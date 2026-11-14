@@ -1,0 +1,229 @@
+## Macro Node Layer (PRD 3.1): async LLM calls, only at contract nodes
+## (negotiation + emergency awakening). Never called per-frame.
+## Speaks the OpenAI-compatible chat/completions protocol, which DeepSeek, GLM (Zhipu)
+## and Ollama all expose. Falls back to the offline persona engine on any failure.
+extends Node
+
+const Persona = preload("res://scripts/persona_engine.gd")
+const D = preload("res://scripts/data.gd")
+const CFG_PATH := "user://llm_settings.cfg"
+
+const PRESETS := {
+	"offline":  {"label": "Offline Persona Engine (no API)", "base_url": "", "model": "", "env": ""},
+	"deepseek": {"label": "DeepSeek", "base_url": "https://api.deepseek.com", "model": "deepseek-chat", "env": "DEEPSEEK_API_KEY"},
+	"glm":      {"label": "GLM - Zhipu BigModel (CN)", "base_url": "https://open.bigmodel.cn/api/paas/v4", "model": "glm-4-flash", "env": "ZHIPU_API_KEY"},
+	"glm_intl": {"label": "GLM - Z.ai (international, pay-as-you-go)", "base_url": "https://api.z.ai/api/paas/v4", "model": "glm-4.5-flash", "env": "ZAI_API_KEY"},
+	"zai_coding": {"label": "GLM - Z.ai Coding Plan", "base_url": "https://api.z.ai/api/coding/paas/v4", "model": "glm-5.3", "env": "ZAI_API_KEY"},
+	"ollama":   {"label": "Ollama (local)", "base_url": "http://localhost:11434/v1", "model": "qwen2.5:7b", "env": ""},
+	"custom":   {"label": "Custom OpenAI-compatible", "base_url": "", "model": "", "env": "LLM_API_KEY"},
+}
+const PRESET_ORDER := ["offline", "deepseek", "glm", "glm_intl", "zai_coding", "ollama", "custom"]
+
+var provider := "offline"
+var base_url := ""
+var model := ""
+var api_key := ""
+var timeout_sec := 60.0
+var sim # set by main; used for the LLM-call counter
+var last_error := ""
+
+func _ready() -> void:
+	load_settings()
+
+func load_settings() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(CFG_PATH) == OK:
+		provider = cf.get_value("llm", "provider", "offline")
+		base_url = cf.get_value("llm", "base_url", "")
+		model = cf.get_value("llm", "model", "")
+		api_key = cf.get_value("llm", "api_key", "")
+	if not PRESETS.has(provider): provider = "offline"
+	if base_url == "": base_url = PRESETS[provider]["base_url"]
+	if model == "": model = PRESETS[provider]["model"]
+	if api_key == "": api_key = env_key()
+
+func save_settings() -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("llm", "provider", provider)
+	cf.set_value("llm", "base_url", base_url)
+	cf.set_value("llm", "model", model)
+	# Only persist a key the player typed in; env-provided keys stay in the environment.
+	cf.set_value("llm", "api_key", "" if api_key == env_key() else api_key)
+	cf.save(CFG_PATH)
+
+func env_key() -> String:
+	var k := ""
+	var env_name: String = PRESETS.get(provider, {}).get("env", "")
+	if env_name != "": k = OS.get_environment(env_name)
+	if k == "": k = OS.get_environment("LLM_API_KEY")
+	return k
+
+func is_online() -> bool:
+	return provider != "offline"
+
+func label() -> String:
+	return "Offline persona engine" if provider == "offline" else "%s · %s" % [PRESETS[provider]["label"], model]
+
+# ------------------------------------------------------------ prompts
+const RULES := """You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
+{"speech": "<2-4 sentences, in character, addressed to the Great Chieftain>",
+ "blueprint": {
+   "plan_id": "<snake_case name for the plan>",
+   "crew_size": <int 1-%d, including yourself>,
+   "capacity_target": <int 2-15, people the new settlement should house>,
+   "focus": "<one of: %s>",
+   "steps": [ <ordered steps, 3-7 of them> ],
+   "abort_conditions": [ <from: "enemy_attack", "hp_below_<N>%%", "natural_disaster"> ]
+ }}
+Allowed steps (executed by the game engine in order, nothing else is understood):
+  {"action": "gather_wood", "target_amount": <10-120>}
+  {"action": "gather_food", "target_amount": <10-60>}
+  {"action": "build", "structure": "<structure id>", "count": <1-4>}
+  {"action": "ritual", "duration_sec": <5-30>}
+Structure ids and wood costs: %s. hut houses 3, large_hut houses 5, so huts should roughly cover capacity_target. Missing wood is gathered automatically before each build.
+Your personality MUST shape both your tone and the ORDER/CHOICE of steps (cautious: walls first, start small; belligerent: bold, big, bonfire and weapons, skip walls; devout: rituals and shrines; gluttonous: food first; lazy: as little as possible).
+Mention at least one memory from your memory_stream naturally. Speak with primal, vivid language; no modern words.
+If the Chieftain set terms, honor them; you may grumble in speech if they clash with your nature."""
+
+func _structure_costs() -> String:
+	var parts: Array = []
+	for k in D.CONTRACT_STRUCTURES:
+		var sd: Dictionary = D.STRUCTURES[k]
+		if sd.has("tech") and sim and not sim.has_tech(sd["tech"]): continue
+		parts.append("%s=%d" % [k, sd["wood"]])
+	return ", ".join(parts)
+
+func _persona_header(leader: Dictionary) -> String:
+	return "You are %s, \"%s\", a member of a prehistoric tribe at the dawn of civilization, where saber-toothed tigers and great beasts roam. Your personality: %s.\n" % [leader["name"], leader["epithet"], "; ".join(leader["personality"])]
+
+# ------------------------------------------------------------ negotiation (Phase 1)
+## Returns {"speech", "blueprint", "source", "error"}.
+func negotiate(ctx: Dictionary) -> Dictionary:
+	_count_call()
+	if not is_online():
+		await get_tree().create_timer(0.6).timeout
+		var r := Persona.propose(ctx)
+		r["source"] = "offline"
+		return r
+	var system: String = _persona_header(ctx["leader"]) + RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
+	var user := {
+		"directive": ctx["directive"],
+		"your_profile": ctx["leader"],
+		"target_environment": ctx["env"],
+		"chieftain_terms": ctx["terms"] if ctx.get("terms_set", false) else "none - propose your own",
+		"conversation_so_far": ctx.get("history", []),
+		"your_previous_blueprint": _strip_private(ctx.get("previous", {})),
+		"chieftain_says_now": ctx.get("player_message", "") if ctx.get("player_message", "") != "" else "(Chieftain awaits your proposal)",
+	}
+	var res := await chat_json(system, JSON.stringify(user))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("speech") is String and res["data"].get("blueprint") is Dictionary:
+		return {"speech": res["data"]["speech"], "blueprint": res["data"]["blueprint"], "source": label(), "error": ""}
+	var fb := Persona.propose(ctx)
+	fb["source"] = "offline fallback"
+	fb["error"] = res.get("error", "invalid JSON shape")
+	return fb
+
+# ------------------------------------------------------------ emergency awakening (Phase 4)
+## Returns {"speech", "options": [{label, effect}], "source", "error"}.
+func emergency(ctx: Dictionary) -> Dictionary:
+	_count_call()
+	var allowed: Array = ctx["allowed"]
+	var fallback := Persona.emergency(ctx)
+	if not is_online():
+		await get_tree().create_timer(0.6).timeout
+		fallback["source"] = "offline"
+		return fallback
+	var fx: Array = []
+	for e in allowed: fx.append("\"%s\" = %s" % [e, ctx["effects"][e]])
+	var system: String = _persona_header(ctx["leader"]) + """You are leading a Task Contract on the east bank and an emergency just interrupted the work.
+Give the Great Chieftain an urgent, in-character report (2-3 sentences) that reflects your personality and memories, then offer 2-3 choices.
+Reply with ONLY one JSON object: {"speech": "<report>", "options": [{"label": "<short in-character choice>", "effect": "<effect id>"}]}
+Each effect MUST be one of: %s
+Order options by what YOU would prefer.""" % "; ".join(fx)
+	var user := {"situation": ctx["summary"], "your_profile": ctx["leader"]}
+	var res := await chat_json(system, JSON.stringify(user))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("speech") is String and res["data"].get("options") is Array:
+		var opts: Array = []
+		var seen := {}
+		for o in res["data"]["options"]:
+			if o is Dictionary and str(o.get("effect", "")) in allowed and not seen.has(o["effect"]):
+				seen[o["effect"]] = true
+				opts.append({"effect": o["effect"], "label": str(o.get("label", o["effect"])).left(90)})
+		for o in fallback["options"]: # guarantee at least the safe options exist
+			if not seen.has(o["effect"]) and (opts.size() < 2 or o["effect"] == "retreat"):
+				seen[o["effect"]] = true
+				opts.append(o)
+		return {"speech": res["data"]["speech"], "options": opts, "source": label(), "error": ""}
+	fallback["source"] = "offline fallback"
+	fallback["error"] = res.get("error", "invalid JSON shape")
+	return fallback
+
+# ------------------------------------------------------------ transport
+func chat_json(system: String, user: String, json_mode := true) -> Dictionary:
+	if api_key == "" and provider != "ollama":
+		return {"ok": false, "error": "No API key set (Settings, or env %s)" % PRESETS[provider]["env"]}
+	var url := base_url.rstrip("/") + "/chat/completions"
+	var body := {
+		"model": model, "temperature": 0.8, "stream": false,
+		"messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+	}
+	if json_mode: body["response_format"] = {"type": "json_object"}
+	# GLM models reason by default (~10 s per call). Contract nodes need fast, short
+	# in-character replies, so switch thinking off (~2 s) on Zhipu / Z.ai endpoints.
+	if "z.ai" in base_url or "bigmodel.cn" in base_url: body["thinking"] = {"type": "disabled"}
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	if api_key != "": headers.append("Authorization: Bearer " + api_key)
+	var http := HTTPRequest.new()
+	http.timeout = timeout_sec
+	add_child(http)
+	var err := http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
+	if err != OK:
+		http.queue_free()
+		return {"ok": false, "error": "request failed to start (%d)" % err}
+	var out: Array = await http.request_completed
+	http.queue_free()
+	var result: int = out[0]
+	var code: int = out[1]
+	var text: String = (out[3] as PackedByteArray).get_string_from_utf8()
+	if result != HTTPRequest.RESULT_SUCCESS:
+		last_error = "network error (result %d)" % result
+		return {"ok": false, "error": last_error}
+	if code == 400 and json_mode:
+		return await chat_json(system, user, false) # provider may not support response_format
+	if code < 200 or code >= 300:
+		last_error = "HTTP %d: %s" % [code, text.left(200)]
+		return {"ok": false, "error": last_error}
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary) or not parsed.has("choices") or parsed["choices"].is_empty():
+		return {"ok": false, "error": "unexpected response: " + text.left(200)}
+	var content: String = str(parsed["choices"][0].get("message", {}).get("content", ""))
+	var data = extract_json(content)
+	if data == null:
+		last_error = "model did not return JSON: " + content.left(160)
+		return {"ok": false, "error": last_error}
+	last_error = ""
+	return {"ok": true, "data": data, "raw": content}
+
+## Tolerates ```json fences and chatter around the object.
+static func extract_json(content: String) -> Variant:
+	var s := content.strip_edges()
+	var a := s.find("{")
+	var b := s.rfind("}")
+	if a < 0 or b <= a: return null
+	return JSON.parse_string(s.substr(a, b - a + 1))
+
+func test_connection() -> String:
+	var res := await chat_json("Reply with JSON only.", "Return {\"ok\": true, \"tribe\": \"<one word name for a prehistoric tribe>\"}")
+	if res["ok"]: return "Connected: " + JSON.stringify(res["data"])
+	return "Failed: " + str(res.get("error", "?"))
+
+func _count_call() -> void:
+	if sim:
+		sim.llm_calls += 1
+		sim.ticks_since_llm = 0
+
+static func _strip_private(bp: Dictionary) -> Dictionary:
+	var o := {}
+	for k in bp:
+		if not str(k).begins_with("_"): o[k] = bp[k]
+	return o
