@@ -30,6 +30,7 @@ const NUM := ["no one", "one", "two", "three", "four", "five"]
 ## ctx: {arch, leader:{...profile}, env, terms:{crew_size,capacity_target,focus}, terms_set:bool,
 ##       player_message:String, previous:Dictionary, has_farming:bool, max_crew:int}
 static func propose(ctx: Dictionary) -> Dictionary:
+	if ctx.get("kind", "settle") == "research": return propose_research(ctx)
 	var arch: String = ctx["arch"]
 	var df: Dictionary = DEFAULTS.get(arch, DEFAULTS["cautious"])
 	var prev: Dictionary = ctx.get("previous", {})
@@ -223,6 +224,77 @@ static func _has_struct(bp: Dictionary, st: String) -> bool:
 	for s in bp["steps"]:
 		if s.get("structure", "") == st: return true
 	return false
+
+# ------------------------------------------------------------ research contracts
+## Which ideas each temperament is drawn to, most wanted first.
+const RESEARCH_TASTE := {
+	"cautious": ["tools", "hide", "pottery", "code", "fire", "farming", "domestication", "bronze", "totems"],
+	"warrior": ["tools", "bronze", "domestication", "hide", "fire", "code", "farming", "pottery", "totems"],
+	"mystic": ["fire", "totems", "pottery", "hide", "farming", "code", "tools", "domestication", "bronze"],
+	"agrarian": ["farming", "pottery", "domestication", "fire", "tools", "hide", "code", "totems", "bronze"],
+	"lazy": [], # whatever is closest to done
+}
+const RESEARCH_WHY := {
+	"cautious": "It keeps people alive, and that is all I ask of an idea.",
+	"warrior": "Anything that makes the spear bite harder is worth sweat.",
+	"mystic": "The spirits have whispered of it in the smoke.",
+	"agrarian": "A full belly is the beginning of every good thing.",
+	"lazy": "It's nearly figured out already. Less work.",
+}
+
+static func propose_research(ctx: Dictionary) -> Dictionary:
+	var arch: String = ctx["arch"]
+	var cands: Array = ctx.get("candidates", [])
+	var prev: Dictionary = ctx.get("previous", {})
+	var t: Dictionary = ctx.get("terms", {}) if ctx.get("terms_set", false) else {}
+	if cands.is_empty():
+		return {"speech": "Chieftain, I can think of nothing new to seek. We must live more before new wisdom comes.", "blueprint": {}}
+	var ids: Array = cands.map(func(c): return c["id"])
+	var pick: String = ""
+	var msg: String = str(ctx.get("player_message", "")).to_lower()
+	for c in cands: # the Chieftain names an idea
+		if c["id"] in msg or c["name"].to_lower() in msg or c["name"].to_lower().split(" ")[-1] in msg: pick = c["id"]
+	if pick == "" and t.get("tech", "") in ids: pick = t["tech"]
+	if pick == "" and prev.get("tech", "") in ids: pick = prev["tech"]
+	if pick == "":
+		if arch == "lazy":
+			var best: Dictionary = cands[0]
+			for c in cands:
+				if c["insight_pct"] > best["insight_pct"]: best = c
+			pick = best["id"]
+		else:
+			for id in RESEARCH_TASTE[arch]:
+				if id in ids:
+					pick = id
+					break
+	var cand: Dictionary = cands[ids.find(pick)]
+	var crew: int = clampi(t.get("crew_size", prev.get("crew_size", 2 if arch != "lazy" else 1)), 1, ctx.get("max_crew", 4))
+	var fast: bool = _any(msg, ["fast", "quick", "hurry"])
+	var exp_len: int = {"cautious": 30, "warrior": 15, "mystic": 20, "agrarian": 22, "lazy": 12}[arch]
+	if fast: exp_len = maxi(8, exp_len - 8)
+	var steps: Array = []
+	var mat := "gather_stone" if ctx.get("env", {}).get("stone_quarrying_possible", false) and pick in ["bronze", "tools", "totems", "code"] else "gather_wood"
+	match arch:
+		"mystic": steps = [{"action": "ritual", "duration_sec": 10}, {"action": mat, "target_amount": 15}, {"action": "experiment", "duration_sec": exp_len}]
+		"cautious": steps = [{"action": mat, "target_amount": 25}, {"action": "experiment", "duration_sec": exp_len}, {"action": "experiment", "duration_sec": 10}]
+		"agrarian": steps = [{"action": "gather_food", "target_amount": 20}, {"action": "experiment", "duration_sec": exp_len}]
+		"warrior": steps = [{"action": mat, "target_amount": 15}, {"action": "experiment", "duration_sec": exp_len}]
+		_: steps = [{"action": "experiment", "duration_sec": exp_len}]
+	var bp := {"kind": "research", "plan_id": "seek_%s" % pick, "tech": pick, "crew_size": crew, "steps": steps,
+		"abort_conditions": ["enemy_attack", "hp_below_30%"]}
+	var opener: String = OPEN[arch]
+	var reply := ""
+	if msg != "":
+		reply = "As you wish - we chase %s. " % cand["name"] if cand["name"].to_lower().split(" ")[-1] in msg or pick in msg else "I hear you. "
+	var mem: Array = ctx["leader"].get("memory_stream", [])
+	var memline := ""
+	if not mem.is_empty() and reply == "":
+		memline = " I have not forgotten the day I %s." % _best_memory(ctx)
+	var how: String = cand.get("learned_by", "")
+	var speech := "%s%sI would seek %s. %s%s We already understand %d%% of it from %s. Give me %s and %d breaths of trial and error." % [
+		opener, reply, cand["name"], RESEARCH_WHY[arch], memline, cand["insight_pct"], how if how != "" else "our daily work",
+		("%s helper%s" % [NUM[crew - 1], "" if crew == 2 else "s"]) if crew > 1 else "the quiet of the workshop", exp_len]
+	return {"speech": speech, "blueprint": bp}
 
 ## ctx: {arch, name, summary:{...}, allowed:Array}
 static func emergency(ctx: Dictionary) -> Dictionary:

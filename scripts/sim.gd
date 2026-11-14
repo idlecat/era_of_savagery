@@ -4,6 +4,7 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const ContractSystem = preload("res://scripts/contract_system.gd")
+const Evolution = preload("res://scripts/evolution.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -14,7 +15,7 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0}
 var devotion := 0.0
 var units: Array = []
 var nodes: Array = []
@@ -46,9 +47,17 @@ var explored_cells := 0
 var land_cells := 1
 var landmarks: Array = [] # copies of D.LANDMARKS + {"found": bool}
 var contracts: ContractSystem
+var evo: Evolution
+# ---- worn paths: foot traffic slowly wears trails into the grass ----
+const WEAR_CELL := 30.0
+var wear_w := 0
+var wear_h := 0
+var wear := PackedFloat32Array()
+var wear_t := 0.0
 
 func _init() -> void:
 	contracts = ContractSystem.new(self)
+	evo = Evolution.new(self)
 
 func uid() -> int:
 	next_id += 1
@@ -73,6 +82,11 @@ func new_game() -> void:
 		var n := _node("bush", "food", b + o, 30)
 		n.regrow = 0.25
 	_wilds()
+	_boulders()
+	wear_w = ceili(D.W / WEAR_CELL)
+	wear_h = ceili(D.H / WEAR_CELL)
+	wear.resize(wear_w * wear_h)
+	wear.fill(0.0)
 	for i in 14: spawn_deer("west", false)
 	for i in 12: spawn_deer("east", false)
 
@@ -122,6 +136,19 @@ func _wilds() -> void:
 		for k in int(lm.get("den", 0)):
 			var pr := spawn_predator(lm["pos"] + Vector2(randf_range(-60, 60), randf_range(-40, 40)))
 			pr.den = lm["pos"]
+
+## Stone outcrops: only quarryable once the tribe knows Polished Stone Tools.
+func _boulders() -> void:
+	var spots: Array = [D.VILLAGE + Vector2(-330, 260), D.VILLAGE + Vector2(260, -300)]
+	for lm in D.LANDMARKS:
+		if lm["id"] in ["flint", "peak", "stones"]: spots.append(lm["pos"] + Vector2(120, 90))
+	for i in 14:
+		spots.append(Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150)))
+	for c in spots:
+		if absf(c.x - D.river_x(c.y)) < 150 or c.distance_to(D.VILLAGE) < 220: continue
+		for k in 3:
+			var p: Vector2 = c + Vector2(randf_range(-45, 45), randf_range(-35, 35))
+			_node("boulder", "stone", p, 40)
 
 func _node(kind: String, res: String, p: Vector2, amount: float) -> E.ResNode:
 	var n := E.ResNode.new()
@@ -190,6 +217,12 @@ func popup(p: Vector2, text: String, color := Color("#ffe08a"), big := false) ->
 func day() -> int: return int(time / D.DAY_LEN) + 1
 func day_frac() -> float: return fmod(time, D.DAY_LEN) / D.DAY_LEN
 func has_tech(t: String) -> bool: return techs.has(t)
+## Bronze arms the tribe only once a smelter actually stands.
+func has_bronze() -> bool: return has_tech("bronze") and _struct_exists("smelter")
+func _struct_exists(type: String) -> bool:
+	for s in structures:
+		if s.built and s.type == type: return true
+	return false
 func living() -> Array: return units.filter(func(u): return not u.dead)
 
 func unit_by_id(id: int) -> E.Unit:
@@ -242,14 +275,15 @@ func _struct_near(type: String, p: Vector2, r: float) -> bool:
 func unit_atk(u: E.Unit) -> float:
 	var a := u.atk * (1.0 + 0.15 * u.lv("combat"))
 	if has_tech("tools"): a += 2
-	if has_tech("bronze"): a *= 1.6
+	if evo.has_trad("warrior_initiation"): a += 2
+	if has_bronze(): a *= 1.6
 	if _struct_near("weapon_rack", u.pos, 160): a *= 1.2
 	return a
 
 func unit_def(u: E.Unit) -> float:
 	var d := u.def * (1.0 + 0.15 * u.lv("combat"))
 	if has_tech("hide"): d += 2
-	if has_tech("bronze"): d += 3
+	if has_bronze(): d += 3
 	if _struct_near("palisade", u.pos, 115): d += 3
 	for o in units: # Centurion Aura
 		if not o.dead and o != u and o.lv("combat") >= 5 and o.pos.distance_to(u.pos) < 110:
@@ -261,6 +295,7 @@ func unit_speed(u: E.Unit) -> float:
 	var s := 58.0 * u.spd
 	if u.hp < u.max_hp * 0.3: s *= 0.7
 	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
+	if evo.has_trad("wayfinders"): s *= 1.1
 	return s
 
 func work_mul(u: E.Unit) -> float: return 0.9 if u.has_trait("lazy") else 1.0
@@ -272,6 +307,7 @@ func xp_need(lv: int) -> float: return 25.0 + lv * 20.0
 func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 	var s: Dictionary = u.skills[skill]
 	if s["lv"] >= 10 or u.dead: return
+	if skill == "combat" and evo.has_trad("warrior_initiation"): amt *= 1.25
 	s["xp"] += amt
 	u.xp_acc += amt
 	while s["lv"] < 10 and s["xp"] >= xp_need(s["lv"]):
@@ -333,6 +369,9 @@ func step_move(e, dt: float, spd: float) -> bool:
 		var rx := D.river_x(np.y)
 		np.x = rx - D.RIVER_HALF - 1 if D.bank_of(e.pos) == "west" else rx + D.RIVER_HALF + 1
 	e.pos = np
+	if e is E.Unit and wear_w > 0:
+		var wi := clampi(int(np.x / WEAR_CELL), 0, wear_w - 1) + clampi(int(np.y / WEAR_CELL), 0, wear_h - 1) * wear_w
+		wear[wi] = minf(1.0, wear[wi] + dt * 0.18)
 	return false
 
 func approach(u: E.Unit, t: Vector2, near: float, dt: float) -> bool:
@@ -361,6 +400,7 @@ func assign_gather(u: E.Unit, res: String, opts := {}) -> void:
 func assign_build(u: E.Unit, s: E.Structure, key := "") -> void: set_job(u, {"type": "build", "struct_id": s.id}, key)
 func assign_attack(u: E.Unit, p: E.Predator, key := "") -> void: set_job(u, {"type": "attack", "target_id": p.id}, key)
 func assign_ritual(u: E.Unit, p: Vector2, key := "") -> void: set_job(u, {"type": "ritual", "at": p, "elapsed": 0.0}, key)
+func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void: set_job(u, {"type": "experiment", "at": p, "label": label}, key)
 ## AoE2-DE-style auto-scout: keep walking to the nearest unexplored land.
 func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
@@ -369,6 +409,7 @@ func find_node(res: String, from: Vector2, bank: String, max_dist: float) -> E.R
 	var best_score := INF
 	for n in nodes:
 		if n.res != res or n.amount < 1: continue
+		if n.kind == "boulder" and not has_tech("tools"): continue
 		if bank != "" and D.bank_of(n.pos) != bank: continue
 		var d: float = n.pos.distance_to(from)
 		if d > max_dist: continue
@@ -427,7 +468,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			_do_gather(u, j, dt)
 		"build":
 			var s := struct_by_id(j["struct_id"])
-			if s == null or s.built:
+			if s == null or (s.built and not s.reno):
 				set_job(u, {})
 				return
 			var sd: Dictionary = D.STRUCTURES[s.type]
@@ -438,10 +479,18 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				u.act = "Waiting for materials"
 				return
 			if approach(u, tgt, near, dt):
-				u.act = "Building " + sd["name"]
-				s.progress += dt * (1.0 + 0.12 * u.lv("craft")) * work_mul(u)
+				var speed := dt * (1.0 + 0.12 * u.lv("craft")) * work_mul(u) * (1.2 if evo.has_trad("makers_pride") else 1.0)
 				gain_xp(u, "craft", dt * 0.9)
-				if s.progress >= s.work: complete_structure(s, u)
+				evo.practice(u, "build", dt)
+				evo.drift("spiritual", -0.005 * dt)
+				if s.reno:
+					u.act = "Renovating " + sd["name"]
+					s.reno_progress += speed
+					if s.reno_progress >= s.work * 0.6: _finish_reno(s, u)
+				else:
+					u.act = "Building " + sd["name"]
+					s.progress += speed
+					if s.progress >= s.work: complete_structure(s, u)
 			else:
 				u.act = "Walking to " + sd["name"]
 		"attack":
@@ -461,6 +510,13 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				var crit := randf() < 0.05 * u.lv("forage")
 				damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 				gain_xp(u, "combat", 1.2)
+		"experiment":
+			if approach(u, j["at"], 8, dt):
+				u.act = "Experimenting: " + j["label"]
+				gain_xp(u, "lore", dt * 0.3)
+				gain_xp(u, "craft", dt * 0.2)
+			else:
+				u.act = "Walking to the workshop"
 		"explore":
 			u.act = "Scouting"
 			var threat := active_predators_near(u.pos, 240)
@@ -481,12 +537,17 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				j["to"] = tgt
 			if approach(u, tgt, 12, dt): j["to"] = null
 			gain_xp(u, "forage", dt * 0.12)
+			evo.practice(u, "explore", dt)
+			evo.drift("settled", -0.01 * dt)
 		"ritual":
 			if approach(u, j["at"], 6, dt):
 				u.act = "Performing ritual"
 				var boost := 1.5 if (_struct_near("totem_shrine", u.pos, 140) or _struct_near("grand_altar", u.pos, 140)) else 1.0
+				if evo.has_trad("ancestor_rites"): boost *= 1.3
 				stock["lore"] += dt * 0.22 * (1.0 + 0.2 * u.lv("lore")) * boost
-				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")))
+				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")) * (1.3 if evo.has_trad("ancestor_rites") else 1.0))
+				evo.practice(u, "ritual", dt)
+				evo.drift("spiritual", 0.01 * dt)
 				gain_xp(u, "lore", dt * 0.6)
 				j["elapsed"] = j.get("elapsed", 0.0) + dt
 			else:
@@ -519,8 +580,13 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.act = "No %s nearby" % j["res"]
 			return
 		j["node_id"] = n.id
-	if approach(u, n.pos, 16.0 if n.kind == "tree" else 14.0, dt):
+	if n.kind == "boulder" and not has_tech("tools"):
+		set_job(u, {})
+		popup(u.pos + Vector2(0, -30), "Needs Polished Stone Tools", Color("#ff9b7a"))
+		return
+	if approach(u, n.pos, 16.0 if n.kind in ["tree", "boulder"] else 14.0, dt):
 		if n.kind == "deer": # the hunt
+			evo.practice(u, "hunt", 3.0)
 			n.kind = "carcass"
 			n.from_deer = true
 			n.vel = Vector2.ZERO
@@ -529,9 +595,15 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			if randf() < 0.05 * u.lv("forage"):
 				popup(u.pos + Vector2(0, -30), "Lethal strike!", Color("#ffb36b"))
 				n.amount += 5
-		u.act = {"tree": "Chopping wood", "carcass": "Butchering game"}.get(n.kind, "Picking berries")
-		var base: float = {"tree": 1.2, "carcass": 1.4}.get(n.kind, 1.0)
+		u.act = {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
+		var base: float = {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
 		var rate := base * (1.0 + 0.1 * u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
+		if evo.has_trad("peaceful_ways"): rate *= 1.2
+		var activity: String = {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
+		evo.practice(u, activity, dt)
+		match activity:
+			"hunt", "berry": evo.drift("settled", -0.006 * dt)
+			_: evo.drift("spiritual", -0.004 * dt)
 		u.gather_t += dt * rate
 		while u.gather_t >= 1 and n.amount >= 1:
 			u.gather_t -= 1
@@ -542,6 +614,8 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 				j["phase"] = "deliver"
 				break
 		if n.amount < 1: _deplete(n)
+	elif n.kind == "boulder":
+		u.act = "Walking to the rocks"
 	else:
 		u.act = "Walking to forest" if n.kind == "tree" else "Walking to food"
 
@@ -549,7 +623,7 @@ func _deplete(n: E.ResNode) -> void:
 	if n.kind == "tree":
 		n.kind = "stump"
 		n.regrow_t = 140
-	elif n.kind == "carcass":
+	elif n.kind == "carcass" or n.kind == "boulder":
 		nodes.erase(n)
 		if n.from_deer: spawn_deer(n.bank, true)
 
@@ -561,11 +635,16 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 			contracts.deposit(c, j["res"], amt, u)
 			return
 	stock[j["res"]] += amt
-	popup(u.pos + Vector2(0, -12), "+%d %s" % [amt, j["res"]], Color("#d8b483") if j["res"] == "wood" else Color("#f0a07a"))
+	popup(u.pos + Vector2(0, -12), "+%d %s" % [amt, j["res"]], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	s.built = true
 	s.progress = s.work
+	s.style = evo.era
+	if s.type in ["farm_plot", "granary", "aurochs_pen", "fishing_dock"]: evo.drift("settled", 5.0)
+	if s.type in ["totem_shrine", "grand_altar"]: evo.drift("spiritual", 4.0)
+	if s.type in ["weapon_rack", "palisade"]: evo.drift("martial", 2.0)
+	if s.type == "council_ring": evo.drift("ranked", 6.0)
 	var name: String = D.STRUCTURES[s.type]["name"]
 	popup(s.pos + Vector2(0, -30), name + " complete!", Color("#b6f28a"), true)
 	add_log("%s completed%s." % [name, (" by " + u.name + "'s crew") if u else ""], "build")
@@ -590,15 +669,17 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 		step_move(u, dt, unit_speed(u) * 0.4)
 
 func unit_needs(u: E.Unit, dt: float) -> void:
-	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0)
+	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0)
 	u.hunger -= drain * dt
 	if u.hunger < 40 and stock["food"] >= 1:
 		stock["food"] -= 1
+		evo.drift("ranked", -0.15) # meals from the common store
 		u.hunger = minf(100, u.hunger + (38.0 if has_tech("fire") else 30.0))
 	if u.hunger <= 0:
 		u.hunger = 0
 		hurt_unit(u, 0.5 * dt, null)
 	var warm := near_warmth(u)
+	if warm and night_amt > 0.5: evo.practice(u, "hearth", dt)
 	if night_amt > 0.5 and not has_tech("hide") and not warm and u.hp > u.max_hp * 0.35:
 		u.hp -= 0.3 * dt
 	elif u.hunger > 35 and time - u.last_hit_t > 5:
@@ -622,6 +703,8 @@ func kill_unit(u: E.Unit, killer) -> void:
 	for o in units:
 		if not o.dead and o != u and o.pos.distance_to(u.pos) < 300:
 			remember(o, "witnessed %s %s on Day %d" % [u.name, cause, day()], 8)
+	evo.on_death(u)
+	if killer: evo.drift("martial", 1.5)
 	if vice["steward"] == u.id: vice["steward"] = -1
 	if vice["warchief"] == u.id: vice["warchief"] = -1
 
@@ -641,6 +724,7 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 			u.kills += 1
 			gain_xp(u, "combat", 18)
 			remember(u, "slew a %s on the %s bank on Day %d" % [p.name, D.bank_of(p.pos), day()], 8)
+			evo.drift("martial", 4.0)
 			add_log("%s slew a %s!" % [u.name, p.name], "combat")
 		_node("carcass", "food", p.pos, 35)
 	elif p.hp < p.max_hp * 0.2 and not p.fleeing:
@@ -749,7 +833,7 @@ func tick(dt: float) -> void:
 	for s in structures:
 		if not s.built: continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		stock["food"] += sd.get("food", 0.0) * dt
+		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0)
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += 0.03 * dt
 
@@ -782,6 +866,12 @@ func tick(dt: float) -> void:
 	predators = predators.filter(func(p): return not p.fled)
 	_update_guardian(dt)
 	contracts.update(dt)
+	evo.update(dt)
+	wear_t -= dt
+	if wear_t <= 0:
+		wear_t = 1.0
+		for k in wear.size():
+			if wear[k] > 0.0: wear[k] *= 0.996
 	_update_vice(dt)
 	_update_births(dt)
 
@@ -801,20 +891,21 @@ func _update_births(dt: float) -> void:
 			stock["food"] -= 15
 			var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
 			var nm: String = free.pick_random() if not free.is_empty() else "Nameless"
-			var u := make_unit({"name": nm, "epithet": "Newcomer", "traits": [D.TRAITS.keys().pick_random()],
+			var u := make_unit({"name": nm, "epithet": "Newcomer", "traits": [evo.birth_trait()],
 				"color": Color(D.BIRTH_COLORS.pick_random()), "hp": randi_range(40, 52), "atk": randi_range(3, 6),
 				"def": 2, "spd": randf_range(0.9, 1.1),
 				"skills": {"forage": randi_range(0, 2), "craft": randi_range(0, 2), "combat": randi_range(0, 1), "lore": randi_range(0, 1)}},
 				D.VILLAGE + Vector2(randf_range(-30, 30), randf_range(20, 50)))
 			remember(u, "was born beside the tribal bonfire on Day %d" % day(), 5)
 			units.append(u)
+			evo.on_birth(u)
 			add_log("%s (%s) was born into the tribe." % [nm, D.TRAITS[u.traits[0]]["name"]], "story")
 			popup(u.pos + Vector2(0, -24), nm + " is born!", Color("#ffd6f0"), true)
 	else:
 		birth_timer = maxf(0, birth_timer - dt)
 
 # ------------------------------------------------------------------ Tier 3: Vice-Chieftains
-func vice_slots() -> int: return 2 if has_tech("code") else 1
+func vice_slots() -> int: return 1 + (1 if has_tech("code") else 0) + (1 if evo.has_trad("council_of_elders") else 0)
 
 func appoint(u: E.Unit, role: String) -> bool:
 	var used := 0
@@ -826,6 +917,7 @@ func appoint(u: E.Unit, role: String) -> bool:
 	vice[role] = u.id
 	u.title = "Steward" if role == "steward" else "War Chief"
 	remember(u, "was appointed %s of the tribe on Day %d" % [u.title, day()], 7)
+	evo.drift("ranked", 8.0)
 	add_log("%s appointed as Vice-Chieftain (%s)." % [u.name, u.title], "vice")
 	return true
 
@@ -840,7 +932,7 @@ func _update_vice(dt: float) -> void:
 		for u in idle:
 			var unbuilt = null
 			for s in structures:
-				if not s.built and s.paid and s.owner == "village":
+				if (not s.built or s.reno) and s.paid and s.owner == "village":
 					unbuilt = s
 					break
 			var choice: String
@@ -848,12 +940,14 @@ func _update_vice(dt: float) -> void:
 			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
 			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"
 			elif steward_policy == "lore": choice = "lore"
+			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
 			else: choice = "food" if randf() < 0.5 else "wood"
 			match choice:
 				"build": assign_build(u, unbuilt)
 				"lore": assign_ritual(u, D.VILLAGE + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 				_: assign_gather(u, choice, {"bank": "west"})
 			gain_xp(steward, "lore", 0.5)
+			evo.practice(steward, "lead", 2.0)
 		if not idle.is_empty():
 			add_log("Steward %s put %d idle hands to work (%s)." % [steward.name, idle.size(), steward_policy], "vice")
 	var chief := unit_by_id(vice["warchief"])
@@ -870,32 +964,72 @@ func can_place(type: String, p: Vector2) -> String:
 	var sd: Dictionary = D.STRUCTURES[type]
 	if sd.has("tech") and not has_tech(sd["tech"]): return "Requires tech"
 	if stock["wood"] < sd["wood"]: return "Not enough wood"
+	if stock["stone"] < sd.get("stone", 0): return "Not enough stone"
 	if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 15: return "Too close to the river"
 	return ""
 
 func place_structure(type: String, p: Vector2) -> E.Structure:
 	if can_place(type, p) != "": return null
 	stock["wood"] -= D.STRUCTURES[type]["wood"]
+	stock["stone"] -= D.STRUCTURES[type].get("stone", 0)
 	var s := add_structure(type, p, false, "village", true)
 	add_log("Construction site laid out: %s." % D.STRUCTURES[type]["name"], "build")
 	return s
 
+## Spend lore to finish an idea now. Practice already done makes it cheaper; the tribe's
+## best shaman teaches everyone in the village.
 func research(tech_id: String) -> String:
-	for t in D.TECHS:
-		if t["id"] != tech_id: continue
-		if has_tech(tech_id): return "Already known"
-		for r in t["req"]:
-			if not has_tech(r): return "Requires prior wisdom"
-		if stock["lore"] < t["cost"]: return "Not enough lore"
-		stock["lore"] -= t["cost"]
-		techs[tech_id] = true
-		add_log("Tribal Wisdom unlocked: %s - %s" % [t["name"], t["desc"]], "tech")
-		var shaman = null
-		for u in living():
-			if shaman == null or u.lv("lore") > shaman.lv("lore"): shaman = u
-		if shaman: remember(shaman, "revealed the wisdom of %s to the tribe on Day %d" % [t["name"], day()], 6)
-		return ""
-	return "Unknown tech"
+	var t: Dictionary = evo.tech_def(tech_id)
+	if t.is_empty(): return "Unknown tech"
+	if has_tech(tech_id): return "Already known"
+	if not evo.prereqs_met(tech_id): return "Requires prior wisdom"
+	var cost: int = evo.lore_cost(tech_id)
+	if stock["lore"] < cost: return "Not enough lore"
+	stock["lore"] -= cost
+	evo.breakthrough(tech_id, best_unit("lore", false), "taught")
+	return ""
+
+## Bring every outdated home and wall up to the current era's style.
+func outdated() -> Array:
+	return structures.filter(func(s): return s.built and not s.reno and s.owner == "village" and s.type in D.STYLED and s.style < evo.era)
+
+func reno_cost(list: Array) -> Dictionary:
+	var w := 0
+	var st := 0
+	for s in list:
+		w += ceili(D.STRUCTURES[s.type]["wood"] * 0.5)
+		if evo.era >= 3: st += 6
+	return {"wood": w, "stone": st}
+
+func renovate(helpers: Array) -> String:
+	var list := outdated()
+	if list.is_empty(): return "Nothing to renovate"
+	var cost := reno_cost(list)
+	if stock["wood"] < cost["wood"] or stock["stone"] < cost["stone"]:
+		return "Needs %d wood%s" % [cost["wood"], (" and %d stone" % cost["stone"]) if cost["stone"] > 0 else ""]
+	stock["wood"] -= cost["wood"]
+	stock["stone"] -= cost["stone"]
+	for s in list:
+		s.reno = true
+		s.reno_progress = 0.0
+	if helpers.is_empty():
+		helpers = living().filter(func(u): return u.role != "contract" and D.bank_of(u.pos) == "west" and u.job.get("type", "") in ["", "ritual"]).slice(0, 3)
+	var i := 0
+	for u in helpers:
+		assign_build(u, list[i % list.size()])
+		i += 1
+	add_log("The tribe rebuilds %d homes and walls in the style of the %s." % [list.size(), D.ERA_NAMES[evo.era]], "build")
+	return ""
+
+func _finish_reno(s: E.Structure, u: E.Unit) -> void:
+	s.reno = false
+	s.style = evo.era
+	popup(s.pos + Vector2(0, -30), "Renovated", Color("#b6f28a"))
+	gain_xp(u, "craft", 4)
+	for o in structures:
+		if o.reno and o.owner == "village":
+			assign_build(u, o)
+			return
 
 # ------------------------------------------------------------------ milestone events
 func _check_events() -> void:
@@ -906,6 +1040,10 @@ func _check_events() -> void:
 	elif not flags.has("overpop") and living().size() >= D.OVERPOP_THRESHOLD:
 		flags["overpop"] = true
 		_fire_event("overpop")
+	elif evo.pending_era > 1 and not flags.has("era%d" % evo.pending_era):
+		flags["era%d" % evo.pending_era] = true
+		_fire_event("era%d" % evo.pending_era)
+		evo.pending_era = 0
 	elif not flags.has("chosen") and devotion >= 100:
 		flags["chosen"] = true
 		_fire_event("chosen")
@@ -960,6 +1098,8 @@ func event_def(id: String) -> Dictionary:
 					{"label": "Frontier Colonization", "desc": "Appoint an experienced leader via a Task Contract to found a sister settlement across the river.", "enabled": true},
 					{"label": "Territorial Conquest", "desc": "Rally your 3 best warriors to raid a rival tribe for food and timber. Risky.", "enabled": living().size() >= 3},
 				]}
+		"era2", "era3":
+			return _era_event_def(id)
 		"chosen":
 			return {"title": "Birth of the Chosen One",
 				"text": "Under a sky split by lightning, a child is born bearing the mark of the totem. Which mythic bloodline awakens?",
@@ -1031,10 +1171,57 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 			var u := make_unit(def, D.VILLAGE + Vector2(0, 40))
 			remember(u, "was born under a lightning sky, bearing a mythic bloodline", 10)
 			units.append(u)
+			evo.on_birth(u)
 			out["text"] = "%s %s is born! The whole tribe feels the totem's favor." % [def["name"], def["epithet"]]
 			popup(u.pos + Vector2(0, -30), "%s is born!" % def["name"], Color("#ffd36b"), true)
+		"era2", "era3":
+			out["text"] = _era_event_resolve(id, idx)
 	add_log(out["text"], "story")
 	return out
+
+# ------------------------------------------------------------------ era transitions (culture-defining dilemmas)
+const ERA_EVENTS := {
+	"era2": {"title": "Dawn of the Tribe & Agrarian Era",
+		"text": "New wisdom changes how the tribe lives, and not everyone is glad. %s",
+		"voices": {"warrior": "\"Digging in the dirt? We are hunters!\"", "agrarian": "\"Full stores mean no hungry winters.\"",
+			"mystic": "\"The forest spirits will not forgive the axe and the flame.\"", "cautious": "\"Walls and stores - that is how a tribe lasts.\"", "lazy": "\"If the food grows by itself, I like it.\""},
+		"options": [
+			{"label": "Put down roots", "desc": "Fields, pens and stores come first. (Settled +30, Spiritual -10)", "shift": {"settled": 30, "spiritual": -10}},
+			{"label": "Honor the hunt", "desc": "The tribe stays hunters at heart. (Roaming +30, Martial +15)", "shift": {"settled": -30, "martial": 15}},
+			{"label": "Let the shamans decide", "desc": "Ask the spirits before every change. (Spiritual +30, +15 lore)", "shift": {"spiritual": 30}, "lore": 15},
+		]},
+	"era3": {"title": "Dawn of the Bronze & Mythic Era",
+		"text": "Great works are now within reach, and the elders argue over what the tribe should become. %s",
+		"voices": {"warrior": "\"Arm every hand and no beast will trouble us again!\"", "mystic": "\"Raise the great totems so the ancestors see us.\"",
+			"cautious": "\"Laws, not spears, keep a people whole.\"", "agrarian": "\"More fields, more mouths fed.\"", "lazy": "\"Whatever needs the least hauling.\""},
+		"options": [
+			{"label": "The Bronze Oath", "desc": "A warrior people under strong chiefs. (Martial +30, Ranked +15)", "shift": {"martial": 30, "ranked": 15}},
+			{"label": "The Totem Covenant", "desc": "A people of the spirits. (Spiritual +30, +20 devotion)", "shift": {"spiritual": 30}, "devotion": 20},
+			{"label": "The Elders' Law", "desc": "Rule by council and shared stores. (Ranked +20, Settled +15)", "shift": {"ranked": 20, "settled": 15}},
+		]},
+}
+
+func _era_event_def(id: String) -> Dictionary:
+	var ev: Dictionary = ERA_EVENTS[id]
+	var voices: Array = []
+	var seen := {}
+	for u in living():
+		var a := arch(u)
+		if seen.has(a) or not ev["voices"].has(a): continue
+		seen[a] = true
+		voices.append("%s: %s" % [u.name, ev["voices"][a]])
+		if voices.size() >= 3: break
+	var opts: Array = []
+	for o in ev["options"]: opts.append({"label": o["label"], "desc": o["desc"], "enabled": true})
+	return {"title": ev["title"], "text": ev["text"] % "  ".join(voices), "options": opts}
+
+func _era_event_resolve(id: String, idx: int) -> String:
+	var o: Dictionary = ERA_EVENTS[id]["options"][clampi(idx, 0, 2)]
+	for a in o["shift"]: evo.drift(a, o["shift"][a])
+	stock["lore"] += o.get("lore", 0)
+	devotion = minf(100.0, devotion + o.get("devotion", 0))
+	for u in living(): remember(u, "lived through the dawn of the %s, when the tribe chose '%s'" % [D.ERA_NAMES[evo.era], o["label"]], 6)
+	return "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style." % [o["label"], D.ERA_NAMES[evo.era]]
 
 
 # ------------------------------------------------------------------ exploration / fog of war
@@ -1069,7 +1256,7 @@ func explored_pct() -> float:
 	return 100.0 * explored_cells / maxf(1, land_cells)
 
 func sight(u: E.Unit) -> float:
-	return D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0)
+	return D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)
 
 func reveal(p: Vector2, r: float) -> void:
 	var i0 := clampi(int((p.x - r) / D.FOG_CELL), 0, fog_w - 1)
@@ -1111,6 +1298,10 @@ func _discover(lm: Dictionary) -> void:
 		devotion = minf(100.0, devotion + lm["devotion"])
 		parts.append("+%d devotion" % lm["devotion"])
 	if lm.has("reveal"): reveal(lm["pos"], lm["reveal"])
+	for tid in lm.get("insight", {}):
+		if not has_tech(tid):
+			evo.seed(tid, lm["insight"][tid], finder)
+			parts.append("inspires %s" % evo.tech_def(tid)["name"])
 	var who: String = finder.name if finder else "The tribe"
 	add_log("Discovery! %s %s (%s)." % [who, lm["text"], ", ".join(parts)], "story" if lm["kind"] != "den" else "danger")
 	popup(lm["pos"] + Vector2(0, -40), "Discovered: " + lm["name"], Color("#ffd36b"), true)

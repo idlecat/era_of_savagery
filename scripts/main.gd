@@ -88,6 +88,44 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.select_only(sim.unit_by_name(args.get("who", "Panshi")))
 			hud._start_contract_for_selected()
+		"evolve": # debug: fast-forward the tribe through the ages
+			hud._close_modal()
+			sim.fog_enabled = false
+			var stage := int(args.get("era", "3"))
+			sim.stock["lore"] = 2000
+			sim.stock["wood"] = 2000
+			sim.stock["stone"] = 500
+			var order := ["fire", "tools", "hide", "pottery", "domestication", "farming", "bronze", "totems", "code"]
+			for id in order.slice(0, {1: 3, 2: 6, 3: 9}[stage]): sim.research(id)
+			sim.pending_event = ""
+			sim.paused = false
+			var V: Vector2 = sim.D.VILLAGE if false else Vector2(1300, 1200)
+			if stage >= 2:
+				for spec in [["aurochs_pen", Vector2(-230, 60)], ["farm_plot", Vector2(-200, -120)], ["granary", Vector2(170, 150)]]:
+					var st = sim.place_structure(spec[0], V + spec[1])
+					if st: sim.complete_structure(st, null)
+			if stage >= 3:
+				for spec in [["smelter", Vector2(200, -60)], ["council_ring", Vector2(20, 190)]]:
+					var st = sim.place_structure(spec[0], V + spec[1])
+					if st: sim.complete_structure(st, null)
+			sim.renovate([])
+			for st in sim.structures:
+				if st.reno: sim._finish_reno(st, sim.units[0])
+			for i in int(float(args.get("secs", "60")) / STEP):
+				sim.tick(STEP)
+				if sim.paused:
+					sim.pending_event = ""
+					sim.paused = false
+			if args.has("night"): sim.time = floor(sim.time / 90.0) * 90.0 + 75.0
+			hud._close_modal()
+			world.selected = []
+			world.selection_changed.emit()
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.3")), float(args.get("zoom", "1.3")))
+			world.focus_on(V + Vector2(0, 30))
+			if args.has("tech"): hud._open_tech()
+			if args.has("research"):
+				world.select_only(sim.unit_by_name(args["research"]))
+				hud.open_negotiation(sim.unit_by_name(args["research"]), "research")
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

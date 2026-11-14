@@ -28,6 +28,9 @@ var terrain_tex: ImageTexture
 var fog_tex: ImageTexture
 var fog_img: Image
 var fog_refresh := 0.0
+var wear_tex: ImageTexture
+var wear_img: Image
+var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
 var decor: Array = []
 var river_l := PackedVector2Array()
@@ -146,6 +149,8 @@ func _build_terrain() -> void:
 	fog_img = Image.create(maxi(sim.fog_w, 1), maxi(sim.fog_h, 1), false, Image.FORMAT_LA8)
 	fog_tex = ImageTexture.create_from_image(fog_img)
 	_refresh_fog()
+	wear_img = Image.create(maxi(sim.wear_w, 1), maxi(sim.wear_h, 1), false, Image.FORMAT_RGBA8)
+	wear_tex = ImageTexture.create_from_image(wear_img)
 	for i in 2000:
 		var p := Vector2(randf() * D.W, randf() * D.H)
 		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 14: continue
@@ -166,6 +171,10 @@ func _process(delta: float) -> void:
 	if sim.guardian and not sim.guardian.dead:
 		guardian_trail.push_front(sim.guardian.pos)
 		if guardian_trail.size() > 40: guardian_trail.pop_back()
+	wear_refresh -= delta
+	if wear_refresh <= 0:
+		wear_refresh = 1.0
+		_refresh_wear()
 	fog_refresh -= delta
 	if fog_refresh <= 0:
 		fog_refresh = 0.1
@@ -192,6 +201,21 @@ func _refresh_fog() -> void:
 		data[k * 2 + 1] = 0 if not sim.fog_enabled or sim.visible[k] == 1 else (120 if sim.explored[k] == 1 else 255)
 	fog_img.set_data(sim.fog_w, sim.fog_h, false, Image.FORMAT_LA8, data)
 	fog_tex.update(fog_img)
+
+## Worn paths: foot traffic tints the grass toward bare earth.
+func _refresh_wear() -> void:
+	var n: int = sim.wear_w * sim.wear_h
+	if n == 0: return
+	var data := PackedByteArray()
+	data.resize(n * 4)
+	for k in n:
+		var w: float = sim.wear[k]
+		data[k * 4] = 120
+		data[k * 4 + 1] = 98
+		data[k * 4 + 2] = 66
+		data[k * 4 + 3] = int(clampf((w - 0.12) * 1.1, 0.0, 0.62) * 255)
+	wear_img.set_data(sim.wear_w, sim.wear_h, false, Image.FORMAT_RGBA8, data)
+	wear_tex.update(wear_img)
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -258,10 +282,28 @@ func _sync_lights() -> void:
 		var r := 120.0 * (2.0 if sim.has_tech("fire") else 1.0)
 		l.texture_scale = r * 2.6 / 256.0
 		l.energy = (0.4 + 0.9 * sim.night_amt) * (1.0 + 0.08 * sin(t * 9 + s.id))
+	for u in sim.units:
+		if not _has_torch(u): continue
+		var key := "t%d" % u.id
+		alive[key] = true
+		if not lights.has(key):
+			var l := PointLight2D.new()
+			l.texture = light_tex
+			l.scale = Vector2(1.0, 0.6)
+			add_child(l)
+			lights[key] = l
+		var tl: PointLight2D = lights[key]
+		tl.position = iso(u.pos) - Vector2(0, 30)
+		tl.texture_scale = 140.0 / 256.0
+		tl.energy = 0.9 * (1.0 + 0.1 * sin(t * 13 + u.id))
 	for id in lights.keys():
 		if not alive.has(id):
 			lights[id].queue_free()
 			lights.erase(id)
+
+## At night, people away from a fire carry torches once the tribe knows Friction Fire.
+func _has_torch(u) -> bool:
+	return not u.dead and sim.night_amt > 0.4 and sim.has_tech("fire") and not sim.near_warmth(u) and sim.is_visible(u.pos)
 
 # ------------------------------------------------------------ drawing
 func _draw() -> void:
@@ -270,6 +312,7 @@ func _draw() -> void:
 	# ---- ground pass (flat, through the iso transform, world coordinates)
 	ci.draw_set_transform_matrix(GROUND)
 	ci.draw_texture_rect(terrain_tex, Rect2(0, 0, D.W, D.H), false)
+	ci.draw_texture_rect(wear_tex, Rect2(0, 0, sim.wear_w * sim.WEAR_CELL, sim.wear_h * sim.WEAR_CELL), false)
 	_draw_water_fx()
 	for s in sim.structures: _draw_ground_part(s)
 	for c in sim.contracts.list: _draw_site_ring(c)
@@ -484,11 +527,12 @@ func _arc_pts(c: Vector2, rx: float, ry: float, a0: float, a1: float, seg: int, 
 	return pts
 
 ## Iso box centred on world point c (half-sizes in world units, height in px).
-func _box(c: Vector2, hw: float, hd: float, h: float, col: Color) -> void:
-	var p1 := iso(c + Vector2(-hw, -hd))
-	var p2 := iso(c + Vector2(hw, -hd))
-	var p3 := iso(c + Vector2(hw, hd))
-	var p4 := iso(c + Vector2(-hw, hd))
+func _box(c: Vector2, hw: float, hd: float, h: float, col: Color, lift := 0.0) -> void:
+	var l := Vector2(0, lift)
+	var p1 := iso(c + Vector2(-hw, -hd)) - l
+	var p2 := iso(c + Vector2(hw, -hd)) - l
+	var p3 := iso(c + Vector2(hw, hd)) - l
+	var p4 := iso(c + Vector2(-hw, hd)) - l
 	var up := Vector2(0, h)
 	ci.draw_colored_polygon(PackedVector2Array([p2, p3, p3 - up, p2 - up]), col.darkened(0.32))
 	ci.draw_colored_polygon(PackedVector2Array([p4, p3, p3 - up, p4 - up]), col.darkened(0.12))
@@ -541,16 +585,20 @@ func _round_house(b: Vector2, r: float, wall_h: float, roof_h: float, wall: Colo
 	ci.draw_line(apex, apex + Vector2(-3, -5), Color("#5a3d22"), 2)
 	ci.draw_line(apex, apex + Vector2(3, -5), Color("#5a3d22"), 2)
 
-func _draw_post(b: Vector2, shown: bool, built: bool) -> void:
+func _draw_post(b: Vector2, shown: bool, built: bool, style := 2) -> void:
 	if not shown:
 		ci.draw_circle(b, 2, Color(0.5, 0.4, 0.3, 0.35))
 		return
-	var h := 22.0
+	var h := 20.0 + 3.0 * style
 	ci.draw_line(b + Vector2(1, 0), b + Vector2(9, 3), Color(0, 0, 0, 0.18), 3)
+	if style >= 3:
+		_ell(b + Vector2(0, 1), 6, 3, Color("#8a877e"))
+		_ell(b + Vector2(-1, 0), 4.5, 2.2, Color("#a3a097"))
 	ci.draw_rect(Rect2(b.x - 3, b.y - h, 6, h), Color("#7a5530"))
 	ci.draw_rect(Rect2(b.x + 0.5, b.y - h, 2.5, h), Color("#5c3f22"))
 	ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-3, -h), b + Vector2(3, -h), b + Vector2(0, -h - 6)]), Color("#a57a4a"))
-	ci.draw_line(b + Vector2(-4, -h * 0.45), b + Vector2(4, -h * 0.45), Color("#4a3018"), 1.5)
+	if style >= 2: ci.draw_line(b + Vector2(-4, -h * 0.45), b + Vector2(4, -h * 0.45), Color("#4a3018"), 1.5)
+	if style >= 3: ci.draw_line(b + Vector2(-4, -h * 0.75), b + Vector2(4, -h * 0.75), Color("#4a3018"), 1.5)
 
 # ------------------------------------------------------------ objects
 func _draw_node(n) -> void:
@@ -577,6 +625,14 @@ func _draw_node(n) -> void:
 				ci.draw_circle(b + Vector2(7, -21) * s, 9 * s, c0.darkened(0.15))
 				ci.draw_circle(b + Vector2(-4, -31) * s, 8 * s, c0.lightened(0.18))
 				ci.draw_circle(b + Vector2(-6, -34) * s, 3.5 * s, c0.lightened(0.32))
+		"boulder":
+			var k: float = clampf(n.amount / 40.0, 0.35, 1.0)
+			_ell(b + Vector2(8, 3), 22 * k, 8 * k, SHADOW)
+			for i in 3:
+				var q := b + Vector2((i - 1) * 9 * k, (i % 2) * 3)
+				var h: float = (14.0 - i * 3.0) * k
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-9, 0) * k, q + Vector2(-7 * k, -h), q + Vector2(2 * k, -h - 4 * k), q + Vector2(9 * k, -h * 0.4), q + Vector2(8, 0) * k]), Color("#8e8a80"))
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-7 * k, -h), q + Vector2(2 * k, -h - 4 * k), q + Vector2(0, -h * 0.5)]), Color("#b0aca2"))
 		"stump":
 			_ell(b + Vector2(2, 1), 7, 3.5, SHADOW)
 			ci.draw_rect(Rect2(b.x - 5, b.y - 5, 10, 5), Color("#6b4a2a"))
@@ -642,10 +698,25 @@ func _draw_structure(s) -> void:
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
 	match s.type:
-		"hut":
-			_round_house(b, 20, 11, 24, Color("#9b7a52"), Color("#c9a24f"), frac, s.built)
-		"large_hut":
-			_round_house(b, 27, 13, 30, Color("#8f6d48"), Color("#b98f42"), frac, s.built)
+		"hut", "large_hut":
+			var big: bool = s.type == "large_hut"
+			var r := 27.0 if big else 20.0
+			if not s.built:
+				_round_house(b, r, 13 if big else 11, 30 if big else 24, Color("#9b7a52"), Color("#c9a24f"), frac, false)
+			elif s.style <= 1:
+				_tent(b, r * 0.95, Color("#a8865c") if big else Color("#b8946a"))
+			elif s.style == 2:
+				_round_house(b, r, 13 if big else 11, 30 if big else 24, Color("#8f6d48") if big else Color("#9b7a52"), Color("#b98f42") if big else Color("#c9a24f"), frac, true)
+			else:
+				_longhouse(s.pos, r)
+			if s.built and sim.has_tech("fire"): _smoke(b - Vector2(0, (30 if s.style == 1 else 34) + (6 if big else 0)), s.id)
+			if s.reno: _scaffold(b, r)
+		"aurochs_pen":
+			_pen(s, b, a)
+		"smelter":
+			_smelter(s, b, a)
+		"council_ring":
+			_council(s, b, a)
 		"granary":
 			if s.built:
 				for i in 4:
@@ -698,6 +769,114 @@ func _draw_structure(s) -> void:
 			_box(s.pos, 20, 20, 16, Color(0.66, 0.64, 0.6, a))
 			_totem(b - Vector2(0, 16), 54, 1.3, a)
 
+# ---- era styles & new buildings
+## Era 1 home: a hide tent on leaning poles.
+func _tent(b: Vector2, r: float, hide: Color) -> void:
+	var rx := r * 1.0
+	var ry := r * 0.5
+	_ell(b + Vector2(rx * 0.4, ry * 0.3), rx * 1.2, ry * 1.1, SHADOW)
+	var apex := b - Vector2(0, r * 1.55)
+	var pts := _arc_pts(b, rx, ry, 0, PI, 14)
+	pts.append(apex)
+	ci.draw_colored_polygon(pts, hide)
+	var dark := _arc_pts(b, rx, ry, 0, PI * 0.4, 6)
+	dark.append(apex)
+	ci.draw_colored_polygon(dark, hide.darkened(0.25))
+	for i in 5: # seams
+		var q := b + Vector2(cos(PI * (i + 0.5) / 5) * rx, sin(PI * (i + 0.5) / 5) * ry)
+		ci.draw_line(q, apex.lerp(q, 0.1), hide.darkened(0.35), 1)
+	ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-5, ry * 0.95), b + Vector2(3, ry), b + Vector2(-1, -r * 0.55)]), Color("#3a2414"))
+	for d in [-1, 1, 0]:
+		ci.draw_line(apex, apex + Vector2(d * 5 - 1, -9), Color("#6b4524"), 2)
+
+## Era 3 home: timber longhouse on a stone footing with a carved gable.
+func _longhouse(c: Vector2, r: float) -> void:
+	var hw := r * 1.25
+	var hd := r * 0.7
+	var b := iso(c)
+	_ell(b + Vector2(16, 6), hw * 1.4, hd * 0.9, SHADOW)
+	_box(c, hw + 4, hd + 4, 5, Color("#8f8b82"))
+	_box(c, hw, hd, 14, Color("#8a5f3a"), 5)
+	var eave := 19.0
+	var rh := 18.0 + r * 0.3
+	var ue := Vector2(0, eave)
+	var ur := Vector2(0, eave + rh)
+	var e1 := iso(c + Vector2(-hw - 3, -hd - 3)) - ue
+	var e2 := iso(c + Vector2(hw + 3, -hd - 3)) - ue
+	var e3 := iso(c + Vector2(hw + 3, hd + 3)) - ue
+	var e4 := iso(c + Vector2(-hw - 3, hd + 3)) - ue
+	var rl := iso(c + Vector2(-hw - 3, 0)) - ur
+	var rr := iso(c + Vector2(hw + 3, 0)) - ur
+	ci.draw_colored_polygon(PackedVector2Array([e1, e2, rr, rl]), Color("#7a5a32"))
+	ci.draw_colored_polygon(PackedVector2Array([e2, e3, rr]), Color("#6e4a28"))
+	ci.draw_colored_polygon(PackedVector2Array([e4, e3, rr, rl]), Color("#a8823e"))
+	for i in 6:
+		var k := (i + 0.5) / 6.0
+		ci.draw_line(e4.lerp(e3, k), rl.lerp(rr, k), Color("#8a6a30"), 1)
+	ci.draw_line(rl, rr, Color("#5a3d22"), 2)
+	ci.draw_line(rr, rr + Vector2(-5, -8), Color("#c0392b"), 2.5)
+	ci.draw_line(rr, rr + Vector2(5, -8), Color("#c0392b"), 2.5)
+	var door := iso(c + Vector2(0, hd)) - Vector2(0, 5)
+	ci.draw_colored_polygon(PackedVector2Array([door + Vector2(-5, 0), door + Vector2(-5, -11), door + Vector2(5, -11), door + Vector2(5, 0)]), Color("#2a1a0e"))
+
+func _smoke(p: Vector2, seed_id: int) -> void:
+	for i in 3:
+		var k := fmod(t * 0.35 + i / 3.0 + seed_id * 0.13, 1.0)
+		ci.draw_circle(p + Vector2(sin(t * 1.3 + i + seed_id) * 3 + 6 * k, -24 * k), 2.0 + 4.0 * k, Color(0.75, 0.75, 0.75, 0.32 * (1.0 - k)))
+
+func _scaffold(b: Vector2, r: float) -> void:
+	for x in [-r * 0.9, r * 0.9]:
+		ci.draw_line(b + Vector2(x, 4), b + Vector2(x, -r * 1.6), Color("#c8a46a"), 2)
+	ci.draw_line(b + Vector2(-r, -r * 0.7), b + Vector2(r, -r * 0.7), Color("#c8a46a"), 2)
+	ci.draw_line(b + Vector2(-r, -r * 1.3), b + Vector2(r, -r * 1.3), Color("#c8a46a"), 2)
+
+func _pen(s, b: Vector2, a: float) -> void:
+	var rx := 32.0
+	var ry := 16.0
+	var col := Color(Color("#7a5530"), a)
+	var back := _arc_pts(b, rx, ry, PI, TAU, 10)
+	ci.draw_polyline(back, col, 2)
+	for q in back: ci.draw_line(q, q - Vector2(0, 9), col, 2)
+	ci.draw_polyline(_arc_pts(b, rx, ry, PI, TAU, 10, 6), col, 1.5)
+	if s.built:
+		for i in 2:
+			var ph: float = t * 0.4 + i * 3.0 + s.id
+			var q := b + Vector2(sin(ph) * 14 - 6 + i * 10, cos(ph * 0.7) * 5)
+			var f := 1.0 if cos(ph) > 0 else -1.0
+			_ell(q + Vector2(2, 1), 9, 3, SHADOW)
+			_ell(q - Vector2(0, 7), 9, 5, Color("#3d2a1c"))
+			ci.draw_circle(q + Vector2(9 * f, -9), 3.5, Color("#4a3322"))
+			ci.draw_line(q + Vector2(9 * f, -12), q + Vector2(13 * f, -16), Color("#e8dcc0"), 1.5)
+			ci.draw_line(q + Vector2(7 * f, -12), q + Vector2(5 * f, -16), Color("#e8dcc0"), 1.5)
+			for l in [-5, -1, 3, 6]: ci.draw_line(q + Vector2(l, -4), q + Vector2(l, 0), Color("#2a1d10"), 1.5)
+	var front := _arc_pts(b, rx, ry, 0, PI, 10)
+	ci.draw_polyline(front, col, 2)
+	for q in front: ci.draw_line(q, q - Vector2(0, 9), col, 2)
+	ci.draw_polyline(_arc_pts(b, rx, ry, 0, PI, 10, 6), col, 1.5)
+
+func _smelter(s, b: Vector2, a: float) -> void:
+	_ell(b + Vector2(8, 3), 22, 8, SHADOW)
+	var stone := Color(Color("#7d776c"), a)
+	ci.draw_colored_polygon(_arc_pts(b, 16, 8, 0, PI, 10) + _arc_pts(b - Vector2(0, 18), 12, 6, PI, 0, 10), stone)
+	ci.draw_colored_polygon(_arc_pts(b - Vector2(0, 18), 12, 6, PI, TAU, 10) + _arc_pts(b - Vector2(0, 18), 12, 6, 0, PI, 10), stone.lightened(0.1))
+	ci.draw_rect(Rect2(b.x + 2, b.y - 34, 6, 16), stone.darkened(0.15))
+	if s.built:
+		var glow := 0.75 + 0.25 * sin(t * 6 + s.id)
+		ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-6, 6), b + Vector2(-6, -4), b + Vector2(0, -8), b + Vector2(6, -4), b + Vector2(6, 6)]), Color(1.0, 0.45 * glow + 0.2, 0.1, 1.0))
+		for i in 3: ci.draw_rect(Rect2(b.x + 14 + i * 4, b.y + 2 - i, 6, 3), Color("#d49a3a"))
+		_smoke(b - Vector2(-5, 36), s.id)
+
+func _council(s, b: Vector2, a: float) -> void:
+	for i in 10:
+		var ang := TAU * i / 10
+		var q := b + Vector2(cos(ang) * 34, sin(ang) * 17)
+		_ell(q + Vector2(2, 1), 6, 3, SHADOW)
+		ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-5, 0), q + Vector2(-4, -6), q + Vector2(4, -7), q + Vector2(5, 0)]), Color(Color("#9a968c"), a))
+	if s.built:
+		_logs(b, 1.0)
+		_flame(b - Vector2(0, 3), 5, 13 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
+	_totem(b - Vector2(0, 0) + Vector2(0, -16), 18, 0.6, a)
+
 func _logs(b: Vector2, a: float) -> void:
 	ci.draw_line(b + Vector2(-9, 2), b + Vector2(7, -5), Color(0.35, 0.22, 0.1, a), 3.5)
 	ci.draw_line(b + Vector2(9, 2), b + Vector2(-7, -5), Color(0.42, 0.27, 0.12, a), 3.5)
@@ -720,6 +899,10 @@ func _totem(b: Vector2, h: float, s: float, a: float) -> void:
 	ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x + 4 * s, wy), Vector2(b.x + 18 * s, wy - 8 * s), Vector2(b.x + 15 * s, wy + 2 * s)]), Color(Color("#d4a02e"), a))
 
 func _draw_structure_overlay(s) -> void:
+	if s.reno:
+		var rb := iso(s.pos)
+		_bar(Vector2(rb.x, rb.y + 10), 38, s.reno_progress / (s.work * 0.6), Color("#ffd36b"))
+		return
 	if s.built: return
 	var sd: Dictionary = D.STRUCTURES[s.type]
 	var b := iso(s.pos) if not sd.get("ring", false) else iso(s.pos + Vector2(sd["r"], sd["r"]) * 0.707)
@@ -778,6 +961,10 @@ func _draw_unit(u) -> void:
 	ci.draw_line(b + Vector2(2, -9 - bob), b + Vector2(2 - sw, 0), skin.darkened(0.15), 2.5)
 	# torso (fur tunic)
 	var hip := b + Vector2(0, -8 - bob)
+	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
+		_pack_ox(b + Vector2(-17 * f, 3), f, walk)
+	if sim.has_tech("hide"): # fur cloak behind the body
+		ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(-6, -12), hip + Vector2(6, -12), hip + Vector2(-4 * f + 5 * f, 2), hip + Vector2(-8 * f, 1)]), Color("#7a5a3a"))
 	ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(-5, 1), hip + Vector2(5, 1), hip + Vector2(4, -12), hip + Vector2(-4, -12)]), u.color)
 	ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(1.5 * f, 1), hip + Vector2(5 * f, 1), hip + Vector2(4 * f, -12), hip + Vector2(1 * f, -12)]), u.color.darkened(0.25))
 	ci.draw_line(hip + Vector2(-5, 1), hip + Vector2(5, 1), u.color.darkened(0.45), 1.5)
@@ -790,18 +977,25 @@ func _draw_unit(u) -> void:
 	if u.job.get("type", "") == "attack" or u.act == "Fighting" or u.has_trait("belligerent"):
 		var dirv := Vector2(0.35 * f, -1).normalized().rotated(swing * f * 0.5)
 		ci.draw_line(hand - dirv * 6, hand + dirv * 18, Color("#b9a27a"), 1.6)
-		ci.draw_colored_polygon(PackedVector2Array([hand + dirv * 18 + Vector2(-2, 0), hand + dirv * 18 + Vector2(2, 0), hand + dirv * 24]), Color("#8d8d93"))
+		ci.draw_colored_polygon(PackedVector2Array([hand + dirv * 18 + Vector2(-2, 0), hand + dirv * 18 + Vector2(2, 0), hand + dirv * 24]), _blade_col())
 	elif busy:
 		var tool := Vector2(0.9 * f, -0.4).normalized().rotated(swing * f)
 		ci.draw_line(hand, hand + tool * 10, Color("#8a5a32"), 2)
-		ci.draw_circle(hand + tool * 10, 2.2, Color("#8d8d93"))
+		ci.draw_circle(hand + tool * 10, 2.2, _blade_col())
 	# head
 	var head := sh + Vector2(0, -5)
 	ci.draw_circle(head, 4.5, skin)
 	ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-5, -1), head + Vector2(-3.5, -5), head + Vector2(3.5, -5.5), head + Vector2(5, -1), head + Vector2(-1 * f, -2.5)]), Color("#2e1d10"))
 	ci.draw_circle(head + Vector2(2 * f, 0), 0.9, Color("#1a0f08"))
+	if sim.has_bronze() and (u.has_trait("belligerent") or u.job.get("type", "") == "attack" or u.title == "War Chief"):
+		ci.draw_colored_polygon(_arc_pts(head - Vector2(0, 1), 5.5, 5.5, PI, TAU, 8), Color("#c8902e"))
+		ci.draw_circle(hip + Vector2(0, -6), 2.5, Color("#d49a3a"))
 	if u.title != "":
 		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -5), head + Vector2(-1, -11), head + Vector2(0, -5.5), head + Vector2(2, -12), head + Vector2(4, -5)]), Color("#e8c25a"))
+	if _has_torch(u):
+		var th := sh + Vector2(-6 * f, 4)
+		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
+		_flame(th + Vector2(-2 * f, -14), 3, 9 * (1.0 + 0.2 * sin(t * 14 + u.id)), Color("#f8a531"))
 	if u.carry_amt > 0:
 		var bk := hip + Vector2(-6 * f, -8)
 		if u.carry_type == "wood":
@@ -814,6 +1008,21 @@ func _draw_unit(u) -> void:
 		for i in 3:
 			var k := fmod(t * 0.7 + i / 3.0, 1.0)
 			ci.draw_circle(b + Vector2(sin(t * 2 + i * 2) * 10, -10 - 30 * k), 1.8, Color(0.8, 0.7, 1, 1 - k))
+
+## Stone before Polished Stone Tools is crude grey-brown; bronze once a smelter stands.
+func _blade_col() -> Color:
+	if sim.has_bronze(): return Color("#d49a3a")
+	return Color("#8d8d93") if sim.has_tech("tools") else Color("#8a7458")
+
+func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
+	_ell(q + Vector2(2, 1), 10, 3.5, SHADOW)
+	for i in 4:
+		var lx := q.x + (-6 + i * 4) * f
+		ci.draw_line(Vector2(lx, q.y - 6), Vector2(lx + (sin(t * 12 + i) * 2.0 if walk else 0.0), q.y), Color("#2a1d10"), 1.5)
+	_ell(q - Vector2(0, 9), 9, 5, Color("#4a3322"))
+	ci.draw_circle(q + Vector2(9 * f, -11), 3.2, Color("#3d2a1c"))
+	ci.draw_line(q + Vector2(9 * f, -14), q + Vector2(13 * f, -17), Color("#e8dcc0"), 1.3)
+	ci.draw_rect(Rect2(q.x - 5, q.y - 18, 10, 5), Color("#8a5a32"))
 
 func _draw_unit_overlay(u) -> void:
 	if u.dead: return
@@ -1048,7 +1257,7 @@ func draw_item(kind: int, obj) -> void:
 		2: _draw_unit(obj)
 		3: _draw_pred(obj)
 		4: _draw_guardian(obj)
-		5: _draw_post(iso(obj[0]), obj[1], obj[2])
+		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3])
 		6: _draw_landmark(obj)
 		7:
 			for d in obj: _draw_decor(d)
@@ -1100,16 +1309,18 @@ func _sync_items() -> void:
 				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
 				var key := "s%d_%d" % [st.id, i]
 				seen[key] = true
-				var it := _item(key, 5, [pp, i < shown, st.built], iso(pp), false)
+				var it := _item(key, 5, [pp, i < shown, st.built, st.style], iso(pp), false)
 				it.visible = exp
-				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0))
+				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type != "farm_plot":
 			var key := "s%d" % st.id
 			seen[key] = true
-			var anim: bool = st.type in ["bonfire", "fishing_dock"] or not st.built
+			var anim: bool = st.type in ["bonfire", "fishing_dock", "aurochs_pen", "smelter", "council_ring"] or not st.built or st.reno \
+				or (st.type in ["hut", "large_hut"] and sim.has_tech("fire"))
 			var it := _item(key, 1, st, iso(st.pos), anim)
+			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
-			_touch(it, 1 if st.built else 0)
+			_touch(it, (1 if st.built else 0) + st.style * 10)
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true

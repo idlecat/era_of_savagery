@@ -32,23 +32,23 @@ const SIGHT_BONFIRE := 300.0
 ## Points of interest hidden in the fog. Found when first seen by a tribesperson.
 ## reward: stock deltas; reveal: extra radius revealed on discovery; den: spawns prowling tigers.
 const LANDMARKS := [
-	{"id": "cave", "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520), "reward": {"lore": 40},
+	{"id": "cave", "insight": {"totems": 0.4}, "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520), "reward": {"lore": 40},
 		"text": "found the Painted Cave, where the ancestors drew the great hunt"},
-	{"id": "stones", "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020), "reward": {"lore": 30}, "devotion": 8.0,
+	{"id": "stones", "insight": {"totems": 0.3, "code": 0.2}, "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020), "reward": {"lore": 30}, "devotion": 8.0,
 		"text": "found the Standing Stones that hum when the moon is full"},
-	{"id": "mammoth", "kind": "bones", "name": "Mammoth Graveyard", "pos": Vector2(1180, 330), "reward": {"lore": 15, "wood": 25},
+	{"id": "mammoth", "insight": {"hide": 0.5}, "kind": "bones", "name": "Mammoth Graveyard", "pos": Vector2(1180, 330), "reward": {"lore": 15, "wood": 25},
 		"text": "found the Mammoth Graveyard and hauled home great tusks and ribs"},
-	{"id": "flint", "kind": "flint", "name": "Flint Outcrop", "pos": Vector2(260, 1640), "reward": {"wood": 40, "lore": 10},
+	{"id": "flint", "insight": {"tools": 0.6, "bronze": 0.2}, "kind": "flint", "name": "Flint Outcrop", "pos": Vector2(260, 1640), "reward": {"wood": 40, "lore": 10},
 		"text": "found a Flint Outcrop; the tribe's axes bite deeper now"},
-	{"id": "grove", "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080), "reward": {"food": 40},
+	{"id": "grove", "insight": {"farming": 0.5}, "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080), "reward": {"food": 40},
 		"text": "found a Wild Berry Grove heavy with fruit"},
-	{"id": "peak", "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300), "reward": {"lore": 20}, "reveal": 650.0,
+	{"id": "peak", "insight": {"domestication": 0.4}, "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300), "reward": {"lore": 20}, "reveal": 650.0,
 		"text": "climbed Eagle Peak and saw the whole east bank spread below"},
-	{"id": "spring", "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120), "reward": {"food": 20, "lore": 15},
+	{"id": "spring", "insight": {"pottery": 0.4}, "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120), "reward": {"food": 20, "lore": 15},
 		"text": "found a steaming Hot Spring deep in the east"},
-	{"id": "den_n", "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760), "reward": {"lore": 10}, "den": 2,
+	{"id": "den_n", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760), "reward": {"lore": 10}, "den": 2,
 		"text": "found a Saber-tooth Den littered with bones and lived to tell of it"},
-	{"id": "den_s", "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180), "reward": {"lore": 10}, "den": 1,
+	{"id": "den_s", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180), "reward": {"lore": 10}, "den": 1,
 		"text": "found a second Saber-tooth Den in the southern thickets"},
 ]
 
@@ -92,10 +92,15 @@ const STRUCTURES := {
 	"totem_shrine": {"name": "Totem Shrine", "wood": 18, "work": 30.0, "r": 14.0, "lore": 0.06},
 	"farm_plot":    {"name": "Farm Plot", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
 	"granary":      {"name": "Granary", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
-	"grand_altar":  {"name": "Grand Altar", "wood": 60, "work": 80.0, "r": 24.0, "tech": "totems"},
+	"grand_altar":  {"name": "Grand Altar", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
+	"aurochs_pen":  {"name": "Aurochs Pen", "wood": 25, "work": 30.0, "r": 30.0, "food": 0.05, "tech": "domestication"},
+	"smelter":      {"name": "Bronze Smelter", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
+	"council_ring": {"name": "Council Ring", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
 }
+## Homes and walls get a new look per era (style = era they were built or renovated in).
+const STYLED := ["hut", "large_hut", "palisade", "granary"]
 const CONTRACT_STRUCTURES := ["hut", "large_hut", "palisade", "fishing_dock", "bonfire", "weapon_rack", "totem_shrine", "farm_plot"]
-const VILLAGE_BUILDS := ["hut", "palisade", "bonfire", "totem_shrine", "farm_plot", "granary", "grand_altar"]
+const VILLAGE_BUILDS := ["hut", "palisade", "bonfire", "totem_shrine", "farm_plot", "granary", "aurochs_pen", "smelter", "council_ring", "grand_altar"]
 const STRUCT_ALIASES := {
 	"wooden_palisade": "palisade", "wall": "palisade", "walls": "palisade", "fence": "palisade",
 	"dock": "fishing_dock", "fishing_pier": "fishing_dock", "pier": "fishing_dock",
@@ -106,18 +111,60 @@ const STRUCT_ALIASES := {
 	"farm": "farm_plot", "field": "farm_plot", "crop_plot": "farm_plot",
 }
 
+## Knowledge evolves two ways: by PRACTICE (people doing related work build up insight;
+## "practice" maps activity -> weight) and by spending lore to finish the idea. "words"
+## are things personas must not mention before the tech exists.
+const INSIGHT_RATE := 0.06
+const PRACTICE_NAMES := {"chop": "felling trees", "hunt": "hunting & butchering", "berry": "foraging berries", "build": "building",
+	"ritual": "rituals", "quarry": "quarrying stone", "explore": "scouting", "hearth": "nights by the fire", "lead": "leading others"}
 const TECHS := [
-	{"id": "fire", "era": 1, "name": "Friction Fire", "cost": 15, "req": [], "desc": "Bonfire warmth radius x2. Cooked food is 25% more nourishing."},
-	{"id": "tools", "era": 1, "name": "Polished Stone Tools", "cost": 20, "req": [], "desc": "+30% hunting & woodcutting speed. +2 ATK."},
-	{"id": "hide", "era": 1, "name": "Hide Tailoring", "cost": 20, "req": [], "desc": "Immune to night cold. +2 DEF."},
-	{"id": "pottery", "era": 2, "name": "Primitive Pottery", "cost": 35, "req": ["fire"], "desc": "Unlocks Granary (+4 pop cap). Food spoilage -50%."},
-	{"id": "domestication", "era": 2, "name": "Beast Domestication", "cost": 40, "req": ["tools"], "desc": "Tamed aurochs haul loads: +50% carry capacity."},
-	{"id": "farming", "era": 2, "name": "Slash-and-Burn Farming", "cost": 35, "req": ["fire"], "desc": "Unlocks Farm Plots for steady food."},
-	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "desc": "+60% ATK, +3 DEF for all tribespeople."},
-	{"id": "totems", "era": 3, "name": "Megalithic Totems", "cost": 70, "req": ["pottery"], "desc": "Unlocks the Grand Altar, which summons a mythic guardian beast."},
-	{"id": "code", "era": 3, "name": "Tribal Code", "cost": 60, "req": ["farming"], "desc": "+1 Vice-Chieftain slot (War Chief)."},
+	{"id": "fire", "era": 1, "name": "Friction Fire", "cost": 15, "req": [], "practice": {"hearth": 1.0, "ritual": 0.5},
+		"desc": "Torches light the night and homes get hearths. Bonfire warmth x2; cooked food 25% more nourishing.", "words": ["fire-drills", "torches"]},
+	{"id": "tools", "era": 1, "name": "Polished Stone Tools", "cost": 20, "req": [], "practice": {"chop": 1.0, "hunt": 0.6},
+		"desc": "+30% hunting & woodcutting, +2 ATK. Lets the tribe quarry stone from boulders.", "words": ["polished axes", "quarrying"]},
+	{"id": "hide", "era": 1, "name": "Hide Tailoring", "cost": 20, "req": [], "practice": {"hunt": 1.0},
+		"desc": "Fur cloaks: immune to night cold, +2 DEF.", "words": ["sewn furs", "needles"]},
+	{"id": "pottery", "era": 2, "name": "Primitive Pottery", "cost": 35, "req": ["fire"], "practice": {"hearth": 0.6, "berry": 0.6},
+		"desc": "Unlocks the Granary (+4 pop cap). Food spoilage -50%.", "words": ["pots", "pottery", "clay jars", "granaries"]},
+	{"id": "domestication", "era": 2, "name": "Beast Domestication", "cost": 40, "req": ["tools"], "practice": {"hunt": 0.8, "explore": 0.6},
+		"desc": "Unlocks the Aurochs Pen. Pack oxen: +50% carry capacity.", "words": ["tamed beasts", "oxen", "pens", "riding"]},
+	{"id": "farming", "era": 2, "name": "Slash-and-Burn Farming", "cost": 35, "req": ["fire"], "practice": {"berry": 1.0},
+		"desc": "Unlocks Farm Plots for steady food.", "words": ["farms", "fields", "planting", "crops"]},
+	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "practice": {"quarry": 1.0, "build": 0.3},
+		"desc": "Unlocks the Bronze Smelter; once one stands, the tribe is armed in bronze (+60% ATK, +3 DEF).", "words": ["bronze", "metal", "smelting"]},
+	{"id": "totems", "era": 3, "name": "Megalithic Totems", "cost": 70, "req": ["pottery"], "practice": {"ritual": 1.0},
+		"desc": "Unlocks the Grand Altar (mythic guardian). Carved totems preserve all the tribe's knowledge.", "words": ["great totems", "altars", "megaliths"]},
+	{"id": "code", "era": 3, "name": "Tribal Code", "cost": 60, "req": ["farming"], "practice": {"lead": 1.0, "build": 0.3},
+		"desc": "+1 Vice-Chieftain slot and the Council Ring. Laws preserve all the tribe's knowledge.", "words": ["laws", "councils"]},
 ]
 const ERA_NAMES := {1: "Stone & Fire Era", 2: "Tribe & Agrarian Era", 3: "Bronze & Mythic Era"}
+
+# ---- Culture: four values that drift with what the tribe actually does ----
+const CULTURE_AXES := {
+	"martial": ["Martial", "Peaceful"], "spiritual": ["Spiritual", "Practical"],
+	"settled": ["Settled", "Roaming"], "ranked": ["Ranked", "Communal"],
+}
+const TRADITION_THRESHOLD := 35.0
+const TRADITIONS := [
+	{"id": "warrior_initiation", "axis": "martial", "sign": 1, "name": "Warrior Initiation", "arch": "warrior",
+		"desc": "Youths prove themselves on the hunt: +2 ATK for everyone, combat XP +25%."},
+	{"id": "peaceful_ways", "axis": "martial", "sign": -1, "name": "Peaceful Ways", "arch": "agrarian",
+		"desc": "The tribe sheds no needless blood: +20% gathering speed."},
+	{"id": "ancestor_rites", "axis": "spiritual", "sign": 1, "name": "Ancestor Rites", "arch": "mystic",
+		"desc": "Nightly rites for the ancestors: rituals give +30% lore and devotion."},
+	{"id": "makers_pride", "axis": "spiritual", "sign": -1, "name": "Makers' Pride", "arch": "cautious",
+		"desc": "Skill is honored above omens: +20% building speed."},
+	{"id": "harvest_festival", "axis": "settled", "sign": 1, "name": "Harvest Festival", "arch": "agrarian",
+		"desc": "The tribe feasts on what the land gives: farms, docks and pens yield +30%."},
+	{"id": "wayfinders", "axis": "settled", "sign": -1, "name": "Wayfinders", "arch": "warrior",
+		"desc": "Born to roam: +40 sight and +10% travel speed."},
+	{"id": "council_of_elders", "axis": "ranked", "sign": 1, "name": "Council of Elders", "arch": "cautious",
+		"desc": "Rank is respected: +1 Vice-Chieftain slot."},
+	{"id": "shared_hearth", "axis": "ranked", "sign": -1, "name": "Shared Hearth", "arch": "lazy",
+		"desc": "All eat from one pot: hunger drains 20% slower."},
+]
+## Which personality newborns lean toward as the culture develops.
+const CULTURE_TRAIT := {"martial": "belligerent", "spiritual": "devout", "settled": "gluttonous", "ranked": "cautious"}
 
 const TRAITS := {
 	"cautious":    {"name": "Cautious & Pragmatic", "arch": "cautious", "desc": "Safety first. Builds walls before huts."},

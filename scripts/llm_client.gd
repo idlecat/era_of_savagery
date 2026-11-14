@@ -85,6 +85,22 @@ Your personality MUST shape both your tone and the ORDER/CHOICE of steps (cautio
 Mention at least one memory from your memory_stream naturally. Speak with primal, vivid language; no modern words.
 If the Chieftain set terms, honor them; you may grumble in speech if they clash with your nature."""
 
+const RESEARCH_RULES := """The Chieftain asks you to lead a RESEARCH Task Contract: seek one new piece of wisdom for the tribe.
+You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
+{"speech": "<2-4 sentences, in character, addressed to the Great Chieftain: which idea you want to pursue and why>",
+ "blueprint": {
+   "kind": "research",
+   "plan_id": "<snake_case name>",
+   "tech": "<id of ONE idea from ideas_within_reach>",
+   "crew_size": <int 1-%d, including yourself>,
+   "steps": [ <ordered steps, 2-5 of them, at least one experiment> ],
+   "abort_conditions": [ <from: "enemy_attack", "hp_below_<N>%%"> ]
+ }}
+Allowed steps: {"action": "gather_wood"|"gather_food", "target_amount": <5-60>}, {"action": "gather_stone", "target_amount": <5-40>} (only if stone_quarrying_possible),
+  {"action": "experiment", "duration_sec": <8-45>}, {"action": "ritual", "duration_sec": <4-30>}.
+Pick the idea that fits YOUR personality and memories, unless the Chieftain names one. Describe the idea only in words your tribe could use - you have not discovered it yet.
+Mention at least one memory from your memory_stream naturally. Primal, vivid language; no modern words."""
+
 func _structure_costs() -> String:
 	var parts: Array = []
 	for k in D.CONTRACT_STRUCTURES:
@@ -93,8 +109,14 @@ func _structure_costs() -> String:
 		parts.append("%s=%d" % [k, sd["wood"]])
 	return ", ".join(parts)
 
-func _persona_header(leader: Dictionary) -> String:
-	return "You are %s, \"%s\", a member of a prehistoric tribe at the dawn of civilization, where saber-toothed tigers and great beasts roam. Your personality: %s.\n" % [leader["name"], leader["epithet"], "; ".join(leader["personality"])]
+func _persona_header(leader: Dictionary, world: Dictionary = {}) -> String:
+	var h := "You are %s, \"%s\", a member of a prehistoric tribe at the dawn of civilization, where saber-toothed tigers and great beasts roam. Your personality: %s.\n" % [leader["name"], leader["epithet"], "; ".join(leader["personality"])]
+	if not world.is_empty():
+		h += "Your tribe lives in the %s. Its culture is %s%s. It knows: %s.\n" % [world["age"], world["tribe_culture"],
+			("; its traditions: " + ", ".join(world["traditions"])) if not world["traditions"].is_empty() else "",
+			", ".join(world["known_wisdom"]) if not world["known_wisdom"].is_empty() else "nothing beyond stone, wood and fire"]
+		h += "Speak only of what your tribe knows. You have NO words for: %s - never mention them.\n" % ", ".join(world["unknown_things_you_have_no_words_for"])
+	return h
 
 # ------------------------------------------------------------ negotiation (Phase 1)
 ## Returns {"speech", "blueprint", "source", "error"}.
@@ -105,12 +127,16 @@ func negotiate(ctx: Dictionary) -> Dictionary:
 		var r := Persona.propose(ctx)
 		r["source"] = "offline"
 		return r
-	var system: String = _persona_header(ctx["leader"]) + RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
+	var research: bool = ctx.get("kind", "settle") == "research"
+	var system: String = _persona_header(ctx["leader"], ctx.get("world", {}))
+	if research: system += RESEARCH_RULES % mini(4, ctx.get("max_crew", 4))
+	else: system += RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
 	var user := {
 		"directive": ctx["directive"],
 		"your_profile": ctx["leader"],
 		"target_environment": ctx["env"],
 		"chieftain_terms": ctx["terms"] if ctx.get("terms_set", false) else "none - propose your own",
+		"ideas_within_reach": ctx.get("candidates", []) if research else null,
 		"conversation_so_far": ctx.get("history", []),
 		"your_previous_blueprint": _strip_private(ctx.get("previous", {})),
 		"chieftain_says_now": ctx.get("player_message", "") if ctx.get("player_message", "") != "" else "(Chieftain awaits your proposal)",
@@ -135,7 +161,7 @@ func emergency(ctx: Dictionary) -> Dictionary:
 		return fallback
 	var fx: Array = []
 	for e in allowed: fx.append("\"%s\" = %s" % [e, ctx["effects"][e]])
-	var system: String = _persona_header(ctx["leader"]) + """You are leading a Task Contract on the east bank and an emergency just interrupted the work.
+	var system: String = _persona_header(ctx["leader"], ctx.get("world", {})) + """You are leading a Task Contract and an emergency just interrupted the work.
 Give the Great Chieftain an urgent, in-character report (2-3 sentences) that reflects your personality and memories, then offer 2-3 choices.
 Reply with ONLY one JSON object: {"speech": "<report>", "options": [{"label": "<short in-character choice>", "effect": "<effect id>"}]}
 Each effect MUST be one of: %s

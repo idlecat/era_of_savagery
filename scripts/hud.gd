@@ -32,6 +32,8 @@ var log_dirty := true
 var roster_sig := ""
 var roster_headers := {} # group key -> Button
 var sheet_scout_btn: Button
+var sheet_research_btn: Button
+var reno_btn: Button
 var minimap: Control
 const MINI_W := 314.0
 
@@ -169,7 +171,7 @@ func _build_top(root: Control) -> void:
 		var b := _button("%dx" % sp, func(): sim.speed = sp)
 		speed_btns.append(b)
 		h.add_child(b)
-	h.add_child(_button("Wisdom Tree", _open_tech, "T"))
+	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
 	h.add_child(_button("LLM Settings", _open_settings))
 	h.add_child(_button("?", _show_intro))
 
@@ -206,6 +208,10 @@ func _build_left(root: Control) -> void:
 	sheet_box.add_child(sheet_contract_btn)
 	sheet_scout_btn = _button("Scout the unknown (X)", func(): world.scout_selected(), "Auto-explore: walk to the nearest unexplored land until called back (right-click)")
 	sheet_box.add_child(sheet_scout_btn)
+	sheet_research_btn = _button("Seek new wisdom…", func():
+		var sel: Array = world.selected_units()
+		if sel.size() == 1: open_negotiation(sel[0], "research"), "Tier 2: a research Task Contract - the leader proposes which idea to pursue and how")
+	sheet_box.add_child(sheet_research_btn)
 	var hb := HBoxContainer.new()
 	sheet_box.add_child(hb)
 	sheet_steward_btn = _button("Appoint Steward", func(): _appoint("steward"), "Tier 3: auto-manages idle villagers")
@@ -301,17 +307,26 @@ func _build_right(root: Control) -> void:
 	v.add_child(grid)
 	for k in D.VILLAGE_BUILDS:
 		var sd: Dictionary = D.STRUCTURES[k]
-		var b := _button("%s (%d)" % [sd["name"], sd["wood"]], func(): world.build_type = k, "Costs %d wood" % sd["wood"])
+		var b := _button("%s (%s)" % [sd["name"], _cost_short(sd)], func(): world.build_type = k, "Costs " + _cost_long(sd))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.clip_text = true
+		b.custom_minimum_size = Vector2(60, 0)
 		build_btns[k] = b
 		grid.add_child(b)
+	reno_btn = _button("", func():
+		var free: Array = world.selected_units().filter(func(u): return u.role != "contract")
+		var err: String = sim.renovate(free)
+		if err != "": sim.popup(D.VILLAGE, err, Color("#ff8080")), "Rebuild old homes and walls in the current era's style")
+	reno_btn.visible = false
+	reno_btn.clip_text = true
+	v.add_child(reno_btn)
 	var ph := HBoxContainer.new()
 	v.add_child(ph)
 	var pl := _label("Steward policy:", 14, COL_DIM)
 	pl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	ph.add_child(pl)
 	policy_opt = OptionButton.new()
-	for pol in ["balanced", "food", "wood", "lore"]: policy_opt.add_item(pol)
+	for pol in ["balanced", "food", "wood", "stone", "lore"]: policy_opt.add_item(pol)
 	policy_opt.item_selected.connect(func(i): sim.steward_policy = policy_opt.get_item_text(i))
 	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ph.add_child(policy_opt)
@@ -338,9 +353,9 @@ func _refresh_top() -> void:
 	var f: float = sim.day_frac()
 	var phase := "Night" if sim.night_amt > 0.5 else ("Dusk" if f > 0.65 else "Day")
 	var since: String = "%.0fs" % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
-	top_stats.text = "[color=#ffd36b]Day %d[/color] %s   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color] [color=#8a9aa8](%s · sim ticks since last: %d)[/color]" % [
-		sim.day(), phase, sim.stock["food"], sim.stock["wood"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
-		sim.devotion, sim.explored_pct(), sim.llm_calls, llm.label(), sim.ticks_since_llm]
+	top_stats.text = "[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color] [color=#8a9aa8](%s)[/color]" % [
+		sim.day(), phase, D.ERA_NAMES[sim.evo.era], sim.stock["food"], sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
+		sim.devotion, sim.explored_pct(), sim.llm_calls, "offline" if not llm.is_online() else llm.model]
 	pause_btn.text = "Resume" if sim.paused else "Pause"
 	for i in speed_btns.size():
 		speed_btns[i].modulate = COL_ACCENT if sim.speed == [1, 2, 4][i] else Color.WHITE
@@ -438,7 +453,9 @@ func _refresh_left_content() -> void:
 	if u.hero: s += "[color=#ffd36b]Mythic bloodline[/color]\n"
 	s += "[color=#e6b8ff]%s[/color] · Level %d\n" % [", ".join(tr), sim.unit_level(u)]
 	s += "HP %d/%d   Hunger %d%%\nATK %.1f   DEF %.1f   SPD %.2f   Kills %d\n" % [u.hp, u.max_hp, u.hunger, sim.unit_atk(u), sim.unit_def(u), u.spd, u.kills]
-	s += "[color=#b8a888]Now:[/color] %s\n\n" % u.act
+	s += "[color=#b8a888]Now:[/color] %s\n" % u.act
+	var knows: Array = sim.evo.known_by(u).map(func(id): return sim.evo.tech_def(id)["name"])
+	s += "[color=#b8a888]Knows:[/color] %s\n\n" % (", ".join(knows) if not knows.is_empty() else "[color=#8a7a60]only the old ways[/color]")
 	s += "[color=#ffd36b]SPECIALIZATIONS[/color]\n"
 	for k in D.SKILLS:
 		var sk: Dictionary = u.skills[k]
@@ -457,6 +474,8 @@ func _refresh_left_content() -> void:
 	sheet_contract_btn.disabled = on_contract or D.bank_of(u.pos) != "west"
 	sheet_contract_btn.text = "On contract — executing blueprint" if on_contract else "Assign Task Contract…"
 	sheet_scout_btn.disabled = on_contract
+	sheet_research_btn.disabled = on_contract or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
+	sheet_research_btn.text = "Seek new wisdom…" if not sim.evo.candidates().is_empty() else "No new wisdom within reach"
 	sheet_scout_btn.text = "Scouting… (right-click to recall)" if u.job.get("type", "") == "explore" else "Scout the unknown (X)"
 	sheet_steward_btn.disabled = sim.vice["steward"] == u.id
 	sheet_chief_btn.disabled = sim.vice["warchief"] == u.id or sim.vice_slots() < 2
@@ -468,8 +487,14 @@ func _refresh_right() -> void:
 	for k in build_btns:
 		var sd: Dictionary = D.STRUCTURES[k]
 		var locked: bool = sd.has("tech") and not sim.has_tech(sd["tech"])
-		build_btns[k].disabled = locked or sim.stock["wood"] < sd["wood"]
-		build_btns[k].tooltip_text = ("Requires %s" % sd["tech"]) if locked else ("Costs %d wood" % sd["wood"])
+		build_btns[k].disabled = locked or sim.stock["wood"] < sd["wood"] or sim.stock["stone"] < sd.get("stone", 0)
+		build_btns[k].tooltip_text = ("Requires %s" % sim.evo.tech_def(sd["tech"])["name"]) if locked else ("Costs " + _cost_long(sd))
+	var old: Array = sim.outdated()
+	reno_btn.visible = not old.is_empty()
+	if not old.is_empty():
+		var rc: Dictionary = sim.reno_cost(old)
+		reno_btn.text = "Renovate %d homes in %s style (%dw%s)" % [old.size(), ["", "hide", "mud & thatch", "timber & stone"][sim.evo.era], rc["wood"], (" %ds" % rc["stone"]) if rc["stone"] > 0 else ""]
+		reno_btn.disabled = sim.stock["wood"] < rc["wood"] or sim.stock["stone"] < rc["stone"]
 	var s := ""
 	if sim.contracts.list.is_empty():
 		s = "[color=#8a7a60]None yet. Select a tribesperson and press 'Assign Task Contract'.[/color]"
@@ -487,6 +512,12 @@ func _refresh_right() -> void:
 		for e in sim.log_lines.slice(0, 40):
 			l += "[color=#7a6a50]D%d[/color] [color=%s]%s[/color]\n" % [e["day"], colors.get(e["kind"], "#d8ccb0"), e["text"]]
 		log_text.text = l
+
+func _cost_short(sd: Dictionary) -> String:
+	return "%d" % sd["wood"] if sd.get("stone", 0) == 0 else "%dw %ds" % [sd["wood"], sd["stone"]]
+
+func _cost_long(sd: Dictionary) -> String:
+	return "%d wood" % sd["wood"] + ((" and %d stone" % sd["stone"]) if sd.get("stone", 0) > 0 else "")
 
 func _appoint(role: String) -> void:
 	var sel: Array = world.selected_units()
@@ -539,6 +570,7 @@ func _show_intro() -> void:
 [color=#ffd36b]Tier 3 · Vice-Chieftains[/color] — appoint a Steward to auto-manage idle villagers.
 [color=#ffd36b]Exploration[/color] — the land beyond the firelight is hidden. Select someone and press [b]X[/b] (or [i]Scout the unknown[/i]) to auto-explore; landmarks reward the finder with lore, food or wood and a new memory. Beware the saber-tooth dens in the far east. The minimap (bottom left) shows what you know: click it to look, right-click it to send the selected people.
 
+[color=#ffd36b]Evolution[/color] — new wisdom comes from [i]practice[/i] (chopping wood teaches stone tools, rituals lead to totems) or from lore and research contracts. Each age changes homes, gear and what people can do; the tribe's culture drifts with its deeds and adopts traditions. Knowledge lives in people until it is carved into totems or laws.
 Every task grants specialization XP and notable events enter each person's [b]Memory Archive[/b], which is fed back into their next negotiation. Research the Wisdom Tree with lore from rituals. Milestone events: the Great Flood (Day %d), Overpopulation (%d people), Birth of the Chosen One (100%% devotion).
 
 LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or GLM with your API key.""" % [D.FLOOD_DAY, D.OVERPOP_THRESHOLD, llm.label()]
@@ -552,19 +584,20 @@ func _start_contract_for_selected() -> void:
 	var sel: Array = world.selected_units()
 	if sel.size() == 1: open_negotiation(sel[0])
 
-func open_negotiation(leader) -> void:
+func open_negotiation(leader, kind := "settle") -> void:
 	var tr: Array = []
 	for t in leader.traits: tr.append(D.TRAITS[t]["name"])
-	var v := _open_modal("TASK CONTRACT · Phase 1: Negotiation with %s" % leader.name, 1080)
+	var research: bool = kind == "research"
+	var v := _open_modal(("RESEARCH CONTRACT · Seeking new wisdom with %s" if research else "TASK CONTRACT · Phase 1: Negotiation with %s") % leader.name, 1080)
 	var token := modal_token
-	var max_crew := mini(5, sim.contracts.available_helpers(leader.id).size() + 1)
-	neg = {"leader": leader, "history": [], "bp": {}, "raw": {}, "terms_set": false, "syncing": false, "busy": false, "calls": 0, "token": token}
+	var max_crew := mini(4 if research else 5, sim.contracts.available_helpers(leader.id).size() + 1)
+	neg = {"leader": leader, "kind": kind, "history": [], "bp": {}, "raw": {}, "terms_set": false, "syncing": false, "busy": false, "calls": 0, "token": token}
 	v.add_child(_label("%s \"%s\" · %s · Lv%d · Craft %d / Combat %d / Lore %d · HP %d/%d" % [leader.name, leader.epithet, ", ".join(tr), sim.unit_level(leader), leader.lv("craft"), leader.lv("combat"), leader.lv("lore"), leader.hp, leader.max_hp], 14, Color("#e6b8ff")))
 	var dh := HBoxContainer.new()
 	v.add_child(dh)
 	dh.add_child(_label("Directive:", 15, COL_DIM))
 	var directive := LineEdit.new()
-	directive.text = "Establish a settlement across the river"
+	directive.text = "Find new wisdom for the tribe" if research else "Establish a settlement across the river"
 	directive.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dh.add_child(directive)
 	neg["directive"] = directive
@@ -586,7 +619,7 @@ func open_negotiation(leader) -> void:
 	var rh := HBoxContainer.new()
 	lcol.add_child(rh)
 	var reply := LineEdit.new()
-	reply.placeholder_text = "Reply to %s… (e.g. 'make it bigger', 'skip the wall', 'focus on fishing')" % leader.name
+	reply.placeholder_text = ("Reply to %s… (e.g. 'seek farming instead', 'be quick about it')" if research else "Reply to %s… (e.g. 'make it bigger', 'skip the wall', 'focus on fishing')") % leader.name
 	reply.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rh.add_child(reply)
 	neg["reply"] = reply
@@ -603,23 +636,36 @@ func open_negotiation(leader) -> void:
 	crew.min_value = 1
 	crew.max_value = max_crew
 	g.add_child(crew)
-	g.add_child(_label("Capacity target", 14, COL_DIM))
-	var cap := SpinBox.new()
-	cap.min_value = 2
-	cap.max_value = 15
-	g.add_child(cap)
-	g.add_child(_label("Focus", 14, COL_DIM))
-	var focus := OptionButton.new()
-	for f in D.FOCUSES: focus.add_item(f)
-	g.add_child(focus)
 	neg["crew"] = crew
-	neg["cap"] = cap
-	neg["focus"] = focus
 	var mark := func(_v):
 		if not neg.get("syncing", false): neg["terms_set"] = true
 	crew.value_changed.connect(mark)
-	cap.value_changed.connect(mark)
-	focus.item_selected.connect(mark)
+	if research:
+		g.add_child(_label("Wisdom to seek", 14, COL_DIM))
+		var tech := OptionButton.new()
+		tech.add_item("Let %s choose" % leader.name)
+		var ids: Array = [""]
+		for id in sim.evo.candidates():
+			tech.add_item("%s (%d%% understood)" % [sim.evo.tech_def(id)["name"], roundi(sim.evo.insight_frac(id) * 100)])
+			ids.append(id)
+		g.add_child(tech)
+		neg["tech"] = tech
+		neg["tech_ids"] = ids
+		tech.item_selected.connect(mark)
+	else:
+		g.add_child(_label("Capacity target", 14, COL_DIM))
+		var cap := SpinBox.new()
+		cap.min_value = 2
+		cap.max_value = 15
+		g.add_child(cap)
+		g.add_child(_label("Focus", 14, COL_DIM))
+		var focus := OptionButton.new()
+		for f in D.FOCUSES: focus.add_item(f)
+		g.add_child(focus)
+		neg["cap"] = cap
+		neg["focus"] = focus
+		cap.value_changed.connect(mark)
+		focus.item_selected.connect(mark)
 	rcol.add_child(_button("Ask %s to revise with these terms" % leader.name, func(): _neg_request("")))
 	var bph := HBoxContainer.new()
 	rcol.add_child(bph)
@@ -653,6 +699,8 @@ func open_negotiation(leader) -> void:
 	_neg_request("")
 
 func _neg_terms() -> Dictionary:
+	if neg.get("kind", "settle") == "research":
+		return {"kind": "research", "crew_size": int(neg["crew"].value), "tech": neg["tech_ids"][neg["tech"].selected]}
 	return {"crew_size": int(neg["crew"].value), "capacity_target": int(neg["cap"].value), "focus": neg["focus"].get_item_text(neg["focus"].selected)}
 
 func _neg_send() -> void:
@@ -671,7 +719,7 @@ func _neg_request(msg: String) -> void:
 	neg["confirm"].disabled = true
 	neg["status"].text = "Awakening %s's LLM persona core (%s)…" % [leader.name, llm.label()]
 	neg["chat"].append_text("[color=#8a7a60][i]%s is thinking…[/i][/color]\n" % leader.name)
-	var ctx: Dictionary = sim.contracts.negotiation_ctx(leader, neg["directive"].text, _neg_terms(), neg["terms_set"], msg, neg["raw"], neg["history"].slice(-6))
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(leader, neg["directive"].text, _neg_terms(), neg["terms_set"], msg, neg["raw"], neg["history"].slice(-6), neg.get("kind", "settle"))
 	var r: Dictionary = await llm.negotiate(ctx)
 	var chat: RichTextLabel = neg["chat"]
 	chat.remove_paragraph(chat.get_paragraph_count() - 2) # drop the "is thinking…" line
@@ -685,6 +733,11 @@ func _neg_request(msg: String) -> void:
 		r["blueprint"] = fb["blueprint"]
 		san = sim.contracts.sanitize(fb["blueprint"], _neg_terms(), leader)
 		note = " · blueprint invalid, engine substituted a safe plan"
+	if not san["ok"]:
+		neg["chat"].append_text("[color=#ff8a7a][i]%s[/i][/color]\n" % " ".join(san["notes"]))
+		neg["status"].text = "No valid plan is possible right now."
+		neg["busy"] = false
+		return
 	neg["raw"] = r["blueprint"] if r["blueprint"] is Dictionary else san["blueprint"]
 	neg["bp"] = san["blueprint"]
 	neg["history"].append({"speaker": leader.name, "text": r["speech"]})
@@ -700,14 +753,21 @@ func _neg_request(msg: String) -> void:
 func _neg_sync_terms(bp: Dictionary) -> void:
 	neg["syncing"] = true
 	neg["crew"].value = bp["crew_size"]
-	neg["cap"].value = bp["capacity_target"]
-	neg["focus"].select(D.FOCUSES.find(bp["focus"]))
+	if neg.get("kind", "settle") == "research":
+		var i: int = neg["tech_ids"].find(bp.get("tech", ""))
+		if i > 0: neg["tech"].select(i)
+	else:
+		neg["cap"].value = bp["capacity_target"]
+		neg["focus"].select(D.FOCUSES.find(bp["focus"]))
 	neg["syncing"] = false
 
 func _neg_show_bp(san: Dictionary) -> void:
 	neg["san"] = san
 	var bp: Dictionary = san["blueprint"]
 	var s := "[color=#ffd36b]%s[/color] · crew %d · houses %d (target %d) · wood ≈ %d\n" % [bp["plan_id"], bp["crew_size"], sim.contracts.housing(bp), bp["capacity_target"], sim.contracts.wood_needed(bp)]
+	if bp.get("kind", "settle") == "research":
+		var td: Dictionary = sim.evo.tech_def(bp["tech"])
+		s = "[color=#ffd36b]%s[/color] · seeking [color=#c8a8ff]%s[/color] (%d%% understood) · crew %d\n[color=#b8a888]%s[/color]\n" % [bp["plan_id"], td["name"], roundi(sim.evo.insight_frac(bp["tech"]) * 100), bp["crew_size"], td["desc"]]
 	var i := 1
 	for st in bp["steps"]:
 		s += " %d. %s\n" % [i, sim.contracts.step_text(st)]
@@ -799,11 +859,16 @@ func _event_choose(id: String, idx: int) -> void:
 
 # ------------------------------------------------------------ tech tree
 func _open_tech() -> void:
-	var v := _open_modal("TRIBAL WISDOM TREE · Lore: %d" % sim.stock["lore"], 1100)
+	var v := _open_modal("WISDOM & CULTURE · %s · Lore: %d" % [D.ERA_NAMES[sim.evo.era], sim.stock["lore"]], 1240)
 	var was_paused: bool = sim.paused
 	sim.paused = true
+	var note := "Knowledge is [color=#b6f28a]codified[/color] - it can no longer be lost." if sim.evo.codified else \
+		("Knowledge is [color=#ff9b7a]oral[/color]: a tech dies with its last keeper. Megalithic Totems or a Tribal Code would preserve it." if sim.evo.oral_tradition else "Oral tradition is off.")
+	var hint := _rich(0, true)
+	hint.text = "New wisdom grows from [i]practice[/i] (the bar fills as people do related work) and can be finished with lore or a research contract. " + note
+	v.add_child(hint)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
+	h.add_theme_constant_override("separation", 10)
 	v.add_child(h)
 	for era in [1, 2, 3]:
 		var col := VBoxContainer.new()
@@ -812,28 +877,77 @@ func _open_tech() -> void:
 		col.add_child(_header(D.ERA_NAMES[era].to_upper()))
 		for tdef in D.TECHS:
 			if tdef["era"] != era: continue
-			var known: bool = sim.has_tech(tdef["id"])
-			var p := PanelContainer.new()
-			col.add_child(p)
-			var pv := VBoxContainer.new()
-			p.add_child(pv)
-			pv.add_child(_label(tdef["name"], 16, Color("#b6f28a") if known else COL_ACCENT))
-			pv.add_child(_label(tdef["desc"], 13, COL_DIM))
-			if not tdef["req"].is_empty():
-				var names: Array = []
-				for rq in tdef["req"]:
-					for t2 in D.TECHS:
-						if t2["id"] == rq: names.append(t2["name"])
-				pv.add_child(_label("Requires: " + ", ".join(names), 12, Color("#8a7a60")))
-			var tid: String = tdef["id"]
-			var b := _button("Known" if known else "Unlock (%d lore)" % tdef["cost"], func():
-				var err: String = sim.research(tid)
-				if err == "": _open_tech()
-				else: sim.popup(D.VILLAGE, err, Color("#ff8080")))
-			b.disabled = known
-			pv.add_child(b)
-	v.add_child(_label("Lore comes from rituals (devout tribespeople perform them when idle; shrines boost them).", 13, COL_DIM))
+			col.add_child(_tech_card(tdef, was_paused))
+	v.add_child(_header("CULTURE · %s" % sim.evo.culture_summary().capitalize()))
+	var cg := HBoxContainer.new()
+	cg.add_theme_constant_override("separation", 16)
+	v.add_child(cg)
+	var axes := _rich(0, true)
+	axes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var at := ""
+	for a in D.CULTURE_AXES:
+		var val: float = sim.evo.culture[a]
+		var pos := clampi(int(round((val + 100.0) / 200.0 * 20.0)), 0, 20)
+		var bar := ""
+		for i in 21:
+			bar += "[color=#ffd36b]●[/color]" if i == pos else ("[color=#5a4a38]|[/color]" if i == 10 else "[color=#3a3226]─[/color]")
+		at += "%s %s %s  [color=#8a7a60](%+d)[/color]\n" % [_pad(D.CULTURE_AXES[a][1], 9), bar, _pad(D.CULTURE_AXES[a][0], 9), roundi(val)]
+	axes.text = "[font_size=14]" + at + "[/font_size][color=#8a7a60]Values drift with deeds: hunting and scouting make the tribe roam, fields settle it; kills harden it, rituals turn it to the spirits, Vice-Chieftains rank it, shared meals bind it.[/color]"
+	cg.add_child(axes)
+	var trads := _rich(0, true)
+	trads.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var tt := "[color=#ffd36b]TRADITIONS[/color] [color=#8a7a60](adopted at ±%d)[/color]\n" % D.TRADITION_THRESHOLD
+	for t in D.TRADITIONS:
+		var pole: String = D.CULTURE_AXES[t["axis"]][0 if t["sign"] > 0 else 1]
+		if sim.evo.has_trad(t["id"]):
+			tt += "[color=#b6f28a]✔ %s[/color] (Day %d) - %s\n" % [t["name"], sim.evo.traditions[t["id"]], t["desc"]]
+		else:
+			tt += "[color=#6a5a48]○ %s - needs %s[/color]\n" % [t["name"], pole]
+	trads.text = tt
+	cg.add_child(trads)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+func _pad(s2: String, n: int) -> String:
+	return s2 + " ".repeat(maxi(0, n - s2.length()))
+
+func _tech_card(tdef: Dictionary, was_paused: bool) -> Control:
+	var id: String = tdef["id"]
+	var known: bool = sim.has_tech(id)
+	var reachable: bool = sim.evo.prereqs_met(id)
+	var p := PanelContainer.new()
+	var pv := VBoxContainer.new()
+	p.add_child(pv)
+	pv.add_child(_label(tdef["name"], 16, Color("#b6f28a") if known else (COL_ACCENT if reachable else Color("#8a7a60"))))
+	pv.add_child(_label(tdef["desc"], 13, COL_DIM))
+	var info := _rich(0, true)
+	var how: Array = []
+	for k in tdef["practice"]: how.append(D.PRACTICE_NAMES[k])
+	if known:
+		var keepers: int = sim.evo.keepers(id).size()
+		var by: String = (" · invented by " + sim.evo.inventors[id]) if sim.evo.inventors.has(id) else ((" · taught by " + sim.evo.teachers[id]) if sim.evo.teachers.has(id) else "")
+		info.text = "[color=#b6f28a]Known[/color]%s · %d keeper%s" % [by, keepers, "" if keepers == 1 else "s"]
+	else:
+		var frac: float = sim.evo.insight_frac(id)
+		var bars := int(frac * 14)
+		info.text = "[bgcolor=#8a6ad0]%s[/bgcolor][bgcolor=#3a3226]%s[/bgcolor] %d%% understood\n[color=#8a7a60]Learned by %s[/color]" % [" ".repeat(bars * 2), " ".repeat((14 - bars) * 2), roundi(frac * 100), ", ".join(how)]
+		if not reachable:
+			var names: Array = []
+			for rq in tdef["req"]:
+				if not sim.has_tech(rq): names.append(sim.evo.tech_def(rq)["name"])
+			info.text += "\n[color=#8a7a60]Requires %s[/color]" % ", ".join(names)
+	pv.add_child(info)
+	if not known:
+		var cost: int = sim.evo.lore_cost(id)
+		var b := _button("Teach now (%d lore)" % cost, func():
+			var err: String = sim.research(id)
+			if err == "":
+				_close_modal()
+				sim.paused = was_paused
+				_open_tech()
+			else: sim.popup(D.VILLAGE, err, Color("#ff8080")))
+		b.disabled = not reachable or sim.stock["lore"] < cost
+		pv.add_child(b)
+	return p
 
 # ------------------------------------------------------------ settings
 func _open_settings() -> void:
@@ -878,6 +992,11 @@ func _open_settings() -> void:
 	fog.button_pressed = sim.fog_enabled
 	fog.toggled.connect(func(on): sim.fog_enabled = on)
 	v.add_child(fog)
+	var oral := CheckBox.new()
+	oral.text = "Oral tradition (a tech is lost if everyone who knows it dies before it is codified)"
+	oral.button_pressed = sim.evo.oral_tradition
+	oral.toggled.connect(func(on): sim.evo.oral_tradition = on)
+	v.add_child(oral)
 	var result := _label("", 14, Color("#9fd0ff"))
 	v.add_child(result)
 	var apply := func():

@@ -66,6 +66,35 @@ The top bar's **LLM calls** counter shows that a sealed contract runs with zero 
 - Gatherers prefer resources the tribe already knows about.
 - Fog can be turned off in *LLM Settings*.
 
+## How the world evolves
+
+**Knowledge.** Each tech is discovered by *practice*: insight builds while people do related work.
+- Felling trees and hunting lead to Polished Stone Tools.
+- Nights by the fire lead to Friction Fire.
+- Rituals lead to Megalithic Totems.
+
+Landmarks seed ideas too (the Flint Outcrop inspires tools). Lore finishes an idea early; the cost is only the part not yet practiced. A **research Task Contract** (*Seek new wisdom…* on the character sheet) lets a leader's persona choose an idea and plan experiments.
+
+Whoever contributed most becomes the **inventor** and remembers it. Knowledge lives in people:
+- It spreads to those nearby, and children learn it at the fire.
+- With **oral tradition** on, a tech is lost if its last keeper dies before Megalithic Totems or a Tribal Code preserve it. This can be toggled in settings.
+
+**What each tech changes:**
+- **Actions:** stone tools let people quarry stone; pack oxen haul goods; torches at night.
+- **Buildings:** Aurochs Pen, Bronze Smelter (bronze gear only works while one stands), Council Ring, Grand Altar (needs stone).
+- **Appearance:** fur cloaks, stone or bronze blades, bronze helmets, hearth smoke.
+
+**Eras.** The first tech of a new era starts a new age. It brings a culture-defining dilemma, in which leaders argue in character, and a new building style:
+- Era 1: hide tents
+- Era 2: mud-and-thatch huts
+- Era 3: timber longhouses on stone footings
+
+*Renovate* (right panel) rebuilds old homes in the new style. Foot traffic wears visible paths into the grass.
+
+**Culture.** Four values drift with what the tribe does: Martial/Peaceful, Spiritual/Practical, Settled/Roaming and Ranked/Communal. At ±35, a value adopts a permanent **tradition** with a bonus (e.g. Ancestor Rites, Wayfinders, Shared Hearth). Culture also shapes newborns' personalities.
+
+**LLM.** Persona prompts include the current age, culture, traditions and known wisdom, plus a list of words for undiscovered things the tribe doesn't have. A Bronze-age word won't come out of a Stone-age mouth. See *Wisdom & Culture* (T).
+
 ## POC simplifications
 - Overpopulation fires at 12 people instead of PRD's 20, and the flood comes on Day 4, so both show up in a short session.
 - The mid-contract ambush is scripted at ~45% progress (toggle it in LLM Settings).
@@ -78,6 +107,7 @@ scripts/entities.gd         Unit / Predator / ResNode / Structure / Contract
 scripts/sim.gd              deterministic 20 Hz simulation (no LLM, no rendering)
 scripts/contract_system.gd  task contracts: context, sanitize, executor, aborts, resolve
 scripts/persona_engine.gd   offline stand-in for the LLM
+scripts/evolution.gd        knowledge (practice, inventors, oral tradition), culture & traditions, eras
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
 scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)

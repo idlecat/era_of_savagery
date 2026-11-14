@@ -54,6 +54,7 @@ func leader_profile(u: E.Unit) -> Dictionary:
 		"level": sim.unit_level(u), "skills": skills,
 		"hp": "%d/%d" % [roundi(u.hp), roundi(u.max_hp)], "hunger": "%d%%" % roundi(u.hunger),
 		"memory_stream": mem,
+		"knows": sim.evo.known_by(u).map(func(id): return sim.evo.tech_def(id)["name"]),
 	}
 
 func env_data(site: Vector2) -> Dictionary:
@@ -81,21 +82,41 @@ func env_data(site: Vector2) -> Dictionary:
 		"predator_threat": threats, "river": "rich fishing waters along the bank",
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
-		"known_wisdom": sim.techs.keys(), "buildable_structures": structs,
+		"buildable_structures": structs,
 		"day": sim.day(),
 	}
 
 ## Everything injected into the leader's LLM node for Phase 1 negotiation.
 func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set: bool,
-		player_message := "", previous := {}, history := []) -> Dictionary:
+		player_message := "", previous := {}, history := [], kind := "settle") -> Dictionary:
 	var top := ""
 	if not u.memory.is_empty(): top = u.memory[0]["text"] # memory is kept sorted by impact
 	return {
-		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE),
+		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
+		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE) if kind == "settle" else research_env(),
 		"directive": directive, "terms": terms, "terms_set": terms_set,
 		"player_message": player_message, "previous": previous, "history": history,
 		"has_farming": sim.has_tech("farming"), "max_crew": mini(5, available_helpers(u.id).size() + 1),
 		"top_memory": top,
+	}
+
+## Ideas a research contract may pursue: prerequisites known, tech itself not.
+func research_candidates() -> Array:
+	var out: Array = []
+	for id in sim.evo.candidates():
+		var t: Dictionary = sim.evo.tech_def(id)
+		var how: Array = []
+		for k in t["practice"]: how.append(D.PRACTICE_NAMES[k])
+		out.append({"id": id, "name": t["name"], "what_it_gives": t["desc"], "insight_pct": roundi(sim.evo.insight_frac(id) * 100),
+			"learned_by": ", ".join(how)})
+	return out
+
+func research_env() -> Dictionary:
+	return {
+		"target_area": "a workshop clearing beside the village bonfire",
+		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"]), "lore": roundi(sim.stock["lore"])},
+		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
+		"stone_quarrying_possible": sim.has_tech("tools"), "day": sim.day(),
 	}
 
 ## Context for Phase 4 emergency awakening.
@@ -103,15 +124,17 @@ func emergency_ctx(c: E.Contract) -> Dictionary:
 	var u := leader(c)
 	return {
 		"arch": sim.arch(u), "name": u.name, "leader": leader_profile(u),
-		"summary": summary(c), "allowed": allowed_effects(c), "effects": EFFECTS,
+		"summary": summary(c), "allowed": allowed_effects(c), "effects": EFFECTS, "world": sim.evo.world_ctx(),
 	}
 
 # ------------------------------------------------------------ blueprint sanitizing
 ## LLM output is untrusted: clamp every number, whitelist every enum. Returns
 ## {"ok": bool, "blueprint": Dictionary, "notes": Array[String]}.
 func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
+	var bp0: Dictionary = raw if raw is Dictionary else {}
+	if terms.get("kind", bp0.get("kind", "settle")) == "research": return _sanitize_research(bp0, terms, leader)
 	var notes: Array = []
-	var bp: Dictionary = raw if raw is Dictionary else {}
+	var bp: Dictionary = bp0
 	var max_crew := mini(5, available_helpers(leader.id).size() + 1)
 	var out := {}
 	var pid := str(bp.get("plan_id", "")).to_lower().replace(" ", "_")
@@ -171,6 +194,57 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	out["abort_conditions"] = aborts
 	return {"ok": true, "blueprint": out, "notes": notes}
 
+func _sanitize_research(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Dictionary:
+	var notes: Array = []
+	var out := {"kind": "research"}
+	var cands: Array = sim.evo.candidates()
+	var pid := RegEx.create_from_string("[^a-z0-9_]").sub(str(bp.get("plan_id", "")).to_lower().replace(" ", "_"), "", true).left(40)
+	out["plan_id"] = pid if pid != "" else "seek_wisdom_%02d" % (list.size() + 1)
+	out["leader_id"] = "unit_%d" % leader.id
+	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 2)), 1, mini(4, available_helpers(leader.id).size() + 1))
+	var tech := str(bp.get("tech", terms.get("tech", ""))).to_lower()
+	for t in D.TECHS: # accept names as well as ids
+		if tech == t["name"].to_lower(): tech = t["id"]
+	if terms.get("tech", "") != "" and terms["tech"] in cands and tech != terms["tech"]:
+		notes.append("The Chieftain chose %s." % sim.evo.tech_def(terms["tech"])["name"])
+		tech = terms["tech"]
+	if tech not in cands:
+		if cands.is_empty():
+			return {"ok": false, "blueprint": out, "notes": ["No new wisdom is within reach yet."]}
+		if tech != "": notes.append("'%s' is out of reach; seeking %s instead." % [tech, sim.evo.tech_def(cands[0])["name"]])
+		tech = cands[0]
+	out["tech"] = tech
+	out["capacity_target"] = 0
+	out["focus"] = "research"
+	var steps: Array = []
+	var raw_steps: Array = bp.get("steps", []) if bp.get("steps") is Array else []
+	for s in raw_steps:
+		if not (s is Dictionary): continue
+		var action := str(s.get("action", "")).to_lower()
+		match action:
+			"gather_wood", "gather_food":
+				steps.append({"action": action, "target_amount": clampi(_int(s.get("target_amount"), 20), 5, 60)})
+			"gather_stone":
+				if sim.has_tech("tools"): steps.append({"action": action, "target_amount": clampi(_int(s.get("target_amount"), 15), 5, 40)})
+				else: notes.append("Dropped stone gathering (needs Polished Stone Tools).")
+			"experiment":
+				steps.append({"action": "experiment", "duration_sec": clampi(_int(s.get("duration_sec", s.get("duration")), 20), 8, 45)})
+			"ritual":
+				steps.append({"action": "ritual", "duration_sec": clampi(_int(s.get("duration_sec", s.get("duration")), 10), 4, 30)})
+			_:
+				notes.append("Dropped '%s' (not part of a research plan)." % action)
+		if steps.size() >= 6: break
+	if not steps.any(func(s): return s["action"] == "experiment"):
+		steps.append({"action": "experiment", "duration_sec": 20})
+		notes.append("Added an experiment step - wisdom is not found without trying.")
+	out["steps"] = steps
+	var aborts: Array = ["enemy_attack"]
+	for a in (bp.get("abort_conditions", []) if bp.get("abort_conditions") is Array else []):
+		var m := RegEx.create_from_string("hp_below_(\\d+)").search(str(a))
+		if m: aborts.append("hp_below_%d%%" % clampi(int(m.get_string(1)), 10, 80))
+	out["abort_conditions"] = aborts
+	return {"ok": true, "blueprint": out, "notes": notes}
+
 func _int(v: Variant, fallback: int) -> int:
 	if v is int or v is float: return int(v)
 	if v is String and v.is_valid_float(): return int(float(v))
@@ -195,7 +269,12 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	c.plan = bp.duplicate(true)
 	c.directive = directive
 	c.leader_id = leader.id
-	c.site = D.EAST_SITE + Vector2(0, 260 * (list.size() % 3) * (1 if list.size() % 2 == 0 else -1))
+	c.kind = bp.get("kind", "settle")
+	if c.kind == "research":
+		var n := list.filter(func(o): return o.kind == "research").size()
+		c.site = D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
+	else:
+		c.site = D.EAST_SITE + Vector2(0, 260 * (list.size() % 3) * (1 if list.size() % 2 == 0 else -1))
 	c.t = sim.time
 	for s in bp["steps"]:
 		var rs: Dictionary = s.duplicate()
@@ -217,7 +296,8 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		sim.set_job(u, {})
 	list.append(c)
 	var names: Array = c.crew_ids.map(func(id): return sim.unit_by_id(id).name)
-	sim.add_log("Task Contract '%s' sealed. %s leads %s across the river. The LLM connection is closed." % [bp["plan_id"], leader.name, ", ".join(names.slice(1)) if names.size() > 1 else "no one"], "contract")
+	var where := "across the river" if c.kind == "settle" else "to seek %s" % sim.evo.tech_def(bp["tech"])["name"]
+	sim.add_log("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed." % [bp["plan_id"], leader.name, ", ".join(names.slice(1)) if names.size() > 1 else "no one", where], "contract")
 	_clog(c, "Contract sealed: %d steps, crew of %d." % [c.steps.size(), c.crew_ids.size()])
 	return c
 
@@ -293,11 +373,11 @@ func _assemble(c: E.Contract) -> void:
 		i += 1
 		var spot: Vector2 = c.site + Vector2(cos(i * 1.7) * 30, sin(i * 1.7) * 30)
 		_ensure(u, "c%d_assemble" % c.id, func(): sim.assign_move(u, spot))
-		u.act = "Crossing the river (contract)"
+		u.act = "Crossing the river (contract)" if c.kind == "settle" else "Gathering at the workshop"
 		if u.pos.distance_to(c.site) > 70: all_there = false
 	if all_there or c.state_t > 45:
 		_set_status(c, "executing")
-		_clog(c, "Crew arrived at the east bank site.")
+		_clog(c, "Crew arrived at the site.")
 
 func _run_step(c: E.Contract, dt: float) -> void:
 	if c.step_idx >= c.steps.size():
@@ -307,8 +387,8 @@ func _run_step(c: E.Contract, dt: float) -> void:
 	var key := "c%d_s%d" % [c.id, c.step_idx]
 	var bank := D.bank_of(c.site)
 	match step["action"]:
-		"gather_wood", "gather_food":
-			var res := "wood" if step["action"] == "gather_wood" else "food"
+		"gather_wood", "gather_food", "gather_stone":
+			var res: String = step["action"].trim_prefix("gather_")
 			c.substate = "Gathering %s %d/%d" % [res, step["done"], step["target_amount"]]
 			for u in crew(c):
 				_ensure(u, key, func(): sim.assign_gather(u, res, {"dropoff": c.id, "area": c.site, "area_r": 650.0, "bank": bank}))
@@ -342,6 +422,26 @@ func _run_step(c: E.Contract, dt: float) -> void:
 			c.substate = "Building %s (%d%%)" % [sname, roundi(target.progress / target.work * 100)]
 			for u in crew(c):
 				_ensure(u, key + "_b%d" % target.id, func(): sim.assign_build(u, target))
+		"experiment":
+			var tname: String = sim.evo.tech_def(c.plan["tech"])["name"]
+			var cr := crew(c)
+			var working := 0
+			var i := 0
+			for u in cr:
+				var spot: Vector2 = c.site + Vector2.from_angle(i * TAU / maxf(1, cr.size())) * 26
+				_ensure(u, key, func(): sim.assign_experiment(u, spot, tname))
+				if u.act.begins_with("Experimenting"): working += 1
+				i += 1
+			var ld := leader(c)
+			var rate: float = (0.4 + 0.6 * working / maxf(1, cr.size())) * (1.0 + 0.08 * ld.lv("lore") + 0.04 * ld.lv("craft"))
+			if working > 0:
+				step["done"] += dt * rate
+				var total := 0.0
+				for s2 in c.steps:
+					if s2["action"] == "experiment": total += s2["duration_sec"]
+				sim.evo.seed(c.plan["tech"], 0.7 * dt * rate / maxf(1.0, total), ld)
+			c.substate = "Experimenting on %s (%ds/%ds)" % [tname, step["done"], step["duration_sec"]]
+			if step["done"] >= step["duration_sec"]: _next_step(c)
 		"ritual":
 			var ld := leader(c)
 			if c.leader_id in c.resting_ids:
@@ -362,7 +462,7 @@ func _next_step(c: E.Contract) -> void:
 	var step: Dictionary = c.steps[c.step_idx]
 	var desc := _step_text(step)
 	for u in crew(c):
-		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "build": "craft", "ritual": "lore"}[step["action"]]
+		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "gather_stone": "forage", "build": "craft", "ritual": "lore", "experiment": "lore"}[step["action"]]
 		sim.gain_xp(u, skill, 6)
 	_clog(c, "Step %d done: %s." % [c.step_idx + 1, desc])
 	c.step_idx += 1
@@ -384,11 +484,12 @@ func _slot_for(c: E.Contract, type: String) -> Vector2:
 
 func deposit(c: E.Contract, res: String, amt: int, u: E.Unit) -> void:
 	if res == "wood": c.wood += amt
-	else: sim.stock["food"] += amt # rations shared with the tribe
+	elif res == "food": sim.stock["food"] += amt # rations shared with the tribe
+	# stone is consumed by the experiments
 	if c.step_idx < c.steps.size():
 		var step: Dictionary = c.steps[c.step_idx]
 		if step["action"] == "gather_" + res: step["done"] += amt
-	sim.popup(u.pos + Vector2(0, -12), "+%d %s" % [amt, res], Color("#d8b483") if res == "wood" else Color("#f0a07a"))
+	sim.popup(u.pos + Vector2(0, -12), "+%d %s" % [amt, res], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(res, Color("#f0a07a")))
 
 func _progress(c: E.Contract) -> float:
 	var total := 0.0
@@ -398,9 +499,12 @@ func _progress(c: E.Contract) -> float:
 		var w := 0.0
 		var d := 0.0
 		match s["action"]:
-			"gather_wood", "gather_food":
+			"gather_wood", "gather_food", "gather_stone":
 				w = s["target_amount"]
 				d = minf(s["done"], w)
+			"experiment":
+				w = s["duration_sec"] * 3.0
+				d = minf(s["done"] * 3.0, w)
 			"build":
 				w = D.STRUCTURES[s["structure"]]["work"] * s["count"]
 				for id in s["ids"]:
@@ -415,7 +519,7 @@ func _progress(c: E.Contract) -> float:
 	return done / total if total > 0 else 1.0
 
 func _maybe_ambush(c: E.Contract) -> void:
-	if not sim.scripted_ambush or c.ambushed or c.progress < 0.45: return
+	if not sim.scripted_ambush or c.kind != "settle" or c.ambushed or c.progress < 0.45: return
 	c.ambushed = true
 	for off in [Vector2(380, -260), Vector2(400, 240)]:
 		var p: Vector2 = c.site + off
@@ -560,6 +664,9 @@ func _complete(c: E.Contract) -> void:
 	c.progress = 1.0
 	sim.stock["wood"] += c.wood
 	c.wood = 0
+	if c.kind == "research":
+		_complete_research(c)
+		return
 	var built: Array = []
 	for id in c.struct_ids:
 		var s = sim.struct_by_id(id)
@@ -582,6 +689,27 @@ func _complete(c: E.Contract) -> void:
 	sim.add_log("Contract '%s' complete! %s. Housing for %d more." % [c.plan["plan_id"], what, housing(c.plan)], "contract")
 	sim.contract_finished.emit(c)
 
+func _complete_research(c: E.Contract) -> void:
+	var ld := leader(c)
+	var id: String = c.plan["tech"]
+	var t: Dictionary = sim.evo.tech_def(id)
+	var fresh: bool = not sim.has_tech(id)
+	if fresh: sim.evo.breakthrough(id, ld, "invented")
+	for u in crew(c, true):
+		if u != ld:
+			sim.remember(u, "helped %s %s %s on Day %d" % [ld.name, "discover" if fresh else "refine", t["name"], sim.day()], 6)
+		sim.evo.learn(u, id)
+		sim.gain_xp(u, "lore", 8)
+		_release(u)
+		sim.set_job(u, {})
+	sim.gain_xp(ld, "combat", 8) # leadership
+	if not fresh:
+		sim.stock["lore"] += 15
+		sim.add_log("'%s' finished, but %s was already known - the work became 15 lore." % [c.plan["plan_id"], t["name"]], "contract")
+	else:
+		sim.add_log("Research contract '%s' complete: %s now knows %s." % [c.plan["plan_id"], ld.name, t["name"]], "contract")
+	sim.contract_finished.emit(c)
+
 func _fail(c: E.Contract, why: String) -> void:
 	c.status = "failed"
 	for u in crew(c, true): _release(u)
@@ -591,6 +719,8 @@ func _step_text(s: Dictionary) -> String:
 	match s["action"]:
 		"gather_wood": return "gather %d wood" % s["target_amount"]
 		"gather_food": return "gather %d food" % s["target_amount"]
+		"gather_stone": return "quarry %d stone" % s["target_amount"]
+		"experiment": return "%ds of experiments" % s["duration_sec"]
 		"build": return "build %s%s" % [("%d x " % s["count"]) if s["count"] > 1 else "", D.STRUCTURES[s["structure"]]["name"]]
 		"ritual": return "%ds blessing ritual" % s["duration_sec"]
 	return s["action"]

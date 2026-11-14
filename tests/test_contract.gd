@@ -6,6 +6,10 @@ const Sim = preload("res://scripts/sim.gd")
 const Persona = preload("res://scripts/persona_engine.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const D = preload("res://scripts/data.gd")
+# Compile-check the UI scripts too (a parse error in any of them fails this test run).
+const _Main = preload("res://scripts/main.gd")
+const _HUD = preload("res://scripts/hud.gd")
+const _World = preload("res://scripts/world_view.gd")
 
 var failures := 0
 
@@ -22,6 +26,8 @@ func _initialize() -> void:
 	test_full_contract()
 	test_events()
 	test_exploration()
+	test_evolution()
+	test_research_contract()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -156,3 +162,93 @@ func test_exploration() -> void:
 	check(sim.stock["lore"] > lore0, "discoveries pay out")
 	check(u.memory.any(func(m): return "found" in m["text"]), "discovery archived in the scout's memory")
 	check(u.job.get("type", "") == "explore" or u.dead or u.job.get("flee", false), "scout keeps exploring until recalled")
+
+func _run(sim, secs: float) -> void:
+	var t := 0.0
+	while t < secs:
+		sim.tick(0.05)
+		if sim.paused:
+			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+			for c in sim.contracts.list:
+				if c.status == "interrupted": sim.contracts.resolve(c, sim.contracts.allowed_effects(c)[0])
+			sim.paused = false
+		t += 0.05
+
+func test_evolution() -> void:
+	print("\n== Evolution: practice, inventors, oral tradition, culture, eras ==")
+	var sim = _new_sim()
+	sim.scripted_ambush = false
+	var evo = sim.evo
+	# practice: woodcutters work out Polished Stone Tools by themselves
+	for nm in ["Bai", "Shan", "Tuo", "Mo'er"]: sim.assign_gather(sim.unit_by_name(nm), "wood")
+	var t := 0.0
+	while t < 600 and not sim.has_tech("tools"):
+		_run(sim, 1.0)
+		t += 1.0
+	print("   tools after %ds of chopping, inventor: %s" % [t, evo.inventors.get("tools", "-")])
+	check(sim.has_tech("tools"), "chopping wood leads to Polished Stone Tools by practice")
+	var inv = sim.unit_by_name(evo.inventors.get("tools", ""))
+	check(inv != null and inv.memory.any(func(m): return "invented Polished Stone Tools" in m["text"]), "the inventor remembers the breakthrough")
+	# stone: only quarryable with tools
+	var q = sim.unit_by_name("Yan")
+	sim.assign_gather(q, "stone")
+	_run(sim, 60)
+	print("   stone after a minute of quarrying: %d" % sim.stock["stone"])
+	check(sim.stock["stone"] > 0, "stone tools open up quarrying")
+	# lore cost shrinks with practice
+	check(evo.lore_cost("hide") <= 20, "practice makes teaching cheaper (hide: %d lore)" % evo.lore_cost("hide"))
+	# oral tradition: kill everyone who knows a tech
+	sim.stock["lore"] = 500
+	check(sim.research("hide") == "", "teach Hide Tailoring with lore")
+	for u in evo.keepers("hide"): sim.kill_unit(u, null)
+	check(not sim.has_tech("hide"), "oral tradition: Hide Tailoring died with its last keeper")
+	check(evo.insight_frac("hide") > 0.3, "...but is half-remembered (%d%%)" % roundi(evo.insight_frac("hide") * 100))
+
+	# culture -> tradition
+	var sim2 = _new_sim()
+	for i in 5: sim2.evo.drift("spiritual", 8.0)
+	sim2.evo.update(2.1)
+	check(sim2.evo.has_trad("ancestor_rites"), "a spiritual tribe adopts Ancestor Rites")
+	check("spiritual" in sim2.evo.culture_summary(), "culture summary: %s" % sim2.evo.culture_summary())
+	# era transition + dilemma + renovation
+	sim2.stock["lore"] = 500
+	sim2.stock["wood"] = 300
+	sim2.research("fire")
+	sim2.research("pottery")
+	check(sim2.evo.era == 2, "first Era-2 tech starts the Tribe & Agrarian Era")
+	sim2._check_events()
+	check(sim2.pending_event == "era2", "the new age opens a culture-defining dilemma")
+	var d: Dictionary = sim2.event_def("era2")
+	print("   ", d["text"])
+	var settled0: float = sim2.evo.culture["settled"]
+	sim2.resolve_event("era2", 0)
+	check(sim2.evo.culture["settled"] > settled0, "'Put down roots' settles the tribe")
+	var old: Array = sim2.outdated()
+	check(old.size() >= 4, "old hide tents are now outdated (%d)" % old.size())
+	check(sim2.renovate([]) == "", "renovation starts")
+	_run(sim2, 120)
+	check(sim2.structures.filter(func(s): return s.type == "hut" and s.style == 2).size() >= 2, "huts rebuilt in mud & thatch")
+	var ctx: Dictionary = sim2.contracts.negotiation_ctx(sim2.unit_by_name("Alie"), "x", {}, false)
+	check("bronze" in ctx["world"]["unknown_things_you_have_no_words_for"], "personas have no words for bronze yet")
+	check(ctx["world"]["age"] == D.ERA_NAMES[2], "personas know which age they live in")
+
+func test_research_contract() -> void:
+	print("\n== Research contract (offline persona) ==")
+	var sim = _new_sim()
+	sim.scripted_ambush = false
+	var u = sim.unit_by_name("Linghe")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Find new wisdom", {"kind": "research"}, false, "", {}, [], "research")
+	var r := Persona.propose(ctx)
+	print("   [Linghe] ", r["speech"])
+	var san: Dictionary = sim.contracts.sanitize(r["blueprint"], {"kind": "research"}, u)
+	check(san["ok"] and san["blueprint"]["tech"] == "fire", "mystic Linghe seeks Friction Fire")
+	var bad: Dictionary = sim.contracts.sanitize({"kind": "research", "tech": "bronze", "steps": [{"action": "build", "structure": "hut"}]}, {"kind": "research"}, u)
+	check(bad["ok"] and bad["blueprint"]["tech"] != "bronze" and bad["blueprint"]["steps"].any(func(s): return s["action"] == "experiment"), "out-of-reach idea replaced, experiment step enforced")
+	var c = sim.contracts.create(san["blueprint"], u, "Find new wisdom")
+	var t := 0.0
+	while sim.contracts.is_running(c) and t < 400:
+		_run(sim, 1.0)
+		t += 1.0
+	print("   finished at t=%ds status=%s, log: %s" % [t, c.status, c.events.slice(0, 3)])
+	check(c.status == "done" and sim.has_tech("fire"), "research contract discovers Friction Fire")
+	check(sim.evo.inventors.get("fire", "") == "Linghe", "the leader is credited as inventor")

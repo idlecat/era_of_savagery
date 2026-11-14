@@ -91,6 +91,9 @@ class Structure:
 	var work: float = 1.0
 	var paid: bool = false
 	var owner: String = "village" # "village" or "contract:<id>"
+	var style: int = 1 # era look (1 hide & branch, 2 mud & thatch, 3 timber & stone)
+	var reno: bool = false # being renovated to the current era's style
+	var reno_progress: float = 0.0
 
 class Guardian:
 	var id: int
@@ -129,3 +132,4 @@ class Contract:
 	var clear_t: float = 0.0
 	var events: Array = []
 	var substate: String = ""
+	var kind: String = "settle" # "settle" (outpost across the river) or "research" (seek new wisdom)
