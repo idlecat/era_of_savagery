@@ -18,7 +18,10 @@ A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.
 - **Zoom:** mouse wheel, or pinch on a trackpad.
 - **Explore:** select people and press X (or *Scout the unknown*) to auto-scout. Right-click recalls them.
 - **Minimap** (bottom left): left-click or drag to move the view, right-click to send the selected people there.
-- **Roster:** people are grouped by quest: each running Task Contract (leader first), scouts, then the village. Click a group header to select the whole group.
+- **Roster:** two views.
+  - *By quest* (default): people are grouped under each running Task Contract (leader first), then scouts, then the village. Click a group header to select the whole group.
+  - *By ability*: a table of level and the four skills. Click a column to sort by it; click it again to reverse. Hover a row to see HP, ATK, DEF and what the person is doing.
+  - In both views, Shift-click adds a person to the selection or removes them.
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 
 ## LLM setup (DeepSeek / GLM)
@@ -52,6 +55,14 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 | Night cold, hunger, births, food spoilage, Yinglong guardian from the Grand Altar | `sim.gd` |
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
+
+## Language
+
+English and Simplified Chinese (简体中文). Switch with the **中文 / English** button in the top bar. The choice is saved, and the default follows your system language.
+- Translations live in `scripts/lang_zh.gd`, keyed by the English text, and are registered with Godot's `TranslationServer`. `tr()` and auto-translated controls switch live; chronicle lines already written keep their original language.
+- In Chinese mode, both the offline persona engine and cloud LLM personas speak Chinese. The LLM writes speech and option labels in Chinese while JSON keys and ids stay English. Chinese replies like 不要墙 or 大一点 are understood.
+- A Simplified Chinese system font (Hiragino Sans GB / Microsoft YaHei / Noto Sans CJK SC…) is added as a fallback, because macOS's default fallback picks a face that lacks some simplified characters.
+- The test suite fails if any `tr()` key has no Chinese text.
 
 ## Map & exploration
 
@@ -108,6 +119,8 @@ scripts/sim.gd              deterministic 20 Hz simulation (no LLM, no rendering
 scripts/contract_system.gd  task contracts: context, sanitize, executor, aborts, resolve
 scripts/persona_engine.gd   offline stand-in for the LLM
 scripts/evolution.gd        knowledge (practice, inventors, oral tradition), culture & traditions, eras
+scripts/i18n.gd             language switching, CJK font fallback, activity text
+scripts/lang_zh.gd          Simplified Chinese strings (keys = English text)
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
 scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)

@@ -123,21 +123,21 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		if how == "invented": inventors[id] = inventor.name
 		else: teachers[id] = inventor.name
 		if how == "invented":
-			sim.remember(inventor, "invented %s on Day %d" % [t["name"], sim.day()], 8)
+			sim.remember(inventor, tr("invented %s on Day %d") % [tr(t["name"]), sim.day()], 8)
 			sim.gain_xp(inventor, "lore", 12)
-			sim.add_log("Breakthrough! %s discovered %s: %s" % [inventor.name, t["name"], t["desc"]], "tech")
-			sim.popup(inventor.pos + Vector2(0, -50), "Breakthrough: " + t["name"], Color("#c8a8ff"), true)
+			sim.add_log(tr("Breakthrough! %s discovered %s: %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech")
+			sim.popup(inventor.pos + Vector2(0, -50), tr("Breakthrough: ") + tr(t["name"]), Color("#c8a8ff"), true)
 		else:
-			sim.remember(inventor, "taught the tribe %s on Day %d" % [t["name"], sim.day()], 6)
-			sim.add_log("Tribal Wisdom: %s taught %s - %s" % [inventor.name, t["name"], t["desc"]], "tech")
+			sim.remember(inventor, tr("taught the tribe %s on Day %d") % [tr(t["name"]), sim.day()], 6)
+			sim.add_log(tr("Tribal Wisdom: %s taught %s - %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech")
 	if id in ["totems", "code"] and not codified:
 		codified = true
-		sim.add_log("The tribe's knowledge is now %s - it can no longer be lost." % ("carved into the great totems" if id == "totems" else "kept in the Tribal Code"), "tech")
+		sim.add_log(tr("The tribe's knowledge is now %s - it can no longer be lost.") % (tr("carved into the great totems") if id == "totems" else tr("kept in the Tribal Code")), "tech")
 	var e := era_now()
 	if e > era:
 		era = e
 		pending_era = e
-		sim.add_log("A new age dawns: the %s." % D.ERA_NAMES[e], "story")
+		sim.add_log(tr("A new age dawns: the %s.") % tr(D.ERA_NAMES[e]), "story")
 	# ideas that were waiting on this prerequisite
 	for o in D.TECHS:
 		if not sim.has_tech(o["id"]) and prereqs_met(o["id"]) and insight[o["id"]] >= o["cost"] - 0.01:
@@ -163,9 +163,9 @@ func _lose(id: String, u: E.Unit) -> void:
 	var t := tech_def(id)
 	sim.techs.erase(id)
 	insight[id] = t["cost"] * 0.35 # half-remembered: easier to rediscover
-	sim.add_log("The secret of %s died with %s - no one else knew it. (Megalithic Totems or a Tribal Code would preserve knowledge.)" % [t["name"], u.name], "danger")
-	sim.popup(u.pos + Vector2(0, -60), "%s is forgotten" % t["name"], Color("#ff8a8a"), true)
-	for o in sim.living(): sim.remember(o, "mourned the lost knowledge of %s on Day %d" % [t["name"], sim.day()], 5)
+	sim.add_log(tr("The secret of %s died with %s - no one else knew it. (Megalithic Totems or a Tribal Code would preserve knowledge.)") % [tr(t["name"]), tr(u.name)], "danger")
+	sim.popup(u.pos + Vector2(0, -60), tr("%s is forgotten") % tr(t["name"]), Color("#ff8a8a"), true)
+	for o in sim.living(): sim.remember(o, tr("mourned the lost knowledge of %s on Day %d") % [tr(t["name"]), sim.day()], 5)
 
 func update(dt: float) -> void:
 	spread_t -= dt
@@ -202,25 +202,26 @@ func adopt(id: String) -> void:
 		if o["id"] == id: t = o
 	if t.is_empty() or traditions.has(id): return
 	traditions[id] = sim.day()
-	sim.add_log("A new tradition takes hold: %s - %s" % [t["name"], t["desc"]], "story")
-	sim.popup(D.VILLAGE + Vector2(0, -90), "Tradition: " + t["name"], Color("#ffd6a0"), true)
+	sim.add_log(tr("A new tradition takes hold: %s - %s") % [tr(t["name"]), tr(t["desc"])], "story")
+	sim.popup(D.VILLAGE + Vector2(0, -90), tr("Tradition: ") + tr(t["name"]), Color("#ffd6a0"), true)
 	var champion: E.Unit = null
 	for u in sim.living():
 		if sim.arch(u) == t["arch"] and (champion == null or sim.unit_level(u) > sim.unit_level(champion)): champion = u
-	if champion: sim.remember(champion, "championed the tradition of %s on Day %d" % [t["name"], sim.day()], 6)
+	if champion: sim.remember(champion, tr("championed the tradition of %s on Day %d") % [tr(t["name"]), sim.day()], 6)
 
 func pole(axis: String) -> String:
 	var v: float = culture[axis]
 	if absf(v) < 10: return ""
-	var name: String = D.CULTURE_AXES[axis][0 if v > 0 else 1]
-	return ("strongly " if absf(v) >= 50 else ("" if absf(v) >= D.TRADITION_THRESHOLD else "somewhat ")) + name.to_lower()
+	var name: String = tr(D.CULTURE_AXES[axis][0 if v > 0 else 1]).to_lower()
+	if absf(v) >= 50: return tr("strongly %s") % name
+	return name if absf(v) >= D.TRADITION_THRESHOLD else tr("somewhat %s") % name
 
 func culture_summary() -> String:
 	var parts: Array = []
 	for a in D.CULTURE_AXES:
 		var p := pole(a)
 		if p != "": parts.append(p)
-	return ", ".join(parts) if not parts.is_empty() else "still unformed"
+	return tr(", ").join(parts) if not parts.is_empty() else tr("still unformed")
 
 ## Newborns lean toward the tribe's dominant values.
 func birth_trait() -> String:
@@ -243,13 +244,14 @@ func world_ctx() -> Dictionary:
 	var unknown_words: Array = []
 	for t in D.TECHS:
 		if sim.has_tech(t["id"]):
-			known.append(t["name"] + ((" (invented by %s)" % inventors[t["id"]]) if inventors.has(t["id"]) else ""))
+			known.append(tr(t["name"]) + ((tr(" (invented by %s)") % tr(inventors[t["id"]])) if inventors.has(t["id"]) else ""))
 		else:
 			unknown_words.append_array(t["words"])
+			if tr(t["name"]) != t["name"]: unknown_words.append(tr(t["name"]))
 	var trads: Array = []
 	for t in D.TRADITIONS:
-		if traditions.has(t["id"]): trads.append(t["name"])
+		if traditions.has(t["id"]): trads.append(tr(t["name"]))
 	return {
-		"age": D.ERA_NAMES[era], "known_wisdom": known, "traditions": trads,
+		"age": tr(D.ERA_NAMES[era]), "known_wisdom": known, "traditions": trads,
 		"tribe_culture": culture_summary(), "unknown_things_you_have_no_words_for": unknown_words,
 	}

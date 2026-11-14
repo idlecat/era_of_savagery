@@ -41,20 +41,20 @@ func available_helpers(exclude_id := -1) -> Array:
 
 func leader_profile(u: E.Unit) -> Dictionary:
 	var skills := {}
-	for s in D.SKILLS: skills[D.SKILL_NAMES[s]] = u.lv(s)
+	for s in D.SKILLS: skills[tr(D.SKILL_NAMES[s])] = u.lv(s)
 	var mem: Array = []
 	var sorted_mem: Array = u.memory.duplicate()
 	sorted_mem.sort_custom(func(a, b): return a["day"] < b["day"])
 	for m in sorted_mem:
-		mem.append(("Day %d: " % m["day"] if m["day"] > 0 else "Long ago: ") + m["text"])
+		mem.append((tr("Day %d: ") % m["day"] if m["day"] > 0 else tr("Long ago: ")) + tr(m["text"]))
 	var traits: Array = []
-	for t in u.traits: traits.append("%s (%s)" % [D.TRAITS[t]["name"], D.TRAITS[t]["desc"]])
+	for t in u.traits: traits.append("%s (%s)" % [tr(D.TRAITS[t]["name"]), tr(D.TRAITS[t]["desc"])])
 	return {
-		"name": u.name, "epithet": u.epithet, "personality": traits, "archetype": sim.arch(u),
+		"name": tr(u.name), "epithet": tr(u.epithet), "personality": traits, "archetype": sim.arch(u),
 		"level": sim.unit_level(u), "skills": skills,
 		"hp": "%d/%d" % [roundi(u.hp), roundi(u.max_hp)], "hunger": "%d%%" % roundi(u.hunger),
 		"memory_stream": mem,
-		"knows": sim.evo.known_by(u).map(func(id): return sim.evo.tech_def(id)["name"]),
+		"knows": sim.evo.known_by(u).map(func(id): return tr(sim.evo.tech_def(id)["name"])),
 	}
 
 func env_data(site: Vector2) -> Dictionary:
@@ -68,18 +68,18 @@ func env_data(site: Vector2) -> Dictionary:
 			timber += n.amount
 		elif n.res == "food" and n.amount >= 1:
 			food_nodes += 1
-	var threats: Array = ["fresh saber-tooth tracks in the tall grass east of the ford"]
+	var threats: Array = [tr("fresh saber-tooth tracks in the tall grass east of the ford")]
 	var visible: int = sim.active_predators_near(site, 700).size()
-	if visible > 0: threats.append("%d saber-toothed tigers seen prowling" % visible)
+	if visible > 0: threats.append(tr("%d saber-toothed tigers seen prowling") % visible)
 	var structs := {}
 	for k in D.CONTRACT_STRUCTURES:
 		var sd: Dictionary = D.STRUCTURES[k]
 		if sd.has("tech") and not sim.has_tech(sd["tech"]): continue
 		structs[k] = {"wood": sd["wood"], "houses": sd.get("cap", 0)}
 	return {
-		"target_area": "untamed east bank, across the river ford",
-		"timber": "%d trees (~%d wood)" % [trees, timber], "food_sources": food_nodes,
-		"predator_threat": threats, "river": "rich fishing waters along the bank",
+		"target_area": tr("untamed east bank, across the river ford"),
+		"timber": tr("%d trees (~%d wood)") % [trees, timber], "food_sources": food_nodes,
+		"predator_threat": threats, "river": tr("rich fishing waters along the bank"),
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"buildable_structures": structs,
@@ -90,7 +90,7 @@ func env_data(site: Vector2) -> Dictionary:
 func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set: bool,
 		player_message := "", previous := {}, history := [], kind := "settle") -> Dictionary:
 	var top := ""
-	if not u.memory.is_empty(): top = u.memory[0]["text"] # memory is kept sorted by impact
+	if not u.memory.is_empty(): top = tr(u.memory[0]["text"]) # memory is kept sorted by impact
 	return {
 		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
 		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE) if kind == "settle" else research_env(),
@@ -106,14 +106,14 @@ func research_candidates() -> Array:
 	for id in sim.evo.candidates():
 		var t: Dictionary = sim.evo.tech_def(id)
 		var how: Array = []
-		for k in t["practice"]: how.append(D.PRACTICE_NAMES[k])
-		out.append({"id": id, "name": t["name"], "what_it_gives": t["desc"], "insight_pct": roundi(sim.evo.insight_frac(id) * 100),
+		for k in t["practice"]: how.append(tr(D.PRACTICE_NAMES[k]))
+		out.append({"id": id, "name": tr(t["name"]), "what_it_gives": tr(t["desc"]), "insight_pct": roundi(sim.evo.insight_frac(id) * 100),
 			"learned_by": ", ".join(how)})
 	return out
 
 func research_env() -> Dictionary:
 	return {
-		"target_area": "a workshop clearing beside the village bonfire",
+		"target_area": tr("a workshop clearing beside the village bonfire"),
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"stone_quarrying_possible": sim.has_tech("tools"), "day": sim.day(),
@@ -295,10 +295,10 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		u.contract_id = c.id
 		sim.set_job(u, {})
 	list.append(c)
-	var names: Array = c.crew_ids.map(func(id): return sim.unit_by_id(id).name)
-	var where := "across the river" if c.kind == "settle" else "to seek %s" % sim.evo.tech_def(bp["tech"])["name"]
-	sim.add_log("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed." % [bp["plan_id"], leader.name, ", ".join(names.slice(1)) if names.size() > 1 else "no one", where], "contract")
-	_clog(c, "Contract sealed: %d steps, crew of %d." % [c.steps.size(), c.crew_ids.size()])
+	var names: Array = c.crew_ids.map(func(id): return tr(sim.unit_by_id(id).name))
+	var where: String = tr("across the river") if c.kind == "settle" else tr("to seek %s") % tr(sim.evo.tech_def(bp["tech"])["name"])
+	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract")
+	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
 	return c
 
 func _clog(c: E.Contract, text: String) -> void:
@@ -358,13 +358,13 @@ func _manage_wounded(c: E.Contract) -> void:
 		if u.id in c.resting_ids:
 			if u.hp >= u.max_hp * 0.7:
 				c.resting_ids.erase(u.id)
-				sim.add_log("%s has recovered and rejoins '%s'." % [u.name, c.plan["plan_id"]], "contract")
+				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), c.plan["plan_id"]], "contract")
 			elif u.job.is_empty() and u.pos.distance_to(D.VILLAGE) > 60:
 				sim.set_job(u, {"type": "move", "to": D.VILLAGE + Vector2(randf_range(-30, 30), 30), "flee": true})
 		elif u.hp < u.max_hp * 0.25 and not u.has_trait("belligerent") and u.id != c.leader_id:
 			c.resting_ids.append(u.id)
 			sim.set_job(u, {"type": "move", "to": D.VILLAGE + Vector2(randf_range(-30, 30), 30), "flee": true})
-			_clog(c, "%s is badly hurt and limps home." % u.name)
+			_clog(c, tr("%s is badly hurt and limps home.") % tr(u.name))
 
 func _assemble(c: E.Contract) -> void:
 	var all_there := true
@@ -377,7 +377,7 @@ func _assemble(c: E.Contract) -> void:
 		if u.pos.distance_to(c.site) > 70: all_there = false
 	if all_there or c.state_t > 45:
 		_set_status(c, "executing")
-		_clog(c, "Crew arrived at the site.")
+		_clog(c, tr("Crew arrived at the site."))
 
 func _run_step(c: E.Contract, dt: float) -> void:
 	if c.step_idx >= c.steps.size():
@@ -389,7 +389,7 @@ func _run_step(c: E.Contract, dt: float) -> void:
 	match step["action"]:
 		"gather_wood", "gather_food", "gather_stone":
 			var res: String = step["action"].trim_prefix("gather_")
-			c.substate = "Gathering %s %d/%d" % [res, step["done"], step["target_amount"]]
+			c.substate = tr("Gathering %s %d/%d") % [tr(res), step["done"], step["target_amount"]]
 			for u in crew(c):
 				_ensure(u, key, func(): sim.assign_gather(u, res, {"dropoff": c.id, "area": c.site, "area_r": 650.0, "bank": bank}))
 			if step["done"] >= step["target_amount"]: _next_step(c)
@@ -415,11 +415,11 @@ func _run_step(c: E.Contract, dt: float) -> void:
 					c.wood -= cost
 					target.paid = true
 				else:
-					c.substate = "Gathering timber for %s (%d/%d)" % [sname, c.wood, cost]
+					c.substate = tr("Gathering timber for %s (%d/%d)") % [tr(sname), c.wood, cost]
 					for u in crew(c):
 						_ensure(u, key + "_mat", func(): sim.assign_gather(u, "wood", {"dropoff": c.id, "area": c.site, "area_r": 650.0, "bank": bank}))
 					return
-			c.substate = "Building %s (%d%%)" % [sname, roundi(target.progress / target.work * 100)]
+			c.substate = tr("Building %s (%d%%)") % [tr(sname), roundi(target.progress / target.work * 100)]
 			for u in crew(c):
 				_ensure(u, key + "_b%d" % target.id, func(): sim.assign_build(u, target))
 		"experiment":
@@ -440,14 +440,14 @@ func _run_step(c: E.Contract, dt: float) -> void:
 				for s2 in c.steps:
 					if s2["action"] == "experiment": total += s2["duration_sec"]
 				sim.evo.seed(c.plan["tech"], 0.7 * dt * rate / maxf(1.0, total), ld)
-			c.substate = "Experimenting on %s (%ds/%ds)" % [tname, step["done"], step["duration_sec"]]
+			c.substate = tr("Experimenting on %s (%ds/%ds)") % [tr(tname), step["done"], step["duration_sec"]]
 			if step["done"] >= step["duration_sec"]: _next_step(c)
 		"ritual":
 			var ld := leader(c)
 			if c.leader_id in c.resting_ids:
 				_next_step(c)
 				return
-			c.substate = "%s performs the ritual (%ds/%ds)" % [ld.name, step["done"], step["duration_sec"]]
+			c.substate = tr("%s performs the ritual (%ds/%ds)") % [tr(ld.name), step["done"], step["duration_sec"]]
 			_ensure(ld, key + "_r", func(): sim.assign_ritual(ld, c.site + Vector2(0, -10)))
 			if ld.job.get("type", "") == "ritual" and ld.pos.distance_to(c.site + Vector2(0, -10)) < 8:
 				step["done"] += dt
@@ -464,7 +464,7 @@ func _next_step(c: E.Contract) -> void:
 	for u in crew(c):
 		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "gather_stone": "forage", "build": "craft", "ritual": "lore", "experiment": "lore"}[step["action"]]
 		sim.gain_xp(u, skill, 6)
-	_clog(c, "Step %d done: %s." % [c.step_idx + 1, desc])
+	_clog(c, tr("Step %d done: %s.") % [c.step_idx + 1, desc])
 	c.step_idx += 1
 
 func _slot_for(c: E.Contract, type: String) -> Vector2:
@@ -489,7 +489,7 @@ func deposit(c: E.Contract, res: String, amt: int, u: E.Unit) -> void:
 	if c.step_idx < c.steps.size():
 		var step: Dictionary = c.steps[c.step_idx]
 		if step["action"] == "gather_" + res: step["done"] += amt
-	sim.popup(u.pos + Vector2(0, -12), "+%d %s" % [amt, res], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(res, Color("#f0a07a")))
+	sim.popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(res)], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(res, Color("#f0a07a")))
 
 func _progress(c: E.Contract) -> float:
 	var total := 0.0
@@ -526,7 +526,7 @@ func _maybe_ambush(c: E.Contract) -> void:
 		p.x = minf(p.x, D.W - 30)
 		p.y = clampf(p.y, 40, D.H - 40)
 		sim.spawn_predator(p, c.site)
-	sim.add_log("Something moves in the tall grass near '%s'..." % c.plan["plan_id"], "danger")
+	sim.add_log(tr("Something moves in the tall grass near '%s'...") % c.plan["plan_id"], "danger")
 
 # ------------------------------------------------------------ abort conditions
 func _check_aborts(c: E.Contract) -> bool:
@@ -550,8 +550,8 @@ func _check_aborts(c: E.Contract) -> bool:
 	c.interruptions += 1
 	_set_status(c, "interrupted")
 	for u in crew(c): sim.set_job(u, {})
-	_clog(c, "ABORT CONDITION: %s at %d%% progress." % [reason, roundi(c.progress * 100)])
-	sim.add_log("Contract '%s' interrupted (%s). The leader's LLM node is re-awakening..." % [c.plan["plan_id"], reason], "danger")
+	_clog(c, tr("ABORT CONDITION: %s at %d%% progress.") % [tr(reason), roundi(c.progress * 100)])
+	sim.add_log(tr("Contract '%s' interrupted (%s). The leader's LLM node is re-awakening...") % [c.plan["plan_id"], tr(reason)], "danger")
 	sim.paused = true
 	sim.contract_interrupted.emit(c)
 	return true
@@ -572,16 +572,16 @@ func summary(c: E.Contract) -> Dictionary:
 	for id in c.struct_ids:
 		var s = sim.struct_by_id(id)
 		if s == null: continue
-		var n: String = D.STRUCTURES[s.type]["name"]
+		var n: String = tr(D.STRUCTURES[s.type]["name"])
 		if s.built: built.append(n)
 		elif s.progress > 0: partial.append("%s (%d%%)" % [n, roundi(s.progress / s.work * 100)])
 	var preds: int = sim.active_predators_near(c.site, 500).size()
 	var ld := leader(c)
-	var crew_state: Array = crew(c, true).map(func(u): return "%s %d/%d HP" % [u.name, roundi(u.hp), roundi(u.max_hp)])
+	var crew_state: Array = crew(c, true).map(func(u): return "%s %d/%d HP" % [tr(u.name), roundi(u.hp), roundi(u.max_hp)])
 	return {
 		"plan_id": c.plan["plan_id"], "progress_pct": roundi(c.progress * 100),
 		"current_step": c.substate, "built": built, "half_built": partial,
-		"threat": "%d saber-toothed tigers" % preds if preds > 0 else "none visible",
+		"threat": tr("%d saber-toothed tigers") % preds if preds > 0 else tr("none visible"),
 		"reason": c.abort_reason, "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
 		"crew": crew_state, "tribe_lore": roundi(sim.stock["lore"]),
 		"idle_warriors_in_village": available_helpers().size(),
@@ -591,7 +591,7 @@ func summary(c: E.Contract) -> Dictionary:
 func resolve(c: E.Contract, effect: String, label := "") -> void:
 	if effect not in allowed_effects(c): effect = allowed_effects(c)[0]
 	var ld := leader(c)
-	_clog(c, "Chieftain's decision: %s" % (label if label != "" else effect))
+	_clog(c, tr("Chieftain's decision: %s") % (label if label != "" else tr(EFFECTS.get(effect, effect))))
 	c.abort_cooldowns[c.abort_reason] = sim.time + 5.0
 	match effect:
 		"hold":
@@ -604,21 +604,21 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 				u.contract_id = c.id
 				c.reinforcement_ids.append(u.id)
 				sim.set_job(u, {})
-			sim.add_log("%d warriors rush across the ford to reinforce '%s'." % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
+			sim.add_log(tr("%d warriors rush across the ford to reinforce '%s'.") % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
 			_set_status(c, "defending")
 		"ward":
 			sim.stock["lore"] -= 10
 			var n: int = sim.scare_predators(c.site, 600)
 			sim.gain_xp(ld, "lore", 12)
-			sim.remember(ld, "drove off %d beasts with a totem ward on Day %d" % [n, sim.day()], 8)
-			sim.popup(c.site + Vector2(0, -50), "Totem Ward!", Color("#c8a8ff"), true)
+			sim.remember(ld, tr("drove off %d beasts with a totem ward on Day %d") % [n, sim.day()], 8)
+			sim.popup(c.site + Vector2(0, -50), tr("Totem Ward!"), Color("#c8a8ff"), true)
 			_set_status(c, "executing")
 		"retreat":
 			for u in crew(c, true):
-				sim.remember(u, "abandoned the half-built camp '%s' on the east bank on Day %d" % [c.plan["plan_id"], sim.day()], 7)
+				sim.remember(u, tr("abandoned the half-built camp '%s' on the east bank on Day %d") % [c.plan["plan_id"], sim.day()], 7)
 				_release(u)
 				sim.assign_flee(u)
-			sim.add_log("'%s' abandoned at %d%%. The crew flees across the river." % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
+			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees across the river.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
 			c.status = "abandoned"
 		"rest":
 			c.resting_ids.append(ld.id)
@@ -640,13 +640,13 @@ func _defend(c: E.Contract, dt: float) -> void:
 		c.clear_t += dt
 		if c.clear_t > 2.5:
 			for u in crew_list:
-				sim.remember(u, "held the half-built camp '%s' against saber-tooths on Day %d" % [c.plan["plan_id"], sim.day()], 8)
-			_clog(c, "The beasts are gone. Resuming the blueprint where we left off.")
-			sim.add_log("'%s' secured. The state machine resumes - no LLM needed." % c.plan["plan_id"], "contract")
+				sim.remember(u, tr("held the half-built camp '%s' against saber-tooths on Day %d") % [c.plan["plan_id"], sim.day()], 8)
+			_clog(c, tr("The beasts are gone. Resuming the blueprint where we left off."))
+			sim.add_log(tr("'%s' secured. The state machine resumes - no LLM needed.") % c.plan["plan_id"], "contract")
 			_set_status(c, "executing")
 		return
 	c.clear_t = 0
-	c.substate = "Defending the camp"
+	c.substate = tr("Defending the camp")
 	for u in crew_list:
 		if u.job.get("type", "") != "attack":
 			var nearest = threats[0]
@@ -675,18 +675,18 @@ func _complete(c: E.Contract) -> void:
 	var what := ", ".join(built)
 	for u in crew(c, true):
 		if c.reinforcement_ids.has(u.id):
-			sim.remember(u, "helped defend and finish '%s' on Day %d" % [c.plan["plan_id"], sim.day()], 6)
+			sim.remember(u, tr("helped defend and finish '%s' on Day %d") % [c.plan["plan_id"], sim.day()], 6)
 			u.home = D.VILLAGE
 		else:
 			var lead: bool = u == ld
-			sim.remember(u, ("led" if lead else "helped") + " the founding of '%s' across the river on Day %d (%s)" % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
+			sim.remember(u, (tr("led the founding of '%s' across the river on Day %d (%s)") if lead else tr("helped the founding of '%s' across the river on Day %d (%s)")) % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
 			sim.gain_xp(u, "craft", 10)
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
 			u.home = c.site
 		_release(u)
 		sim.set_job(u, {})
-	sim.popup(c.site + Vector2(0, -80), "Outpost founded!", Color("#b6f28a"), true)
-	sim.add_log("Contract '%s' complete! %s. Housing for %d more." % [c.plan["plan_id"], what, housing(c.plan)], "contract")
+	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
+	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [c.plan["plan_id"], what, housing(c.plan)], "contract")
 	sim.contract_finished.emit(c)
 
 func _complete_research(c: E.Contract) -> void:
@@ -697,7 +697,7 @@ func _complete_research(c: E.Contract) -> void:
 	if fresh: sim.evo.breakthrough(id, ld, "invented")
 	for u in crew(c, true):
 		if u != ld:
-			sim.remember(u, "helped %s %s %s on Day %d" % [ld.name, "discover" if fresh else "refine", t["name"], sim.day()], 6)
+			sim.remember(u, tr("helped %s %s %s on Day %d") % [tr(ld.name), tr("discover") if fresh else tr("refine"), tr(t["name"]), sim.day()], 6)
 		sim.evo.learn(u, id)
 		sim.gain_xp(u, "lore", 8)
 		_release(u)
@@ -705,24 +705,24 @@ func _complete_research(c: E.Contract) -> void:
 	sim.gain_xp(ld, "combat", 8) # leadership
 	if not fresh:
 		sim.stock["lore"] += 15
-		sim.add_log("'%s' finished, but %s was already known - the work became 15 lore." % [c.plan["plan_id"], t["name"]], "contract")
+		sim.add_log(tr("'%s' finished, but %s was already known - the work became 15 lore.") % [c.plan["plan_id"], tr(t["name"])], "contract")
 	else:
-		sim.add_log("Research contract '%s' complete: %s now knows %s." % [c.plan["plan_id"], ld.name, t["name"]], "contract")
+		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [c.plan["plan_id"], tr(ld.name), tr(t["name"])], "contract")
 	sim.contract_finished.emit(c)
 
 func _fail(c: E.Contract, why: String) -> void:
 	c.status = "failed"
 	for u in crew(c, true): _release(u)
-	sim.add_log("Contract '%s' failed: %s" % [c.plan["plan_id"], why], "danger")
+	sim.add_log(tr("Contract '%s' failed: %s") % [c.plan["plan_id"], why], "danger")
 
 func _step_text(s: Dictionary) -> String:
 	match s["action"]:
-		"gather_wood": return "gather %d wood" % s["target_amount"]
-		"gather_food": return "gather %d food" % s["target_amount"]
-		"gather_stone": return "quarry %d stone" % s["target_amount"]
-		"experiment": return "%ds of experiments" % s["duration_sec"]
-		"build": return "build %s%s" % [("%d x " % s["count"]) if s["count"] > 1 else "", D.STRUCTURES[s["structure"]]["name"]]
-		"ritual": return "%ds blessing ritual" % s["duration_sec"]
+		"gather_wood": return tr("gather %d wood") % s["target_amount"]
+		"gather_food": return tr("gather %d food") % s["target_amount"]
+		"gather_stone": return tr("quarry %d stone") % s["target_amount"]
+		"experiment": return tr("%ds of experiments") % s["duration_sec"]
+		"build": return tr("build %s%s") % [("%d x " % s["count"]) if s["count"] > 1 else "", tr(D.STRUCTURES[s["structure"]]["name"])]
+		"ritual": return tr("%ds blessing ritual") % s["duration_sec"]
 	return s["action"]
 
 func step_text(s: Dictionary) -> String: return _step_text(s)

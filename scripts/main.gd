@@ -6,6 +6,7 @@ const Sim = preload("res://scripts/sim.gd")
 const WorldView = preload("res://scripts/world_view.gd")
 const HUD = preload("res://scripts/hud.gd")
 const LLM = preload("res://scripts/llm_client.gd")
+const I = preload("res://scripts/i18n.gd")
 
 const STEP := 0.05
 
@@ -16,6 +17,10 @@ var llm
 
 func _ready() -> void:
 	randomize()
+	var lang := I.load_pref()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--lang="): lang = arg.trim_prefix("--lang=")
+	I.setup(lang)
 	sim = Sim.new()
 	sim.new_game()
 	llm = LLM.new()
@@ -123,6 +128,10 @@ func _debug_shot(args: Dictionary) -> void:
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.3")), float(args.get("zoom", "1.3")))
 			world.focus_on(V + Vector2(0, 30))
 			if args.has("tech"): hud._open_tech()
+			if args.has("ability"):
+				hud.roster_mode = "ability"
+				hud.sort_key = args["ability"]
+				hud._refresh_left()
 			if args.has("research"):
 				world.select_only(sim.unit_by_name(args["research"]))
 				hud.open_negotiation(sim.unit_by_name(args["research"]), "research")

@@ -6,6 +6,7 @@
 extends Node2D
 
 const D = preload("res://scripts/data.gd")
+const I = preload("res://scripts/i18n.gd")
 
 signal selection_changed()
 
@@ -342,12 +343,12 @@ func draw_overlay() -> void:
 
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
 	var ford_lbl := Vector2(D.river_x(D.FORD_Y1 + 30), D.FORD_Y1 + 30)
-	if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), "FORD", 13, Color(1, 1, 1, 0.65), true)
-	if sim.is_explored(D.EAST_SITE): _draw_label(iso(D.EAST_SITE + Vector2(250, -330)), "UNTAMED EAST BANK", 20, Color(1, 1, 1, 0.4), true)
-	_draw_label(iso(D.VILLAGE + Vector2(-220, -300)), "TRIBAL LANDS", 20, Color(1, 1, 1, 0.4), true)
+	if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
+	if sim.is_explored(D.EAST_SITE): _draw_label(iso(D.EAST_SITE + Vector2(250, -330)), tr("UNTAMED EAST BANK"), 20, Color(1, 1, 1, 0.4), true)
+	_draw_label(iso(D.VILLAGE + Vector2(-220, -300)), tr("TRIBAL LANDS"), 20, Color(1, 1, 1, 0.4), true)
 	for lm in sim.landmarks:
 		if lm["found"] and _in_view(lm["pos"]):
-			_draw_label(iso(lm["pos"]) + Vector2(0, 22), lm["name"], 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
+			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
 	for c in sim.contracts.list: _draw_site_flag(c)
 	for s in sim.structures:
 		if _in_view(s.pos): _draw_structure_overlay(s)
@@ -367,7 +368,7 @@ func draw_overlay() -> void:
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.12))
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.7), false, 1.5)
 	if build_type != "":
-		_draw_label(iso(ghost_m) + Vector2(0, -44), D.STRUCTURES[build_type]["name"] + ("" if ghost_why == "" else " - " + ghost_why), 14, Color.WHITE, true)
+		_draw_label(iso(ghost_m) + Vector2(0, -44), tr(D.STRUCTURES[build_type]["name"]) + ("" if ghost_why == "" else " - " + tr(ghost_why)), 14, Color.WHITE, true)
 
 func _in_view(p: Vector2) -> bool:
 	return view.has_point(iso(p))
@@ -908,7 +909,7 @@ func _draw_structure_overlay(s) -> void:
 	var b := iso(s.pos) if not sd.get("ring", false) else iso(s.pos + Vector2(sd["r"], sd["r"]) * 0.707)
 	var by: float = b.y + 10
 	_bar(Vector2(b.x, by), 38, s.progress / s.work, Color("#b6f28a"))
-	if not s.paid: _draw_label(Vector2(b.x, by + 17), "awaiting wood", 11, Color(1, 0.8, 0.6), true)
+	if not s.paid: _draw_label(Vector2(b.x, by + 17), tr("awaiting wood"), 11, Color(1, 0.8, 0.6), true)
 
 func _draw_site_ring(c) -> void:
 	var col := _site_col(c)
@@ -931,10 +932,10 @@ func _draw_site_flag(c) -> void:
 	var wv := sin(t * 4) * 3
 	ci.draw_colored_polygon(PackedVector2Array([fp + Vector2(0, -44), fp + Vector2(24, -38 + wv), fp + Vector2(0, -30)]), col)
 	var ld = sim.unit_by_id(c.leader_id)
-	var label := "%s  [%s %d%%]" % [c.plan["plan_id"], c.status.to_upper(), roundi(c.progress * 100)]
+	var label := "%s  [%s %d%%]" % [c.plan["plan_id"], tr(c.status).to_upper(), roundi(c.progress * 100)]
 	_draw_label(fp + Vector2(0, -52), label, 14, col, true)
 	if ld and c.status not in ["done", "abandoned", "failed"]:
-		_draw_label(fp + Vector2(0, -70), "Leader: %s · %s" % [ld.name, c.substate], 12, Color(1, 1, 1, 0.85), true)
+		_draw_label(fp + Vector2(0, -70), tr("Leader: %s · %s") % [tr(ld.name), c.substate], 12, Color(1, 1, 1, 0.85), true)
 
 func _draw_unit(u) -> void:
 	var b := iso(u.pos)
@@ -1028,7 +1029,7 @@ func _draw_unit_overlay(u) -> void:
 	if u.dead: return
 	var b := iso(u.pos) * 1.0
 	var sel: bool = u.id in selected
-	var title: String = ("★ " if u.title != "" else "") + u.name
+	var title: String = ("★ " if u.title != "" else "") + tr(u.name)
 	_draw_label(b + Vector2(0, -46), title, 14, Color("#fff4d6") if not sel else Color("#ffe066"), true)
 	if u.hp < u.max_hp - 0.5: _bar(b + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
 
@@ -1074,7 +1075,7 @@ func _draw_guardian(g) -> void:
 	_ell(c, 14, 9, Color("#5fe0c0"))
 	ci.draw_circle(c + Vector2(12, -6), 6, Color("#6ff0d0"))
 	ci.draw_circle(c + Vector2(14, -7), 1.6, Color.WHITE)
-	_draw_label(c + Vector2(0, -26), "Yinglong", 13, Color("#9ff0d0"), true)
+	_draw_label(c + Vector2(0, -26), tr("Yinglong"), 13, Color("#9ff0d0"), true)
 
 func _draw_label(p: Vector2, text: String, size: int, col: Color, outline := false) -> void:
 	var w := 400.0
@@ -1171,7 +1172,7 @@ func scout_selected() -> void:
 		sim.assign_explore(u)
 		n += 1
 	if n > 0:
-		sim.add_log("%d scout%s set out to explore the unknown." % [n, "" if n == 1 else "s"], "story")
+		sim.add_log(tr("%d scout%s set out to explore the unknown.") % [n, "" if n == 1 else I.plural_s()], "story")
 		selection_changed.emit()
 
 ## Right-click command at a world point (used by the minimap).
@@ -1181,7 +1182,7 @@ func command_at(world_pos: Vector2) -> void:
 func _place(m: Vector2) -> void:
 	var s = sim.place_structure(build_type, m)
 	if s == null:
-		sim.popup(m, sim.can_place(build_type, m), Color("#ff8080"))
+		sim.popup(m, tr(sim.can_place(build_type, m)), Color("#ff8080"))
 		return
 	for u in selected_units():
 		if u.role != "contract": sim.assign_build(u, s)
@@ -1193,7 +1194,7 @@ func _command(sm: Vector2) -> void:
 	if units.is_empty(): return
 	var free: Array = units.filter(func(u): return u.role != "contract")
 	if free.size() < units.size():
-		sim.popup(m, "Contract crews follow their blueprint", Color("#9fd0ff"))
+		sim.popup(m, tr("Contract crews follow their blueprint"), Color("#9fd0ff"))
 	if free.is_empty(): return
 	cmd_marker = {"p": m, "t": t, "c": Color("#ffe066")}
 	for p in sim.predators:

@@ -4,6 +4,7 @@ extends SceneTree
 
 const Sim = preload("res://scripts/sim.gd")
 const LLM = preload("res://scripts/llm_client.gd")
+const I18N = preload("res://scripts/i18n.gd")
 
 var failures := 0
 
@@ -20,6 +21,7 @@ func _run() -> void:
 	var provider := "zai_coding"
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--provider="): provider = a.trim_prefix("--provider=")
+		if a.begins_with("--lang="): I18N.setup(a.trim_prefix("--lang="))
 	var sim = Sim.new()
 	sim.new_game()
 	var llm = LLM.new()

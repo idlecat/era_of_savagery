@@ -6,6 +6,7 @@ const Sim = preload("res://scripts/sim.gd")
 const Persona = preload("res://scripts/persona_engine.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const D = preload("res://scripts/data.gd")
+const I18N = preload("res://scripts/i18n.gd")
 # Compile-check the UI scripts too (a parse error in any of them fails this test run).
 const _Main = preload("res://scripts/main.gd")
 const _HUD = preload("res://scripts/hud.gd")
@@ -28,6 +29,7 @@ func _initialize() -> void:
 	test_exploration()
 	test_evolution()
 	test_research_contract()
+	test_translations()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -252,3 +254,34 @@ func test_research_contract() -> void:
 	print("   finished at t=%ds status=%s, log: %s" % [t, c.status, c.events.slice(0, 3)])
 	check(c.status == "done" and sim.has_tech("fire"), "research contract discovers Friction Fire")
 	check(sim.evo.inventors.get("fire", "") == "Linghe", "the leader is credited as inventor")
+
+## Every tr("...") / I.t("...") key used in the code must have a Chinese translation.
+func test_translations() -> void:
+	print("\n== Chinese translation coverage ==")
+	var ZH = load("res://scripts/lang_zh.gd")
+	var re := RegEx.create_from_string("(?:\\btr|I\\.t)\\(\\s*\"((?:[^\"\\\\\\n]|\\\\.)*)\"")
+	var letters := RegEx.create_from_string("[A-Za-z]{2}")
+	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
+	var missing: Array = []
+	for f in ["sim", "contract_system", "evolution", "hud", "world_view", "persona_engine", "llm_client"]:
+		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
+		for m in re.search_all(src):
+			var k := m.get_string(1).c_unescape()
+			if letters.search(markup.sub(k, "", true)) == null: continue
+			if not ZH.STRINGS.has(k) and k not in missing: missing.append(k)
+	for k in missing: print("   missing: ", k)
+	check(missing.is_empty(), "all %d-ish UI/game strings have Chinese text (%d missing)" % [ZH.STRINGS.size(), missing.size()])
+	I18N.setup("zh")
+	check(I18N.t("Wooden Palisade") == "木栅栏", "TranslationServer switches to Chinese")
+	check(I18N.act("Building Hut") == "建造小屋", "activity strings translate for display")
+	var sim = _new_sim()
+	var u = sim.unit_by_name("Panshi")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "x", {}, false)
+	var r := Persona.propose(ctx)
+	print("   [盘石] ", r["speech"])
+	check(r["speech"].contains("栅栏") and not r["speech"].contains("palisade"), "offline persona speaks Chinese")
+	var ctx2: Dictionary = sim.contracts.negotiation_ctx(u, "x", {}, false, "不要墙，大一点", r["blueprint"])
+	var r2 := Persona.propose(ctx2)
+	print("   [盘石 回应] ", r2["speech"])
+	check(r2["blueprint"]["capacity_target"] > r["blueprint"]["capacity_target"], "Chinese reply '大一点' is understood")
+	I18N.setup("en")
