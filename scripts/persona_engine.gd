@@ -335,6 +335,8 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 			if arch == "warrior": opts = [opts[1], opts[0], opts[2]]
 		"natural_disaster":
 			speech = I.t("Chieftain, the waters rise over the east bank! We are %d%% done - %s may be lost.") % [pct, half]
+			if sm.get("disaster", "") == "blizzard":
+				speech = I.t("Chieftain, a blizzard buries the camp! We are %d%% done, but no one can work in this cold.") % pct
 			opts = [["shelter", I.t("Shelter on high ground until the waters fall")], ["retreat", I.t("Abandon the camp and save ourselves")]]
 		_:
 			speech = I.t("Chieftain, something has gone wrong.")

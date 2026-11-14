@@ -42,6 +42,8 @@ class Unit:
 	var resume_job: Dictionary = {}
 	var resume_key: String = ""
 	var hero: bool = false
+	var sick: float = 0.0 # 1 = just fell ill, 0 = healthy
+	var immune_t: float = 0.0
 
 	func lv(skill: String) -> int:
 		return skills[skill]["lv"]
@@ -66,6 +68,9 @@ class Predator:
 	var fleeing: bool = false
 	var prowl_t: float = 0.0
 	var den: Variant = null # home lair (prowls around it)
+	var kind: String = "tiger" # "tiger" or "wolf"
+	var raid: bool = false # a den tiger out hunting in the village
+	var raid_t: float = 0.0
 
 class ResNode:
 	var id: int

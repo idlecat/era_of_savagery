@@ -135,6 +135,26 @@ func _debug_shot(args: Dictionary) -> void:
 			if args.has("research"):
 				world.select_only(sim.unit_by_name(args["research"]))
 				hud.open_negotiation(sim.unit_by_name(args["research"]), "research")
+		"winter": # debug: a hard winter night
+			hud._close_modal()
+			sim.fog_enabled = false
+			for i in int(30 / STEP): sim.tick(STEP)
+			sim.flags["flood"] = true
+			sim.time = 90.0 * 6 + float(args.get("at", "60"))
+			for i in int(float(args.get("secs", "20")) / STEP):
+				sim.tick(STEP)
+				if sim.paused:
+					sim.pending_event = ""
+					sim.paused = false
+			sim.hz._start(args.get("weather", "blizzard"))
+			sim.hz.spawn_wolf_pack()
+			for w in sim.predators:
+				if w.kind == "wolf": w.pos = Vector2(1300, 1200) + Vector2(randf_range(-260, -160), randf_range(80, 160))
+			sim.unit_by_name("Alie").sick = 1.0
+			sim.hz.snow = 1.0
+			for i in int(3 / STEP): sim.tick(STEP)
+			world.cam.zoom = Vector2(1.2, 1.2)
+			world.focus_on(Vector2(1240, 1260))
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

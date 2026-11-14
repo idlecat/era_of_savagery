@@ -30,12 +30,15 @@ func _initialize() -> void:
 	test_evolution()
 	test_research_contract()
 	test_translations()
+	test_vice_slots()
+	test_hardships()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
 func _new_sim():
 	var s = Sim.new()
 	assert(s != null)
+	s.hz.level = "off" # deterministic: the hardship tests switch challenges on themselves
 	s.new_game()
 	return s
 
@@ -263,7 +266,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "hud", "world_view", "persona_engine", "llm_client"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -285,3 +288,74 @@ func test_translations() -> void:
 	print("   [盘石 回应] ", r2["speech"])
 	check(r2["blueprint"]["capacity_target"] > r["blueprint"]["capacity_target"], "Chinese reply '大一点' is understood")
 	I18N.setup("en")
+
+func test_vice_slots() -> void:
+	print("\n== Vice-Chieftain slots ==")
+	var sim = _new_sim()
+	var a = sim.unit_by_name("Alie")
+	var p = sim.unit_by_name("Panshi")
+	check(sim.appoint_block(a, "warchief") == "", "with one free slot, a War Chief can be appointed (no Tribal Code needed)")
+	check(sim.appoint(a, "warchief"), "Alie becomes War Chief")
+	check(sim.appoint_block(p, "steward") == "no_slot", "the single slot is now taken")
+	check(sim.appoint_block(a, "steward") == "", "Alie can switch roles (her own slot is freed)")
+	sim.stock["lore"] = 500
+	for id in ["fire", "farming", "tools", "pottery", "domestication"]: sim.research(id)
+	sim.research("code")
+	check(sim.appoint(p, "steward"), "Tribal Code adds a second slot: Panshi becomes Steward")
+
+
+func test_hardships() -> void:
+	print("\n== Hardships: seasons, weather, wolves, sickness, famine ==")
+	var sim = _new_sim()
+	sim.hz.level = "normal"
+	sim.scripted_ambush = false
+	var alerts: Array = []
+	sim.alert_raised.connect(func(a): alerts.append(a["text"]))
+	check(sim.hz.season() == "Spring" and sim.hz.year() == 1, "the game starts in spring of Year 1")
+	sim.tick(0.05)
+	sim.time = D.DAY_LEN * 6 + 1.0 # first day of winter
+	sim.tick(0.05)
+	check(sim.hz.season() == "Winter", "Day 7 is winter")
+	check(alerts.any(func(t): return "Winter has come" in t), "winter is announced")
+	check(sim.hz.berry_mult() == 0.0 and sim.hz.food_mult("farm_plot") == 0.0, "no berries or harvest in winter")
+	var u = sim.unit_by_name("Shan")
+	u.pos = D.VILLAGE + Vector2(-700, 300) # far from any fire
+	sim.night_amt = 1.0
+	check(sim.hz.cold_rate(u, false) > 0.5 and sim.hz.cold_can_kill(), "a winter night away from the fire can kill")
+	sim.techs["hide"] = true
+	check(sim.hz.cold_rate(u, false) < 0.5, "fur cloaks (Hide Tailoring) cut the cold")
+	check(sim.hz.cold_rate(u, true) == 0.0, "a fire keeps everyone warm")
+	# blizzard -> natural disaster for contracts
+	sim.hz._start("blizzard")
+	check(sim.hz.speed_mult() < 1.0 and sim.hz.sight_mult() < 1.0, "blizzards slow and blind")
+	check(sim.flags.get("disaster_t", -1.0) == sim.time, "a blizzard counts as a natural disaster")
+	# wolves
+	var before: int = sim.predators.size()
+	sim.hz.spawn_wolf_pack()
+	var wolves: Array = sim.predators.filter(func(p): return p.kind == "wolf")
+	check(wolves.size() >= 2 and sim.predators.size() > before, "a wolf pack of %d spawns" % wolves.size())
+	check(alerts.any(func(t): return "Wolves howl" in t), "the pack is announced with an alert")
+	# sickness spreads and heals
+	var sim2 = _new_sim()
+	sim2.hz.level = "normal"
+	var a = sim2.unit_by_name("Alie")
+	a.sick = 1.0
+	var t := 0.0
+	var spread := false
+	while t < 120.0:
+		sim2.tick(0.05)
+		if sim2.paused:
+			sim2.pending_event = ""
+			sim2.paused = false
+		if sim2.living().filter(func(o): return o.sick > 0 and o != a).size() > 0: spread = true
+		t += 0.05
+	check(spread, "sickness spreads between people living close together")
+	check(a.sick == 0.0 and a.immune_t > sim2.time, "the sick recover and are immune for a while")
+	# famine warning
+	var sim3 = _new_sim()
+	sim3.hz.level = "normal"
+	var msgs: Array = []
+	sim3.alert_raised.connect(func(al): msgs.append(al["text"]))
+	sim3.stock["food"] = 3
+	sim3.hz._famine(11.0)
+	check(msgs.any(func(m2): return "running low" in m2), "low food stores raise a warning")

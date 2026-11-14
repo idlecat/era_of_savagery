@@ -42,6 +42,8 @@ var sheet_scout_btn: Button
 var sheet_research_btn: Button
 var reno_btn: Button
 var lang_btn: Button
+var alert_box: VBoxContainer
+var alert_items: Array = [] # [Control, expires_at_msec]
 var minimap: Control
 const MINI_W := 314.0
 
@@ -64,10 +66,12 @@ func setup(s, w, l) -> void:
 	_build_top(root)
 	_build_left(root)
 	_build_right(root)
+	_build_alerts(root)
 	sim.log_added.connect(func(): log_dirty = true)
 	sim.contract_interrupted.connect(_on_interrupt)
 	sim.event_fired.connect(_on_event)
 	sim.contract_finished.connect(func(c): _toast_contract_done(c))
+	sim.alert_raised.connect(_on_alert)
 	world.selection_changed.connect(_refresh_left)
 	_refresh_left()
 	_show_intro()
@@ -157,6 +161,39 @@ func _header(text: String) -> Label:
 	return _label(text, 14, COL_ACCENT)
 
 # ------------------------------------------------------------ layout
+# ------------------------------------------------------------ alerts (AoE-style banners)
+func _build_alerts(root: Control) -> void:
+	alert_box = VBoxContainer.new()
+	alert_box.anchor_left = 0.5
+	alert_box.anchor_right = 0.5
+	alert_box.offset_left = -380
+	alert_box.offset_right = 380
+	alert_box.offset_top = 62
+	alert_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	alert_box.add_theme_constant_override("separation", 4)
+	root.add_child(alert_box)
+
+func _on_alert(a: Dictionary) -> void:
+	var col: Color = {"danger": Color("#ff8a7a"), "warn": Color("#ffd36b")}.get(a["level"], Color("#cfe8ff"))
+	var b := _button(("⚠ " if a["level"] == "danger" else "") + a["text"], func():
+		if a["pos"] != Vector2.ZERO: world.focus_on(a["pos"]), tr("Click to look") if a["pos"] != Vector2.ZERO else "")
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.add_theme_color_override("font_color", col)
+	b.add_theme_font_size_override("font_size", 16)
+	b.focus_mode = Control.FOCUS_NONE
+	alert_box.add_child(b)
+	alert_items.append([b, Time.get_ticks_msec() + (9000 if a["level"] == "danger" else 6000)])
+	while alert_items.size() > 3:
+		alert_items[0][0].queue_free()
+		alert_items.pop_front()
+
+func _expire_alerts() -> void:
+	var now := Time.get_ticks_msec()
+	for it in alert_items.duplicate():
+		if now > it[1]:
+			it[0].queue_free()
+			alert_items.erase(it)
+
 func _build_top(root: Control) -> void:
 	var p := PanelContainer.new()
 	p.anchor_right = 1.0
@@ -171,6 +208,8 @@ func _build_top(root: Control) -> void:
 	top_stats = _rich(0, false)
 	top_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_stats.custom_minimum_size = Vector2(0, 28)
+	top_stats.add_theme_font_size_override("normal_font_size", 14)
+	top_stats.add_theme_font_size_override("bold_font_size", 14)
 	top_stats.scroll_active = false
 	h.add_child(top_stats)
 	pause_btn = _button("Pause", func(): sim.paused = not sim.paused, "Space")
@@ -238,7 +277,7 @@ func _build_left(root: Control) -> void:
 	var hb := HBoxContainer.new()
 	sheet_box.add_child(hb)
 	sheet_steward_btn = _button("Appoint Steward", func(): _appoint("steward"), "Tier 3: auto-manages idle villagers")
-	sheet_chief_btn = _button("Appoint War Chief", func(): _appoint("warchief"), "Tier 3: rallies warriors vs. beasts near the village (needs Tribal Code)")
+	sheet_chief_btn = _button("Appoint War Chief", func(): _appoint("warchief"), "Tier 3: rallies warriors vs. beasts near the village")
 	sheet_steward_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sheet_chief_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(sheet_steward_btn)
@@ -365,6 +404,7 @@ func _build_right(root: Control) -> void:
 # ------------------------------------------------------------ periodic refresh
 func _process(delta: float) -> void:
 	if minimap: minimap.queue_redraw()
+	_expire_alerts()
 	refresh_t -= delta
 	if refresh_t > 0: return
 	refresh_t = 0.25
@@ -375,10 +415,14 @@ func _process(delta: float) -> void:
 func _refresh_top() -> void:
 	var f: float = sim.day_frac()
 	var phase := tr("Night") if sim.night_amt > 0.5 else (tr("Dusk") if f > 0.65 else tr("Day"))
+	if sim.hz.on():
+		phase += " · " + tr("Year %d") % sim.hz.year() + " " + tr(sim.hz.season())
+		if sim.hz.weather != "clear" or sim.hz.winter(): phase += " · [color=#cfe8ff]%s[/color]" % tr(sim.hz.weather_name())
 	var since: String = tr("%.0fs") % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
-	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color] [color=#8a9aa8](%s)[/color]") % [
+	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
 		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), sim.stock["food"], sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
-		sim.devotion, sim.explored_pct(), sim.llm_calls, tr("offline") if not llm.is_online() else llm.model]
+		sim.devotion, sim.explored_pct(), sim.llm_calls]
+	top_stats.tooltip_text = tr("LLM node: %s") % llm.label()
 	pause_btn.text = "Resume" if sim.paused else "Pause"
 	for i in speed_btns.size():
 		speed_btns[i].modulate = COL_ACCENT if sim.speed == [1, 2, 4][i] else Color.WHITE
@@ -595,8 +639,8 @@ func _refresh_left_content() -> void:
 	sheet_research_btn.disabled = on_contract or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
 	sheet_research_btn.text = tr("Seek new wisdom…") if not sim.evo.candidates().is_empty() else tr("No new wisdom within reach")
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
-	sheet_steward_btn.disabled = sim.vice["steward"] == u.id
-	sheet_chief_btn.disabled = sim.vice["warchief"] == u.id or sim.vice_slots() < 2
+	_vice_button(sheet_steward_btn, u, "steward")
+	_vice_button(sheet_chief_btn, u, "warchief")
 
 func _cap(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1) if s.length() > 0 else s
@@ -650,11 +694,27 @@ func _cost_short(sd: Dictionary) -> String:
 func _cost_long(sd: Dictionary) -> String:
 	return tr("%d wood") % sd["wood"] + ((tr(" and %d stone") % sd["stone"]) if sd.get("stone", 0) > 0 else "")
 
+## Vice-Chieftain buttons say why they are disabled instead of just greying out.
+func _vice_button(b: Button, u, role: String) -> void:
+	var why: String = sim.appoint_block(u, role)
+	var steward: bool = role == "steward"
+	b.disabled = why != ""
+	match why:
+		"already":
+			b.text = tr("★ Steward") if steward else tr("★ War Chief")
+			b.tooltip_text = tr("%s already holds this office") % tr(u.name)
+		"no_slot":
+			b.text = tr("Steward (no slot)") if steward else tr("War Chief (no slot)")
+			b.tooltip_text = tr("All %d Vice-Chieftain slots are taken. Tribal Code and the Council of Elders tradition each add one.") % sim.vice_slots()
+		_:
+			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
+			b.tooltip_text = tr("Tier 3: auto-manages idle villagers") if steward else tr("Tier 3: rallies warriors vs. beasts near the village")
+
 func _appoint(role: String) -> void:
 	var sel: Array = world.selected_units()
 	if sel.size() != 1: return
 	if not sim.appoint(sel[0], role):
-		sim.popup(sel[0].pos, tr("No Vice-Chieftain slot free (Tribal Code adds one)"), Color("#ff8080"))
+		sim.popup(sel[0].pos, tr("No Vice-Chieftain slot free (Tribal Code or the Council of Elders adds one)"), Color("#ff8080"))
 	_refresh_left_content()
 
 # ------------------------------------------------------------ modal plumbing
@@ -1126,6 +1186,14 @@ func _open_settings() -> void:
 	amb.button_pressed = sim.scripted_ambush
 	amb.toggled.connect(func(on): sim.scripted_ambush = on)
 	v.add_child(amb)
+	var hh := HBoxContainer.new()
+	v.add_child(hh)
+	hh.add_child(_label("Challenges", 15, COL_DIM))
+	var lvl := OptionButton.new()
+	for k in sim.hz.LEVELS: lvl.add_item({"off": "Off (no seasons, weather, wolves, sickness or famine)", "normal": "Normal", "harsh": "Harsh"}[k])
+	lvl.select(sim.hz.LEVELS.find(sim.hz.level))
+	lvl.item_selected.connect(func(i): sim.hz.level = sim.hz.LEVELS[i])
+	hh.add_child(lvl)
 	var fog := CheckBox.new()
 	fog.text = "Fog of war (unexplored land is hidden until scouted)"
 	fog.button_pressed = sim.fog_enabled

@@ -83,6 +83,7 @@ func env_data(site: Vector2) -> Dictionary:
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"buildable_structures": structs,
+		"season_and_weather": sim.hz.summary(),
 		"day": sim.day(),
 	}
 
@@ -117,6 +118,7 @@ func research_env() -> Dictionary:
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"stone_quarrying_possible": sim.has_tech("tools"), "day": sim.day(),
+		"season_and_weather": sim.hz.summary(),
 	}
 
 ## Context for Phase 4 emergency awakening.
@@ -538,7 +540,7 @@ func _check_aborts(c: E.Contract) -> bool:
 				if sim.time - u.last_hit_t < 1.0: near = true
 			if near: reason = "enemy_attack"
 		elif cond == "natural_disaster":
-			if sim.flags.get("flood_active", -1.0) >= c.t: reason = "natural_disaster"
+			if sim.flags.get("flood_active", -1.0) >= c.t or sim.flags.get("disaster_t", -1.0) >= c.t: reason = "natural_disaster"
 		elif cond.begins_with("hp_below_"):
 			var pct := float(cond.trim_prefix("hp_below_").trim_suffix("%")) / 100.0
 			var ld := leader(c)
@@ -582,7 +584,7 @@ func summary(c: E.Contract) -> Dictionary:
 		"plan_id": c.plan["plan_id"], "progress_pct": roundi(c.progress * 100),
 		"current_step": c.substate, "built": built, "half_built": partial,
 		"threat": tr("%d saber-toothed tigers") % preds if preds > 0 else tr("none visible"),
-		"reason": c.abort_reason, "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
+		"reason": c.abort_reason, "disaster": "blizzard" if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
 		"crew": crew_state, "tribe_lore": roundi(sim.stock["lore"]),
 		"idle_warriors_in_village": available_helpers().size(),
 	}

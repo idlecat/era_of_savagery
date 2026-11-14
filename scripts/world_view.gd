@@ -314,6 +314,7 @@ func _draw() -> void:
 	ci.draw_set_transform_matrix(GROUND)
 	ci.draw_texture_rect(terrain_tex, Rect2(0, 0, D.W, D.H), false)
 	ci.draw_texture_rect(wear_tex, Rect2(0, 0, sim.wear_w * sim.WEAR_CELL, sim.wear_h * sim.WEAR_CELL), false)
+	_draw_season_ground()
 	_draw_water_fx()
 	for s in sim.structures: _draw_ground_part(s)
 	for c in sim.contracts.list: _draw_site_ring(c)
@@ -341,6 +342,7 @@ func draw_overlay() -> void:
 		ci.draw_texture_rect(fog_tex, Rect2(0, 0, sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL), false)
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
+	_draw_weather()
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
 	var ford_lbl := Vector2(D.river_x(D.FORD_Y1 + 30), D.FORD_Y1 + 30)
 	if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
@@ -369,6 +371,56 @@ func draw_overlay() -> void:
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.7), false, 1.5)
 	if build_type != "":
 		_draw_label(iso(ghost_m) + Vector2(0, -44), tr(D.STRUCTURES[build_type]["name"]) + ("" if ghost_why == "" else " - " + tr(ghost_why)), 14, Color.WHITE, true)
+
+# ------------------------------------------------------------ seasons & weather
+func _draw_season_ground() -> void:
+	var hz = sim.hz
+	if not hz.on(): return
+	var world := Rect2(0, 0, D.W, D.H)
+	if hz.snow > 0.01: ci.draw_rect(world, Color(0.93, 0.96, 1.0, 0.6 * hz.snow))
+	if hz.season_idx() == 2: ci.draw_rect(world, Color(0.85, 0.5, 0.15, 0.13))
+	if hz.weather == "drought": ci.draw_rect(world, Color(0.85, 0.7, 0.35, 0.2))
+
+## Rain, snow and blizzards are drawn over the visible screen area only.
+func _draw_weather() -> void:
+	var hz = sim.hz
+	if not hz.on(): return
+	var w: String = hz.weather
+	var snowing: bool = w == "blizzard" or (hz.winter() and w == "clear")
+	if w in ["rain", "storm"]:
+		for i in 220:
+			var x := view.position.x + fmod(i * 137.71 + t * 60.0, view.size.x)
+			var y := view.position.y + fmod(i * 91.37 + t * 620.0, view.size.y)
+			ci.draw_line(Vector2(x, y), Vector2(x - 4, y + 16), Color(0.75, 0.85, 1.0, 0.35), 1.2)
+		if w == "storm" and fmod(t, 7.3) < 0.12: ci.draw_rect(view, Color(1, 1, 0.9, 0.35))
+	if snowing:
+		var n := 420 if w == "blizzard" else 140
+		var drift := 260.0 if w == "blizzard" else 25.0
+		for i in n:
+			var x := view.position.x + fmod(i * 137.71 + t * drift + sin(t + i) * 12.0, view.size.x)
+			var y := view.position.y + fmod(i * 91.37 + t * (140.0 if w == "blizzard" else 45.0), view.size.y)
+			ci.draw_circle(Vector2(x, y), 1.6 + fmod(i * 0.37, 1.6), Color(1, 1, 1, 0.75))
+		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+
+func _draw_wolf(p) -> void:
+	var b := iso(p.pos)
+	var key := "p%d" % p.id
+	var f: float = facing.get(key, 1)
+	var walk: bool = moving.get(key, false)
+	_ell(b + Vector2(2, 1), 13, 4.5, SHADOW)
+	var body := b - Vector2(0, 10)
+	for i in 4:
+		var lx := body.x + (-7 + i * 4.5) * f
+		var sw := sin(t * 15 + i * 1.9) * 3.0 if walk else 0.0
+		ci.draw_line(Vector2(lx, body.y + 2), Vector2(lx + sw, b.y), Color("#4a4a4e"), 2.2)
+	ci.draw_line(body + Vector2(-10 * f, -1), body + Vector2(-17 * f, 3 + sin(t * 4) * 2), Color("#6d6d72"), 3)
+	_ell(body, 11, 5, Color("#76767c"))
+	_ell(body + Vector2(0, 2), 8, 2.5, Color("#a4a4aa"))
+	var head := body + Vector2(11 * f, -4)
+	_ell(head, 5, 4, Color("#808086"))
+	ci.draw_colored_polygon(PackedVector2Array([head + Vector2(3 * f, -1), head + Vector2(10 * f, 1), head + Vector2(3 * f, 3)]), Color("#6d6d72"))
+	ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-3 * f, -3), head + Vector2(-1 * f, -9), head + Vector2(1 * f, -3)]), Color("#5a5a60"))
+	ci.draw_circle(head + Vector2(3 * f, -1), 1.1, Color("#ffd040"))
 
 func _in_view(p: Vector2) -> bool:
 	return view.has_point(iso(p))
@@ -619,6 +671,8 @@ func _draw_node(n) -> void:
 					var tip := Vector2(b.x, by - 18 * s)
 					ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x + hw, by), tip]), dark)
 					ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x - hw * 0.1, by + 2 * s), tip]), lite)
+					if sim.hz.snow > 0.5:
+						ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-hw * 0.45, 8 * s), tip + Vector2(hw * 0.45, 8 * s)]), Color("#f4f8ff"))
 			else:
 				var c0 := Color("#2f5a2a") if not east else Color("#29482a")
 				ci.draw_circle(b + Vector2(0, -26 * s), 14 * s, c0)
@@ -626,6 +680,7 @@ func _draw_node(n) -> void:
 				ci.draw_circle(b + Vector2(7, -21) * s, 9 * s, c0.darkened(0.15))
 				ci.draw_circle(b + Vector2(-4, -31) * s, 8 * s, c0.lightened(0.18))
 				ci.draw_circle(b + Vector2(-6, -34) * s, 3.5 * s, c0.lightened(0.32))
+				if sim.hz.snow > 0.5: _ell(b + Vector2(-2, -36) * s, 10 * s, 4 * s, Color("#f4f8ff"))
 		"boulder":
 			var k: float = clampf(n.amount / 40.0, 0.35, 1.0)
 			_ell(b + Vector2(8, 3), 22 * k, 8 * k, SHADOW)
@@ -993,6 +1048,11 @@ func _draw_unit(u) -> void:
 		ci.draw_circle(hip + Vector2(0, -6), 2.5, Color("#d49a3a"))
 	if u.title != "":
 		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -5), head + Vector2(-1, -11), head + Vector2(0, -5.5), head + Vector2(2, -12), head + Vector2(4, -5)]), Color("#e8c25a"))
+	if u.sick > 0: # fever: green, sweating
+		ci.draw_circle(head + Vector2(-1, -1), 4.6, Color(0.55, 0.85, 0.35, 0.45))
+		for i in 2:
+			var k := fmod(t * 0.8 + i * 0.5, 1.0)
+			ci.draw_circle(head + Vector2(6 - i * 12, -6 - 14 * k), 1.6, Color(0.6, 0.9, 0.4, 1.0 - k))
 	if _has_torch(u):
 		var th := sh + Vector2(-6 * f, 4)
 		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
@@ -1036,6 +1096,10 @@ func _draw_unit_overlay(u) -> void:
 func _draw_pred(p) -> void:
 	var b := iso(p.pos)
 	_scale_about(b, FIG_SCALE)
+	if p.kind == "wolf":
+		_draw_wolf(p)
+		return
+	if p.raid: _ell_line(b, 20, 8, Color(1, 0.3, 0.2, 0.7), 2)
 	var key := "p%d" % p.id
 	var f: float = facing.get(key, 1)
 	var walk: bool = moving.get(key, false)
@@ -1293,7 +1357,7 @@ func _sync_items() -> void:
 		seen[key] = true
 		var it := _item(key, 0, n, iso(n.pos), n.kind == "deer")
 		it.visible = sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)
-		_touch(it, n.kind.length() * 1000 + int(n.amount / 5))
+		_touch(it, n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0))
 	for lm in sim.landmarks:
 		var key: String = "lm_" + lm["id"]
 		seen[key] = true

@@ -5,11 +5,13 @@ const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const ContractSystem = preload("res://scripts/contract_system.gd")
 const Evolution = preload("res://scripts/evolution.gd")
+const Hazards = preload("res://scripts/hazards.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
 signal contract_finished(contract)
 signal log_added()
+signal alert_raised(alert)
 
 var next_id := 1
 var time := 0.0
@@ -47,7 +49,10 @@ var explored_cells := 0
 var land_cells := 1
 var landmarks: Array = [] # copies of D.LANDMARKS + {"found": bool}
 var contracts: ContractSystem
+const MEAL := 3.0 # food per meal
 var evo: Evolution
+var hz: Hazards
+var alerts: Array = [] # {text, pos, level, t}
 # ---- worn paths: foot traffic slowly wears trails into the grass ----
 const WEAR_CELL := 30.0
 var wear_w := 0
@@ -58,6 +63,7 @@ var wear_t := 0.0
 func _init() -> void:
 	contracts = ContractSystem.new(self)
 	evo = Evolution.new(self)
+	hz = Hazards.new(self)
 
 func uid() -> int:
 	next_id += 1
@@ -80,7 +86,7 @@ func new_game() -> void:
 	_forest(Vector2(1420, 900) + o, 8, 90)
 	for b in [Vector2(760, 380), Vector2(800, 430), Vector2(720, 760), Vector2(790, 800), Vector2(850, 720), Vector2(1580, 470), Vector2(1660, 640)]:
 		var n := _node("bush", "food", b + o, 30)
-		n.regrow = 0.25
+		n.regrow = 0.1
 	_wilds()
 	_boulders()
 	wear_w = ceili(D.W / WEAR_CELL)
@@ -124,7 +130,7 @@ func _wilds() -> void:
 		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 160: continue
 		for k in 3:
 			var n := _node("bush", "food", c + Vector2(randf_range(-50, 50), randf_range(-40, 40)), 30)
-			n.regrow = 0.25
+			n.regrow = 0.1
 	for def in D.LANDMARKS:
 		var lm: Dictionary = def.duplicate(true)
 		lm["found"] = false
@@ -132,7 +138,7 @@ func _wilds() -> void:
 		if lm["id"] == "grove":
 			for k in 6:
 				var n := _node("bush", "food", lm["pos"] + Vector2.from_angle(k * TAU / 6) * 60, 40)
-				n.regrow = 0.35
+				n.regrow = 0.14
 		for k in int(lm.get("den", 0)):
 			var pr := spawn_predator(lm["pos"] + Vector2(randf_range(-60, 60), randf_range(-40, 40)))
 			pr.den = lm["pos"]
@@ -206,6 +212,14 @@ func add_structure(type: String, p: Vector2, built := false, owner := "village",
 	return s
 
 # ------------------------------------------------------------------ helpers
+## AoE-style alert: a banner the player can click to look at the danger.
+func alert(text: String, pos: Vector2, level := "info") -> void:
+	var a := {"text": text, "pos": pos, "level": level, "t": time}
+	alerts.append(a)
+	if alerts.size() > 20: alerts.pop_front()
+	add_log(text, {"danger": "danger", "warn": "story"}.get(level, "info"))
+	alert_raised.emit(a)
+
 func add_log(text: String, kind := "info") -> void:
 	log_lines.push_front({"day": day(), "text": text, "kind": kind})
 	if log_lines.size() > 80: log_lines.pop_back()
@@ -260,6 +274,12 @@ func pop_cap() -> int:
 		if s.built: c += int(D.STRUCTURES[s.type].get("cap", 0))
 	return c
 
+func _nearest_fire(p: Vector2) -> E.Structure:
+	var best: E.Structure = null
+	for s in structures:
+		if s.built and s.type == "bonfire" and (best == null or s.pos.distance_to(p) < best.pos.distance_to(p)): best = s
+	return best
+
 func near_warmth(u: E.Unit) -> bool:
 	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
 	for s in structures:
@@ -296,9 +316,10 @@ func unit_speed(u: E.Unit) -> float:
 	if u.hp < u.max_hp * 0.3: s *= 0.7
 	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
 	if evo.has_trad("wayfinders"): s *= 1.1
+	s *= hz.speed_mult()
 	return s
 
-func work_mul(u: E.Unit) -> float: return 0.9 if u.has_trait("lazy") else 1.0
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult()
 func carry_cap(_u: E.Unit) -> int: return 15 if has_tech("domestication") else 10
 
 # ------------------------------------------------------------------ XP & memory
@@ -433,6 +454,15 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		u.xp_acc = 0
 		u.xp_flush_t = 1.6
 
+	# Freezing people stop what they are doing and go to the nearest fire.
+	if hz.cold_can_kill() and u.hp < u.max_hp * 0.55 and not near_warmth(u) and not u.job.get("warm", false):
+		var fire := _nearest_fire(u.pos)
+		if fire != null:
+			if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "explore":
+				u.resume_job = u.job
+				u.resume_key = u.job_key
+			set_job(u, {"type": "move", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "flee": true, "warm": true}, u.job_key)
+			popup(u.pos + Vector2(0, -30), tr("Seeking warmth"), Color("#a8d8ff"))
 	# Self-defense or flight when attacked
 	if time - u.last_hit_t < 2 and u.attacker_id >= 0:
 		var p := pred_by_id(u.attacker_id)
@@ -462,6 +492,11 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				if u.resume_job.get("type", "") == "explore":
 					u.resume_job = {}
 					assign_explore(u)
+				elif j.get("warm", false) and not u.resume_job.is_empty():
+					if u.hp < u.max_hp * 0.8: return # stay by the fire until warm again
+					var rj := u.resume_job
+					u.resume_job = {}
+					set_job(u, rj, u.resume_key)
 				else:
 					set_job(u, {})
 		"gather":
@@ -625,7 +660,7 @@ func _deplete(n: E.ResNode) -> void:
 		n.regrow_t = 140
 	elif n.kind == "carcass" or n.kind == "boulder":
 		nodes.erase(n)
-		if n.from_deer: spawn_deer(n.bank, true)
+		if n.from_deer and not hz.winter(): spawn_deer(n.bank, true) # no new herds arrive in winter
 
 func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	gain_xp(u, "forage", amt * 0.45)
@@ -651,7 +686,7 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	if s.type == "grand_altar": summon_guardian(s)
 
 func unit_idle(u: E.Unit, dt: float) -> void:
-	u.act = "Idle"
+	u.act = "Resting (sick)" if u.sick > 0 else "Idle"
 	if u.has_trait("devout") and u.role != "contract" and D.bank_of(u.pos) == D.bank_of(u.home):
 		u.idle_t += dt
 		if u.idle_t > 4:
@@ -669,10 +704,10 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 		step_move(u, dt, unit_speed(u) * 0.4)
 
 func unit_needs(u: E.Unit, dt: float) -> void:
-	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0)
+	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult()
 	u.hunger -= drain * dt
 	if u.hunger < 40 and stock["food"] >= 1:
-		stock["food"] -= 1
+		stock["food"] -= minf(stock["food"], MEAL) # a day's eating is a real cost: winter needs stores
 		evo.drift("ranked", -0.15) # meals from the common store
 		u.hunger = minf(100, u.hunger + (38.0 if has_tech("fire") else 30.0))
 	if u.hunger <= 0:
@@ -680,9 +715,20 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 		hurt_unit(u, 0.5 * dt, null)
 	var warm := near_warmth(u)
 	if warm and night_amt > 0.5: evo.practice(u, "hearth", dt)
-	if night_amt > 0.5 and not has_tech("hide") and not warm and u.hp > u.max_hp * 0.35:
-		u.hp -= 0.3 * dt
-	elif u.hunger > 35 and time - u.last_hit_t > 5:
+	var cold := hz.cold_rate(u, warm)
+	if u.sick > 0:
+		u.sick -= hz.heal_rate(u, warm) * dt
+		if u.sick <= 0:
+			u.sick = 0.0
+			u.immune_t = time + D.DAY_LEN * 2
+			popup(u.pos + Vector2(0, -30), tr("Recovered"), Color("#b6f28a"))
+		elif u.hp > u.max_hp * (0.0 if u.hunger < 20 or hz.winter() else 0.3):
+			hurt_unit(u, 0.12 * dt, null) # fever
+	if cold > 0 and (hz.cold_can_kill() or u.hp > u.max_hp * 0.35):
+		hurt_unit(u, cold * dt, null)
+		if u.hp < u.max_hp * 0.4 and hz.cold_can_kill() and fmod(time, 6.0) < dt:
+			popup(u.pos + Vector2(0, -30), tr("Freezing!"), Color("#a8d8ff"))
+	elif u.hunger > 35 and u.sick <= 0 and time - u.last_hit_t > 5:
 		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * dt)
 
 func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
@@ -705,6 +751,14 @@ func kill_unit(u: E.Unit, killer) -> void:
 			remember(o, tr("witnessed %s %s on Day %d") % [tr(u.name), cause, day()], 8)
 	evo.on_death(u)
 	if killer: evo.drift("martial", 1.5)
+	if killer is E.Predator: # a predator that made its kill drags it away
+		if killer.kind == "wolf":
+			for w in predators:
+				if w.kind == "wolf" and w.pos.distance_to(killer.pos) < 300: w.fleeing = true
+		elif killer.raid:
+			killer.raid = false
+			killer.goal = killer.den
+			killer.path = []
 	if vice["steward"] == u.id: vice["steward"] = -1
 	if vice["warchief"] == u.id: vice["warchief"] = -1
 
@@ -735,16 +789,28 @@ func update_predator(p: E.Predator, dt: float) -> void:
 	if p.dead or p.fled: return
 	p.cd -= dt
 	if p.fleeing:
-		p.path = [Vector2(D.W + 40, p.pos.y)]
+		var out := Vector2(D.W + 40, p.pos.y)
+		if p.kind == "wolf": out = Vector2(-40, p.pos.y) if D.bank_of(p.pos) == "west" else out
+		p.path = [out]
 		step_move(p, dt, p.spd * 1.1)
-		if p.pos.x > D.W: p.fled = true
+		if p.pos.x > D.W or p.pos.x < 0: p.fled = true
 		return
+	if p.kind == "wolf":
+		p.raid_t -= dt
+		if p.raid_t <= 0: p.fleeing = true
+	if p.raid:
+		p.raid_t -= dt
+		if p.raid_t <= 0:
+			p.raid = false
+			p.goal = null
+			p.path = []
 	var prey = null
 	var best := 280.0
 	for u in units:
 		if u.dead: continue
 		var d: float = u.pos.distance_to(p.pos)
-		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or u.pos.distance_to(p.den) < 380):
+		if p.kind == "wolf" and not _wolf_target(u): continue
+		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
 			best = d
 			prey = u
 	if prey == null and guardian and not guardian.dead and guardian.pos.distance_to(p.pos) < 280:
@@ -763,8 +829,14 @@ func update_predator(p: E.Predator, dt: float) -> void:
 				popup(prey.pos + Vector2(0, -20), tr("-%d") % roundi(dmg), Color("#ff8080"))
 	elif p.goal != null:
 		if p.pos.distance_to(p.goal) > 30:
-			p.path = [p.goal]
+			if p.raid or p.kind == "wolf": # long trips: route over the ford
+				if p.path.is_empty(): set_dest(p, p.goal)
+			else:
+				p.path = [p.goal]
 			step_move(p, dt, p.spd * 0.8)
+		elif p.kind == "wolf":
+			p.goal = D.VILLAGE + Vector2(randf_range(-260, 260), randf_range(-200, 200))
+			p.path = []
 	else:
 		p.prowl_t -= dt
 		if p.prowl_t <= 0:
@@ -774,6 +846,14 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			var np := Vector2(clampf(c.x + randf_range(-r, r), D.river_x(p.pos.y) + D.RIVER_HALF + 80, D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
 			p.path = [np]
 		step_move(p, dt, p.spd * 0.35)
+
+## Wolves pick off stragglers: never people by a fire, rarely people in a group.
+func _wolf_target(u: E.Unit) -> bool:
+	if near_warmth(u): return false
+	var near := 0
+	for o in units:
+		if not o.dead and o != u and o.pos.distance_to(u.pos) < 90: near += 1
+	return near < 2
 
 func active_predators_near(center: Vector2, r: float) -> Array:
 	return predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.pos.distance_to(center) < r)
@@ -828,19 +908,19 @@ func tick(dt: float) -> void:
 	var target := 1.0 if (f > 0.72 and f < 0.97) else 0.0
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
-	var spoil := 0.0012 * (0.5 if has_tech("pottery") else 1.0)
+	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * hz.spoil_mult()
 	if stock["food"] > 30: stock["food"] -= (stock["food"] - 30) * spoil * dt
 	for s in structures:
 		if not s.built: continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0)
+		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type)
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += 0.03 * dt
 
 	for n in nodes:
 		match n.kind:
 			"bush":
-				n.amount = minf(n.max_amount, n.amount + n.regrow * dt)
+				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult())
 			"stump":
 				n.regrow_t -= dt
 				if n.regrow_t <= 0:
@@ -867,6 +947,7 @@ func tick(dt: float) -> void:
 	_update_guardian(dt)
 	contracts.update(dt)
 	evo.update(dt)
+	hz.update(dt)
 	wear_t -= dt
 	if wear_t <= 0:
 		wear_t = 1.0
@@ -907,18 +988,25 @@ func _update_births(dt: float) -> void:
 # ------------------------------------------------------------------ Tier 3: Vice-Chieftains
 func vice_slots() -> int: return 1 + (1 if has_tech("code") else 0) + (1 if evo.has_trad("council_of_elders") else 0)
 
-func appoint(u: E.Unit, role: String) -> bool:
+## Why u can't take this Vice-Chieftain role right now ("" = they can). Any free slot
+## works for either role; a person moving between roles frees their old slot.
+func appoint_block(u: E.Unit, role: String) -> String:
+	if vice[role] == u.id: return "already"
 	var used := 0
 	for k in vice:
-		if vice[k] >= 0 and k != role: used += 1
-	if used >= vice_slots(): return false
+		if vice[k] >= 0 and k != role and vice[k] != u.id: used += 1
+	if used >= vice_slots(): return "no_slot"
+	return ""
+
+func appoint(u: E.Unit, role: String) -> bool:
+	if appoint_block(u, role) != "": return false
 	for k in vice:
 		if vice[k] == u.id: vice[k] = -1
 	vice[role] = u.id
 	u.title = "Steward" if role == "steward" else "War Chief"
-	remember(u, tr("was appointed %s of the tribe on Day %d") % [u.title, day()], 7)
+	remember(u, tr("was appointed %s of the tribe on Day %d") % [tr(u.title), day()], 7)
 	evo.drift("ranked", 8.0)
-	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), u.title], "vice")
+	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice")
 	return true
 
 func _update_vice(dt: float) -> void:
@@ -1256,7 +1344,7 @@ func explored_pct() -> float:
 	return 100.0 * explored_cells / maxf(1, land_cells)
 
 func sight(u: E.Unit) -> float:
-	return D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)
+	return (D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)) * hz.sight_mult()
 
 func reveal(p: Vector2, r: float) -> void:
 	var i0 := clampi(int((p.x - r) / D.FOG_CELL), 0, fog_w - 1)

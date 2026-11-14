@@ -56,6 +56,18 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
 
+## Hardships (Challenges: Off / Normal / Harsh in LLM Settings)
+
+- **Seasons:** each lasts 2 days. Spring has fast berries, summer spoils food faster, autumn brings the harvest and a warning. In winter there are no berries or crops, half the herds migrate, people eat 25% more and the cold can kill. You need stores, fires and Hide Tailoring.
+- **Weather:** spring rain, summer drought, autumn thunderstorms (lightning splits trees), and announced winter blizzards. Blizzards slow work and travel, shrink sight, freeze anyone far from a fire, and count as a natural disaster for Task Contracts, which wakes the leader's LLM. Freezing people head to the nearest bonfire on their own, then go back to work.
+- **Wild animals:**
+  - Wolf packs come out at night, mostly in autumn and winter. They pick off stragglers away from fires and groups, and leave after a kill or at dawn.
+  - Saber-tooths leave their dens every few days to raid the village; a raider leaves with one victim.
+  - The War Chief rallies fighters against both.
+- **Sickness:** a coughing fever breaks out in hard times (winter, hunger, crowding) and spreads between people close together. Fire, shrines, a nearby shaman (Lore 3+) and the discovered Hot Spring speed recovery, and survivors are immune for a while.
+- **Famine:** you're warned when the stores drop below about a day's food, then again when people are starving. A meal costs 3 food and stores spoil, so you can't hoard forever.
+- **Alerts:** dangers appear as AoE-style banners at the top of the screen; click one to look. Season and weather show in the top bar. LLM personas are told the season, the weather and how many days of food remain.
+
 ## Language
 
 English and Simplified Chinese (简体中文). Switch with the **中文 / English** button in the top bar. The choice is saved, and the default follows your system language.
@@ -121,6 +133,7 @@ scripts/persona_engine.gd   offline stand-in for the LLM
 scripts/evolution.gd        knowledge (practice, inventors, oral tradition), culture & traditions, eras
 scripts/i18n.gd             language switching, CJK font fallback, activity text
 scripts/lang_zh.gd          Simplified Chinese strings (keys = English text)
+scripts/hazards.gd          seasons, weather, wolves & raids, sickness, famine, alerts
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
 scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)
