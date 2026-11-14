@@ -16,6 +16,9 @@ A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.
 - **Command:** right-click a tree, bush or deer to gather, a tiger to attack, a construction site to build, or ground to move.
 - **Pan:** WASD or the arrow keys, push the cursor against a screen edge, drag with the middle mouse button, or swipe two fingers on a trackpad.
 - **Zoom:** mouse wheel, or pinch on a trackpad.
+- **Explore:** select people and press X (or *Scout the unknown*) to auto-scout. Right-click recalls them.
+- **Minimap** (bottom left): left-click or drag to move the view, right-click to send the selected people there.
+- **Roster:** people are grouped by quest: each running Task Contract (leader first), scouts, then the village. Click a group header to select the whole group.
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 
 ## LLM setup (DeepSeek / GLM)
@@ -50,6 +53,19 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
 
+## Map & exploration
+
+- The map is 3600×2400 world units, about 4× the original area. The home village and ford sit in the middle, with wilderness all around.
+- Fog of war works like AoE2:
+  - **Black:** never seen.
+  - **Dimmed:** explored. Terrain, trees and buildings are remembered, but animals and beasts are hidden.
+  - **Clear:** currently in sight of people, buildings, bonfires or Yinglong.
+- Nine landmarks are hidden in the fog: Painted Cave, Standing Stones, Mammoth Graveyard, Flint Outcrop, Wild Berry Grove, Eagle Peak (reveals a wide area), Hot Spring, and two Saber-tooth Dens with resident tigers.
+- The first person to see a landmark earns its reward (lore, food or wood), Foraging XP and a memory, which later feeds their LLM negotiations.
+- Auto-scouts walk to the nearest unexplored land. They avoid known dens and back off from beasts they can see.
+- Gatherers prefer resources the tribe already knows about.
+- Fog can be turned off in *LLM Settings*.
+
 ## POC simplifications
 - Overpopulation fires at 12 people instead of PRD's 20, and the flood comes on Day 4, so both show up in a short session.
 - The mid-contract ambush is scripted at ~45% progress (toggle it in LLM Settings).
@@ -63,7 +79,7 @@ scripts/sim.gd              deterministic 20 Hz simulation (no LLM, no rendering
 scripts/contract_system.gd  task contracts: context, sanitize, executor, aborts, resolve
 scripts/persona_engine.gd   offline stand-in for the LLM
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
-scripts/world_view.gd       isometric 2.5D rendering (depth-sorted) + RTS input
+scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)
 tests/test_contract.gd      headless end-to-end tests
 ```

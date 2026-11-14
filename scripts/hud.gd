@@ -5,6 +5,7 @@ extends CanvasLayer
 const D = preload("res://scripts/data.gd")
 const Persona = preload("res://scripts/persona_engine.gd")
 
+const WV = preload("res://scripts/world_view.gd")
 var sim
 var world
 var llm
@@ -28,6 +29,11 @@ var modal: Control = null
 var modal_token := 0
 var refresh_t := 0.0
 var log_dirty := true
+var roster_sig := ""
+var roster_headers := {} # group key -> Button
+var sheet_scout_btn: Button
+var minimap: Control
+const MINI_W := 314.0
 
 const COL_BG := Color(0.11, 0.09, 0.07, 0.92)
 const COL_EDGE := Color(0.55, 0.42, 0.25)
@@ -172,9 +178,10 @@ func _build_left(root: Control) -> void:
 	p.anchor_bottom = 1.0
 	p.offset_top = 56
 	p.offset_right = 340
-	p.offset_bottom = -6
+	p.offset_bottom = -6 - (MINI_W / 2 + 20) - 6
 	p.offset_left = 6
 	root.add_child(p)
+	_build_minimap(root)
 	var v := VBoxContainer.new()
 	p.add_child(v)
 	left_title = _header("TRIBE")
@@ -197,6 +204,8 @@ func _build_left(root: Control) -> void:
 	sheet_box.add_child(sheet_text)
 	sheet_contract_btn = _button("Assign Task Contract…", func(): _start_contract_for_selected(), "Tier 2: negotiate a semi-autonomous goal with this leader")
 	sheet_box.add_child(sheet_contract_btn)
+	sheet_scout_btn = _button("Scout the unknown (X)", func(): world.scout_selected(), "Auto-explore: walk to the nearest unexplored land until called back (right-click)")
+	sheet_box.add_child(sheet_scout_btn)
 	var hb := HBoxContainer.new()
 	sheet_box.add_child(hb)
 	sheet_steward_btn = _button("Appoint Steward", func(): _appoint("steward"), "Tier 3: auto-manages idle villagers")
@@ -206,6 +215,72 @@ func _build_left(root: Control) -> void:
 	hb.add_child(sheet_steward_btn)
 	hb.add_child(sheet_chief_btn)
 	sheet_box.add_child(_button("← Back to tribe roster", func(): world.select_only(null)))
+
+# ------------------------------------------------------------ minimap
+func _build_minimap(root: Control) -> void:
+	var p := PanelContainer.new()
+	p.anchor_top = 1.0
+	p.anchor_bottom = 1.0
+	p.offset_left = 6
+	p.offset_right = 340
+	p.offset_top = -6 - (MINI_W / 2 + 20)
+	p.offset_bottom = -6
+	root.add_child(p)
+	minimap = Control.new()
+	minimap.custom_minimum_size = Vector2(MINI_W, MINI_W / 2)
+	minimap.mouse_filter = Control.MOUSE_FILTER_STOP
+	minimap.clip_contents = true
+	minimap.tooltip_text = "Minimap: left-click to look, right-click to send the selected people"
+	p.add_child(minimap)
+	minimap.draw.connect(_draw_minimap)
+	minimap.gui_input.connect(_minimap_input)
+
+func _mm_scale() -> float:
+	return minimap.size.x / ((D.W + D.H) * WV.IX)
+
+## Iso canvas point -> minimap point.
+func _mm_pt(sp: Vector2) -> Vector2:
+	return (sp + Vector2(D.H * WV.IX, 0)) * _mm_scale()
+
+func _draw_minimap() -> void:
+	var k := _mm_scale()
+	var mm := minimap
+	mm.draw_rect(Rect2(Vector2.ZERO, mm.size), Color("#141210"))
+	var xf := Transform2D(0.0, Vector2(k, k), 0.0, Vector2(D.H * WV.IX * k, 0)) * WV.GROUND
+	mm.draw_set_transform_matrix(xf)
+	mm.draw_texture_rect(world.terrain_tex, Rect2(0, 0, D.W, D.H), false)
+	if sim.fog_enabled: mm.draw_texture_rect(world.fog_tex, Rect2(0, 0, sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL), false)
+	mm.draw_set_transform_matrix(Transform2D.IDENTITY)
+	for st in sim.structures:
+		if sim.is_explored(st.pos): mm.draw_rect(Rect2(_mm_pt(WV.iso(st.pos)) - Vector2(2, 2), Vector2(4, 4)), Color("#c9a24f"))
+	for lm in sim.landmarks:
+		if lm["found"]:
+			var q := _mm_pt(WV.iso(lm["pos"]))
+			mm.draw_colored_polygon(PackedVector2Array([q + Vector2(0, -4), q + Vector2(4, 0), q + Vector2(0, 4), q + Vector2(-4, 0)]), Color("#ff6b5a") if lm["kind"] == "den" else Color("#ffe066"))
+	for pr in sim.predators:
+		if not pr.dead and not pr.fled and sim.is_visible(pr.pos): mm.draw_circle(_mm_pt(WV.iso(pr.pos)), 2.5, Color("#ff4a3a"))
+	for u in sim.units:
+		if u.dead: continue
+		var sel: bool = u.id in world.selected
+		mm.draw_circle(_mm_pt(WV.iso(u.pos)), 3.0 if sel else 2.2, Color("#ffffff") if sel else u.color.lightened(0.3))
+	var vs: Vector2 = world.get_viewport_rect().size / world.cam.zoom.x
+	var r := Rect2(_mm_pt(world.cam.get_screen_center_position() - vs / 2), vs * k)
+	mm.draw_rect(r, Color(1, 1, 1, 0.85), false, 1.0)
+
+func _minimap_input(ev: InputEvent) -> void:
+	var mb := ev as InputEventMouseButton
+	var mm := ev as InputEventMouseMotion
+	var pos := Vector2.ZERO
+	if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT: pos = mb.position
+	elif mm and (mm.button_mask & MOUSE_BUTTON_MASK_LEFT): pos = mm.position
+	elif mb and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+		world.command_at(WV.uniso(mb.position / _mm_scale() - Vector2(D.H * WV.IX, 0)))
+		minimap.accept_event()
+		return
+	else: return
+	world.cam.position = pos / _mm_scale() - Vector2(D.H * WV.IX, 0)
+	world._clamp_cam()
+	minimap.accept_event()
 
 func _build_right(root: Control) -> void:
 	var p := PanelContainer.new()
@@ -251,6 +326,7 @@ func _build_right(root: Control) -> void:
 
 # ------------------------------------------------------------ periodic refresh
 func _process(delta: float) -> void:
+	if minimap: minimap.queue_redraw()
 	refresh_t -= delta
 	if refresh_t > 0: return
 	refresh_t = 0.25
@@ -262,9 +338,9 @@ func _refresh_top() -> void:
 	var f: float = sim.day_frac()
 	var phase := "Night" if sim.night_amt > 0.5 else ("Dusk" if f > 0.65 else "Day")
 	var since: String = "%.0fs" % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
-	top_stats.text = "[color=#ffd36b]Day %d[/color] %s   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color] [color=#8a9aa8](%s · sim ticks since last: %d)[/color]" % [
+	top_stats.text = "[color=#ffd36b]Day %d[/color] %s   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color] [color=#8a9aa8](%s · sim ticks since last: %d)[/color]" % [
 		sim.day(), phase, sim.stock["food"], sim.stock["wood"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
-		sim.devotion, sim.llm_calls, llm.label(), sim.ticks_since_llm]
+		sim.devotion, sim.explored_pct(), sim.llm_calls, llm.label(), sim.ticks_since_llm]
 	pause_btn.text = "Resume" if sim.paused else "Pause"
 	for i in speed_btns.size():
 		speed_btns[i].modulate = COL_ACCENT if sim.speed == [1, 2, 4][i] else Color.WHITE
@@ -277,30 +353,80 @@ func _refresh_left() -> void:
 	if not single:
 		for c in roster_box.get_children(): c.queue_free()
 		roster_buttons.clear()
-		for u in sim.units:
-			if u.dead: continue
-			var b := _button("", func(): world.select_only(u); world.focus_on(u.pos))
-			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			b.clip_text = true
-			roster_box.add_child(b)
-			roster_buttons[u.id] = b
+		roster_headers.clear()
+		roster_sig = _roster_signature()
+		for g in _roster_groups():
+			var members: Array = g["units"]
+			var hb := _button("", func():
+				world.selected = members.map(func(u): return u.id)
+				world.selection_changed.emit()
+				world.focus_on(g["focus"]))
+			hb.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			hb.clip_text = true
+			hb.flat = true
+			hb.add_theme_color_override("font_color", g["color"])
+			hb.tooltip_text = "Select this whole group"
+			roster_box.add_child(hb)
+			roster_headers[g["key"]] = hb
+			for u in members:
+				var b := _button("", func(): world.select_only(u); world.focus_on(u.pos))
+				b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+				b.clip_text = true
+				roster_box.add_child(b)
+				roster_buttons[u.id] = b
 	_refresh_left_content()
+
+## People grouped by what they are doing: one group per running Task Contract (its crew,
+## leader first), then scouts out exploring, then everyone in the village.
+func _roster_groups() -> Array:
+	var groups: Array = []
+	var placed := {}
+	for c in sim.contracts.list:
+		if not sim.contracts.is_running(c): continue
+		var crew: Array = sim.living().filter(func(u): return u.role == "contract" and u.contract_id == c.id)
+		if crew.is_empty(): continue
+		crew.sort_custom(func(a, b): return a.id == c.leader_id and b.id != c.leader_id)
+		for u in crew: placed[u.id] = true
+		groups.append({"key": "c%d" % c.id, "contract": c, "units": crew, "focus": c.site, "color": Color("#ff8a7a") if c.status in ["interrupted", "defending"] else Color("#9fd0ff")})
+	var scouts: Array = sim.living().filter(func(u): return not placed.has(u.id) and u.job.get("type", "") == "explore")
+	for u in scouts: placed[u.id] = true
+	if not scouts.is_empty():
+		groups.append({"key": "scouts", "units": scouts, "focus": scouts[0].pos, "color": Color("#b6f28a")})
+	var rest: Array = sim.living().filter(func(u): return not placed.has(u.id))
+	if not rest.is_empty():
+		groups.append({"key": "village", "units": rest, "focus": D.VILLAGE, "color": COL_ACCENT})
+	return groups
+
+func _roster_signature() -> String:
+	var parts: Array = []
+	for u in sim.living():
+		parts.append("%d:%d:%s" % [u.id, u.contract_id if u.role == "contract" else -1, "x" if u.job.get("type", "") == "explore" else ""])
+	for c in sim.contracts.list: parts.append("c%d%s" % [c.id, c.status])
+	return ",".join(parts)
+
+func _group_title(key: String, units: Array) -> String:
+	if key == "scouts": return "▸ SCOUTING THE UNKNOWN (%d)" % units.size()
+	if key == "village": return "▸ VILLAGE (%d)" % units.size()
+	var c = sim.contracts.by_id(int(key.substr(1)))
+	if c == null: return key
+	var ld = sim.unit_by_id(c.leader_id)
+	return "⚑ %s · %s %d%% (%d)" % [c.plan["plan_id"], c.status, roundi(c.progress * 100), units.size()]
 
 func _refresh_left_content() -> void:
 	var sel: Array = world.selected_units()
 	if sel.size() != 1:
 		left_title.text = "TRIBE (%d)%s" % [sim.living().size(), "  · %d selected" % sel.size() if sel.size() > 1 else ""]
-		var alive := 0
-		for u in sim.units:
-			if not u.dead: alive += 1
-		if alive != roster_buttons.size():
+		if _roster_signature() != roster_sig:
 			_refresh_left()
 			return
+		for g in _roster_groups():
+			if roster_headers.has(g["key"]): roster_headers[g["key"]].text = _group_title(g["key"], g["units"])
 		for id in roster_buttons:
 			var u = sim.unit_by_id(id)
 			var tag: String = " ★" + u.title if u.title != "" else ""
-			if u.role == "contract": tag += " [contract]"
-			roster_buttons[id].text = "%s Lv%d%s — %s" % [u.name, sim.unit_level(u), tag, u.act]
+			var c = sim.contracts.by_id(u.contract_id) if u.role == "contract" else null
+			if c and c.leader_id == u.id: tag += " [leader]"
+			roster_buttons[id].text = "   %s Lv%d%s — %s" % [u.name, sim.unit_level(u), tag, u.act]
 			roster_buttons[id].modulate = COL_ACCENT if u.id in world.selected else Color.WHITE
 		return
 	var u = sel[0]
@@ -330,6 +456,8 @@ func _refresh_left_content() -> void:
 	var on_contract: bool = u.role == "contract"
 	sheet_contract_btn.disabled = on_contract or D.bank_of(u.pos) != "west"
 	sheet_contract_btn.text = "On contract — executing blueprint" if on_contract else "Assign Task Contract…"
+	sheet_scout_btn.disabled = on_contract
+	sheet_scout_btn.text = "Scouting… (right-click to recall)" if u.job.get("type", "") == "explore" else "Scout the unknown (X)"
 	sheet_steward_btn.disabled = sim.vice["steward"] == u.id
 	sheet_chief_btn.disabled = sim.vice["warchief"] == u.id or sim.vice_slots() < 2
 
@@ -409,6 +537,7 @@ func _show_intro() -> void:
 [color=#ffd36b]Tier 1 · Direct micro[/color] — select tribespeople (click / drag) and right-click trees, bushes, deer, tigers, construction sites or ground.
 [color=#ffd36b]Tier 2 · Task Contracts[/color] — select one person (try [b]Panshi[/b], [b]Alie[/b] or [b]Linghe[/b]) and press [i]Assign Task Contract[/i]. Their LLM persona negotiates a blueprint for a settlement across the river. Once sealed, a deterministic state machine executes it with [b]zero LLM calls[/b] (watch the counter in the top bar) — until an ambush re-awakens the leader.
 [color=#ffd36b]Tier 3 · Vice-Chieftains[/color] — appoint a Steward to auto-manage idle villagers.
+[color=#ffd36b]Exploration[/color] — the land beyond the firelight is hidden. Select someone and press [b]X[/b] (or [i]Scout the unknown[/i]) to auto-explore; landmarks reward the finder with lore, food or wood and a new memory. Beware the saber-tooth dens in the far east. The minimap (bottom left) shows what you know: click it to look, right-click it to send the selected people.
 
 Every task grants specialization XP and notable events enter each person's [b]Memory Archive[/b], which is fed back into their next negotiation. Research the Wisdom Tree with lore from rituals. Milestone events: the Great Flood (Day %d), Overpopulation (%d people), Birth of the Chosen One (100%% devotion).
 
@@ -744,6 +873,11 @@ func _open_settings() -> void:
 	amb.button_pressed = sim.scripted_ambush
 	amb.toggled.connect(func(on): sim.scripted_ambush = on)
 	v.add_child(amb)
+	var fog := CheckBox.new()
+	fog.text = "Fog of war (unexplored land is hidden until scouted)"
+	fog.button_pressed = sim.fog_enabled
+	fog.toggled.connect(func(on): sim.fog_enabled = on)
+	v.add_child(fog)
 	var result := _label("", 14, Color("#9fd0ff"))
 	v.add_child(result)
 	var apply := func():

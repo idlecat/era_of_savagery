@@ -21,6 +21,7 @@ func _initialize() -> void:
 	test_sanitize()
 	test_full_contract()
 	test_events()
+	test_exploration()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -129,3 +130,29 @@ func test_events() -> void:
 	sim.stock["lore"] = 100
 	check(sim.research("fire") == "", "research Friction Fire")
 	check(sim.research("bronze") != "", "bronze blocked by prereqs")
+
+func test_exploration() -> void:
+	print("\n== Exploration / fog of war ==")
+	var sim = _new_sim()
+	sim.scripted_ambush = false
+	check(sim.is_explored(D.VILLAGE) and sim.is_visible(D.VILLAGE), "village starts explored and in sight")
+	check(not sim.is_explored(Vector2(D.W - 100, 100)), "far corner starts hidden")
+	var start: float = sim.explored_pct()
+	check(start < 15, "only the home area is known at start (%d%%)" % start)
+	var u = sim.unit_by_name("Shan")
+	sim.assign_explore(u)
+	var lore0: float = sim.stock["lore"]
+	var t := 0.0
+	while t < D.DAY_LEN:
+		sim.tick(0.05)
+		if sim.paused:
+			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 2)
+			sim.paused = false
+		t += 0.05
+	var found: Array = sim.landmarks.filter(func(l): return l["found"])
+	print("   after 1 day: explored %d%%, found %s" % [sim.explored_pct(), found.map(func(l): return l["name"])])
+	check(sim.explored_pct() > start + 15, "a scout pushes the map open (%d%%)" % sim.explored_pct())
+	check(not found.is_empty(), "scouting discovers landmarks")
+	check(sim.stock["lore"] > lore0, "discoveries pay out")
+	check(u.memory.any(func(m): return "found" in m["text"]), "discovery archived in the scout's memory")
+	check(u.job.get("type", "") == "explore" or u.dead or u.job.get("flee", false), "scout keeps exploring until recalled")

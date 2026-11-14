@@ -58,6 +58,8 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 			world.select_only(null)
 		KEY_C:
 			if not hud.modal_open(): hud._start_contract_for_selected()
+		KEY_X:
+			if not hud.modal_open(): world.scout_selected()
 
 func toggle_fullscreen() -> void:
 	var fs := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
@@ -86,6 +88,16 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.select_only(sim.unit_by_name(args.get("who", "Panshi")))
 			hud._start_contract_for_selected()
+		"explore":
+			hud._close_modal()
+			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))
+			for i in int(float(args.get("secs", "240")) / STEP): sim.tick(STEP)
+			sim.paused = false
+			hud._close_modal()
+			world.selected = []
+			world.selection_changed.emit()
+			world.cam.zoom = Vector2(0.42, 0.42)
+			world.focus_on(Vector2(1800, 1200))
 		"emergency":
 			hud._close_modal()
 			var u = sim.unit_by_name(args.get("who", "Panshi"))

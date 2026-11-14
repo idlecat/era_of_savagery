@@ -65,6 +65,7 @@ class Predator:
 	var fled: bool = false
 	var fleeing: bool = false
 	var prowl_t: float = 0.0
+	var den: Variant = null # home lair (prowls around it)
 
 class ResNode:
 	var id: int

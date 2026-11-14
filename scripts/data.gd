@@ -1,24 +1,56 @@
 ## Static game data: map geometry, structures, techs, traits, starting tribe.
 extends RefCounted
 
-const W := 1920.0
-const H := 1080.0
+const W := 3600.0
+const H := 2400.0
 const DAY_LEN := 90.0 # seconds per in-game day at 1x
 
 # ---- River & ford ----
-const RIVER_BASE_X := 1180.0
+const RIVER_BASE_X := 1960.0
 const RIVER_AMP := 40.0
 const RIVER_PERIOD := 170.0
 const RIVER_HALF := 46.0
-const FORD_Y0 := 495.0
-const FORD_Y1 := 585.0
-const FORD_Y := 540.0
+const FORD_Y0 := 1155.0
+const FORD_Y1 := 1245.0
+const FORD_Y := 1200.0
 
-const VILLAGE := Vector2(520, 560)
-const EAST_SITE := Vector2(1520, 560)
+const VILLAGE := Vector2(1300, 1200)
+const EAST_SITE := Vector2(2300, 1200)
+## Offset used to place the original hand-made starting area inside the bigger map.
+const HOME_OFS := Vector2(780, 640)
 
 const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short POC session
 const FLOOD_DAY := 4
+
+# ---- Exploration (fog of war) ----
+const FOG_CELL := 40.0
+const SIGHT_UNIT := 200.0
+const SIGHT_SCOUT_BONUS := 30.0 # extra sight while auto-scouting
+const SIGHT_STRUCT := 200.0
+const SIGHT_BONFIRE := 300.0
+
+## Points of interest hidden in the fog. Found when first seen by a tribesperson.
+## reward: stock deltas; reveal: extra radius revealed on discovery; den: spawns prowling tigers.
+const LANDMARKS := [
+	{"id": "cave", "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520), "reward": {"lore": 40},
+		"text": "found the Painted Cave, where the ancestors drew the great hunt"},
+	{"id": "stones", "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020), "reward": {"lore": 30}, "devotion": 8.0,
+		"text": "found the Standing Stones that hum when the moon is full"},
+	{"id": "mammoth", "kind": "bones", "name": "Mammoth Graveyard", "pos": Vector2(1180, 330), "reward": {"lore": 15, "wood": 25},
+		"text": "found the Mammoth Graveyard and hauled home great tusks and ribs"},
+	{"id": "flint", "kind": "flint", "name": "Flint Outcrop", "pos": Vector2(260, 1640), "reward": {"wood": 40, "lore": 10},
+		"text": "found a Flint Outcrop; the tribe's axes bite deeper now"},
+	{"id": "grove", "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080), "reward": {"food": 40},
+		"text": "found a Wild Berry Grove heavy with fruit"},
+	{"id": "peak", "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300), "reward": {"lore": 20}, "reveal": 650.0,
+		"text": "climbed Eagle Peak and saw the whole east bank spread below"},
+	{"id": "spring", "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120), "reward": {"food": 20, "lore": 15},
+		"text": "found a steaming Hot Spring deep in the east"},
+	{"id": "den_n", "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760), "reward": {"lore": 10}, "den": 2,
+		"text": "found a Saber-tooth Den littered with bones and lived to tell of it"},
+	{"id": "den_s", "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180), "reward": {"lore": 10}, "den": 1,
+		"text": "found a second Saber-tooth Den in the southern thickets"},
+]
 
 static func river_x(y: float) -> float:
 	return RIVER_BASE_X + RIVER_AMP * sin(y / RIVER_PERIOD)

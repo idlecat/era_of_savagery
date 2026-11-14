@@ -35,6 +35,16 @@ var vice_timer := 0.0
 var guardian = null
 var pending_event := ""
 var scripted_ambush := true
+# ---- exploration (fog of war) ----
+var fog_enabled := true
+var fog_w := 0
+var fog_h := 0
+var explored := PackedByteArray() # 1 = ever seen
+var visible := PackedByteArray()  # 1 = seen right now
+var fog_t := 0.0
+var explored_cells := 0
+var land_cells := 1
+var landmarks: Array = [] # copies of D.LANDMARKS + {"found": bool}
 var contracts: ContractSystem
 
 func _init() -> void:
@@ -46,24 +56,25 @@ func uid() -> int:
 
 # ------------------------------------------------------------------ setup
 func new_game() -> void:
+	var o := D.HOME_OFS # the original hand-made home area, placed in the middle of the bigger map
 	add_structure("bonfire", D.VILLAGE, true)
-	add_structure("hut", Vector2(430, 470), true)
-	add_structure("hut", Vector2(610, 465), true)
-	add_structure("hut", Vector2(440, 660), true)
-	add_structure("hut", Vector2(620, 665), true)
+	add_structure("hut", Vector2(430, 470) + o, true)
+	add_structure("hut", Vector2(610, 465) + o, true)
+	add_structure("hut", Vector2(440, 660) + o, true)
+	add_structure("hut", Vector2(620, 665) + o, true)
 
-	_forest(Vector2(230, 230), 22, 170)
-	_forest(Vector2(260, 880), 18, 150)
-	_forest(Vector2(900, 140), 10, 120)
-	_forest(Vector2(1620, 250), 22, 170)
-	_forest(Vector2(1700, 860), 20, 160)
-	_forest(Vector2(1420, 900), 8, 90)
-
+	_forest(Vector2(230, 230) + o, 22, 170)
+	_forest(Vector2(260, 880) + o, 18, 150)
+	_forest(Vector2(900, 140) + o, 10, 120)
+	_forest(Vector2(1620, 250) + o, 22, 170)
+	_forest(Vector2(1700, 860) + o, 20, 160)
+	_forest(Vector2(1420, 900) + o, 8, 90)
 	for b in [Vector2(760, 380), Vector2(800, 430), Vector2(720, 760), Vector2(790, 800), Vector2(850, 720), Vector2(1580, 470), Vector2(1660, 640)]:
-		var n := _node("bush", "food", b, 30)
+		var n := _node("bush", "food", b + o, 30)
 		n.regrow = 0.25
-	for i in 6: spawn_deer("west", false)
-	for i in 5: spawn_deer("east", false)
+	_wilds()
+	for i in 14: spawn_deer("west", false)
+	for i in 12: spawn_deer("east", false)
 
 	var count: int = D.CHARACTERS.size()
 	for i in count:
@@ -74,6 +85,43 @@ func new_game() -> void:
 	assign_gather(unit_by_name("Shan"), "food")
 	assign_gather(unit_by_name("Bai"), "wood")
 	add_log("The tribe gathers around the bonfire. Saber-tooth tracks have been seen east of the ford.", "story")
+	add_log("Beyond the firelight the land is unknown. Send a scout (X) to explore it.", "story")
+	_fog_init()
+	fog_update()
+
+## Outer wilderness of the big map: random forests and berry patches away from the home area,
+## plus the landmarks (and the tiger dens) hidden in the fog.
+func _wilds() -> void:
+	var home := Rect2(D.VILLAGE - Vector2(700, 600), Vector2(1700, 1200))
+	var placed := 0
+	var tries := 0
+	while placed < 26 and tries < 400:
+		tries += 1
+		var c := Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
+		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 220: continue
+		var near_lm := false
+		for lm in D.LANDMARKS:
+			if c.distance_to(lm["pos"]) < 230: near_lm = true
+		if near_lm: continue
+		_forest(c, randi_range(10, 24), randf_range(110, 200))
+		placed += 1
+	for i in 8:
+		var c := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
+		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 160: continue
+		for k in 3:
+			var n := _node("bush", "food", c + Vector2(randf_range(-50, 50), randf_range(-40, 40)), 30)
+			n.regrow = 0.25
+	for def in D.LANDMARKS:
+		var lm: Dictionary = def.duplicate(true)
+		lm["found"] = false
+		landmarks.append(lm)
+		if lm["id"] == "grove":
+			for k in 6:
+				var n := _node("bush", "food", lm["pos"] + Vector2.from_angle(k * TAU / 6) * 60, 40)
+				n.regrow = 0.35
+		for k in int(lm.get("den", 0)):
+			var pr := spawn_predator(lm["pos"] + Vector2(randf_range(-60, 60), randf_range(-40, 40)))
+			pr.den = lm["pos"]
 
 func _node(kind: String, res: String, p: Vector2, amount: float) -> E.ResNode:
 	var n := E.ResNode.new()
@@ -88,6 +136,10 @@ func _forest(c: Vector2, count: int, spread: float) -> void:
 		var p := Vector2(clampf(c.x + cos(a) * r, 20, D.W - 20), clampf(c.y + sin(a) * r * 0.8, 20, D.H - 20))
 		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 20: continue
 		if p.distance_to(D.VILLAGE) < 190 or p.distance_to(D.EAST_SITE) < 130: continue
+		var blocked := false
+		for lm in D.LANDMARKS:
+			if p.distance_to(lm["pos"]) < 90: blocked = true
+		if blocked: continue
 		var n := _node("tree", "wood", p, 30)
 		n.sz = randf_range(0.8, 1.25)
 
@@ -95,10 +147,10 @@ func spawn_deer(bank: String, from_edge: bool) -> void:
 	var p := Vector2.ZERO
 	for k in 30:
 		if bank == "west":
-			p = Vector2(randf_range(30, 120) if from_edge else randf_range(650, 1050), randf_range(60, D.H - 60))
+			p = Vector2(randf_range(30, 120) if from_edge else randf_range(150, D.RIVER_BASE_X - 150), randf_range(60, D.H - 60))
 		else:
-			p = Vector2(randf_range(1350, 1880), randf_range(60, D.H - 60))
-		if not D.in_river(p) and D.bank_of(p) == bank and p.distance_to(D.VILLAGE) > 160: break
+			p = Vector2(randf_range(D.RIVER_BASE_X + 150, D.W - 80), randf_range(60, D.H - 60))
+		if not D.in_river(p) and D.bank_of(p) == bank and p.distance_to(D.VILLAGE) > 220: break
 	var n := _node("deer", "food", p, 25)
 	n.bank = bank
 
@@ -208,6 +260,7 @@ func unit_def(u: E.Unit) -> float:
 func unit_speed(u: E.Unit) -> float:
 	var s := 58.0 * u.spd
 	if u.hp < u.max_hp * 0.3: s *= 0.7
+	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
 	return s
 
 func work_mul(u: E.Unit) -> float: return 0.9 if u.has_trait("lazy") else 1.0
@@ -308,6 +361,8 @@ func assign_gather(u: E.Unit, res: String, opts := {}) -> void:
 func assign_build(u: E.Unit, s: E.Structure, key := "") -> void: set_job(u, {"type": "build", "struct_id": s.id}, key)
 func assign_attack(u: E.Unit, p: E.Predator, key := "") -> void: set_job(u, {"type": "attack", "target_id": p.id}, key)
 func assign_ritual(u: E.Unit, p: Vector2, key := "") -> void: set_job(u, {"type": "ritual", "at": p, "elapsed": 0.0}, key)
+## AoE2-DE-style auto-scout: keep walking to the nearest unexplored land.
+func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
 func find_node(res: String, from: Vector2, bank: String, max_dist: float) -> E.ResNode:
 	var best: E.ResNode = null
@@ -320,7 +375,7 @@ func find_node(res: String, from: Vector2, bank: String, max_dist: float) -> E.R
 		var claims := 0
 		for u in units:
 			if not u.dead and u.job.get("node_id", -2) == n.id: claims += 1
-		var score := d + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0)
+		var score := d + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0)
 		if score < best_score:
 			best_score = score
 			best = n
@@ -343,7 +398,10 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		if p and not p.dead and not p.fleeing:
 			var low := u.hp < u.max_hp * 0.22
 			var jt: String = u.job.get("type", "")
-			if low and not u.has_trait("belligerent") and not u.job.get("flee", false):
+			if jt == "explore":
+				assign_flee(u)
+				popup(u.pos + Vector2(0, -26), "Scout retreats!", Color("#ff9b7a"))
+			elif low and not u.has_trait("belligerent") and not u.job.get("flee", false):
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), "Flees!", Color("#ff9b7a"))
 			elif not low and jt != "attack" and jt != "move":
@@ -359,7 +417,12 @@ func update_unit(u: E.Unit, dt: float) -> void:
 	match j["type"]:
 		"move":
 			u.act = "Fleeing" if j.get("flee", false) else "Moving"
-			if approach(u, j["to"], 4, dt): set_job(u, {})
+			if approach(u, j["to"], 4, dt):
+				if u.resume_job.get("type", "") == "explore":
+					u.resume_job = {}
+					assign_explore(u)
+				else:
+					set_job(u, {})
 		"gather":
 			_do_gather(u, j, dt)
 		"build":
@@ -398,6 +461,26 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				var crit := randf() < 0.05 * u.lv("forage")
 				damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 				gain_xp(u, "combat", 1.2)
+		"explore":
+			u.act = "Scouting"
+			var threat := active_predators_near(u.pos, 240)
+			if not threat.is_empty(): # scouts keep their distance from beasts they can see
+				var away: Vector2 = (u.pos - threat[0].pos).normalized()
+				j["to"] = null
+				set_job(u, {"type": "move", "to": u.pos + away * 260, "flee": true})
+				u.resume_job = {"type": "explore", "to": null}
+				popup(u.pos + Vector2(0, -30), "Beast! Scout backs off", Color("#ff9b7a"))
+				return
+			var tgt: Variant = j.get("to")
+			if tgt == null or is_explored(tgt):
+				tgt = explore_target(u)
+				if tgt == null:
+					set_job(u, {})
+					popup(u.pos + Vector2(0, -30), "Nothing left to explore", Color("#9fd0ff"))
+					return
+				j["to"] = tgt
+			if approach(u, tgt, 12, dt): j["to"] = null
+			gain_xp(u, "forage", dt * 0.12)
 		"ritual":
 			if approach(u, j["at"], 6, dt):
 				u.act = "Performing ritual"
@@ -577,7 +660,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 	for u in units:
 		if u.dead: continue
 		var d: float = u.pos.distance_to(p.pos)
-		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos):
+		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or u.pos.distance_to(p.den) < 380):
 			best = d
 			prey = u
 	if prey == null and guardian and not guardian.dead and guardian.pos.distance_to(p.pos) < 280:
@@ -602,7 +685,10 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		p.prowl_t -= dt
 		if p.prowl_t <= 0:
 			p.prowl_t = randf_range(3, 6)
-			p.path = [Vector2(clampf(p.pos.x + randf_range(-120, 120), 1300, D.W - 30), clampf(p.pos.y + randf_range(-120, 120), 40, D.H - 40))]
+			var c: Vector2 = p.den if p.den != null else p.pos
+			var r := 220.0 if p.den != null else 120.0
+			var np := Vector2(clampf(c.x + randf_range(-r, r), D.river_x(p.pos.y) + D.RIVER_HALF + 80, D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
+			p.path = [np]
 		step_move(p, dt, p.spd * 0.35)
 
 func active_predators_near(center: Vector2, r: float) -> Array:
@@ -688,6 +774,10 @@ func tick(dt: float) -> void:
 					n.vel = -n.vel
 
 	for u in units: update_unit(u, dt)
+	fog_t -= dt
+	if fog_t <= 0:
+		fog_t = 0.2
+		fog_update()
 	for p in predators: update_predator(p, dt)
 	predators = predators.filter(func(p): return not p.fled)
 	_update_guardian(dt)
@@ -946,3 +1036,105 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 	add_log(out["text"], "story")
 	return out
 
+
+# ------------------------------------------------------------------ exploration / fog of war
+func _fog_init() -> void:
+	fog_w = ceili(D.W / D.FOG_CELL)
+	fog_h = ceili(D.H / D.FOG_CELL)
+	explored.resize(fog_w * fog_h)
+	explored.fill(0)
+	visible.resize(fog_w * fog_h)
+	visible.fill(0)
+	land_cells = 0
+	for j in fog_h:
+		for i in fog_w:
+			if not D.is_water(_cell_center(i, j)): land_cells += 1
+	explored_cells = 0
+
+func _cell_center(i: int, j: int) -> Vector2:
+	return Vector2((i + 0.5) * D.FOG_CELL, (j + 0.5) * D.FOG_CELL)
+
+func _cell_idx(p: Vector2) -> int:
+	var i := clampi(int(p.x / D.FOG_CELL), 0, fog_w - 1)
+	var j := clampi(int(p.y / D.FOG_CELL), 0, fog_h - 1)
+	return j * fog_w + i
+
+func is_explored(p: Vector2) -> bool:
+	return not fog_enabled or fog_w == 0 or explored[_cell_idx(p)] == 1
+
+func is_visible(p: Vector2) -> bool:
+	return not fog_enabled or fog_w == 0 or visible[_cell_idx(p)] == 1
+
+func explored_pct() -> float:
+	return 100.0 * explored_cells / maxf(1, land_cells)
+
+func sight(u: E.Unit) -> float:
+	return D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0)
+
+func reveal(p: Vector2, r: float) -> void:
+	var i0 := clampi(int((p.x - r) / D.FOG_CELL), 0, fog_w - 1)
+	var i1 := clampi(int((p.x + r) / D.FOG_CELL), 0, fog_w - 1)
+	var j0 := clampi(int((p.y - r) / D.FOG_CELL), 0, fog_h - 1)
+	var j1 := clampi(int((p.y + r) / D.FOG_CELL), 0, fog_h - 1)
+	var r2 := r * r
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			if _cell_center(i, j).distance_squared_to(p) > r2: continue
+			var k := j * fog_w + i
+			visible[k] = 1
+			if explored[k] == 0:
+				explored[k] = 1
+				if not D.is_water(_cell_center(i, j)): explored_cells += 1
+
+func fog_update() -> void:
+	if fog_w == 0: return
+	visible.fill(0)
+	for u in units:
+		if not u.dead: reveal(u.pos, sight(u))
+	for s in structures:
+		if s.built: reveal(s.pos, D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)
+	if guardian and not guardian.dead: reveal(guardian.pos, 260)
+	for lm in landmarks:
+		if not lm["found"] and visible[_cell_idx(lm["pos"])] == 1: _discover(lm)
+
+func _discover(lm: Dictionary) -> void:
+	lm["found"] = true
+	var finder: E.Unit = null
+	for u in living():
+		if finder == null or u.pos.distance_to(lm["pos"]) < finder.pos.distance_to(lm["pos"]): finder = u
+	var rw: Dictionary = lm.get("reward", {})
+	var parts: Array = []
+	for k in rw:
+		stock[k] += rw[k]
+		parts.append("+%d %s" % [rw[k], k])
+	if lm.has("devotion"):
+		devotion = minf(100.0, devotion + lm["devotion"])
+		parts.append("+%d devotion" % lm["devotion"])
+	if lm.has("reveal"): reveal(lm["pos"], lm["reveal"])
+	var who: String = finder.name if finder else "The tribe"
+	add_log("Discovery! %s %s (%s)." % [who, lm["text"], ", ".join(parts)], "story" if lm["kind"] != "den" else "danger")
+	popup(lm["pos"] + Vector2(0, -40), "Discovered: " + lm["name"], Color("#ffd36b"), true)
+	if finder:
+		remember(finder, "%s on Day %d" % [lm["text"], day()], 6)
+		gain_xp(finder, "forage", 15)
+
+## Nearest unexplored land cell, preferring the scout's own bank (crossing costs a detour)
+## and steering clear of known saber-tooth dens.
+func explore_target(u: E.Unit) -> Variant:
+	var best: Variant = null
+	var best_score := INF
+	var my_bank := D.bank_of(u.pos)
+	var dens: Array = landmarks.filter(func(l): return l["found"] and l["kind"] == "den").map(func(l): return l["pos"])
+	for j in fog_h:
+		for i in fog_w:
+			if explored[j * fog_w + i] == 1: continue
+			var c := _cell_center(i, j)
+			if D.in_river(c): continue
+			var score: float = c.distance_to(u.pos)
+			if D.bank_of(c) != my_bank: score += 2.0 * absf(c.y - D.FORD_Y) + 300.0
+			for dp in dens:
+				if c.distance_to(dp) < 450: score += 2500.0
+			if score < best_score:
+				best_score = score
+				best = c
+	return best
