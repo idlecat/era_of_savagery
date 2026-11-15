@@ -64,7 +64,7 @@ func decor_total() -> int:
 	return n
 
 func mood_target() -> float:
-	var t := 55.0 + minf(15.0, decor_total() * 2.0) + minf(15.0, treasures.size() * 4.0)
+	var t: float = 55.0 + minf(15.0, decor_total() * 2.0) + minf(15.0, treasures.size() * 4.0) + sim.inv.mood_bonus()
 	if sim.time < glow_until: t += 15.0
 	var alive: Array = sim.living()
 	if sim.stock["food"] < alive.size(): t -= 15.0
@@ -220,6 +220,7 @@ func _masterpiece(u: E.Unit, kind: String) -> void:
 	lift(10.0)
 	sim.devotion = minf(100.0, sim.devotion + 5)
 	sim.remember(u, tr("made the %s, a treasure of the tribe, on Day %d") % [tr(what), sim.day()], 8)
+	sim.inv.feat("masterpiece", tr("Made a masterpiece: the %s") % tr(what), u)
 	sim.alert(tr("%s has made a masterpiece: the %s! The whole tribe comes to see it.") % [tr(u.name), tr(what)], u.pos, "info", [u])
 
 # ------------------------------------------------------------ festivals

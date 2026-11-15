@@ -507,6 +507,42 @@ const STRUCT_ALIASES := {
 ## Knowledge evolves two ways: by PRACTICE (people doing related work build up insight;
 ## "practice" maps activity -> weight) and by spending lore to finish the idea. "words"
 ## are things personas must not mention before the tech exists.
+## Everyday inventions (inventions.gd): smaller than the Wisdom Tree's techs. Each grows out
+## of what the tribe does: practice = tribe-wide points per activity (seconds of the work,
+## counted once its needs are met: techs, finds, other inventions). The one who practised
+## most is the inventor. kind: medicine | tool | goods. hint: shown while undiscovered.
+const INVENTIONS := [
+	{"id": "moss_dressing", "kind": "medicine", "name": "Moss Dressings", "practice": {"hunt": 80.0}, "needs": {},
+		"desc": "Wounds packed with clean moss: the hurt heal 40% faster.", "hint": "Comes from tending the wounds of many hunts."},
+	{"id": "fever_brew", "kind": "medicine", "name": "Fever Brew", "practice": {"ritual": 150.0}, "needs": {"finds": ["willow"]},
+		"desc": "A bitter brew of willow bark and roots: the sick recover 30% faster.", "hint": "Needs willow bark, and long rites over the sick."},
+	{"id": "bone_setting", "kind": "medicine", "name": "Bone Setting", "practice": {"hunt": 250.0, "ritual": 120.0}, "needs": {"inventions": ["moss_dressing"]},
+		"desc": "Splints of wood and hide: the badly hurt are no longer slowed.", "hint": "After moss dressings: many more hunts, and healers' rites."},
+	{"id": "digging_stick", "kind": "tool", "name": "Fire-Hardened Digging Stick", "practice": {"berry": 150.0}, "needs": {},
+		"desc": "Berries, roots and grain are gathered 25% faster.", "hint": "Comes from long days of foraging."},
+	{"id": "fish_hook", "kind": "tool", "name": "Bone Fishhook", "practice": {"hunt": 60.0}, "needs": {"finds": ["fish"]},
+		"desc": "Fishing yields 40% more.", "hint": "Needs a fishing ground, and a hunter's patience."},
+	{"id": "sling", "kind": "tool", "name": "Hunting Sling", "practice": {"hunt": 200.0, "quarry": 30.0}, "needs": {},
+		"desc": "Stones hurled from afar: +2 attack for everyone.", "hint": "Comes to hunters who also work stone."},
+	{"id": "carrying_frame", "kind": "tool", "name": "Carrying Frame", "practice": {"chop": 300.0}, "needs": {},
+		"desc": "A frame of bent poles worn on the back: everyone carries 3 more.", "hint": "Comes from hauling a great deal of timber."},
+	{"id": "bone_needle", "kind": "tool", "name": "Bone Needle", "practice": {"hunt": 120.0}, "needs": {"techs": ["hide"]},
+		"desc": "Fitted, stitched clothes: the cold bites 30% less.", "hint": "Needs Hide Tailoring, and many hides."},
+	{"id": "baskets", "kind": "goods", "name": "Woven Baskets", "practice": {"berry": 250.0, "chop": 100.0}, "needs": {},
+		"desc": "The stores hold 30 more food.", "hint": "Comes from gathering, and working with wood and reed."},
+	{"id": "smoking_rack", "kind": "goods", "name": "Smoking Rack", "practice": {"hearth": 500.0, "hunt": 80.0}, "needs": {"techs": ["fire"]},
+		"desc": "Meat smoked over the fire: food spoils 30% slower.", "hint": "Needs fire, and meat brought home to the hearth."},
+	{"id": "salt_curing", "kind": "goods", "name": "Salt-Cured Meat", "practice": {"hunt": 100.0}, "needs": {"finds": ["salt"]},
+		"desc": "Food spoils another 20% slower.", "hint": "Needs salt, and plenty of meat."},
+	{"id": "bone_flute", "kind": "goods", "name": "Bone Flute", "practice": {"ritual": 200.0, "hearth": 300.0}, "needs": {},
+		"desc": "Music by the fire: the tribe's mood is 5 higher.", "hint": "Comes from rites, and evenings by the fire."},
+	{"id": "fur_bedding", "kind": "goods", "name": "Fur Bedding", "practice": {"hearth": 800.0}, "needs": {"techs": ["hide"]},
+		"desc": "Soft furs to sleep on: the tribe's mood is 3 higher.", "hint": "Needs Hide Tailoring, and many nights by the fire."},
+	{"id": "clay_lamp", "kind": "goods", "name": "Clay Lamp", "practice": {"hearth": 600.0, "ritual": 60.0}, "needs": {"techs": ["pottery"]},
+		"desc": "Light for night-long tales: the tribe gathers a little more lore.", "hint": "Needs Primitive Pottery, and long nights of tales."},
+]
+const INVENTION_KINDS := {"medicine": "Medicine", "tool": "Tools", "goods": "Daily goods"}
+
 const INSIGHT_RATE := 0.06
 const PRACTICE_NAMES := {"chop": "felling trees", "hunt": "hunting & butchering", "berry": "foraging berries", "build": "building",
 	"ritual": "rituals", "quarry": "quarrying stone", "explore": "scouting", "hearth": "nights by the fire", "lead": "leading others"}

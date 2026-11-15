@@ -81,6 +81,7 @@ func era_now() -> int:
 ## Called by the simulation whenever someone does work: activity in D.PRACTICE_NAMES,
 ## amount ~ seconds of work.
 func practice(u: E.Unit, activity: String, amount: float) -> void:
+	sim.inv.practice(u, activity, amount) # everyday inventions grow from the same work
 	for t in D.TECHS:
 		var id: String = t["id"]
 		var w: float = t["practice"].get(activity, 0.0)
@@ -113,6 +114,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 	var t := tech_def(id)
 	sim.techs[id] = true
 	insight[id] = float(t["cost"])
+	sim.inv.feat("wisdom", (tr("Discovered %s") if how == "invented" else tr("Learned %s")) % tr(t["name"]), inventor)
 	var learners: Array = []
 	if how == "taught":
 		learners = sim.living().filter(func(o): return o.role != "contract" and D.home_side(o.pos))
@@ -140,6 +142,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		era = e
 		pending_era = e
 		sim.add_log(tr("A new age dawns: the %s.") % tr(D.ERA_NAMES[e]), "story")
+		sim.inv.feat("era", tr("Entered the %s") % tr(D.ERA_NAMES[e]))
 	# ideas that were waiting on this prerequisite
 	for o in D.TECHS:
 		if not sim.has_tech(o["id"]) and prereqs_met(o["id"]) and insight[o["id"]] >= o["cost"] - 0.01:
@@ -204,6 +207,7 @@ func adopt(id: String) -> void:
 		if o["id"] == id: t = o
 	if t.is_empty() or traditions.has(id): return
 	traditions[id] = sim.day()
+	sim.inv.feat("tradition", tr("Adopted the tradition of %s") % tr(t["name"]))
 	sim.add_log(tr("A new tradition takes hold: %s - %s") % [tr(t["name"]), tr(t["desc"])], "story")
 	sim.popup(D.VILLAGE + Vector2(0, -90), tr("Tradition: ") + tr(t["name"]), Color("#ffd6a0"), true)
 	var champion: E.Unit = null
@@ -258,4 +262,5 @@ func world_ctx() -> Dictionary:
 		"tribe_culture": culture_summary(), "unknown_things_you_have_no_words_for": unknown_words,
 		"neighbors": sim.rivals.summary() if sim.rivals else [],
 		"found_in_the_land": sim.known_finds.keys().map(func(id): return tr(D.FINDS[id]["name"])),
+		"everyday_inventions": sim.inv.known.keys().map(func(id): return tr(sim.inv.def(id)["name"])),
 	}

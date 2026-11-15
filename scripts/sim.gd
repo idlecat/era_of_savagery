@@ -11,6 +11,7 @@ const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Story = preload("res://scripts/story.gd")
+const Inventions = preload("res://scripts/inventions.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
 signal contract_interrupted(contract)
@@ -78,6 +79,7 @@ var hz: Hazards
 var nat: Nature
 var folk: Folk
 var story: Story # the scenario's scripted events (none on a random map)
+var inv: Inventions # everyday inventions and the tribe's achievements
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -96,6 +98,7 @@ func _init() -> void:
 	nat = Nature.new(self)
 	folk = Folk.new(self)
 	story = Story.new(self)
+	inv = Inventions.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -372,6 +375,7 @@ func _struct_near(type: String, p: Vector2, r: float) -> bool:
 func unit_atk(u: E.Unit) -> float:
 	var a := u.atk * (1.0 + 0.15 * u.lv("combat"))
 	if has_tech("tools"): a += 2
+	a += inv.atk_bonus() # the sling
 	if evo.has_trad("warrior_initiation"): a += 2
 	if has_bronze(): a *= 1.6
 	elif knows_find("obsidian"): a *= 1.15 # black-glass blades
@@ -394,7 +398,7 @@ func unit_def(u: E.Unit) -> float:
 
 func unit_speed(u: E.Unit) -> float:
 	var s := 58.0 * u.spd
-	if u.hp < u.max_hp * 0.3: s *= 0.7
+	if u.hp < u.max_hp * 0.3 and not inv.has("bone_setting"): s *= 0.7
 	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
 	if evo.has_trad("wayfinders"): s *= 1.1
 	s *= hz.speed_mult()
@@ -402,14 +406,14 @@ func unit_speed(u: E.Unit) -> float:
 	return s
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult()
-func carry_cap(u: E.Unit) -> int: return 15 if u.ox else 10
+func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second.
 const FOOD_STORE_BASE := 80
 const FOOD_STORE_GRANARY := 100
 const FOOD_ROT := 0.03
 func food_cap() -> int:
-	var c := FOOD_STORE_BASE
+	var c := FOOD_STORE_BASE + inv.store_bonus()
 	for s in structures:
 		if s.built and ours(s) and s.type == "granary": c += FOOD_STORE_GRANARY
 	return c
@@ -773,6 +777,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
 		var rate := base * (1.0 + 0.1 * u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
+		rate *= inv.gather_mult(n.kind, fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry"))
 		var activity: String = fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
 		evo.practice(u, activity, dt * fd.get("practice_x", 1.0))
 		match activity:
@@ -940,6 +945,7 @@ func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	add_log(tr("Discovery! %s found %s: %s") % [tr(u.name), tr(fd["name"]), tr(fd["desc"])], "story", [u])
 	popup(at + Vector2(0, -40), tr("Discovered: %s") % tr(fd["name"]), Color("#ffd36b"), true)
 	remember(u, tr("found %s on Day %d") % [tr(fd["name"]), day()], 6)
+	inv.feat("find", tr("Found %s") % tr(fd["name"]), u)
 	gain_xp(u, "lore" if fd["group"] == "medicine" else "forage", 5)
 	match id:
 		"flint": evo.seed("tools", 0.45, u)
@@ -1391,7 +1397,7 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 			stock["herbs"] -= 1
 			u.herb_t = time + 30.0
 			popup(u.pos + Vector2(0, -30), tr("Willow-bark tea"), Color("#b6f28a"))
-		u.sick -= hz.heal_rate(u, warm) * dt
+		u.sick -= hz.heal_rate(u, warm) * inv.sick_mult() * dt
 		if u.sick <= 0:
 			u.sick = 0.0
 			u.immune_t = time + D.DAY_LEN * 2
@@ -1407,7 +1413,7 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 			stock["herbs"] -= 1
 			u.salve_t = time + 30.0
 			popup(u.pos + Vector2(0, -30), tr("Yarrow poultice"), Color("#b6f28a"))
-		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * (2.0 if time < u.salve_t else 1.0) * dt)
+		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * (2.0 if time < u.salve_t else 1.0) * inv.heal_mult() * dt)
 
 func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
 	if u.dead: return
@@ -1622,11 +1628,12 @@ func tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	story.tick(dt)
+	inv.update(dt)
 	var f := day_frac()
 	var target := maxf(1.0 if (f > 0.72 and f < 0.97) else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
-	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult()
+	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult()
 	var cap := food_cap()
 	if stock["food"] > 30: stock["food"] -= (minf(stock["food"], cap) - 30) * spoil * dt
 	if stock["food"] > cap: # nowhere to keep it: it rots fast
@@ -1639,7 +1646,7 @@ func tick(dt: float) -> void:
 		var sd: Dictionary = D.STRUCTURES[s.type]
 		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s)
 		stock["lore"] += sd.get("lore", 0.0) * dt
-	stock["lore"] += 0.03 * dt
+	stock["lore"] += (0.03 + inv.lore_rate()) * dt
 
 	for n in nodes:
 		match n.kind:
@@ -2143,6 +2150,7 @@ func _discover(lm: Dictionary) -> void:
 	var finder: E.Unit = null
 	for u in living():
 		if finder == null or u.pos.distance_to(lm["pos"]) < finder.pos.distance_to(lm["pos"]): finder = u
+	inv.feat("landmark", tr("Discovered %s") % tr(lm["name"]), finder)
 	var rw: Dictionary = lm.get("reward", {})
 	var parts: Array = []
 	for k in rw:

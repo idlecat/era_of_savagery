@@ -47,6 +47,7 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 | PRD item | Where |
 |---|---|
 | Map: rivers, fords and the land regions between them, routing over fords | `data.gd` |
+| Everyday inventions (medicine, tools, daily goods) and the Achievements panel | `inventions.gd`, `hud.gd` |
 | Game modes: random maps (`mapgen.gd`), scenarios with scripted events (`scenarios/*.gd`, `story.gd`), New Game screen | `mapgen.gd`, `scenarios.gd`, `story.gd`, `new_game_ui.gd` |
 | Forests, berries, deer, bonfire, huts, palisades | `sim.gd`, `world_view.gd` |
 | Tier 1 direct micro (select, drag-box, right-click gather/attack/build/move) | `world_view.gd` |
@@ -287,3 +288,16 @@ scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas ite
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)
 tests/test_contract.gd      headless end-to-end tests
 ```
+
+## Everyday inventions & achievements
+
+Beyond the Wisdom Tree, the tribe makes smaller inventions out of what it does every day. Each invention's progress grows with tribe-wide practice of particular activities, such as hunting, foraging, chopping, rites and evenings by the fire. Progress starts counting once the invention's needs are met (a technology, a find, or an earlier invention). The adult who practised most becomes the inventor, gains XP and a memory, and the tribe's mood lifts.
+
+| Kind | Inventions |
+|---|---|
+| Medicine | Moss Dressings (hurt heal 40% faster), Fever Brew (needs willow; the sick recover 30% faster), Bone Setting (after Moss Dressings; the badly hurt are no longer slowed) |
+| Tools | Fire-Hardened Digging Stick (+25% foraging), Bone Fishhook (needs fish; +40% fishing), Hunting Sling (+2 attack), Carrying Frame (carry 3 more), Bone Needle (needs Hide Tailoring; cold 30% weaker) |
+| Daily goods | Woven Baskets (+30 food storage), Smoking Rack (needs fire; food spoils 30% slower), Salt-Cured Meat (needs salt; another 20%), Bone Flute (mood +5), Fur Bedding (needs Hide Tailoring; mood +3), Clay Lamp (needs Pottery; more lore) |
+
+The **Achievements** button (top bar) lists the inventions made, with who and when, and a hint and progress for each one still to come. It also lists **the tribe's firsts** in order: inventions, wisdom discovered or learned, natural finds, landmarks, clans met, traditions, new ages, masterpieces and outposts. The personas know the tribe's inventions too.
+

@@ -447,6 +447,13 @@ func _debug_shot(args: Dictionary) -> void:
 			var bg = sim.burial_ground()
 			world.focus_on(bg.pos.lerp(sim.D.VILLAGE, 0.5) if bg and args.has("burial") else sim.D.VILLAGE)
 			if args.has("graves") and bg: hud.open_graves(bg)
+		"achievements": # the Achievements panel with a few inventions and firsts
+			hud._close_modal()
+			for id in ["moss_dressing", "digging_stick", "baskets", "bone_flute"]: sim.inv.discover(id, sim.living()[randi() % 6])
+			sim.discover_find("mushroom", sim.living()[0], sim.living()[0].pos)
+			sim.evo.breakthrough("fire", sim.living()[1])
+			for i in int(float(args.get("secs", "30")) / STEP): sim.tick(STEP)
+			hud.open_achievements()
 		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
 			hud._close_modal()
 			sim.fog_enabled = false

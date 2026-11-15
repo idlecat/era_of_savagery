@@ -232,6 +232,7 @@ func _build_top(root: Control) -> void:
 		h.add_child(b)
 	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
 	h.add_child(_button("Legacy", _open_legacy, "The three paths to victory: conquest, unity and wisdom"))
+	h.add_child(_button("Achievements", open_achievements, "The tribe's inventions and everything it did first"))
 	h.add_child(_button("LLM Settings", _open_settings))
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
@@ -1764,6 +1765,46 @@ func _open_legacy() -> void:
 	s += tr("[color=#8a7a60]If every one of our people dies, the chronicle ends in defeat. After a victory you may keep playing.[/color]")
 	r.text = s
 	v.add_child(r)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
+	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "outpost": ["Outpost", "#b6f28a"]}
+
+## The tribe's achievements: everyday inventions (known, and hints of those still to come)
+## and the record of its firsts.
+func open_achievements() -> void:
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var inv = sim.inv
+	var v := _open_modal(tr("ACHIEVEMENTS · Day %d") % sim.day(), 820)
+	v.add_child(_header(tr("INVENTIONS (%d of %d)") % [inv.known.size(), D.INVENTIONS.size()]))
+	var r := _rich(0, true)
+	var s := ""
+	for kind in D.INVENTION_KINDS:
+		s += "[b]%s[/b]\n" % tr(D.INVENTION_KINDS[kind])
+		for d in D.INVENTIONS:
+			if d["kind"] != kind: continue
+			if inv.has(d["id"]):
+				var k: Dictionary = inv.known[d["id"]]
+				var by: String = (tr(" by %s") % tr(k["by"])) if k["by"] != "" else ""
+				s += (tr("  [color=#9ff0c8]✔ %s[/color] — %s [color=#8a7a60](Day %d%s)[/color]") % [tr(d["name"]), tr(d["desc"]), k["day"], by]) + "\n"
+			elif inv.needs_met(d):
+				s += (tr("  [color=#d8ccb0]○ ???[/color] — [i]%s[/i] [color=#8a7a60](%d%%)[/color]") % [tr(d["hint"]), roundi(inv.frac(d["id"]) * 100)]) + "\n"
+			else:
+				s += (tr("  [color=#6a5e4a]○ ??? — %s[/color]") % tr(d["hint"])) + "\n"
+		s += "\n"
+	r.text = s
+	v.add_child(r)
+	v.add_child(_header(tr("THE TRIBE'S FIRSTS (%d)") % inv.feats.size()))
+	var f := _rich(0, true)
+	var lines: Array = []
+	for e in inv.feats:
+		var fk: Array = FEAT_KINDS.get(e["kind"], ["", "#d8ccb0"])
+		var who: String = (" [color=#8a7a60]— %s[/color]" % tr(e["who"])) if e["who"] != "" else ""
+		lines.append(tr("[color=#8a7a60]Day %d[/color]  [color=%s]%s[/color]  %s%s") % [e["day"], fk[1], tr(fk[0]), e["text"], who])
+	f.text = "\n".join(lines) if not lines.is_empty() else tr("[color=#8a7a60]Nothing yet. Explore, work and learn: every first is written here.[/color]")
+	v.add_child(f)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
 
 ## A victory or defeat: the storyteller's LLM node composes the saga of the game.

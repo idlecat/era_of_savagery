@@ -51,6 +51,7 @@ func _initialize() -> void:
 	test_folk()
 	test_mapgen()
 	test_water()
+	test_inventions()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1358,3 +1359,37 @@ func test_water() -> void:
 	check(p4.size() == 5, "without it, the way goes round over both main fords (%d legs)" % p4.size())
 	Scenarios.apply()
 
+
+func test_inventions() -> void:
+	print("\n== Everyday inventions and achievements ==")
+	var sim = _new_sim()
+	var inv = sim.inv
+	var u = sim.unit_by_name("Tuo")
+	var cap0: int = sim.food_cap()
+	for i in 300: sim.evo.practice(u, "berry", 1.0)
+	check(inv.frac("digging_stick") >= 1.0 and not inv.has("digging_stick"), "foraging builds toward the digging stick")
+	for i in 200:
+		sim.tick(0.05)
+		if inv.has("digging_stick"): break
+	for i in 400:
+		inv.update(2.1)
+		if inv.has("digging_stick"): break
+	check(inv.has("digging_stick") and inv.known["digging_stick"]["by"] == "Tuo", "the forager who practised most invents it")
+	check(inv.gather_mult("bush", "berry") > 1.2, "berries are gathered faster with it")
+	check(u.memory.any(func(m): return m["text"].contains("Digging Stick")), "the inventor remembers it")
+	# needs gate the practice: no fishhook before fish is found
+	for i in 100: sim.evo.practice(u, "hunt", 1.0)
+	check(inv.frac("fish_hook") == 0.0 and inv.frac("moss_dressing") > 0.9, "a fishhook needs a fishing ground first")
+	inv.discover("baskets", u)
+	inv.discover("carrying_frame", u)
+	inv.discover("bone_needle", u)
+	check(sim.food_cap() == cap0 + 30 and sim.carry_cap(u) == 13, "baskets store more food, carrying frames carry more")
+	sim.hz.level = "normal"
+	check(inv.cold_mult() < 1.0, "bone needles make warmer clothes")
+	var kinds: Array = inv.feats.map(func(f): return f["kind"])
+	check(kinds.count("invention") == 4, "each invention is an achievement")
+	sim.discover_find("fish", u, u.pos)
+	sim.evo.breakthrough("fire", u)
+	kinds = inv.feats.map(func(f): return f["kind"])
+	check(kinds.has("find") and kinds.has("wisdom"), "finds and wisdom are achievements too")
+	check(sim.evo.world_ctx()["everyday_inventions"].size() == 4, "the personas know the tribe's inventions")
