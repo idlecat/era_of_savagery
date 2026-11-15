@@ -176,7 +176,7 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
 
 ## Rival clans
 
-Two neighbouring clans live on the map: the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (far south-west). Their villages and peaceful hunters start hidden in the fog.
+Six clans share the map. Near home are the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (south-west). Farther out live the martial **Tusk Clan** (north-west forests) and **Hawk Clan** (south-east hills), and the spiritual **Elk Clan** (north-east meadows) and **Willow Clan** (southern marshes). Their villages and peaceful hunters start hidden in the fog. Conquest and Unity victories need every clan.
 
 - **First contact.** The first time you see their people or homes, the game pauses for a choice: offer gifts (20 food, +20 relations), show strength (martial clans respect it, others take it as a threat) or keep your distance.
 - **Relations** run from -100 to 100 (Blood feud · Hostile · Wary · Friendly · Allied) and drift back toward each clan's temperament. They drop when you gather or scout on their hunting grounds, build near them, or attack or kill their people. Clans remember grudges.
@@ -212,7 +212,7 @@ English and Simplified Chinese (简体中文). Switch with the **中文 / Englis
 
 ## Map & exploration
 
-- The map is 3600×2400 world units, about 4× the original area. The home village and ford sit in the middle, with wilderness all around.
+- The map is 6400×4400 world units. The home village, ford and the first two clans sit in the middle; the far reaches hold four more clans and more landmarks (Cave of Hands, Wind Peak, Bison Bone Pit, Mist Spring, Ring of the Ancients, a third Saber-tooth Den). Forests, berry patches, stone, deer and natural finds are scaled up to match.
 - Fog of war works like AoE2:
   - **Black:** never seen.
   - **Dimmed:** explored. Terrain, trees and buildings are remembered, but animals and beasts are hidden.

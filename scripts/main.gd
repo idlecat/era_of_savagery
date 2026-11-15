@@ -133,7 +133,7 @@ func _debug_shot(args: Dictionary) -> void:
 			for id in order.slice(0, {1: 3, 2: 6, 3: 9}[stage]): sim.research(id)
 			sim.pending_event = ""
 			sim.paused = false
-			var V: Vector2 = sim.D.VILLAGE if false else Vector2(1300, 1200)
+			var V: Vector2 = sim.D.VILLAGE
 			if stage >= 2:
 				for spec in [["aurochs_pen", Vector2(-230, 60)], ["farm_plot", Vector2(-200, -120)], ["granary", Vector2(170, 150)]]:
 					var st = sim.place_structure(spec[0], V + spec[1])
@@ -149,8 +149,8 @@ func _debug_shot(args: Dictionary) -> void:
 					st.progress = st.work * spec[1]
 					k += 1
 			if stage >= 2:
-				var dy := 1120.0
-				var dx: float = 1960.0 + 40.0 * sin(dy / 170.0) - 46.0 - 6.0
+				var dy: float = 1120.0 + sim.D.SHIFT.y
+				var dx: float = sim.D.river_x(dy) - sim.D.RIVER_HALF - 6.0
 				sim.add_structure("fishing_dock", Vector2(dx, dy), true)
 			sim.renovate([])
 			for st in sim.structures:
@@ -189,12 +189,12 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.hz._start(args.get("weather", "blizzard"))
 			sim.hz.spawn_wolf_pack()
 			for w in sim.predators:
-				if w.kind == "wolf": w.pos = Vector2(1300, 1200) + Vector2(randf_range(-260, -160), randf_range(80, 160))
+				if w.kind == "wolf": w.pos = sim.D.VILLAGE + Vector2(randf_range(-260, -160), randf_range(80, 160))
 			sim.unit_by_name("Alie").sick = 1.0
 			sim.hz.snow = 1.0
 			for i in int(3 / STEP): sim.tick(STEP)
 			world.cam.zoom = Vector2(1.2, 1.2)
-			world.focus_on(Vector2(1240, 1260))
+			world.focus_on(sim.D.VILLAGE + Vector2(-60, 60))
 		"clans": # debug: a rival village, met, with a war band setting out (--clan=ochre|heron, --event shows first contact)
 			hud._close_modal()
 			var cid: String = args.get("clan", "ochre")
@@ -271,10 +271,10 @@ func _debug_shot(args: Dictionary) -> void:
 					for id in sim.rivals.clans: sim.rivals.clans[id]["vassal"] = 3
 				"unity":
 					for id in sim.rivals.clans: sim.rivals.clans[id]["treaties"]["alliance"] = {"until": sim.time + 3000.0, "tribute": 0}
-					sim.add_structure("council_ring", Vector2(1300, 1200) + Vector2(-200, 160), true)
+					sim.add_structure("council_ring", sim.D.VILLAGE + Vector2(-200, 160), true)
 				"wisdom":
 					for t in sim.evo.D.TECHS: sim.techs[t["id"]] = true
-					sim.add_structure("grand_altar", Vector2(1300, 1200) + Vector2(-200, 160), true)
+					sim.add_structure("grand_altar", sim.D.VILLAGE + Vector2(-200, 160), true)
 				"defeat":
 					for o in sim.living(): sim.kill_unit(o, null)
 			if args.has("panel"):
@@ -290,10 +290,10 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.rivals.pending.clear()
 			sim.nat.quake_at = INF
 			var what: String = args.get("what", "fire")
-			var focus := Vector2(1300, 1200)
+			var focus: Vector2 = sim.D.VILLAGE
 			match what:
 				"fire":
-					var trees = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(Vector2(1300, 1200)) < 700)
+					var trees = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(sim.D.VILLAGE) < 700)
 					sim.nat.ignite(trees[0])
 					focus = trees[0].pos
 					for i in int(float(args.get("secs", "8")) / STEP): sim.tick(STEP)
@@ -302,12 +302,12 @@ func _debug_shot(args: Dictionary) -> void:
 					sim.nat.flood_at = sim.time + 0.1
 					sim.nat.flood_warned = true
 					for i in int(float(args.get("secs", "3")) / STEP): sim.tick(STEP)
-					focus = Vector2(sim.D.river_x(1200), 1200)
+					focus = Vector2(sim.D.river_x(sim.D.FORD_Y), sim.D.FORD_Y)
 				"eruption", "ash":
 					sim.nat.erupt()
 					var secs := float(args.get("secs", "3" if what == "eruption" else "20"))
 					for i in int(secs / STEP): sim.tick(STEP)
-					focus = sim.nat.VOLCANO + Vector2(-150, 250) if what == "eruption" else Vector2(1300, 1200)
+					focus = sim.nat.VOLCANO + Vector2(-150, 250) if what == "eruption" else sim.D.VILLAGE
 				"eclipse":
 					sim.time = 90.0 * 2 + 90.0 * 0.35
 					sim.nat.eclipse_at = sim.time
@@ -316,7 +316,7 @@ func _debug_shot(args: Dictionary) -> void:
 						if sim.paused: break
 				"storm":
 					sim.hz._start("storm")
-					sim.nat.strikes.append({"pos": Vector2(1450, 1050), "t": 0.05})
+					sim.nat.strikes.append({"pos": sim.D.VILLAGE + Vector2(150, -150), "t": 0.05})
 			sim.paused = false
 			sim.pending_event = sim.pending_event if what == "eclipse" else ""
 			if what != "eclipse": hud._close_modal()
@@ -348,7 +348,7 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.paused = false
 			hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "2.0")), float(args.get("zoom", "2.0")))
-			world.focus_on(Vector2(1300, 1200))
+			world.focus_on(sim.D.VILLAGE)
 			if fw == "trade": hud.open_trade("heron")
 		"finds": # debug: look at the natural finds (all known, fog off), --kind=mushroom to centre on one
 			hud._close_modal()
@@ -380,10 +380,10 @@ func _debug_shot(args: Dictionary) -> void:
 			if args.has("burial"):
 				for nm in ["Bai", "Shan"]:
 					var dd = sim.unit_by_name(nm)
-					dd.pos = Vector2(1300, 1200) + Vector2(150, 120)
+					dd.pos = sim.D.VILLAGE + Vector2(150, 120)
 					sim.kill_unit(dd, null)
 				sim.kill_unit(sim.unit_by_name("Mo'er"), null)
-				sim.unit_by_name("Mo'er").pos = Vector2(3400, 2300)
+				sim.unit_by_name("Mo'er").pos = Vector2(3400, 2300) + sim.D.SHIFT
 				sim.time = 5.0
 				var bt := 0.0
 				while sim.living().size() > 0 and bt < 80 and not (sim.unit_by_name("Bai").buried and sim.unit_by_name("Shan").buried):
@@ -401,7 +401,7 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.1")), float(args.get("zoom", "1.1")))
 			var bg = sim.burial_ground()
-			world.focus_on(bg.pos.lerp(Vector2(1300, 1200), 0.5) if bg and args.has("burial") else Vector2(1300, 1200))
+			world.focus_on(bg.pos.lerp(sim.D.VILLAGE, 0.5) if bg and args.has("burial") else sim.D.VILLAGE)
 			if args.has("graves") and bg: hud.open_graves(bg)
 		"explore":
 			hud._close_modal()
@@ -412,7 +412,7 @@ func _debug_shot(args: Dictionary) -> void:
 			world.selected = []
 			world.selection_changed.emit()
 			world.cam.zoom = Vector2(0.42, 0.42)
-			world.focus_on(Vector2(1800, 1200))
+			world.focus_on(Vector2(1800, 1200) + sim.D.SHIFT)
 		"emergency":
 			hud._close_modal()
 			var u = sim.unit_by_name(args.get("who", "Panshi"))
@@ -434,7 +434,7 @@ func _debug_shot(args: Dictionary) -> void:
 				world.focus_on(c.site)
 	if args.has("hover"): # put the mouse over the first structure of that type (adds one by the river if none)
 		var hs = sim.structures.filter(func(st): return st.type == args["hover"])
-		if hs.is_empty(): hs = [sim.add_structure(args["hover"], Vector2(sim.D.river_x(1300) - 70, 1300), true)]
+		if hs.is_empty(): hs = [sim.add_structure(args["hover"], Vector2(sim.D.river_x(sim.D.FORD_Y + 100) - 70, sim.D.FORD_Y + 100), true)]
 		world.focus_on(hs[0].pos)
 		await get_tree().process_frame
 		get_viewport().warp_mouse(world.get_viewport().get_canvas_transform() * world.iso(hs[0].pos))

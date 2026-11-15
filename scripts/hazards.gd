@@ -218,7 +218,7 @@ func spawn_wolf_pack() -> void:
 	var c := Vector2.ZERO
 	for k in 40: # somewhere on the tribe's bank, away from the village
 		c = Vector2(randf_range(150, D.RIVER_BASE_X - 200), randf_range(150, D.H - 150))
-		if c.distance_to(D.VILLAGE) > 650: break
+		if c.distance_to(D.VILLAGE) > 650 and c.distance_to(D.VILLAGE) < 1800: break
 	for i in size:
 		var w = sim.spawn_predator(c + Vector2(randf_range(-40, 40), randf_range(-40, 40)), D.VILLAGE + Vector2(randf_range(-200, 200), randf_range(-150, 150)))
 		w.kind = "wolf"

@@ -21,7 +21,7 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 
-const VOLCANO := Vector2(3380, 250)
+const VOLCANO := Vector2(3380, 250) + D.SHIFT
 const LAVA_R := 460.0
 const ECLIPSE_LEN := 30.0
 

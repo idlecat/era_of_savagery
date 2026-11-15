@@ -305,7 +305,7 @@ func _place_ground_cover() -> void:
 			if randf() < 0.75:
 				var p := Vector2(D.river_x(y) + side * (D.RIVER_HALF + randf_range(2, 22)), y)
 				decor.append({"p": p, "kind": "reeds", "v": randi() % 2, "s": randf_range(0.8, 1.2), "east": side > 0, "tall": false, "c": 0.0})
-	for i in 2600:
+	for i in int(2600 * D.W * D.H / (3600.0 * 2400.0)):
 		var p := Vector2(randf() * D.W, randf() * D.H)
 		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 14: continue
 		var east := D.bank_of(p) == "east"
@@ -321,7 +321,7 @@ func _place_ground_cover() -> void:
 		elif r < 0.08 and not east: kind = "flower"
 		decor.append({"p": p, "east": east, "kind": kind, "v": randi() % 3, "tall": east and randf() < 0.7, "c": randf_range(-0.05, 0.05), "s": randf_range(0.75, 1.25)})
 	var tries := 0
-	while outcrops.size() < 12 and tries < 300:
+	while outcrops.size() < 36 and tries < 900:
 		tries += 1
 		var p := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
 		if p.distance_to(D.VILLAGE) < 700 or p.distance_to(D.EAST_SITE) < 450 or absf(p.x - D.river_x(p.y)) < 250: continue

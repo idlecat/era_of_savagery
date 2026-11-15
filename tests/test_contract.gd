@@ -176,7 +176,7 @@ func test_exploration() -> void:
 		t += 0.05
 	var found: Array = sim.landmarks.filter(func(l): return l["found"])
 	print("   after 1 day: explored %d%%, found %s" % [sim.explored_pct(), found.map(func(l): return l["name"])])
-	check(sim.explored_pct() > start + 15, "a scout pushes the map open (%d%%)" % sim.explored_pct())
+	check(sim.explored_pct() > start + 5, "a scout pushes the map open (%d%%)" % sim.explored_pct())
 	check(not found.is_empty(), "scouting discovers landmarks")
 	check(sim.stock["lore"] > lore0, "discoveries pay out")
 	check(u.memory.any(func(m): return "found" in m["text"]), "discovery archived in the scout's memory")
@@ -393,7 +393,7 @@ func test_rivals() -> void:
 	check(sim.pop_cap() == ours_cap, "rival huts don't house our people (cap %d)" % sim.pop_cap())
 	check(not sim.is_explored(D.RIVALS[0]["pos"]), "rival villages start hidden in the fog")
 	var hunters: Array = sim.predators.filter(func(p): return p.kind == "hunter")
-	check(hunters.size() == 4, "each clan sends out two peaceful hunters")
+	check(hunters.size() == 2 * D.RIVALS.size(), "each clan sends out two peaceful hunters")
 	# hunters leave villagers alone
 	var u = sim.unit_by_name("Tuo")
 	var h = hunters.filter(func(p): return p.clan == "heron")[0]
@@ -468,7 +468,7 @@ func test_diplomacy() -> void:
 	print("\n== Diplomacy: envoys, parley, treaties ==")
 	var sim = _new_sim()
 	var R = sim.rivals
-	for id in R.clans: R.clans[id]["met"] = true
+	for id in ["ochre", "heron"]: R.clans[id]["met"] = true
 	var heron: Dictionary = R.clans["heron"]
 	var u = sim.unit_by_name("Linghe")
 	var arrived := []
@@ -564,7 +564,7 @@ func test_war_and_trade() -> void:
 	print("\n== War contracts, trade caravans, knowledge ==")
 	var sim = _new_sim()
 	var R = sim.rivals
-	for id in R.clans: R.clans[id]["met"] = true
+	for id in ["ochre", "heron"]: R.clans[id]["met"] = true
 	R.pending.clear()
 	var u = sim.unit_by_name("Alie")
 	var terms := {"kind": "war", "target": "heron", "objective": "loot", "crew_size": 5}
@@ -1133,7 +1133,7 @@ func test_endgames() -> void:
 	print("\n== Alliances, vassals, endings ==")
 	var sim = _new_sim()
 	var R = sim.rivals
-	for id in R.clans: R.clans[id]["met"] = true
+	for id in ["ochre", "heron"]: R.clans[id]["met"] = true
 	R.pending.clear()
 	sim.techs["fire"] = true
 	var heron: Dictionary = R.clans["heron"]
@@ -1193,6 +1193,8 @@ func test_endgames() -> void:
 	check(sim.legacy.pending == "", "no victory while a clan is free")
 	heron["treaties"].clear()
 	heron["vassal"] = 3
+	for id in R.clans: # the far clans too
+		if R.clans[id]["vassal"] == 0: R.clans[id]["vassal"] = 1
 	sim.legacy.check_t = 0.0
 	sim.legacy.update(0.1)
 	check(sim.legacy.pending == "victory_conquest", "every clan a vassal: victory by conquest")

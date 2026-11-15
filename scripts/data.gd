@@ -1,23 +1,26 @@
 ## Static game data: map geometry, structures, techs, traits, starting tribe.
 extends RefCounted
 
-const W := 3600.0
-const H := 2400.0
+const W := 6400.0
+const H := 4400.0
+## The original 3600x2400 world (home, river, ford, first two clans and landmarks) sits
+## at this offset inside the bigger map; positions below are written as old + SHIFT.
+const SHIFT := Vector2(1400, 1000)
 const DAY_LEN := 90.0 # seconds per in-game day at 1x
 
 # ---- River & ford ----
-const RIVER_BASE_X := 1960.0
+const RIVER_BASE_X := 1960.0 + 1400.0
 const RIVER_AMP := 40.0
 const RIVER_PERIOD := 170.0
 const RIVER_HALF := 46.0
-const FORD_Y0 := 1155.0
-const FORD_Y1 := 1245.0
-const FORD_Y := 1200.0
+const FORD_Y0 := 1155.0 + 1000.0
+const FORD_Y1 := 1245.0 + 1000.0
+const FORD_Y := 1200.0 + 1000.0
 
-const VILLAGE := Vector2(1300, 1200)
-const EAST_SITE := Vector2(2300, 1200)
+const VILLAGE := Vector2(1300, 1200) + SHIFT
+const EAST_SITE := Vector2(2300, 1200) + SHIFT
 ## Offset used to place the original hand-made starting area inside the bigger map.
-const HOME_OFS := Vector2(780, 640)
+const HOME_OFS := Vector2(780, 640) + SHIFT
 
 const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short POC session
 const FLOOD_DAY := 4
@@ -33,41 +36,67 @@ const SIGHT_BONFIRE := 300.0
 ## relation -100 (blood feud) .. +100 (allies); "base" is where it drifts back to.
 const RIVALS := [
 	{"id": "ochre", "name": "Red Ochre Clan", "chief": "Gor", "epithet": "the Scarred", "culture": "martial",
-		"color": Color("#c8452e"), "pos": Vector2(3180, 1300), "base": -25.0, "start": -20.0, "pop": 11, "era": 2,
+		"color": Color("#c8452e"), "pos": Vector2(3180, 1300) + SHIFT, "base": -25.0, "start": -20.0, "pop": 11, "era": 2,
 		"strength": 1.2, "hunter_name": "Red Ochre hunter", "warrior_name": "Red Ochre warrior", "trader_name": "Red Ochre trader", "sells": "stone", "wants": "food", "knows": ["fire", "tools", "hide", "domestication"], "desc": "Hunters who paint themselves in red earth. They prize strength and take what they need."},
 	{"id": "heron", "name": "Heron Clan", "chief": "Ama", "epithet": "Who Listens to Water", "culture": "spiritual",
-		"color": Color("#3e8fc0"), "pos": Vector2(360, 2180), "base": 10.0, "start": 5.0, "pop": 9, "era": 1,
+		"color": Color("#3e8fc0"), "pos": Vector2(360, 2180) + SHIFT, "base": 10.0, "start": 5.0, "pop": 9, "era": 1,
 		"strength": 0.85, "hunter_name": "Heron hunter", "warrior_name": "Heron warrior", "trader_name": "Heron trader", "sells": "food", "wants": "wood", "knows": ["fire", "pottery", "totems"], "desc": "River folk led by a seer. Slow to anger, but they never forget a wrong."},
+	# the far reaches of the bigger map
+	{"id": "tusk", "name": "Tusk Clan", "chief": "Dun", "epithet": "Broad-Shoulders", "culture": "martial",
+		"color": Color("#8a5a2a"), "pos": Vector2(900, 800), "base": -15.0, "start": -10.0, "pop": 10, "era": 2,
+		"strength": 1.1, "hunter_name": "Tusk hunter", "warrior_name": "Tusk warrior", "trader_name": "Tusk trader", "sells": "wood", "wants": "stone", "knows": ["fire", "tools", "hide"], "desc": "Forest hunters who wear boar tusks at the throat. Proud, and quick to fight over hunting grounds."},
+	{"id": "elk", "name": "Elk Clan", "chief": "Sela", "epithet": "the Antlered Mother", "culture": "spiritual",
+		"color": Color("#9a7ac8"), "pos": Vector2(5700, 700), "base": 15.0, "start": 10.0, "pop": 9, "era": 1,
+		"strength": 0.8, "hunter_name": "Elk hunter", "warrior_name": "Elk warrior", "trader_name": "Elk trader", "sells": "food", "wants": "stone", "knows": ["fire", "hide", "totems"], "desc": "Herders of the northern meadows who follow the elk. Gentle, generous, and wary of strangers with spears."},
+	{"id": "hawk", "name": "Hawk Clan", "chief": "Varo", "epithet": "Sharp-Eye", "culture": "martial",
+		"color": Color("#c8a030"), "pos": Vector2(5600, 3800), "base": -5.0, "start": 0.0, "pop": 12, "era": 2,
+		"strength": 1.0, "hunter_name": "Hawk hunter", "warrior_name": "Hawk warrior", "trader_name": "Hawk trader", "sells": "stone", "wants": "wood", "knows": ["fire", "tools", "pottery", "domestication"], "desc": "Hill people who watch the plains from their high camp. They trade hard and fight harder."},
+	{"id": "willow", "name": "Willow Clan", "chief": "Nao", "epithet": "Who Weaves", "culture": "spiritual",
+		"color": Color("#5aa070"), "pos": Vector2(700, 3900), "base": 5.0, "start": 0.0, "pop": 8, "era": 1,
+		"strength": 0.75, "hunter_name": "Willow hunter", "warrior_name": "Willow warrior", "trader_name": "Willow trader", "sells": "wood", "wants": "food", "knows": ["fire", "pottery", "farming"], "desc": "Basket-weavers of the southern marshes who grow wild grain. Few, patient, and fond of gifts."},
 ]
 const RIVAL_TERRITORY := 520.0 # gathering or building this close to a clan's village angers them
 
 ## Points of interest hidden in the fog. Found when first seen by a tribesperson.
 ## reward: stock deltas; reveal: extra radius revealed on discovery; den: spawns prowling tigers.
 const LANDMARKS := [
-	{"id": "cave", "insight": {"totems": 0.4}, "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520), "reward": {"lore": 40},
+	{"id": "cave", "insight": {"totems": 0.4}, "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520) + SHIFT, "reward": {"lore": 40},
 		"text": "found the Painted Cave, where the ancestors drew the great hunt"},
-	{"id": "stones", "insight": {"totems": 0.3, "code": 0.2}, "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020), "reward": {"lore": 30}, "devotion": 8.0,
+	{"id": "stones", "insight": {"totems": 0.3, "code": 0.2}, "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020) + SHIFT, "reward": {"lore": 30}, "devotion": 8.0,
 		"text": "found the Standing Stones that hum when the moon is full"},
-	{"id": "mammoth", "insight": {"hide": 0.5}, "kind": "bones", "name": "Mammoth Graveyard", "pos": Vector2(1180, 330), "reward": {"lore": 15, "wood": 25},
+	{"id": "mammoth", "insight": {"hide": 0.5}, "kind": "bones", "name": "Mammoth Graveyard", "pos": Vector2(1180, 330) + SHIFT, "reward": {"lore": 15, "wood": 25},
 		"text": "found the Mammoth Graveyard and hauled home great tusks and ribs"},
-	{"id": "flint", "insight": {"tools": 0.6, "bronze": 0.2}, "kind": "flint", "name": "Flint Outcrop", "pos": Vector2(260, 1640), "reward": {"wood": 40, "lore": 10},
+	{"id": "flint", "insight": {"tools": 0.6, "bronze": 0.2}, "kind": "flint", "name": "Flint Outcrop", "pos": Vector2(260, 1640) + SHIFT, "reward": {"wood": 40, "lore": 10},
 		"text": "found a Flint Outcrop; the tribe's axes bite deeper now"},
-	{"id": "grove", "insight": {"farming": 0.5}, "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080), "reward": {"food": 40},
+	{"id": "grove", "insight": {"farming": 0.5}, "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080) + SHIFT, "reward": {"food": 40},
 		"text": "found a Wild Berry Grove heavy with fruit"},
-	{"id": "peak", "insight": {"domestication": 0.4}, "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300), "reward": {"lore": 20}, "reveal": 650.0,
+	{"id": "peak", "insight": {"domestication": 0.4}, "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300) + SHIFT, "reward": {"lore": 20}, "reveal": 650.0,
 		"text": "climbed Eagle Peak and saw the whole east bank spread below"},
-	{"id": "spring", "insight": {"pottery": 0.4}, "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120), "reward": {"food": 20, "lore": 15},
+	{"id": "spring", "insight": {"pottery": 0.4}, "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120) + SHIFT, "reward": {"food": 20, "lore": 15},
 		"text": "found a steaming Hot Spring deep in the east"},
-	{"id": "volcano", "insight": {"fire": 0.3, "bronze": 0.15}, "kind": "volcano", "name": "Fire Mountain", "pos": Vector2(3380, 250), "reward": {"lore": 20},
+	{"id": "volcano", "insight": {"fire": 0.3, "bronze": 0.15}, "kind": "volcano", "name": "Fire Mountain", "pos": Vector2(3380, 250) + SHIFT, "reward": {"lore": 20},
 		"text": "climbed toward the smoking Fire Mountain, where the rocks are warm and the ground growls"},
-	{"id": "den_n", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760), "reward": {"lore": 10}, "den": 2,
+	{"id": "den_n", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760) + SHIFT, "reward": {"lore": 10}, "den": 2,
 		"text": "found a Saber-tooth Den littered with bones and lived to tell of it"},
-	{"id": "den_s", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180), "reward": {"lore": 10}, "den": 1,
+	{"id": "den_s", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180) + SHIFT, "reward": {"lore": 10}, "den": 1,
 		"text": "found a second Saber-tooth Den in the southern thickets"},
+	# the far reaches of the bigger map
+	{"id": "hands", "insight": {"totems": 0.3}, "kind": "cave", "name": "Cave of Hands", "pos": Vector2(450, 2300), "reward": {"lore": 30},
+		"text": "found the Cave of Hands, its walls covered in the prints of the long dead"},
+	{"id": "wind_peak", "insight": {"domestication": 0.3}, "kind": "peak", "name": "Wind Peak", "pos": Vector2(2500, 380), "reward": {"lore": 20}, "reveal": 650.0,
+		"text": "climbed Wind Peak and saw the northern forests roll away to the sky"},
+	{"id": "bison", "insight": {"hide": 0.4}, "kind": "bones", "name": "Bison Bone Pit", "pos": Vector2(2900, 4050), "reward": {"lore": 10, "wood": 20},
+		"text": "found the Bison Bone Pit, where a whole herd was once driven over the edge"},
+	{"id": "mist", "insight": {"pottery": 0.3}, "kind": "spring", "name": "Mist Spring", "pos": Vector2(6000, 2300), "reward": {"food": 20, "lore": 15},
+		"text": "found the Mist Spring far in the east, warm water steaming in the cold air"},
+	{"id": "ring_w", "insight": {"totems": 0.2, "code": 0.3}, "kind": "stones", "name": "Ring of the Ancients", "pos": Vector2(3700, 380), "reward": {"lore": 25}, "devotion": 6.0,
+		"text": "found the Ring of the Ancients, older than any tale the elders know"},
+	{"id": "den_w", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(1400, 3950), "reward": {"lore": 10}, "den": 1,
+		"text": "found a Saber-tooth Den in the far south-west"},
 ]
 
 static func river_x(y: float) -> float:
-	return RIVER_BASE_X + RIVER_AMP * sin(y / RIVER_PERIOD)
+	return RIVER_BASE_X + RIVER_AMP * sin((y - SHIFT.y) / RIVER_PERIOD)
 
 static func is_ford(y: float) -> bool:
 	return y > FORD_Y0 and y < FORD_Y1
