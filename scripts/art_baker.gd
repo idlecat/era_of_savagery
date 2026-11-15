@@ -11,13 +11,16 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 9
+const ART_VERSION := 11
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
 const DIRS := 8
 const WALK_FRAMES := 8
 const WORK_FRAMES := 4
+## Villager animations: name -> frames. Tool animations also bake a bronze variant.
+const MAN_ANIMS := {"idle": 1, "walk": 8, "chop": 4, "build": 4, "gather": 4, "attack": 4, "ritual": 4, "dead": 1}
+const TOOL_ANIMS := ["chop", "build", "attack"]
 const SITE_SIZES := [14, 20, 26] # footprint radius of construction-site sprites
 
 var sprites := {} # key -> {"tex": Texture2D, "anchor": Vector2}  (anchor = ground point in sprite px)
@@ -72,6 +75,15 @@ func _save_cache() -> void:
 		sprites[key].erase("img")
 	var f := FileAccess.open(CACHE_DIR + "/index.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(idx))
+	# remove caches from older ART_VERSIONs
+	var ud := DirAccess.open("user://")
+	if ud:
+		for d in ud.get_directories():
+			if d.begins_with("art_cache_v") and "user://" + d != CACHE_DIR:
+				var old := DirAccess.open("user://" + d)
+				if old:
+					for fn in old.get_files(): old.remove(fn)
+				ud.remove(d)
 
 # ------------------------------------------------------------ studio
 func _setup() -> void:
@@ -152,26 +164,29 @@ func _bake(job: Dictionary) -> void:
 	await RenderingServer.frame_post_draw
 	var img := vp.get_texture().get_image()
 	model.free()
-	if job.get("mask", false): _to_mask(img)
 	var r := img.get_used_rect()
 	if r.size.x <= 0: return
 	r = r.grow(1).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	img = img.get_region(r)
 	img.convert(Image.FORMAT_RGBA8)
+	if job.get("mask", false): _to_mask(img)
 	var keep := img.duplicate()
 	img.generate_mipmaps()
 	sprites[job["key"]] = {"tex": ImageTexture.create_from_image(img), "anchor": anchor - Vector2(r.position), "img": keep}
 
 ## Tint layer: keep only the white-lit cloth (everything else was rendered black).
 func _to_mask(img: Image) -> void:
-	img.convert(Image.FORMAT_RGBA8)
-	for y in img.get_height():
-		for x in img.get_width():
-			var c := img.get_pixel(x, y)
-			if c.a < 0.05: continue
-			var l := maxf(c.r, maxf(c.g, c.b))
-			if l < 0.06: img.set_pixel(x, y, Color(0, 0, 0, 0))
-			else: img.set_pixel(x, y, Color(l, l, l, c.a))
+	var data := img.get_data()
+	for i in range(0, data.size(), 4):
+		if data[i + 3] < 13: continue
+		var l := maxi(data[i], maxi(data[i + 1], data[i + 2]))
+		if l < 15:
+			data[i + 3] = 0
+		else:
+			data[i] = l
+			data[i + 1] = l
+			data[i + 2] = l
+	img.set_data(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8, data)
 
 # ------------------------------------------------------------ materials & primitives
 func mat(col: Color, tex := "coarse", sc := 0.08, stretch := Vector3.ONE, contrast := 0.45, snow := 0.0) -> ShaderMaterial:
@@ -283,19 +298,27 @@ func _jobs() -> Array:
 	# animals: 8 directions x (idle + walk)
 	for kind in ["deer", "tiger", "wolf", "packox"]:
 		for d in DIRS:
-			jobs.append({"key": "%s_idle_%d_0" % [kind, d], "size": 128, "lift": 10.0, "build": _beast.bind(kind, d * 360.0 / DIRS, 0.0, false)})
+			var yaw := d * 360.0 / DIRS
+			jobs.append({"key": "%s_idle_%d_0" % [kind, d], "size": 128, "lift": 10.0, "build": _beast.bind(kind, yaw, 0.0, false)})
 			for f in 6:
-				jobs.append({"key": "%s_walk_%d_%d" % [kind, d, f], "size": 128, "lift": 10.0, "build": _beast.bind(kind, d * 360.0 / DIRS, f / 6.0, true)})
-	# villagers: 8 directions x (idle + walk + work), plus a cloth layer tinted per person
+				jobs.append({"key": "%s_walk_%d_%d" % [kind, d, f], "size": 128, "lift": 10.0, "build": _beast.bind(kind, yaw, f / 6.0, true)})
+			if kind in ["tiger", "wolf"]:
+				for f in 4:
+					jobs.append({"key": "%s_attack_%d_%d" % [kind, d, f], "size": 128, "lift": 10.0, "build": _beast.bind(kind, yaw, f / 4.0, false, "attack")})
+			if kind != "packox":
+				jobs.append({"key": "%s_dead_%d_0" % [kind, d], "size": 128, "lift": 6.0, "build": _beast.bind(kind, yaw, 0.0, false, "dead")})
+	# villagers: 8 directions x every animation, plus a cloth layer tinted per person;
+	# tool animations again with bronze tools
 	for d in DIRS:
 		var yaw := d * 360.0 / DIRS
-		var poses: Array = [["idle", 0, 0.0]]
-		for f in WALK_FRAMES: poses.append(["walk", f, float(f) / WALK_FRAMES])
-		for f in WORK_FRAMES: poses.append(["work", f, float(f) / WORK_FRAMES])
-		for p in poses:
-			var key := "man_%s_%d_%d" % [p[0], d, p[1]]
-			jobs.append({"key": key, "size": 96, "lift": 13.0, "build": _person.bind(yaw, p[0], p[2], false)})
-			jobs.append({"key": key + "_cloth", "size": 96, "lift": 13.0, "mask": true, "build": _person.bind(yaw, p[0], p[2], true)})
+		for anim in MAN_ANIMS:
+			var n: int = MAN_ANIMS[anim]
+			for f in n:
+				for tool in (["stone", "bronze"] if anim in TOOL_ANIMS else ["stone"]):
+					var key := "man_%s_%d_%d%s" % [anim, d, f, "_bronze" if tool == "bronze" else ""]
+					var ph := float(f) / n
+					jobs.append({"key": key, "size": 112, "lift": 13.0, "build": _person.bind(yaw, anim, ph, false, tool)})
+					jobs.append({"key": key + "_cloth", "size": 112, "lift": 13.0, "mask": true, "build": _person.bind(yaw, anim, ph, true, tool)})
 	return jobs
 
 # ---- nature
@@ -774,9 +797,19 @@ func _peak(snowy: bool) -> Node3D:
 
 # ---- animals
 ## A four-legged animal (deer, tiger, wolf, aurochs) yawed to face `yaw`, legs mid-stride.
-func _beast(kind: String, yaw: float, phase: float, walking: bool) -> Node3D:
+func _beast(kind: String, yaw: float, phase: float, walking: bool, anim := "") -> Node3D:
+	var holder := Node3D.new()
+	holder.rotation_degrees.y = yaw
 	var root := Node3D.new()
-	root.rotation_degrees.y = yaw
+	holder.add_child(root)
+	var lunge := 0.0
+	if anim == "attack": # crouch, then spring forward with forelegs up
+		lunge = [0.0, 0.3, 1.0, 0.6][int(phase * 4) % 4]
+		root.position.z = lunge * 5.0
+		root.rotation_degrees.x = -lunge * 18.0
+	elif anim == "dead": # lying on its side
+		root.rotation_degrees.z = 88.0
+		root.position.y = 1.0
 	var spec: Dictionary = {
 		"deer": {"col": Color("#9a6a3c"), "belly": Color("#d8c09a"), "blen": 17.0, "r": 4.6, "leg": 11.0, "neck": 7.0, "head": 3.2},
 		"tiger": {"col": Color("#d98a2b"), "belly": Color("#f2d6a8"), "blen": 22.0, "r": 6.0, "leg": 9.0, "neck": 3.0, "head": 5.0},
@@ -794,12 +827,15 @@ func _beast(kind: String, yaw: float, phase: float, walking: bool) -> Node3D:
 		var stripe := flat(Color("#2a1608"))
 		for i in 5: mi(root, box(Vector3(spec["r"] * 2.05, 1.1, 1.2)), stripe, Vector3(0, body_y + 0.8, -blen * 0.35 + i * blen * 0.17), Vector3(0, 0, 0), Vector3(1, 1, 1))
 	var sw := sin(phase * TAU) * 28.0 if walking else 0.0
+	if anim == "attack": sw = 0.0
 	for i in 4:
 		var front := i < 2
 		var side := -1 if i % 2 == 0 else 1
 		var hip := Node3D.new()
 		hip.position = Vector3(side * spec["r"] * 0.55, leg_h, blen * (0.32 if front else -0.32))
 		hip.rotation_degrees.x = sw * (1 if (i == 0 or i == 3) else -1)
+		if anim == "attack" and front: hip.rotation_degrees.x = -55.0 * lunge
+		if anim == "dead": hip.rotation_degrees.x = 25.0 if front else -25.0
 		root.add_child(hip)
 		mi(hip, cyl(spec["r"] * 0.22, spec["r"] * 0.16, leg_h, 6), hide, Vector3(0, -leg_h / 2, 0))
 	var neck := Node3D.new()
@@ -829,61 +865,112 @@ func _beast(kind: String, yaw: float, phase: float, walking: bool) -> Node3D:
 		for side in [-1, 1]: mi(root, cyl(1.6, 1.6, blen * 0.4, 7), mat(Color("#6e4b2a"), "streak", 0.3, Vector3(4, 1, 1)), Vector3(side * spec["r"] * 1.2, body_y + 1, -1), Vector3(90, 0, 0))
 	var tail_len := 10.0 if kind == "tiger" else (3.0 if kind == "deer" else 7.0)
 	mi(root, cyl(0.5, 1.0, tail_len, 5), hide, Vector3(0, body_y + 1, -blen * 0.5 - tail_len * 0.4), Vector3(-60 + (sin(phase * TAU) * 10.0 if walking else 0.0), 0, 0))
-	return root
+	return holder
 
 # ---- people
 ## A villager in a pose. cloth_only renders the tunic white and everything else black
 ## so the game can tint the clothes per person.
-func _person(yaw: float, anim: String, phase: float, cloth_only: bool) -> Node3D:
+func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "stone") -> Node3D:
+	var holder := Node3D.new()
+	holder.rotation_degrees.y = yaw
 	var root := Node3D.new()
-	root.rotation_degrees.y = yaw
+	holder.add_child(root)
 	var skin: Material = mat(Color("#d29e74"), "fine", 0.4, Vector3.ONE, 0.15)
 	var hair: Material = mat(Color("#2b1a0e"), "fine", 0.5, Vector3.ONE, 0.3)
 	var cloth: Material = mat(Color("#d8d4cc") if not cloth_only else Color(1, 1, 1), "coarse", 0.4, Vector3.ONE, 0.35)
 	var fur: Material = mat(Color("#7a5a3a"), "fine", 0.5, Vector3.ONE, 0.4)
 	var wood: Material = mat(Color("#6b4524"), "streak", 0.4, Vector3(1, 4, 1))
-	var stone: Material = mat(Color("#8d8d93"), "coarse", 0.5)
+	var head_m: Material = mat(Color("#8d8d93"), "coarse", 0.5) if tool == "stone" else mat(Color("#d49a3a"), "fine", 0.4, Vector3.ONE, 0.3)
 	if cloth_only:
 		var black := flat(Color.BLACK)
 		skin = black
 		hair = black
 		fur = black
 		wood = black
-		stone = black
-	var swing := 0.0
+		head_m = black
+	var k := int(phase * 4) % 4 # frame index for 4-frame actions
+	var swing := 0.0 # legs
 	var arm_l := 0.0
 	var arm_r := 0.0
+	var spread := 0.0 # arms out to the sides
+	var tilt := 0.0 # upper body leaning forward
 	var bob := 0.0
+	var held := "" # tool in the right hand
 	match anim:
 		"walk":
 			swing = sin(phase * TAU) * 30.0
 			arm_l = -swing * 0.8
 			arm_r = swing * 0.8
 			bob = absf(sin(phase * TAU)) * 0.8
-		"work":
-			arm_r = lerpf(-150.0, 25.0, [0.0, 0.35, 0.85, 1.0][int(phase * WORK_FRAMES) % WORK_FRAMES])
+		"chop": # overhead swing with an axe
+			arm_r = [-150.0, -95.0, -10.0, 25.0][k]
 			arm_l = -20.0
+			tilt = [0.0, 6.0, 16.0, 20.0][k]
+			held = "axe"
+		"build": # crouched hammering with a mallet
+			arm_r = [-100.0, -60.0, -20.0, -45.0][k]
+			arm_l = -40.0
+			tilt = 25.0
+			swing = 12.0
+			held = "mallet"
+		"gather": # bending low, hands reaching into the bush
+			tilt = 38.0
+			arm_r = [-40.0, -70.0, -50.0, -25.0][k]
+			arm_l = [-70.0, -40.0, -25.0, -50.0][k]
+		"attack": # spear: draw back, thrust
+			arm_r = [-40.0, -10.0, -95.0, -80.0][k]
+			arm_l = -55.0
+			tilt = [-5.0, -8.0, 14.0, 10.0][k]
+			swing = [8.0, 12.0, -10.0, -6.0][k]
+			held = "spear"
+		"ritual": # arms raised to the sky, swaying
+			arm_r = -165.0 + sin(phase * TAU) * 15.0
+			arm_l = -165.0 - sin(phase * TAU) * 15.0
+			spread = 18.0
+			bob = absf(sin(phase * TAU)) * 1.2
+		"dead":
+			root.rotation_degrees.x = 86.0 # face down on the ground
+			root.position = Vector3(0, 3.5, -12)
+			arm_r = -150.0
+			arm_l = -120.0
 	var body := Node3D.new()
 	body.position.y = bob
 	root.add_child(body)
 	for side in [-1, 1]: # legs swing at the hip
 		var hip := Node3D.new()
 		hip.position = Vector3(side * 1.8, 11, 0)
-		hip.rotation_degrees.x = swing * side
+		hip.rotation_degrees.x = swing * side if anim != "build" else -swing
 		body.add_child(hip)
 		mi(hip, cap(1.5, 11), skin, Vector3(0, -5.5, 0))
-	mi(body, cap(3.6, 12), cloth, Vector3(0, 16, 0), Vector3.ZERO, Vector3(1.05, 1, 0.8))
-	mi(body, cyl(3.4, 4.6, 6, 10), cloth, Vector3(0, 10.5, 0))
-	mi(body, cyl(4.2, 4.6, 2.2, 10), fur, Vector3(0, 21, 0), Vector3.ZERO, Vector3(1, 1, 0.85))
-	mi(body, sph(3.3, 12, 8), skin, Vector3(0, 25.3, 0))
-	mi(body, sph(3.5, 10, 6), hair, Vector3(0, 26.2, -0.6), Vector3(-15, 0, 0), Vector3(1, 0.8, 1))
+	mi(body, cyl(3.4, 4.6, 6, 10), cloth, Vector3(0, 10.5, 0)) # skirt
+	mi(body, cyl(3.7, 3.7, 1.0, 10), mat(Color("#5a3a20"), "fine") if not cloth_only else flat(Color.BLACK), Vector3(0, 12.8, 0)) # belt
+	var upper := Node3D.new() # everything above the hips bends forward
+	upper.position.y = 12.0
+	upper.rotation_degrees.x = tilt
+	body.add_child(upper)
+	mi(upper, cap(3.6, 12), cloth, Vector3(0, 4, 0), Vector3.ZERO, Vector3(1.05, 1, 0.8))
+	mi(upper, cyl(4.2, 4.6, 2.2, 10), fur, Vector3(0, 9, 0), Vector3.ZERO, Vector3(1, 1, 0.85))
+	mi(upper, sph(3.3, 12, 8), skin, Vector3(0, 13.3, 0))
+	mi(upper, sph(3.5, 10, 6), hair, Vector3(0, 14.2, -0.6), Vector3(-15, 0, 0), Vector3(1, 0.8, 1))
 	for side in [-1, 1]: # arms swing at the shoulder
 		var sh := Node3D.new()
-		sh.position = Vector3(side * 4.6, 20.5, 0)
-		sh.rotation_degrees.x = arm_r if side > 0 else arm_l
-		body.add_child(sh)
+		sh.position = Vector3(side * 4.6, 8.5, 0)
+		sh.rotation_degrees = Vector3(arm_r if side > 0 else arm_l, 0, side * spread)
+		upper.add_child(sh)
 		mi(sh, cap(1.2, 9.5), skin, Vector3(0, -4.5, 0))
-		if side > 0 and anim == "work": # stone axe
-			mi(sh, cyl(0.45, 0.45, 9, 5), wood, Vector3(0, -9, 3), Vector3(90, 0, 0))
-			mi(sh, box(Vector3(1.2, 2.6, 3.2)), stone, Vector3(0, -9, 7.2))
-	return root
+		if side > 0:
+			match held:
+				"axe":
+					mi(sh, cyl(0.45, 0.45, 9, 5), wood, Vector3(0, -9, 3), Vector3(90, 0, 0))
+					mi(sh, box(Vector3(1.2, 2.6, 3.2)), head_m, Vector3(0, -9, 7.2))
+				"mallet":
+					mi(sh, cyl(0.4, 0.4, 6, 5), wood, Vector3(0, -9, 2), Vector3(90, 0, 0))
+					mi(sh, cyl(1.3, 1.3, 3.2, 7), head_m, Vector3(0, -9, 5.2))
+				"spear": # counter-rotated so the spear stays level, pointing forward
+					var grip := Node3D.new()
+					grip.position = Vector3(0, -9, 0)
+					grip.rotation_degrees.x = -(arm_r + tilt)
+					sh.add_child(grip)
+					mi(grip, cyl(0.35, 0.35, 26, 5), wood, Vector3(0, 0, 3), Vector3(90, 0, 0))
+					mi(grip, cyl(0.0, 0.9, 3.6, 5), head_m, Vector3(0, 0, 17.5), Vector3(90, 0, 0))
+	return holder

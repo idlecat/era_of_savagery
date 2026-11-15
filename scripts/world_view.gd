@@ -18,6 +18,7 @@ const TEX_SCALE := 4 # terrain texture = world / 4 pixels
 var sim
 var art # ArtBaker (pre-rendered 3D sprites); old procedural drawing is the fallback
 var heading := {} # "u12" -> last screen-space movement direction
+var attacking := {} # predator keys currently biting someone (attack animation)
 var sprite_dirs: Array = [] # screen direction each of the 8 baked facings looks along
 var selected: Array = [] # unit ids
 var build_type := ""
@@ -215,7 +216,15 @@ func _process(delta: float) -> void:
 	ground_fx.queue_redraw()
 	overlay.queue_redraw()
 	for u in sim.units: _track("u%d" % u.id, u.pos)
-	for p in sim.predators: _track("p%d" % p.id, p.pos)
+	attacking.clear()
+	for p in sim.predators:
+		_track("p%d" % p.id, p.pos)
+		if p.dead or p.fled or p.fleeing: continue
+		for u in sim.units:
+			if not u.dead and u.pos.distance_to(p.pos) < 26.0:
+				attacking["p%d" % p.id] = true
+				heading["p%d" % p.id] = (iso(u.pos) - iso(p.pos)).normalized()
+				break
 	for n in sim.nodes:
 		if n.kind == "deer": _track("n%d" % n.id, n.pos)
 	queue_redraw()
@@ -756,6 +765,8 @@ func _draw_node(n) -> void:
 			if _sprite(("bush_full" if n.amount >= 5 else "bush_bare") + _snowy(), b): return
 		"stump":
 			if _sprite("stump" + _snowy(), b): return
+		"carcass":
+			if n.from_deer and _sprite("deer_dead_%d_0" % (n.id % 8), b, 1.1): return
 		"deer":
 			if _beast_sprite("deer", "n%d" % n.id, b): return
 		"boulder":
@@ -1127,6 +1138,11 @@ func _draw_site_flag(c) -> void:
 func _draw_unit(u) -> void:
 	var b := iso(u.pos)
 	_scale_about(b, FIG_SCALE)
+	if u.dead and art and art.has("man_dead_0_0"):
+		var dn := "man_dead_%d_0" % _dir_index("u%d" % u.id)
+		_sprite(dn, b, 0.95, Color(1, 1, 1, 0.85))
+		_sprite(dn + "_cloth", b, 0.95, Color(u.color, 0.85))
+		return
 	if u.dead:
 		_ell(b, 9, 4, Color(0.25, 0.1, 0.08, 0.5))
 		ci.draw_line(b + Vector2(-8, -1), b + Vector2(8, 1), Color(u.color, 0.6), 4)
@@ -1223,14 +1239,25 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 	var di := _dir_index(key)
 	var name := "%s_idle_%d_0" % [kind, di]
 	if moving.get(key, false): name = "%s_walk_%d_%d" % [kind, di, int(t * 10.0 + key.hash() % 7) % 6]
+	if attacking.has(key) and art.has("%s_attack_%d_0" % [kind, di]): name = "%s_attack_%d_%d" % [kind, di, int(t * 8.0) % 4]
 	return _sprite(name, b, sc)
 
 ## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
 func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
 	var di := _dir_index(key)
-	var name := "man_idle_%d_0" % di
-	if busy: name = "man_work_%d_%d" % [di, int(t * 7.0 + u.id) % 4]
-	elif walk: name = "man_walk_%d_%d" % [di, int(t * 11.0 + u.id) % 8]
+	var anim := "idle"
+	var act: String = u.act
+	if u.job.get("type", "") == "attack" and act == "Fighting": anim = "attack"
+	elif act == "Performing ritual": anim = "ritual"
+	elif act == "Picking berries": anim = "gather"
+	elif act.begins_with("Building") or act.begins_with("Renovating") or act.begins_with("Experimenting"): anim = "build"
+	elif busy: anim = "chop"
+	elif walk: anim = "walk"
+	if anim in ["chop", "build", "attack"] and (walk and anim != "attack"): anim = "walk"
+	var frames: int = {"idle": 1, "walk": 8}.get(anim, 4)
+	var speed := 11.0 if anim == "walk" else 7.0
+	var name := "man_%s_%d_%d" % [anim, di, int(t * speed + u.id) % frames]
+	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
 	var k := 0.95
 	_sprite(name, b, k)
 	_sprite(name + "_cloth", b, k, u.color)
@@ -1261,7 +1288,10 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
 		_flame(th + Vector2(-2 * f, -14), 3, 9 * (1.0 + 0.2 * sin(t * 14 + u.id)), Color("#f8a531"))
 	if u.job.get("type", "") == "ritual" and u.act == "Performing ritual":
-		_ell_line(b - Vector2(0, 12), 16 + sin(t * 3) * 3, 8, Color(0.75, 0.6, 1.0, 0.6), 1.5)
+		_ell_line(b - Vector2(0, 2), 15 + sin(t * 3) * 3, 7, Color(0.75, 0.6, 1.0, 0.6), 1.5)
+		for i in 3:
+			var kk := fmod(t * 0.7 + i / 3.0, 1.0)
+			ci.draw_circle(b + Vector2(sin(t * 2 + i * 2) * 10, -10 - 30 * kk), 1.8, Color(0.8, 0.7, 1, 1 - kk))
 
 ## Stone before Polished Stone Tools is crude grey-brown; bronze once a smelter stands.
 func _blade_col() -> Color:
