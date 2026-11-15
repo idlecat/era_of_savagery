@@ -212,7 +212,8 @@ English and Simplified Chinese (简体中文). Switch with the **中文 / Englis
 
 ## Map & exploration
 
-- The map is 6400×4400 world units. The home village, ford and the first two clans sit in the middle; the far reaches hold four more clans and more landmarks (Cave of Hands, Wind Peak, Bison Bone Pit, Mist Spring, Ring of the Ancients, a third Saber-tooth Den). Forests, berry patches, stone, deer and natural finds are scaled up to match.
+- **New Game screen.** Choose the hand-made *Classic* map or a *random* map: Small (4400×3000, up to 3 clans), Standard (6400×4400, up to 6), Large (8000×5400, up to 8) or Huge (9600×6400, up to 10), how many neighbouring clans, and a seed (the same size, clan count and seed make the same world). Random maps lay a new river course with one ford, put the village on its west bank, draw the clans from a pool of ten (adding the Bear, Otter, Raven and Lynx clans) and scatter them and the landmarks far apart; forests, herds, stone and finds scale with the map's area.
+- The classic map is 6400×4400 world units. The home village, ford and the first two clans sit in the middle; the far reaches hold four more clans and more landmarks (Cave of Hands, Wind Peak, Bison Bone Pit, Mist Spring, Ring of the Ancients, a third Saber-tooth Den). Forests, berry patches, stone, deer and natural finds are scaled up to match.
 - Fog of war works like AoE2:
   - **Black:** never seen.
   - **Dimmed:** explored. Terrain, trees and buildings are remembered, but animals and beasts are hidden.

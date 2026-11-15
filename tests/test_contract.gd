@@ -6,6 +6,8 @@ const Sim = preload("res://scripts/sim.gd")
 const Persona = preload("res://scripts/persona_engine.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const D = preload("res://scripts/data.gd")
+const MapGen = preload("res://scripts/mapgen.gd")
+const _NewGame = preload("res://scripts/new_game_ui.gd")
 const E = preload("res://scripts/entities.gd")
 const I18N = preload("res://scripts/i18n.gd")
 # Compile-check the UI scripts too (a parse error in any of them fails this test run).
@@ -45,6 +47,7 @@ func _initialize() -> void:
 	test_nature()
 	test_settling()
 	test_folk()
+	test_mapgen()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -280,7 +283,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -903,7 +906,7 @@ func test_nature() -> void:
 	check(nat.food_mult(farm) > 1.3, "the silt makes riverside fields richer afterwards")
 	# the Fire Mountain
 	var near = sim.unit_by_name("Qiao")
-	near.pos = nat.VOLCANO + Vector2(-200, 200)
+	near.pos = D.VOLCANO + Vector2(-200, 200)
 	near.hp = near.max_hp
 	nat.erupt()
 	check(near.hp < near.max_hp, "the eruption burns anyone near the mountain")
@@ -1215,3 +1218,37 @@ func test_endgames() -> void:
 	sim2.legacy.update(1.1)
 	check(sim2.legacy.pending == "defeat", "when the last of us dies, the chronicle ends")
 	check(sim2.event_def("defeat")["options"].size() == 1 and sim2.resolve_event("defeat", 0)["restart"], "defeat can only begin anew")
+
+func test_mapgen() -> void:
+	print("\n== Random maps ==")
+	for size in MapGen.SIZE_ORDER:
+		var n: int = MapGen.max_tribes(size)
+		MapGen.generate(size, n, 4242)
+		var sz: Dictionary = MapGen.SIZES[size]
+		check(D.W == sz["w"] and D.H == sz["h"] and D.RIVALS.size() == n, "%s map: %dx%d with %d clans" % [size, D.W, D.H, n])
+		var ok := true
+		for c in D.RIVALS:
+			var p: Vector2 = c["pos"]
+			if p.x < 300 or p.y < 300 or p.x > D.W - 300 or p.y > D.H - 300 or p.distance_to(D.VILLAGE) < 700 or absf(p.x - D.river_x(p.y)) < 250: ok = false
+			for o in D.RIVALS:
+				if o != c and p.distance_to(o["pos"]) < 500: ok = false
+		check(ok, "%s map: clans spread out, inside the map, clear of home and river" % size)
+		check(D.LANDMARKS.any(func(l): return l["id"] == "volcano" and l["pos"] == D.VOLCANO), "%s map: the Fire Mountain is placed (%d landmarks)" % [size, D.LANDMARKS.size()])
+		check(D.bank_of(D.VILLAGE) == "west" and D.is_ford(D.VILLAGE.y) and D.bank_of(D.EAST_SITE) == "east", "%s map: home on the west bank by the ford" % size)
+	MapGen.generate("standard", 4, 77)
+	var first: Array = D.RIVALS.map(func(c): return [c["id"], c["pos"]])
+	var lm1: Array = D.LANDMARKS.map(func(l): return l["pos"])
+	MapGen.generate("standard", 4, 77)
+	check(first == D.RIVALS.map(func(c): return [c["id"], c["pos"]]) and lm1 == D.LANDMARKS.map(func(l): return l["pos"]), "the same seed makes the same map")
+	MapGen.generate("standard", 4, 78)
+	check(first != D.RIVALS.map(func(c): return [c["id"], c["pos"]]), "another seed makes another map")
+	MapGen.generate("small", 2, 5)
+	var sim = _new_sim()
+	var owners := {}
+	for st in sim.structures: owners[st.owner] = true
+	check(owners.size() == 3 and sim.units.size() >= 10 and sim.landmarks.size() == D.LANDMARKS.size(), "a game starts on a random map (2 clan villages)")
+	check(sim.nodes.filter(func(n): return n.kind == "tree").size() > 200, "the random land is forested")
+	for i in 400: sim.tick(0.05)
+	check(true, "the random map runs")
+	D.use_classic()
+	check(D.W == 6400.0 and D.RIVALS.size() == 6, "back to the classic map")

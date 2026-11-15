@@ -1,26 +1,56 @@
 ## Static game data: map geometry, structures, techs, traits, starting tribe.
 extends RefCounted
 
-const W := 6400.0
-const H := 4400.0
+## ---- The map ----
+## Map geometry, clans and landmarks are static vars: they start as the hand-made
+## "classic" map and mapgen.gd overwrites them for a random map before sim.new_game().
 ## The original 3600x2400 world (home, river, ford, first two clans and landmarks) sits
-## at this offset inside the bigger map; positions below are written as old + SHIFT.
+## at SHIFT inside the classic map; classic positions are written as old + SHIFT.
 const SHIFT := Vector2(1400, 1000)
 const DAY_LEN := 90.0 # seconds per in-game day at 1x
+const STD_AREA := 6400.0 * 4400.0 # wilderness counts are tuned for this size
 
+static var W := 6400.0
+static var H := 4400.0
 # ---- River & ford ----
-const RIVER_BASE_X := 1960.0 + 1400.0
+static var RIVER_BASE_X := 1960.0 + 1400.0
+static var RIVER_PHASE := 1000.0 # river_x() meanders as sin((y - RIVER_PHASE) / RIVER_PERIOD)
 const RIVER_AMP := 40.0
 const RIVER_PERIOD := 170.0
 const RIVER_HALF := 46.0
-const FORD_Y0 := 1155.0 + 1000.0
-const FORD_Y1 := 1245.0 + 1000.0
-const FORD_Y := 1200.0 + 1000.0
+static var FORD_Y0 := 1155.0 + 1000.0
+static var FORD_Y1 := 1245.0 + 1000.0
+static var FORD_Y := 1200.0 + 1000.0
 
-const VILLAGE := Vector2(1300, 1200) + SHIFT
-const EAST_SITE := Vector2(2300, 1200) + SHIFT
-## Offset used to place the original hand-made starting area inside the bigger map.
-const HOME_OFS := Vector2(780, 640) + SHIFT
+static var VILLAGE := Vector2(1300, 1200) + SHIFT
+static var EAST_SITE := Vector2(2300, 1200) + SHIFT
+## Where the hand-made starting area (huts, home forests, berry bushes) is laid out.
+static var HOME_OFS := Vector2(780, 640) + SHIFT
+static var VOLCANO := Vector2(3380, 250) + SHIFT
+static var RIVALS: Array = CLASSIC_RIVALS
+static var LANDMARKS: Array = CLASSIC_LANDMARKS
+static var MAP := {"kind": "classic"} # how this map was made (kind, size, tribes, seed)
+
+## Back to the hand-made map (the default; tests rely on it).
+static func use_classic() -> void:
+	W = 6400.0
+	H = 4400.0
+	RIVER_BASE_X = 1960.0 + 1400.0
+	RIVER_PHASE = 1000.0
+	FORD_Y0 = 1155.0 + 1000.0
+	FORD_Y1 = 1245.0 + 1000.0
+	FORD_Y = 1200.0 + 1000.0
+	VILLAGE = Vector2(1300, 1200) + SHIFT
+	EAST_SITE = Vector2(2300, 1200) + SHIFT
+	HOME_OFS = Vector2(780, 640) + SHIFT
+	VOLCANO = Vector2(3380, 250) + SHIFT
+	RIVALS = CLASSIC_RIVALS
+	LANDMARKS = CLASSIC_LANDMARKS
+	MAP = {"kind": "classic"}
+
+## Map area relative to the standard size: scales forests, herds, finds...
+static func area_k() -> float:
+	return W * H / STD_AREA
 
 const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short POC session
 const FLOOD_DAY := 4
@@ -34,7 +64,7 @@ const SIGHT_BONFIRE := 300.0
 
 # ---- Rival clans: their own villages, people and moods (see rivals.gd) ----
 ## relation -100 (blood feud) .. +100 (allies); "base" is where it drifts back to.
-const RIVALS := [
+const CLASSIC_RIVALS := [
 	{"id": "ochre", "name": "Red Ochre Clan", "chief": "Gor", "epithet": "the Scarred", "culture": "martial",
 		"color": Color("#c8452e"), "pos": Vector2(3180, 1300) + SHIFT, "base": -25.0, "start": -20.0, "pop": 11, "era": 2,
 		"strength": 1.2, "hunter_name": "Red Ochre hunter", "warrior_name": "Red Ochre warrior", "trader_name": "Red Ochre trader", "sells": "stone", "wants": "food", "knows": ["fire", "tools", "hide", "domestication"], "desc": "Hunters who paint themselves in red earth. They prize strength and take what they need."},
@@ -55,11 +85,26 @@ const RIVALS := [
 		"color": Color("#5aa070"), "pos": Vector2(700, 3900), "base": 5.0, "start": 0.0, "pop": 8, "era": 1,
 		"strength": 0.75, "hunter_name": "Willow hunter", "warrior_name": "Willow warrior", "trader_name": "Willow trader", "sells": "wood", "wants": "food", "knows": ["fire", "pottery", "farming"], "desc": "Basket-weavers of the southern marshes who grow wild grain. Few, patient, and fond of gifts."},
 ]
+## More clans a random map can draw from (with the six above).
+const EXTRA_CLANS := [
+	{"id": "bear", "name": "Bear Clan", "chief": "Brak", "epithet": "the Unbowed", "culture": "martial",
+		"color": Color("#6a4a3a"), "pos": Vector2.ZERO, "base": -15.0, "start": -10.0, "pop": 10, "era": 2,
+		"strength": 1.15, "hunter_name": "Bear hunter", "warrior_name": "Bear warrior", "trader_name": "Bear trader", "sells": "stone", "wants": "food", "knows": ["fire", "tools", "hide"], "desc": "Cave dwellers who wear the skins of the great bears they hunt. Stubborn, and they never back down."},
+	{"id": "otter", "name": "Otter Clan", "chief": "Lio", "epithet": "Who Swims Upstream", "culture": "spiritual",
+		"color": Color("#4aa0a0"), "pos": Vector2.ZERO, "base": 10.0, "start": 5.0, "pop": 8, "era": 1,
+		"strength": 0.8, "hunter_name": "Otter hunter", "warrior_name": "Otter warrior", "trader_name": "Otter trader", "sells": "food", "wants": "wood", "knows": ["fire", "pottery"], "desc": "Fisher folk of the lakes and streams. Playful and curious, they welcome anyone who comes in peace."},
+	{"id": "raven", "name": "Raven Clan", "chief": "Morra", "epithet": "the Far-Seeing", "culture": "spiritual",
+		"color": Color("#5a5478"), "pos": Vector2.ZERO, "base": 0.0, "start": -5.0, "pop": 9, "era": 2,
+		"strength": 0.9, "hunter_name": "Raven hunter", "warrior_name": "Raven warrior", "trader_name": "Raven trader", "sells": "food", "wants": "stone", "knows": ["fire", "totems", "hide"], "desc": "Followers of a seer who reads the flight of birds. Secretive; they trade in omens as much as goods."},
+	{"id": "lynx", "name": "Lynx Clan", "chief": "Tok", "epithet": "Stone-Hand", "culture": "martial",
+		"color": Color("#c87a50"), "pos": Vector2.ZERO, "base": -10.0, "start": -5.0, "pop": 11, "era": 2,
+		"strength": 1.05, "hunter_name": "Lynx hunter", "warrior_name": "Lynx warrior", "trader_name": "Lynx trader", "sells": "stone", "wants": "wood", "knows": ["fire", "tools", "domestication"], "desc": "Silent stalkers of the high woods. They strike from cover and vanish before the cry goes up."},
+]
 const RIVAL_TERRITORY := 520.0 # gathering or building this close to a clan's village angers them
 
 ## Points of interest hidden in the fog. Found when first seen by a tribesperson.
 ## reward: stock deltas; reveal: extra radius revealed on discovery; den: spawns prowling tigers.
-const LANDMARKS := [
+const CLASSIC_LANDMARKS := [
 	{"id": "cave", "insight": {"totems": 0.4}, "kind": "cave", "name": "Painted Cave", "pos": Vector2(420, 520) + SHIFT, "reward": {"lore": 40},
 		"text": "found the Painted Cave, where the ancestors drew the great hunt"},
 	{"id": "stones", "insight": {"totems": 0.3, "code": 0.2}, "kind": "stones", "name": "Standing Stones", "pos": Vector2(620, 2020) + SHIFT, "reward": {"lore": 30}, "devotion": 8.0,
@@ -71,7 +116,7 @@ const LANDMARKS := [
 	{"id": "grove", "insight": {"farming": 0.5}, "kind": "grove", "name": "Wild Berry Grove", "pos": Vector2(1050, 2080) + SHIFT, "reward": {"food": 40},
 		"text": "found a Wild Berry Grove heavy with fruit"},
 	{"id": "peak", "insight": {"domestication": 0.4}, "kind": "peak", "name": "Eagle Peak", "pos": Vector2(2860, 300) + SHIFT, "reward": {"lore": 20}, "reveal": 650.0,
-		"text": "climbed Eagle Peak and saw the whole east bank spread below"},
+		"text": "climbed Eagle Peak and saw the far lands spread below"},
 	{"id": "spring", "insight": {"pottery": 0.4}, "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120) + SHIFT, "reward": {"food": 20, "lore": 15},
 		"text": "found a steaming Hot Spring deep in the east"},
 	{"id": "volcano", "insight": {"fire": 0.3, "bronze": 0.15}, "kind": "volcano", "name": "Fire Mountain", "pos": Vector2(3380, 250) + SHIFT, "reward": {"lore": 20},
@@ -79,24 +124,24 @@ const LANDMARKS := [
 	{"id": "den_n", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760) + SHIFT, "reward": {"lore": 10}, "den": 2,
 		"text": "found a Saber-tooth Den littered with bones and lived to tell of it"},
 	{"id": "den_s", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180) + SHIFT, "reward": {"lore": 10}, "den": 1,
-		"text": "found a second Saber-tooth Den in the southern thickets"},
+		"text": "found another Saber-tooth Den deep in the thickets"},
 	# the far reaches of the bigger map
 	{"id": "hands", "insight": {"totems": 0.3}, "kind": "cave", "name": "Cave of Hands", "pos": Vector2(450, 2300), "reward": {"lore": 30},
 		"text": "found the Cave of Hands, its walls covered in the prints of the long dead"},
 	{"id": "wind_peak", "insight": {"domestication": 0.3}, "kind": "peak", "name": "Wind Peak", "pos": Vector2(2500, 380), "reward": {"lore": 20}, "reveal": 650.0,
-		"text": "climbed Wind Peak and saw the northern forests roll away to the sky"},
+		"text": "climbed Wind Peak and saw the forests roll away to the sky"},
 	{"id": "bison", "insight": {"hide": 0.4}, "kind": "bones", "name": "Bison Bone Pit", "pos": Vector2(2900, 4050), "reward": {"lore": 10, "wood": 20},
 		"text": "found the Bison Bone Pit, where a whole herd was once driven over the edge"},
 	{"id": "mist", "insight": {"pottery": 0.3}, "kind": "spring", "name": "Mist Spring", "pos": Vector2(6000, 2300), "reward": {"food": 20, "lore": 15},
-		"text": "found the Mist Spring far in the east, warm water steaming in the cold air"},
+		"text": "found the Mist Spring, warm water steaming in the cold air"},
 	{"id": "ring_w", "insight": {"totems": 0.2, "code": 0.3}, "kind": "stones", "name": "Ring of the Ancients", "pos": Vector2(3700, 380), "reward": {"lore": 25}, "devotion": 6.0,
 		"text": "found the Ring of the Ancients, older than any tale the elders know"},
 	{"id": "den_w", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(1400, 3950), "reward": {"lore": 10}, "den": 1,
-		"text": "found a Saber-tooth Den in the far south-west"},
+		"text": "found a Saber-tooth Den among the rocks"},
 ]
 
 static func river_x(y: float) -> float:
-	return RIVER_BASE_X + RIVER_AMP * sin((y - SHIFT.y) / RIVER_PERIOD)
+	return RIVER_BASE_X + RIVER_AMP * sin((y - RIVER_PHASE) / RIVER_PERIOD)
 
 static func is_ford(y: float) -> bool:
 	return y > FORD_Y0 and y < FORD_Y1

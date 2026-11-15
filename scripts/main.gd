@@ -8,6 +8,9 @@ const HUD = preload("res://scripts/hud.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const I = preload("res://scripts/i18n.gd")
 const ArtBaker = preload("res://scripts/art_baker.gd")
+const D = preload("res://scripts/data.gd")
+const MapGen = preload("res://scripts/mapgen.gd")
+const NewGameUI = preload("res://scripts/new_game_ui.gd")
 
 const STEP := 0.05
 const NIGHT_FF := 12.0 # game-speed multiplier while the whole tribe sleeps
@@ -31,8 +34,17 @@ func _ready() -> void:
 	art.progress.connect(func(d, n): loading.get_child(0).text = tr("Forging the world… %d%%  (first launch only)") % (100 * d / n))
 	await art.prepare()
 	loading.queue_free()
+	var settings: Dictionary = await _new_game_settings()
+	if settings["map"] == "classic": D.use_classic()
+	else:
+		MapGen.generate(settings["map"], settings["tribes"], settings["seed"])
+		seed(settings["seed"]) # forests, herds and finds grow the same way for the same seed
+	loading = _loading_screen()
+	await get_tree().process_frame # let "Forging the world…" show while the land is built
+	await get_tree().process_frame
 	sim = Sim.new()
 	sim.new_game()
+	randomize()
 	llm = LLM.new()
 	llm.sim = sim
 	add_child(llm)
@@ -44,7 +56,36 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(sim, world, llm)
 	world.blocked = hud.modal_open
+	loading.queue_free()
 	ready_done = true
+
+## Map choice: from the command line (--map=classic|small|standard|large|huge
+## [--tribes=N] [--seed=S]), the classic map for scripted screenshots, otherwise the
+## New Game screen.
+func _new_game_settings() -> Dictionary:
+	var args := {}
+	for a in OS.get_cmdline_user_args():
+		var kv: PackedStringArray = a.trim_prefix("--").split("=", true, 1)
+		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
+	if args.get("demo", "") == "newgame": # debug: screenshot the New Game screen
+		var shot_ui := NewGameUI.new()
+		add_child(shot_ui)
+		if args.has("lang"): I.setup(args["lang"])
+		await get_tree().create_timer(float(args.get("delay", "1"))).timeout
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(args["shot"])
+		get_tree().quit()
+		return {"map": "classic", "tribes": 6, "seed": 0}
+	if args.has("map") or args.has("shot"):
+		var m: String = args.get("map", "classic")
+		if m != "classic" and not MapGen.SIZES.has(m): m = "standard"
+		var tribes := int(args.get("tribes", str(MapGen.SIZES[m]["def"]) if m != "classic" else "6"))
+		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000)))}
+	var ui := NewGameUI.new()
+	add_child(ui)
+	var s: Dictionary = await ui.chosen
+	ui.queue_free()
+	return s
 
 func _loading_screen() -> CanvasLayer:
 	var cl := CanvasLayer.new()
@@ -149,7 +190,7 @@ func _debug_shot(args: Dictionary) -> void:
 					st.progress = st.work * spec[1]
 					k += 1
 			if stage >= 2:
-				var dy: float = 1120.0 + sim.D.SHIFT.y
+				var dy: float = sim.D.FORD_Y - 80.0
 				var dx: float = sim.D.river_x(dy) - sim.D.RIVER_HALF - 6.0
 				sim.add_structure("fishing_dock", Vector2(dx, dy), true)
 			sim.renovate([])
@@ -307,7 +348,7 @@ func _debug_shot(args: Dictionary) -> void:
 					sim.nat.erupt()
 					var secs := float(args.get("secs", "3" if what == "eruption" else "20"))
 					for i in int(secs / STEP): sim.tick(STEP)
-					focus = sim.nat.VOLCANO + Vector2(-150, 250) if what == "eruption" else sim.D.VILLAGE
+					focus = sim.D.VOLCANO + Vector2(-150, 250) if what == "eruption" else sim.D.VILLAGE
 				"eclipse":
 					sim.time = 90.0 * 2 + 90.0 * 0.35
 					sim.nat.eclipse_at = sim.time

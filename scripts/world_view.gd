@@ -14,7 +14,7 @@ signal structure_clicked(s) # a click on a building with something to show (the 
 const IX := 0.75   # iso projection: screen = ((x-y)*IX, (x+y)*IY), 2:1 diamond
 const IY := 0.375
 const GROUND := Transform2D(Vector2(IX, IY), Vector2(-IX, IY), Vector2.ZERO)
-const TEX_SCALE := 4 # terrain texture = world / 4 pixels
+var TEX_SCALE := 4 # terrain texture = world / TEX_SCALE pixels (coarser on the biggest maps)
 
 var sim
 var art # ArtBaker (pre-rendered 3D sprites); old procedural drawing is the fallback
@@ -168,6 +168,7 @@ func _build_terrain() -> void:
 	meadow.seed = 31
 	meadow.frequency = 0.003
 	forest_map = _forest_density()
+	TEX_SCALE = 4 if D.area_k() <= 1.05 else (5 if D.area_k() <= 1.6 else 6)
 	var w := int(D.W / TEX_SCALE)
 	var h := int(D.H / TEX_SCALE)
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -321,7 +322,8 @@ func _place_ground_cover() -> void:
 		elif r < 0.08 and not east: kind = "flower"
 		decor.append({"p": p, "east": east, "kind": kind, "v": randi() % 3, "tall": east and randf() < 0.7, "c": randf_range(-0.05, 0.05), "s": randf_range(0.75, 1.25)})
 	var tries := 0
-	while outcrops.size() < 36 and tries < 900:
+	var n_out := roundi(36 * D.area_k())
+	while outcrops.size() < n_out and tries < n_out * 25:
 		tries += 1
 		var p := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
 		if p.distance_to(D.VILLAGE) < 700 or p.distance_to(D.EAST_SITE) < 450 or absf(p.x - D.river_x(p.y)) < 250: continue

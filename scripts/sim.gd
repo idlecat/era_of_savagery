@@ -127,8 +127,9 @@ func new_game() -> void:
 	wear_h = ceili(D.H / WEAR_CELL)
 	wear.resize(wear_w * wear_h)
 	wear.fill(0.0)
-	for i in 36: spawn_deer("west", false)
-	for i in 34: spawn_deer("east", false)
+	var west_k := (D.RIVER_BASE_X / D.W) * 2.0 # herds in proportion to each bank's land
+	for i in roundi(36 * D.area_k() * west_k): spawn_deer("west", false)
+	for i in roundi(34 * D.area_k() * (2.0 - west_k)): spawn_deer("east", false)
 
 	var count: int = D.CHARACTERS.size()
 	for i in count:
@@ -153,7 +154,8 @@ func _wilds() -> void:
 	var home := Rect2(D.VILLAGE - Vector2(700, 600), Vector2(1700, 1200))
 	var placed := 0
 	var tries := 0
-	while placed < 80 and tries < 1200:
+	var n_forests := roundi(80 * D.area_k())
+	while placed < n_forests and tries < n_forests * 15:
 		tries += 1
 		var c := Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
 		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 220: continue
@@ -163,7 +165,7 @@ func _wilds() -> void:
 		if near_lm: continue
 		_forest(c, randi_range(10, 24), randf_range(110, 200))
 		placed += 1
-	for i in 24:
+	for i in roundi(24 * D.area_k()):
 		var c := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
 		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 160: continue
 		for k in 3:
@@ -186,7 +188,7 @@ func _boulders() -> void:
 	var spots: Array = [D.VILLAGE + Vector2(-330, 260), D.VILLAGE + Vector2(260, -300)]
 	for lm in D.LANDMARKS:
 		if lm["id"] in ["flint", "peak", "stones"]: spots.append(lm["pos"] + Vector2(120, 90))
-	for i in 40:
+	for i in roundi(40 * D.area_k()):
 		spots.append(Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150)))
 	for c in spots:
 		if absf(c.x - D.river_x(c.y)) < 150 or c.distance_to(D.VILLAGE) < 220: continue
@@ -826,7 +828,8 @@ func _place_finds() -> void:
 		var fd: Dictionary = D.FINDS[id]
 		var made := 0
 		var tries := 0
-		while made < fd["count"] * 2 and tries < 600: # twice the clusters on the big map
+		var want := maxi(1, roundi(fd["count"] * 2 * D.area_k())) # twice the clusters of the old 3600x2400 map, scaled by area
+		while made < want and tries < want * 300:
 			tries += 1
 			var c = _find_spot(fd["where"], trees, made == 0 and fd["group"] != "ore")
 			if c == null: continue

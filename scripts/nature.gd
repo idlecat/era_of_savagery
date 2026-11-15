@@ -10,7 +10,7 @@
 ##               and buildings in its path; berries sprout in the ashes afterwards.
 ## River flood - in spring the river can rise after a warning: people near the banks run for
 ##               high ground, riverside buildings are damaged; the silt feeds the fields.
-## Fire Mountain - a volcano in the north-east erupts every 9-14 days after tremors: lava
+## Fire Mountain - a volcano (D.VOLCANO) erupts every 9-14 days after tremors: lava
 ##               burns the land around it, ash darkens the sky for most of a day (slower
 ##               growth, shorter sight, more fever); obsidian is left on its slopes and the
 ##               ash makes the fields rich for days.
@@ -21,7 +21,6 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 
-const VOLCANO := Vector2(3380, 250) + D.SHIFT
 const LAVA_R := 460.0
 const ECLIPSE_LEN := 30.0
 
@@ -327,7 +326,7 @@ func _volcano_tick(dt: float) -> void:
 	if not tremor_warned and sim.time >= erupt_at - 30.0:
 		tremor_warned = true
 		shake = 3.0
-		sim.alert(tr("The ground trembles. Black smoke pours from the Fire Mountain in the north-east."), VOLCANO, "warn")
+		sim.alert(tr("The ground trembles. Black smoke pours from the Fire Mountain."), D.VOLCANO, "warn")
 	if sim.time >= erupt_at:
 		erupt_at = sim.time + D.DAY_LEN * randf_range(9.0, 14.0)
 		tremor_warned = false
@@ -338,20 +337,20 @@ func erupt() -> void:
 	shake = 4.0
 	ash_until = sim.time + D.DAY_LEN * 0.8
 	fertile_until = sim.time + D.DAY_LEN * 3.5
-	sim.reveal(VOLCANO, 300)
-	sim.alert(tr("The Fire Mountain erupts! Fire runs down its slopes and ash darkens the sky."), VOLCANO, "danger")
-	_disaster("eruption", VOLCANO, 1000.0)
-	var near: Array = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(VOLCANO) < LAVA_R)
+	sim.reveal(D.VOLCANO, 300)
+	sim.alert(tr("The Fire Mountain erupts! Fire runs down its slopes and ash darkens the sky."), D.VOLCANO, "danger")
+	_disaster("eruption", D.VOLCANO, 1000.0)
+	var near: Array = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(D.VOLCANO) < LAVA_R)
 	near.shuffle()
 	for n in near.slice(0, 6): ignite(n)
 	for u in sim.living():
-		if u.pos.distance_to(VOLCANO) < LAVA_R: _hurt(u, u.max_hp * 0.5, tr("burned by the Fire Mountain"))
+		if u.pos.distance_to(D.VOLCANO) < LAVA_R: _hurt(u, u.max_hp * 0.5, tr("burned by the Fire Mountain"))
 	for n in sim.nodes:
-		if n.kind == "deer" and n.pos.distance_to(VOLCANO) < LAVA_R * 1.5: n.vel = (n.pos - VOLCANO).normalized() * 30.0
+		if n.kind == "deer" and n.pos.distance_to(D.VOLCANO) < LAVA_R * 1.5: n.vel = (n.pos - D.VOLCANO).normalized() * 30.0
 	# black glass on the slopes
 	var have: int = sim.nodes.filter(func(n): return n.kind == "obsidian").size()
 	for k in maxi(0, 4 - have):
-		var p: Vector2 = VOLCANO + Vector2.from_angle(randf_range(1.6, 3.4)) * randf_range(220, 380)
+		var p: Vector2 = D.VOLCANO + Vector2.from_angle(randf_range(1.6, 3.4)) * randf_range(220, 380)
 		p = Vector2(clampf(p.x, 40, D.W - 40), clampf(p.y, 40, D.H - 40))
 		var o = sim._node("obsidian", "stone", p, D.FINDS["obsidian"]["amount"])
 		o.bank = D.bank_of(p)

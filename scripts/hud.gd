@@ -91,7 +91,7 @@ func modal_open() -> bool:
 	return modal != null
 
 # ------------------------------------------------------------ theme & helpers
-func _make_theme() -> Theme:
+static func _make_theme() -> Theme:
 	var th := Theme.new()
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = COL_BG
