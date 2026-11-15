@@ -1116,11 +1116,21 @@ func test_folk() -> void:
 	var sells: String = H["sells"]
 	var before: float = sim2.stock[sells]
 	var rel0: float = H["relation"]
+	var txp0: float = t.skills["trade"]["xp"] + t.lv("trade") * 1000.0
+	var lead0: float = t.skills["combat"]["xp"] + t.lv("combat") * 1000.0
 	sim2.time = D.DAY_LEN + 1.0
 	for i in 2400:
 		sim2.tick(0.05)
 		if t.role == "": break
 	check(t.role == "" and sim2.stock[sells] >= before + q.values()[0] and H["relation"] > rel0, "and comes home with their %s (relations %d → %d)" % [sells, rel0, H["relation"]])
+	check(t.skills["trade"]["xp"] + t.lv("trade") * 1000.0 > txp0 and t.skills["combat"]["xp"] + t.lv("combat") * 1000.0 > lead0, "trading teaches Trade & Barter, and a little leadership")
+	var novice = sim2.unit_by_name("Bai")
+	var master = sim2.unit_by_name("Qiao")
+	novice.skills["trade"]["lv"] = 0
+	master.skills["trade"]["lv"] = 5
+	var qn: int = sim2.folk.quote("heron", "wood", 20, novice).values()[0]
+	var qm: int = sim2.folk.quote("heron", "wood", 20, master).values()[0]
+	check(qm > qn, "a master trader (Silver Tongue) brings home more: %d vs %d" % [qm, qn])
 	H["relation"] = -40.0
 	check(sim2.folk.send_trader(t, "heron", "food", 20) != "", "no trading with a hostile clan")
 

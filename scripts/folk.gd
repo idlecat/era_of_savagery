@@ -298,12 +298,20 @@ func rate(id: String) -> float:
 		"Friendly": return 1.05
 	return 0.85
 
+## How much better a deal this person strikes: +6% per Trade & Barter level, and the
+## Silver Tongue of a master (Lv5) adds another 10%.
+func haggle(u: E.Unit) -> float:
+	if u == null: return 1.0
+	var lv: int = u.lv("trade")
+	return 1.0 + 0.06 * lv + (0.1 if lv >= 5 else 0.0)
+
 ## What a clan would give for `amt` of `res`: {their resource: amount}.
-func quote(id: String, res: String, amt: int) -> Dictionary:
+## `trader`: who bargains for us (a skilled trader gets more, see haggle()).
+func quote(id: String, res: String, amt: int, trader: E.Unit = null) -> Dictionary:
 	var c: Dictionary = sim.rivals.clans[id]
 	var sells: String = c["sells"]
 	if res == sells: return {}
-	var v: float = amt * VALUE[res] * (1.5 if res == c["wants"] else 1.0) * rate(id)
+	var v: float = amt * VALUE[res] * (1.5 if res == c["wants"] else 1.0) * rate(id) * haggle(trader)
 	return {sells: maxi(1, roundi(v / VALUE[sells]))}
 
 func send_trader(u: E.Unit, id: String, res: String, amt: int) -> String:
@@ -337,12 +345,14 @@ func do_trade(u: E.Unit, j: Dictionary, dt: float) -> void:
 				j["get"] = {}
 				sim.alert(tr("The %s took our goods and drove %s off empty-handed.") % [tr(c["name"]), tr(u.name)], c["pos"], "danger", [u])
 				sim.remember(u, tr("was robbed by the %s when trading on Day %d") % [tr(c["name"]), sim.day()], 6)
+				sim.gain_xp(u, "trade", 2.0) # a hard lesson
 			else:
-				j["get"] = quote(id, res, amt)
+				j["get"] = quote(id, res, amt, u)
 				sim.rivals.change(id, 4.0 if res == c["wants"] or res == "goods" else 2.0)
 				var known: Array = sim.rivals.teachable(id)
 				if not known.is_empty() and randf() < 0.35: sim.evo.seed(known[0], 0.08, u)
-				sim.gain_xp(u, "lore", 4.0)
+				sim.gain_xp(u, "trade", 12.0) # bargaining with strangers
+				sim.gain_xp(u, "combat", 3.0) # and standing up to their chief (leadership)
 			j["phase"] = "back"
 			var got: Dictionary = j["get"]
 			u.carry_type = got.keys()[0] if not got.is_empty() else ""

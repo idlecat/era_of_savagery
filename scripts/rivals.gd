@@ -588,6 +588,7 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 	var what := terms_text(t)
 	sim.remember(envoy, tr("sealed an agreement with the %s on Day %d: %s") % [tr(c["name"]), sim.day(), what], 7)
 	sim.gain_xp(envoy, "lore", 12)
+	sim.gain_xp(envoy, "trade", 6) # striking a bargain
 	sim.alert(tr("Agreement with the %s: %s.") % [tr(c["name"]), what], c["pos"], "info")
 	return what
 
@@ -669,7 +670,7 @@ func _traders(c: Dictionary, dt: float) -> void:
 
 func trader_arrived(p: E.Predator) -> void:
 	var c: Dictionary = clans[p.clan]
-	var rate := 1.0 + (0.3 if c["relation"] >= 50 else 0.0)
+	var rate: float = (1.0 + (0.3 if c["relation"] >= 50 else 0.0)) * sim.folk.haggle(home_trader()) # our best trader bargains
 	var sells: String = c["sells"]
 	var wants: String = c["wants"]
 	var offers: Array = [
@@ -683,6 +684,14 @@ func trader_arrived(p: E.Predator) -> void:
 	c["trade_offers"] = offers
 	sim.alert(tr("A trader of the %s has come to our fire.") % tr(c["name"]), p.pos, "info")
 	pending.append("trade_" + p.clan)
+
+## Who meets a visiting trader: the best Trade & Barter at home (not away on a task).
+func home_trader() -> E.Unit:
+	var best: E.Unit = null
+	for u in sim.living():
+		if u.role != "" or not D.home_side(u.pos): continue
+		if best == null or u.lv("trade") > best.lv("trade"): best = u
+	return best
 
 func _offer_text(o: Dictionary) -> String:
 	var give: Array = []
@@ -724,6 +733,8 @@ func _trade_resolve(id: String, idx: int) -> String:
 		if learner: sim.remember(learner, tr("learned something of %s from a trader of the %s on Day %d") % [tr(sim.evo.tech_def(tid)["name"]), tr(c["name"]), sim.day()], 6)
 		return tr("The trader shows us how his people work. We understand more of %s.") % tr(sim.evo.tech_def(tid)["name"])
 	for r in o["get"]: sim.stock[r] += o["get"][r]
+	var haggler = home_trader()
+	if haggler: sim.gain_xp(haggler, "trade", 8)
 	var known := teachable(id)
 	if not known.is_empty() and randf() < 0.3: # watching strangers work teaches a little
 		sim.evo.seed(known[0], 0.1, null)

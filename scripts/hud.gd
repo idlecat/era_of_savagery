@@ -41,7 +41,7 @@ var roster_bar: HBoxContainer
 var roster_mode := "quest" # "quest" (grouped by what people are doing) or "ability" (sortable table)
 var sort_key := "lv"
 var sort_desc := true
-const SORT_COLS := [["lv", "Lv", "Overall level"], ["forage", "Fo", "Foraging & Hunting"], ["craft", "Cr", "Crafting & Building"], ["combat", "Co", "Combat & Leadership"], ["lore", "Lo", "Shamanism & Lore"]]
+const SORT_COLS := [["lv", "Lv", "Overall level"], ["forage", "Fo", "Foraging & Hunting"], ["craft", "Cr", "Crafting & Building"], ["combat", "Co", "Combat & Leadership"], ["lore", "Lo", "Shamanism & Lore"], ["trade", "Tr", "Trade & Barter"]]
 const COL_W := 38.0
 var sheet_scout_btn: Button
 var sheet_research_btn: Button
@@ -1566,10 +1566,12 @@ func open_trade(clan_id: String, res := "", amt := 0) -> void:
 	else:
 		v.add_child(_label(tr("Who will carry %d %s to the %s?") % [amt, tr(res), tr(c["name"])], 15, COL_DIM))
 		var cands: Array = sim.living().filter(func(o): return o.role == "")
-		cands.sort_custom(func(a, b): return a.pos.distance_to(c["pos"]) < b.pos.distance_to(c["pos"]))
+		cands.sort_custom(func(a, b): return a.lv("trade") > b.lv("trade") if a.lv("trade") != b.lv("trade") else a.pos.distance_to(c["pos"]) < b.pos.distance_to(c["pos"]))
 		for o in cands.slice(0, 6):
 			var who = o
-			var b := _button(tr("%s \"%s\" — %s") % [tr(o.name), tr(o.epithet), I.act(o.act)], func():
+			var q: Dictionary = F.quote(clan_id, res, amt, o)
+			var haul: String = "%d %s" % [q.values()[0], tr(q.keys()[0])] if not q.is_empty() else "-"
+			var b := _button(tr("%s \"%s\" — Trade %d → about %s · %s") % [tr(o.name), tr(o.epithet), o.lv("trade"), haul, I.act(o.act)], func():
 				var err: String = F.send_trader(who, clan_id, res, amt)
 				_close_modal()
 				if err != "": sim.popup(who.pos, tr(err), Color("#ff8080")))

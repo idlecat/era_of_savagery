@@ -1567,4 +1567,8 @@ const STRINGS := {
 	"held the roofs down when the great storm came two winters ago": "两个冬天前大风暴来袭时，带人压住了屋顶",
 	"dreamed of a white heron circling the camp for three nights": "连续三夜梦见一只白鹭在营地上空盘旋",
 	"Dropped the fishing dock: no one has seen water by the site.": "去掉了渔码头：还没人见过那里有水。",
+	"Trade & Barter": "贸易与交换",
+	"Silver Tongue": "巧舌如簧",
+	"Tr": "贸",
+	"%s \"%s\" — Trade %d → about %s · %s": "%s“%s”—— 贸易 %d → 约 %s · %s",
 }

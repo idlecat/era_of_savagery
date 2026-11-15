@@ -405,18 +405,20 @@ const LANDMARK_KINDS := {
 		"texts": ["climbed toward the smoking Fire Mountain, where the rocks are warm and the ground growls"]},
 }
 
-const SKILLS := ["forage", "craft", "combat", "lore"]
+const SKILLS := ["forage", "craft", "combat", "lore", "trade"]
 const SKILL_NAMES := {
 	"forage": "Foraging & Hunting",
 	"craft": "Crafting & Building",
 	"combat": "Combat & Leadership",
 	"lore": "Shamanism & Lore",
+	"trade": "Trade & Barter",
 }
 const SKILL_UNLOCKS := {
 	"forage": "Beast Taming",
 	"craft": "Megalithic & Bronze Craft",
 	"combat": "Centurion Aura",
 	"lore": "Totem Miracles",
+	"trade": "Silver Tongue",
 }
 
 # Natural finds: foods, medicines and ores scattered over the map. Each kind is unknown (and
