@@ -135,6 +135,13 @@ func _build_terrain() -> void:
 	var fine := FastNoiseLite.new()
 	fine.seed = 11
 	fine.frequency = 0.05
+	var soil := FastNoiseLite.new() # dirt and rocky patches
+	soil.seed = 23
+	soil.frequency = 0.004
+	var meadow := FastNoiseLite.new() # flower meadows
+	meadow.seed = 31
+	meadow.frequency = 0.003
+	forest_map = _forest_density()
 	var w := int(D.W / TEX_SCALE)
 	var h := int(D.H / TEX_SCALE)
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -171,9 +178,17 @@ func _build_terrain() -> void:
 				var dv := p.distance_to(D.VILLAGE)
 				if dv < 170:
 					c = c.lerp(dirt.lerp(dirt.darkened(0.15), f), clampf((170 - dv) / 110.0, 0, 0.85) * (0.6 + 0.4 * n))
-				if not east and n > 0.72: c = c.lerp(Color("#879b4a"), (n - 0.72) * 2.0)
+				var m := meadow.get_noise_2dv(p) * 0.5 + 0.5
+				var so := soil.get_noise_2dv(p) * 0.5 + 0.5
+				var fd := _forest_at(p)
+				if not east and m > 0.62: c = c.lerp(Color("#93a64e"), clampf((m - 0.62) * 3.0, 0, 0.6))
+				if so > 0.7: c = c.lerp(Color("#7d6a48").lerp(Color("#6a5c40"), f), clampf((so - 0.7) * 4.0, 0, 0.75))
+				elif so < 0.22: c = c.lerp(Color("#7a7466").lerp(Color("#8a857a"), f), clampf((0.22 - so) * 4.0, 0, 0.6))
+				if fd > 0.05: c = c.lerp(Color("#3d4a28").lerp(Color("#4a4026"), f), clampf(fd * 0.8, 0, 0.7)) # forest floor and leaf litter
+				if dx < D.RIVER_HALF + 50: c = c.lerp(Color("#4f6a32"), clampf((D.RIVER_HALF + 50 - dx) / 40.0, 0, 0.5)) # lush riverbank
 			img.set_pixel(i, j, c)
 	terrain_tex = ImageTexture.create_from_image(img)
+	_place_ground_cover()
 	var mini := img.duplicate() # minimap: same colours without the type data in alpha
 	mini.convert(Image.FORMAT_RGB8)
 	minimap_tex = ImageTexture.create_from_image(mini)
@@ -182,15 +197,6 @@ func _build_terrain() -> void:
 	_refresh_fog()
 	wear_img = Image.create(maxi(sim.wear_w, 1), maxi(sim.wear_h, 1), false, Image.FORMAT_RGBA8)
 	wear_tex = ImageTexture.create_from_image(wear_img)
-	for i in 2000:
-		var p := Vector2(randf() * D.W, randf() * D.H)
-		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 14: continue
-		var east := D.bank_of(p) == "east"
-		var r := randf()
-		var kind := "tuft"
-		if r < 0.06: kind = "rock"
-		elif r < 0.12 and not east: kind = "flower"
-		decor.append({"p": p, "east": east, "kind": kind, "tall": east and randf() < 0.7, "c": randf_range(-0.05, 0.05), "s": randf_range(0.7, 1.3)})
 	decor.sort_custom(func(a, b): return a["p"].x + a["p"].y < b["p"].x + b["p"].y)
 
 # ------------------------------------------------------------ frame
@@ -231,6 +237,72 @@ func _process(delta: float) -> void:
 
 ## Fog of war as a tiny texture (one texel per fog cell), drawn through the iso transform
 ## with linear filtering so the edges are soft: black = unexplored, dim = explored, clear = in sight.
+## Tree density on a coarse grid (0..1), smoothed: darkens forest floors, places ferns.
+var forest_map: Image
+func _forest_density() -> Image:
+	var cell := 60.0
+	var gw := ceili(D.W / cell)
+	var gh := ceili(D.H / cell)
+	var img := Image.create(gw, gh, false, Image.FORMAT_RF)
+	var counts := {}
+	for n in sim.nodes:
+		if n.kind != "tree": continue
+		var k := Vector2i(int(n.pos.x / cell), int(n.pos.y / cell))
+		counts[k] = counts.get(k, 0) + 1
+	for k in counts: img.set_pixel(k.x, k.y, Color(minf(1.0, counts[k] / 3.0), 0, 0))
+	img.resize(gw * 4, gh * 4, Image.INTERPOLATE_CUBIC)
+	return img
+
+func _forest_at(p: Vector2) -> float:
+	var x := clampi(int(p.x / D.W * forest_map.get_width()), 0, forest_map.get_width() - 1)
+	var y := clampi(int(p.y / D.H * forest_map.get_height()), 0, forest_map.get_height() - 1)
+	return clampf(forest_map.get_pixel(x, y).r, 0.0, 1.0)
+
+## Ground cover chosen by biome: reeds on the banks, ferns in forests, flowers in
+## meadows, pebbles on rocky ground, grass everywhere; a few rock outcrops in the wilds.
+var outcrops: Array = [] # [{p, v}]
+func _place_ground_cover() -> void:
+	var meadow := FastNoiseLite.new()
+	meadow.seed = 31
+	meadow.frequency = 0.003
+	var soil := FastNoiseLite.new()
+	soil.seed = 23
+	soil.frequency = 0.004
+	var y := 0.0
+	while y < D.H: # reeds along both banks
+		y += randf_range(10, 22)
+		if D.is_ford(y) or D.is_ford(y + 30) or D.is_ford(y - 30): continue
+		for side in [-1, 1]:
+			if randf() < 0.75:
+				var p := Vector2(D.river_x(y) + side * (D.RIVER_HALF + randf_range(2, 22)), y)
+				decor.append({"p": p, "kind": "reeds", "v": randi() % 2, "s": randf_range(0.8, 1.2), "east": side > 0, "tall": false, "c": 0.0})
+	for i in 2600:
+		var p := Vector2(randf() * D.W, randf() * D.H)
+		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 14: continue
+		var east := D.bank_of(p) == "east"
+		var fd := _forest_at(p)
+		var m := meadow.get_noise_2dv(p) * 0.5 + 0.5
+		var so := soil.get_noise_2dv(p) * 0.5 + 0.5
+		var r := randf()
+		var kind := "tuft"
+		if fd > 0.35 and r < 0.55: kind = "fern"
+		elif so < 0.25 and r < 0.5: kind = "rock"
+		elif not east and m > 0.6 and r < 0.4: kind = "flower"
+		elif r < 0.04: kind = "rock"
+		elif r < 0.08 and not east: kind = "flower"
+		decor.append({"p": p, "east": east, "kind": kind, "v": randi() % 3, "tall": east and randf() < 0.7, "c": randf_range(-0.05, 0.05), "s": randf_range(0.75, 1.25)})
+	var tries := 0
+	while outcrops.size() < 12 and tries < 300:
+		tries += 1
+		var p := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
+		if p.distance_to(D.VILLAGE) < 700 or p.distance_to(D.EAST_SITE) < 450 or absf(p.x - D.river_x(p.y)) < 250: continue
+		var ok := true
+		for lm in D.LANDMARKS:
+			if p.distance_to(lm["pos"]) < 260: ok = false
+		for o in outcrops:
+			if p.distance_to(o["p"]) < 400: ok = false
+		if ok: outcrops.append({"p": p, "v": outcrops.size() % 3})
+
 ## Seamless noise used as terrain detail (tiles without seams, mipmapped for distance).
 func _noise_tex(seed_v: int, freq: float, type: int, octaves: int) -> ImageTexture:
 	var n := FastNoiseLite.new()
@@ -618,6 +690,15 @@ func _draw_water_fx() -> void:
 func _draw_decor(d: Dictionary) -> void:
 	var p := iso(d["p"])
 	var s: float = d["s"]
+	var sk := ""
+	match d["kind"]:
+		"tuft": sk = "grass_%d" % (d.get("v", 0) % 3)
+		"flower": sk = "flower_%d" % (d.get("v", 0) % 3)
+		"fern": sk = "fern_%d" % (d.get("v", 0) % 2)
+		"reeds": sk = "reeds_%d" % (d.get("v", 0) % 2)
+		"rock": sk = "pebbles"
+	if sk != "" and _sprite(sk + _snowy(), p, s): return
+	if d["kind"] in ["fern", "reeds"]: return
 	match d["kind"]:
 		"rock":
 			_ell(p + Vector2(3, 1), 7 * s, 3 * s, SHADOW)
@@ -1564,6 +1645,8 @@ func draw_item(kind: int, obj) -> void:
 		6: _draw_landmark(obj)
 		7:
 			for d in obj: _draw_decor(d)
+		8:
+			_sprite("outcrop_%d%s" % [obj["v"], _snowy()], iso(obj["p"]))
 
 func _item(key: String, kind: int, obj, pos: Vector2, dynamic: bool, parent: Node2D = null) -> Item:
 	var it: Item = items.get(key)
@@ -1590,6 +1673,16 @@ func _build_decor_chunks() -> void:
 
 func _sync_items() -> void:
 	var seen := {}
+	var snow_sig := 1 if sim.hz.snow > 0.5 else 0
+	for key in items:
+		if key.begins_with("d"): _touch(items[key], snow_sig)
+	for i in outcrops.size():
+		var o: Dictionary = outcrops[i]
+		var key := "o%d" % i
+		seen[key] = true
+		var it := _item(key, 8, o, iso(o["p"]), false)
+		it.visible = sim.is_explored(o["p"])
+		_touch(it, snow_sig)
 	for n in sim.nodes:
 		var key := "n%d" % n.id
 		seen[key] = true

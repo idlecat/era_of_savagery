@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 11
+const ART_VERSION := 12
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -290,6 +290,15 @@ func _jobs() -> Array:
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
 		jobs.append({"key": "stones" + sfx, "size": 224, "lift": 12.0, "build": _stones.bind(snowy)})
 		jobs.append({"key": "peak" + sfx, "size": 320, "lift": 45.0, "build": _peak.bind(snowy)})
+	# ground cover
+	for snowy in [false, true]:
+		var sfx := "_snow" if snowy else ""
+		for v in 3: jobs.append({"key": "grass_%d%s" % [v, sfx], "size": 64, "lift": 3.0, "build": _grass.bind(v, snowy)})
+		for v in 3: jobs.append({"key": "flower_%d%s" % [v, sfx], "size": 64, "lift": 3.0, "build": _flowers.bind(v, snowy)})
+		for v in 2: jobs.append({"key": "fern_%d%s" % [v, sfx], "size": 64, "lift": 3.0, "build": _fern.bind(v, snowy)})
+		for v in 2: jobs.append({"key": "reeds_%d%s" % [v, sfx], "size": 80, "lift": 7.0, "build": _reeds.bind(v, snowy)})
+		jobs.append({"key": "pebbles" + sfx, "size": 64, "lift": 1.0, "build": _pebbles.bind(snowy)})
+		for v in 3: jobs.append({"key": "outcrop_%d%s" % [v, sfx], "size": 288, "lift": 16.0, "build": _outcrop.bind(v, snowy)})
 	# construction sites: round / rectangular footprints, 3 sizes, 4 stages
 	for shape in ["round", "rect"]:
 		for size in SITE_SIZES:
@@ -594,6 +603,88 @@ func _fire_base(snowy: bool) -> Node3D:
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2, 0), Vector3(0, 30, 80))
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2.6, 0), Vector3(0, -40, 80))
 	mi(root, cyl(1.3, 1.3, 14, 7), lg, Vector3(0, 3.2, 0), Vector3(0, 95, 80))
+	return root
+
+# ---- ground cover
+func _grass(v: int, snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 500 + v
+	var greens := [Color("#6a8f3a"), Color("#587f33"), Color("#7a9a44")]
+	for i in 9 + v * 3:
+		var a := rng.randf() * TAU
+		var d := rng.randf_range(0, 3.2)
+		var h := rng.randf_range(3.5, 7.0)
+		var blade := mat(greens[i % 3], "fine", 0.4, Vector3.ONE, 0.3, 0.7 if snowy else 0.0)
+		mi(root, cyl(0.0, 0.45, h, 4), blade, Vector3(cos(a) * d, h / 2, sin(a) * d), Vector3(rng.randf_range(-25, 25), 0, rng.randf_range(-25, 25)))
+	return root
+
+func _flowers(v: int, snowy: bool) -> Node3D:
+	var root := _grass(v + 10, snowy)
+	var col: Color = [Color("#f0d24a"), Color("#e07a9a"), Color("#f2f2ee")][v]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 600 + v
+	for i in 5:
+		var p := Vector3(rng.randf_range(-3, 3), rng.randf_range(4.5, 6.5), rng.randf_range(-3, 3))
+		mi(root, cyl(0.15, 0.15, p.y, 4), mat(Color("#4f7a30"), "fine"), Vector3(p.x, p.y / 2, p.z))
+		mi(root, sph(0.9, 6, 4), mat(col, "fine", 0.4, Vector3.ONE, 0.15), p)
+	return root
+
+func _fern(v: int, snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var col := Color("#3f6f30") if v == 0 else Color("#4a7a36")
+	for i in 7:
+		var a := i * TAU / 7 + v * 0.4
+		var frond := mi(root, sph(3.2, 6, 4), mat(col, "fine", 0.35, Vector3.ONE, 0.45, 0.7 if snowy else 0.0), Vector3(cos(a) * 3.0, 2.2, sin(a) * 3.0), Vector3(0, -rad_to_deg(a), 0), Vector3(1.8, 0.35, 0.6))
+		frond.rotation_degrees.z = 25.0
+	return root
+
+func _reeds(v: int, snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 700 + v
+	var stalk := mat(Color("#6e8a3a"), "streak", 0.4, Vector3(1, 4, 1), 0.3, 0.5 if snowy else 0.0)
+	var head := mat(Color("#5a3a22"), "fine", 0.4, Vector3.ONE, 0.3)
+	for i in 12:
+		var p := Vector3(rng.randf_range(-4, 4), 0, rng.randf_range(-4, 4))
+		var h := rng.randf_range(9, 15)
+		var tilt := Vector3(rng.randf_range(-8, 8), 0, rng.randf_range(-8, 8))
+		mi(root, cyl(0.15, 0.3, h, 4), stalk, p + Vector3(0, h / 2, 0), tilt)
+		if i % 3 == 0: mi(root, cap(0.6, 3.2), head, p + Vector3(0, h - 1.0, 0), tilt)
+	for i in 5: mi(root, cyl(0.0, 0.5, 7, 4), stalk, Vector3(rng.randf_range(-4, 4), 3, rng.randf_range(-4, 4)), Vector3(rng.randf_range(-30, 30), 0, rng.randf_range(-30, 30)))
+	return root
+
+func _pebbles(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 800
+	for i in 6:
+		mi(root, sph(rng.randf_range(0.8, 1.8), 6, 4), mat([Color("#8b877d"), Color("#9e9a90"), Color("#77736a")][i % 3], "coarse", 0.3, Vector3.ONE, 0.5, 0.6 if snowy else 0.0),
+			Vector3(rng.randf_range(-4, 4), 0.5, rng.randf_range(-4, 4)), Vector3.ZERO, Vector3(1, 0.6, 1))
+	return root
+
+## Large layered rock formation for the wilds.
+func _outcrop(v: int, snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 900 + v
+	var tones := [Color("#8a8276"), Color("#7a7266"), Color("#968e80")]
+	for layer in 4:
+		var y := layer * 7.0
+		var r := 34.0 - layer * 7.0 + rng.randf_range(-3, 3)
+		for i in 3 + layer:
+			var a := rng.randf() * TAU
+			var off := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0, r * 0.4)
+			var sz := Vector3(rng.randf_range(r * 0.7, r * 1.2), 8.0, rng.randf_range(r * 0.5, r * 0.9))
+			mi(root, box(sz), mat(tones[(layer + i) % 3], "coarse", 0.08, Vector3(1, 0.3, 1), 0.6, 0.8 if snowy else 0.0), off + Vector3(0, y + 4, 0), Vector3(rng.randf_range(-6, 6), rng.randf_range(0, 180), rng.randf_range(-6, 6)))
+	for i in 8: # fallen boulders and scrub at the foot
+		var a := rng.randf() * TAU
+		mi(root, sph(rng.randf_range(2.5, 5), 6, 4), mat(tones[i % 3], "coarse", 0.15, Vector3.ONE, 0.5, 0.6 if snowy else 0.0), Vector3(cos(a) * 38, 1.5, sin(a) * 30), Vector3(0, rng.randf() * 90, 0), Vector3(1, 0.7, 1))
+	for i in 5:
+		var a := rng.randf() * TAU
+		var g := _grass(i, snowy)
+		g.position = Vector3(cos(a) * 30, 0, sin(a) * 26)
+		root.add_child(g)
 	return root
 
 # ---- construction sites
