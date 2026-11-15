@@ -135,6 +135,12 @@ func _debug_shot(args: Dictionary) -> void:
 				for spec in [["smelter", Vector2(200, -60)], ["council_ring", Vector2(20, 190)]]:
 					var st = sim.place_structure(spec[0], V + spec[1])
 					if st: sim.complete_structure(st, null)
+			if args.has("sites"): # unfinished buildings at each construction stage
+				var k := 0
+				for spec in [["hut", 0.0, false], ["hut", 0.1, true], ["large_hut", 0.35, true], ["granary", 0.8, true], ["smelter", 0.6, true], ["grand_altar", 0.3, true]]:
+					var st = sim.add_structure(spec[0], V + Vector2(-260 + (k % 3) * 220, 260 + (k / 3) * 200), false, "village", spec[2])
+					st.progress = st.work * spec[1]
+					k += 1
 			sim.renovate([])
 			for st in sim.structures:
 				if st.reno: sim._finish_reno(st, sim.units[0])
@@ -148,7 +154,7 @@ func _debug_shot(args: Dictionary) -> void:
 			world.selected = []
 			world.selection_changed.emit()
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.3")), float(args.get("zoom", "1.3")))
-			world.focus_on(V + Vector2(0, 30))
+			world.focus_on(V + Vector2(float(args.get("fx", "0")), float(args.get("fy", "30"))))
 			if args.has("tech"): hud._open_tech()
 			if args.has("ability"):
 				hud.roster_mode = "ability"

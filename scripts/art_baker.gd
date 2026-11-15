@@ -11,13 +11,14 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 7
+const ART_VERSION := 9
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
 const DIRS := 8
 const WALK_FRAMES := 8
 const WORK_FRAMES := 4
+const SITE_SIZES := [14, 20, 26] # footprint radius of construction-site sprites
 
 var sprites := {} # key -> {"tex": Texture2D, "anchor": Vector2}  (anchor = ground point in sprite px)
 var vp: SubViewport
@@ -274,6 +275,11 @@ func _jobs() -> Array:
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
 		jobs.append({"key": "stones" + sfx, "size": 224, "lift": 12.0, "build": _stones.bind(snowy)})
 		jobs.append({"key": "peak" + sfx, "size": 320, "lift": 45.0, "build": _peak.bind(snowy)})
+	# construction sites: round / rectangular footprints, 3 sizes, 4 stages
+	for shape in ["round", "rect"]:
+		for size in SITE_SIZES:
+			for stage in 4:
+				jobs.append({"key": "site_%s_%d_%d" % [shape, size, stage], "size": 224, "lift": 14.0, "build": _site.bind(shape, float(size), stage)})
 	# animals: 8 directions x (idle + walk)
 	for kind in ["deer", "tiger", "wolf", "packox"]:
 		for d in DIRS:
@@ -565,6 +571,84 @@ func _fire_base(snowy: bool) -> Node3D:
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2, 0), Vector3(0, 30, 80))
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2.6, 0), Vector3(0, -40, 80))
 	mi(root, cyl(1.3, 1.3, 14, 7), lg, Vector3(0, 3.2, 0), Vector3(0, 95, 80))
+	return root
+
+# ---- construction sites
+## Stage 0: staked plan; 1: foundation and materials on site; 2: frame (posts, beams,
+## rafters); 3: lower walls going up, scaffold and ladder.
+func _site(shape: String, r: float, stage: int) -> Node3D:
+	var root := Node3D.new()
+	var stake := mat(Color("#c8a46a"), "streak", 0.3, Vector3(1, 4, 1), 0.4)
+	var string_m := mat(Color("#e8dcc0"), "fine", 0.5, Vector3.ONE, 0.1)
+	var post := mat(Color("#6e4a2a"), "streak", 0.2, Vector3(1, 5, 1), 0.5)
+	var beam := mat(Color("#5e3e22"), "streak", 0.2, Vector3(5, 1, 1), 0.5)
+	var wall := mat(Color("#9b7a52"), "coarse", 0.12, Vector3.ONE, 0.55)
+	var plank := mat(Color("#8a5f3a"), "streak", 0.16, Vector3(1, 6, 1), 0.55)
+	var wh := 11.0 if r < 22 else 13.0
+	var corners: Array = [] # footprint outline points on the ground
+	if shape == "round":
+		for i in 12:
+			var a := i * TAU / 12
+			corners.append(Vector3(cos(a) * r, 0, sin(a) * r))
+	else:
+		var hl := r * 1.25
+		var hd := r * 0.7
+		corners = [Vector3(-hl, 0, -hd), Vector3(0, 0, -hd), Vector3(hl, 0, -hd), Vector3(hl, 0, hd), Vector3(0, 0, hd), Vector3(-hl, 0, hd)]
+	# stakes and string lines (every stage)
+	for i in corners.size():
+		var c: Vector3 = corners[i]
+		mi(root, cyl(0.5, 0.6, 5, 5), stake, c + Vector3(0, 2.5, 0))
+		segment(root, c + Vector3(0, 2.6, 0), corners[(i + 1) % corners.size()] + Vector3(0, 2.6, 0), 0.2, string_m)
+	if stage >= 1: # levelled ground, timber and stone delivered
+		var floor_m := mat(Color("#8c7650"), "coarse", 0.15, Vector3.ONE, 0.5)
+		if shape == "round": mi(root, cyl(r * 0.95, r, 0.8, 16), floor_m, Vector3(0, 0.4, 0))
+		else: mi(root, box(Vector3(r * 2.4, 0.8, r * 1.3)), floor_m, Vector3(0, 0.4, 0))
+		_woodpile(root, Vector3(r + 7, 0, r * 0.4), 80)
+		var stone := mat(Color("#8b877d"), "coarse", 0.25, Vector3.ONE, 0.5)
+		for i in 6: mi(root, sph(1.8, 6, 4), stone, Vector3(-r * 0.3 + (i % 3) * 3.2, 1.2 + (i / 3) * 2.2, r + 6), Vector3.ZERO, Vector3(1, 0.7, 1))
+	if stage >= 2: # frame
+		if shape == "round":
+			var apex := Vector3(0, wh + r * 1.2, 0)
+			var tops: Array = []
+			for i in 10:
+				var a := i * TAU / 10
+				var base := Vector3(cos(a) * r, 0, sin(a) * r)
+				mi(root, cyl(1.1, 1.2, wh, 6), post, base + Vector3(0, wh / 2, 0))
+				tops.append(base + Vector3(0, wh, 0))
+			for i in tops.size():
+				segment(root, tops[i], tops[(i + 1) % tops.size()], 0.85, beam)
+				if stage == 2 or i % 2 == 0: segment(root, tops[i], apex, 0.75, beam)
+		else:
+			var hl := r * 1.25
+			var hd := r * 0.7
+			var ridge := 14.0 + r * 0.9
+			for x in [-hl, -hl / 2, 0.0, hl / 2, hl]:
+				for z in [-hd, hd]:
+					mi(root, cyl(1.2, 1.3, 14, 6), post, Vector3(x, 7, z))
+			for z in [-hd, hd]: segment(root, Vector3(-hl, 14, z), Vector3(hl, 14, z), 1.0, beam)
+			for x in [-hl, 0.0, hl]:
+				segment(root, Vector3(x, 14, -hd), Vector3(x, ridge, 0), 0.8, beam)
+				segment(root, Vector3(x, 14, hd), Vector3(x, ridge, 0), 0.8, beam)
+			segment(root, Vector3(-hl, ridge, 0), Vector3(hl, ridge, 0), 0.9, beam)
+	if stage >= 3: # lower walls, scaffold and a ladder
+		if shape == "round":
+			var wall_part := cyl(r - 0.2, r, wh * 0.55, 16)
+			mi(root, wall_part, wall, Vector3(0, wh * 0.275, 0))
+		else:
+			var hl := r * 1.25
+			var hd := r * 0.7
+			for z in [-hd, hd]:
+				for i in int(hl * 2 / 3.4):
+					var x := -hl + 1.7 + i * 3.4
+					mi(root, box(Vector3(3.1, 7.5, 0.9)), plank, Vector3(x, 3.75, z))
+		var sx := r + 3.0
+		for zz in [-5.0, 5.0]: mi(root, cyl(0.45, 0.5, wh + 2, 5), stake, Vector3(sx, (wh + 2) / 2, zz))
+		mi(root, box(Vector3(4, 0.6, 12)), plank, Vector3(sx - 1.5, wh * 0.7, 0))
+		segment(root, Vector3(sx + 6, 0, 3), Vector3(sx + 1, wh * 0.7, 3), 0.35, stake)
+		segment(root, Vector3(sx + 6, 0, -1), Vector3(sx + 1, wh * 0.7, -1), 0.35, stake)
+		for i in 4:
+			var k := (i + 1) / 5.0
+			segment(root, Vector3(sx + 6 - 5 * k, wh * 0.7 * k, 3), Vector3(sx + 6 - 5 * k, wh * 0.7 * k, -1), 0.25, stake)
 	return root
 
 # ---- more buildings

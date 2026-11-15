@@ -853,10 +853,28 @@ func _draw_ground_part(s) -> void:
 		"grand_altar", "totem_shrine":
 			ci.draw_circle(p, D.STRUCTURES[s.type]["r"] + 10, Color(0.55, 0.5, 0.4, 0.35 * a))
 
+## Construction sprite for an unbuilt structure: footprint shape and size by type
+## (homes follow the current era), stage by progress. False if not baked.
+const SITE_SHAPES := {
+	"hut": ["round", 20], "large_hut": ["round", 26], "granary": ["round", 20], "smelter": ["round", 14],
+	"council_ring": ["round", 26], "totem_shrine": ["round", 14], "grand_altar": ["rect", 26],
+	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14],
+}
+func _draw_site_stage(s, b: Vector2) -> bool:
+	if not SITE_SHAPES.has(s.type): return false
+	var shape: String = SITE_SHAPES[s.type][0]
+	var size: int = SITE_SHAPES[s.type][1]
+	if s.type in ["hut", "large_hut"] and sim.evo.era >= 3: shape = "rect"
+	var frac: float = s.progress / s.work
+	var stage := 0
+	if s.paid: stage = 1 if frac < 0.2 else (2 if frac < 0.5 else 3)
+	return _sprite("site_%s_%d_%d" % [shape, size, stage], b, 1.0, Color(1, 1, 1, 0.75) if not s.paid else Color.WHITE)
+
 func _draw_structure(s) -> void:
 	var b := iso(s.pos)
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
+	if not s.built and _draw_site_stage(s, b): return
 	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
 		if _sprite(s.type + _snowy(), b):
 			match s.type:
