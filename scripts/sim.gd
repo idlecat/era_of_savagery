@@ -10,6 +10,8 @@ const Rivals = preload("res://scripts/rivals.gd")
 const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
+const Story = preload("res://scripts/story.gd")
+const Scenarios = preload("res://scripts/scenarios.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -75,6 +77,7 @@ var evo: Evolution
 var hz: Hazards
 var nat: Nature
 var folk: Folk
+var story: Story # the scenario's scripted events (none on a random map)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -92,6 +95,7 @@ func _init() -> void:
 	hz = Hazards.new(self)
 	nat = Nature.new(self)
 	folk = Folk.new(self)
+	story = Story.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -101,21 +105,12 @@ func uid() -> int:
 
 # ------------------------------------------------------------------ setup
 func new_game() -> void:
-	var o := D.HOME_OFS # the original hand-made home area, placed in the middle of the bigger map
+	if not D.is_ready(): Scenarios.apply() # (tests and tools that don't pick a map)
 	add_structure("bonfire", D.VILLAGE, true)
-	add_structure("hut", Vector2(430, 470) + o, true)
-	add_structure("hut", Vector2(610, 465) + o, true)
-	add_structure("hut", Vector2(440, 660) + o, true)
-	add_structure("hut", Vector2(620, 665) + o, true)
-
-	_forest(Vector2(230, 230) + o, 22, 170)
-	_forest(Vector2(260, 880) + o, 18, 150)
-	_forest(Vector2(900, 140) + o, 10, 120)
-	_forest(Vector2(1620, 250) + o, 22, 170)
-	_forest(Vector2(1700, 860) + o, 20, 160)
-	_forest(Vector2(1420, 900) + o, 8, 90)
-	for b in [Vector2(760, 380), Vector2(800, 430), Vector2(720, 760), Vector2(790, 800), Vector2(850, 720), Vector2(1580, 470), Vector2(1660, 640)]:
-		var n := _node("bush", "food", b + o, 30)
+	for h in D.HOME.get("huts", []): add_structure("hut", h, true)
+	for f in D.HOME.get("forests", []): _forest(f[0], f[1], f[2])
+	for b in D.HOME.get("bushes", []):
+		var n := _node("bush", "food", b, 30)
 		n.regrow = 0.1
 	_wilds()
 	_boulders()
@@ -127,26 +122,54 @@ func new_game() -> void:
 	wear_h = ceili(D.H / WEAR_CELL)
 	wear.resize(wear_w * wear_h)
 	wear.fill(0.0)
-	var west_k := (D.RIVER_BASE_X / D.W) * 2.0 # herds in proportion to each bank's land
-	for i in roundi(36 * D.area_k() * west_k): spawn_deer("west", false)
-	for i in roundi(34 * D.area_k() * (2.0 - west_k)): spawn_deer("east", false)
+	var herd := herd_sizes(70.0 * D.area_k()) # herds in proportion to each stretch of land
+	for r in herd:
+		for i in herd[r]: spawn_deer(r, false)
 
-	var count: int = D.CHARACTERS.size()
+	var count: int = D.TRIBE.size()
 	for i in count:
 		var a := float(i) / count * TAU
-		units.append(make_unit(D.CHARACTERS[i], D.VILLAGE + Vector2(cos(a) * 70, sin(a) * 55)))
-	for nm in ["Ah-Lu", "Tala"]: # the tribe's youngest
+		units.append(make_unit(D.TRIBE[i], D.VILLAGE + Vector2(cos(a) * 70, sin(a) * 55)))
+	for nm in D.CHILDREN: # the tribe's youngest
 		var kid: E.Unit = folk.make_child(nm, null)
 		kid.born_t = -D.DAY_LEN * randf_range(0.5, 1.5)
 		units.append(kid)
-	assign_ritual(unit_by_name("Linghe"), D.VILLAGE + Vector2(30, -20))
-	assign_gather(unit_by_name("Tuo"), "food")
-	assign_gather(unit_by_name("Shan"), "food")
-	assign_gather(unit_by_name("Bai"), "wood")
-	add_log(tr("The tribe gathers around the bonfire. Saber-tooth tracks have been seen east of the ford."), "story")
+	_start_jobs()
+	story.setup(D.SCRIPT)
+	for line in D.MAP.get("intro", []): add_log(tr(line), "story")
 	add_log(tr("Beyond the firelight the land is unknown. Send a scout (X) to explore it."), "story")
 	_fog_init()
 	fog_update()
+
+## The first morning's work: as the scenario says, or one mystic at the fire, two
+## foragers after food and someone on wood.
+func _start_jobs() -> void:
+	var jobs: Array = D.START_JOBS
+	if jobs.is_empty():
+		var adults: Array = living().filter(func(u): return u.role == "")
+		var mystic = adults.filter(func(u): return u.has_trait("devout")).front() if adults.any(func(u): return u.has_trait("devout")) else null
+		if mystic: jobs.append({"who": mystic.name, "job": "ritual"})
+		var rest: Array = adults.filter(func(u): return u != mystic)
+		rest.sort_custom(func(a, b): return a.lv("forage") > b.lv("forage"))
+		for u in rest.slice(0, 2): jobs.append({"who": u.name, "job": "food"})
+		rest = rest.slice(2)
+		rest.sort_custom(func(a, b): return a.lv("craft") > b.lv("craft"))
+		if not rest.is_empty(): jobs.append({"who": rest[0].name, "job": "wood"})
+	for j in jobs:
+		var u: E.Unit = unit_by_name(j["who"])
+		if u == null: continue
+		if j["job"] == "ritual": assign_ritual(u, D.VILLAGE + Vector2(30, -20))
+		else: assign_gather(u, j["job"])
+
+## How many deer each stretch of land carries, in proportion to its size.
+func herd_sizes(total: float) -> Dictionary:
+	var cells := 0
+	for r in D.REGIONS:
+		if D.REGIONS[r] >= 60: cells += D.REGIONS[r]
+	var out := {}
+	for r in D.REGIONS:
+		if D.REGIONS[r] >= 60: out[r] = roundi(total * D.REGIONS[r] / maxf(1.0, cells))
+	return out
 
 ## Outer wilderness of the big map: random forests and berry patches away from the home area,
 ## plus the landmarks (and the tiger dens) hidden in the fog.
@@ -158,7 +181,7 @@ func _wilds() -> void:
 	while placed < n_forests and tries < n_forests * 15:
 		tries += 1
 		var c := Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
-		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 220: continue
+		if home.has_point(c) or D.river_dist(c) < 220: continue
 		var near_lm := false
 		for lm in D.LANDMARKS:
 			if c.distance_to(lm["pos"]) < 230: near_lm = true
@@ -167,7 +190,7 @@ func _wilds() -> void:
 		placed += 1
 	for i in roundi(24 * D.area_k()):
 		var c := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
-		if home.has_point(c) or absf(c.x - D.river_x(c.y)) < 160: continue
+		if home.has_point(c) or D.river_dist(c) < 160: continue
 		for k in 3:
 			var n := _node("bush", "food", c + Vector2(randf_range(-50, 50), randf_range(-40, 40)), 30)
 			n.regrow = 0.1
@@ -175,7 +198,7 @@ func _wilds() -> void:
 		var lm: Dictionary = def.duplicate(true)
 		lm["found"] = false
 		landmarks.append(lm)
-		if lm["id"] == "grove":
+		if lm["kind"] == "grove":
 			for k in 6:
 				var n := _node("bush", "food", lm["pos"] + Vector2.from_angle(k * TAU / 6) * 60, 40)
 				n.regrow = 0.14
@@ -187,11 +210,11 @@ func _wilds() -> void:
 func _boulders() -> void:
 	var spots: Array = [D.VILLAGE + Vector2(-330, 260), D.VILLAGE + Vector2(260, -300)]
 	for lm in D.LANDMARKS:
-		if lm["id"] in ["flint", "peak", "stones"]: spots.append(lm["pos"] + Vector2(120, 90))
+		if lm["kind"] in ["flint", "peak", "stones"]: spots.append(lm["pos"] + Vector2(120, 90))
 	for i in roundi(40 * D.area_k()):
 		spots.append(Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150)))
 	for c in spots:
-		if absf(c.x - D.river_x(c.y)) < 150 or c.distance_to(D.VILLAGE) < 220: continue
+		if D.river_dist(c) < 150 or c.distance_to(D.VILLAGE) < 220: continue
 		for k in 3:
 			var p: Vector2 = c + Vector2(randf_range(-45, 45), randf_range(-35, 35))
 			_node("boulder", "stone", p, 40)
@@ -207,8 +230,8 @@ func _forest(c: Vector2, count: int, spread: float) -> void:
 		var a := randf() * TAU
 		var r := sqrt(randf()) * spread
 		var p := Vector2(clampf(c.x + cos(a) * r, 20, D.W - 20), clampf(c.y + sin(a) * r * 0.8, 20, D.H - 20))
-		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 20: continue
-		if p.distance_to(D.VILLAGE) < 190 or p.distance_to(D.EAST_SITE) < 130: continue
+		if D.river_dist(p) < D.RIVER_HALF + 20: continue
+		if p.distance_to(D.VILLAGE) < 190 or D.SITES.any(func(s): return p.distance_to(s) < 130): continue
 		var blocked := false
 		for lm in D.LANDMARKS:
 			if p.distance_to(lm["pos"]) < 90: blocked = true
@@ -216,16 +239,20 @@ func _forest(c: Vector2, count: int, spread: float) -> void:
 		var n := _node("tree", "wood", p, 30)
 		n.sz = randf_range(0.8, 1.25)
 
-func spawn_deer(bank: String, from_edge: bool) -> void:
+## A deer on the given stretch of land (-1: any); from_edge: wandering in from the map edge.
+func spawn_deer(region: int, from_edge: bool) -> void:
 	var p := Vector2.ZERO
-	for k in 30:
-		if bank == "west":
-			p = Vector2(randf_range(30, 120) if from_edge else randf_range(150, D.RIVER_BASE_X - 150), randf_range(60, D.H - 60))
+	for k in 40:
+		if from_edge:
+			var e := randi() % 4
+			var u := randf()
+			p = [Vector2(randf_range(30, 120), u * D.H), Vector2(D.W - randf_range(30, 120), u * D.H), Vector2(u * D.W, randf_range(30, 120)), Vector2(u * D.W, D.H - randf_range(30, 120))][e]
 		else:
-			p = Vector2(randf_range(D.RIVER_BASE_X + 150, D.W - 80), randf_range(60, D.H - 60))
-		if not D.in_river(p) and D.bank_of(p) == bank and p.distance_to(D.VILLAGE) > 220: break
+			p = Vector2(randf_range(80, D.W - 80), randf_range(60, D.H - 60))
+		p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 60, D.H - 60))
+		if not D.in_river(p) and (region < 0 or D.region_at(p) == region) and p.distance_to(D.VILLAGE) > 220: break
 	var n := _node("deer", "food", p, 25)
-	n.bank = bank
+	n.bank = D.region_at(p)
 
 func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 	var u := E.Unit.new()
@@ -419,22 +446,8 @@ func remember(u: E.Unit, text: String, impact: int) -> void:
 # ------------------------------------------------------------------ movement
 func set_dest(e, target: Vector2) -> void:
 	var t := Vector2(clampf(target.x, 10, D.W - 10), clampf(target.y, 10, D.H - 10))
-	if D.is_water(t):
-		var rx := D.river_x(t.y)
-		t.x = rx - D.RIVER_HALF - 8 if t.x < rx else rx + D.RIVER_HALF + 8
-	var path: Array = []
-	var my_bank := D.bank_of(e.pos)
-	var t_bank := D.bank_of(t)
-	var fx := D.river_x(D.FORD_Y)
-	var w_entry := Vector2(fx - D.RIVER_HALF - 30, D.FORD_Y)
-	var e_entry := Vector2(fx + D.RIVER_HALF + 30, D.FORD_Y)
-	if D.in_river(e.pos):
-		path.append(w_entry if t_bank == "west" else e_entry)
-	elif my_bank != t_bank:
-		path.append(w_entry if my_bank == "west" else e_entry)
-		path.append(e_entry if my_bank == "west" else w_entry)
-	path.append(t)
-	e.path = path
+	if D.is_water(t): t = D.shore(t, 8.0)
+	e.path = D.route(e.pos, t) # over the fords where rivers lie between
 	if e is E.Unit: e.dest = t
 
 func go_to(u: E.Unit, t: Vector2) -> void:
@@ -455,8 +468,9 @@ func step_move(e, dt: float, spd: float) -> bool:
 		return e.path.is_empty()
 	var np: Vector2 = e.pos + (wp - e.pos) / d * step
 	if D.is_water(np) and not D.is_water(e.pos): # slide along the bank
-		var rx := D.river_x(np.y)
-		np.x = rx - D.RIVER_HALF - 1 if D.bank_of(e.pos) == "west" else rx + D.RIVER_HALF + 1
+		var sh := D.shore(np, 1.0)
+		var info := D.river_info(e.pos)
+		np = sh if info["d"] >= D.RIVER_HALF else e.pos
 	if e is E.Unit: e.walked += step * (1.5 if e.carry_amt > 0 else 1.0) # a load is heavier going
 	e.pos = np
 	if e is E.Unit and wear_w > 0:
@@ -487,7 +501,7 @@ func assign_flee(u: E.Unit) -> void:
 func assign_gather(u: E.Unit, res: String, opts := {}) -> void:
 	set_job(u, {"type": "gather", "res": res, "node_id": opts.get("node_id", -1),
 		"dropoff": opts.get("dropoff", -1), "area": opts.get("area", null), "area_r": opts.get("area_r", 2000.0),
-		"bank": opts.get("bank", ""), "phase": "collect"}, opts.get("key", ""))
+		"bank": opts.get("bank", -1), "phase": "collect"}, opts.get("key", ""))
 func assign_build(u: E.Unit, s: E.Structure, key := "") -> void: set_job(u, {"type": "build", "struct_id": s.id}, key)
 func assign_attack(u: E.Unit, p: E.Predator, key := "") -> void: set_job(u, {"type": "attack", "target_id": p.id}, key)
 func assign_ritual(u: E.Unit, p: Vector2, key := "") -> void: set_job(u, {"type": "ritual", "at": p, "elapsed": 0.0}, key)
@@ -495,14 +509,14 @@ func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void:
 ## AoE2-DE-style auto-scout: keep walking to the nearest unexplored land.
 func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
-func find_node(res: String, from: Vector2, bank: String, max_dist: float) -> E.ResNode:
+func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResNode:
 	var best: E.ResNode = null
 	var best_score := INF
 	for n in nodes:
 		if n.res != res or n.amount < 1: continue
 		if n.kind == "boulder" and not has_tech("tools"): continue
 		if D.FINDS.has(n.kind) and not _can_gather_find(n): continue
-		if bank != "" and D.bank_of(n.pos) != bank: continue
+		if bank >= 0 and D.region_at(n.pos) != bank: continue
 		var d: float = n.pos.distance_to(from)
 		if d > max_dist: continue
 		var claims := 0
@@ -836,13 +850,15 @@ func _place_finds() -> void:
 			var k_max: int = fd.get("cluster", 2 if fd["group"] == "ore" else 3)
 			for k in k_max:
 				var p: Vector2 = c + Vector2(randf_range(-30, 30), randf_range(-22, 22)) if k > 0 else c
-				if fd["where"] != "river" and absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 12: continue
-				if fd["where"] == "river": p = Vector2(c.x, c.y + randf_range(-40, 40) * k) # a shoal strings along the shallows
-				if fd["where"] == "river": p.x = D.river_x(p.y) + signf(c.x - D.river_x(c.y)) * (D.RIVER_HALF - 26.0)
+				if fd["where"] != "river" and D.river_dist(p) < D.RIVER_HALF + 12: continue
+				if fd["where"] == "river": # a shoal strings along the shallows
+					var info := D.river_info(c)
+					p = info["c"] + info["t"] * randf_range(-40, 40) * k
+					p = D.river_info(p)["c"] + info["n"] * (D.RIVER_HALF - 26.0)
 				p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 30, D.H - 30))
 				var n := _node(id, fd["res"], p, fd["amount"])
 				n.regrow = fd["regrow"]
-				n.bank = D.bank_of(p)
+				n.bank = D.region_at(p)
 			made += 1
 
 ## A spot for a cluster, or null. near_home: the first cluster of a food or medicine stays
@@ -856,20 +872,26 @@ func _find_spot(where: String, trees: Array, near_home: bool) -> Variant:
 			var tr_n = trees.pick_random()
 			p = tr_n.pos + (Vector2.from_angle(randf() * TAU) * (randf_range(15, 40) if where == "forest" else randf_range(70, 110)))
 		"river", "riverbank":
-			var y := randf_range(120, D.H - 120)
-			if D.is_ford(y) or absf(y - D.FORD_Y0) < 180 or absf(y - D.FORD_Y1) < 180: return null
+			if D.RIVERS.is_empty(): return null
+			var pts: PackedVector2Array = D.RIVERS[randi() % D.RIVERS.size()]
+			var k := randi_range(1, pts.size() - 2)
+			var c: Vector2 = pts[k]
+			if c.x < 120 or c.y < 120 or c.x > D.W - 120 or c.y > D.H - 120: return null
+			if D.FORDS.any(func(f): return f["p"].distance_to(c) < 225.0): return null
+			var tg := (pts[k + 1] - pts[k - 1]).normalized()
 			var side := -1.0 if randf() < 0.5 else 1.0
-			p = Vector2(D.river_x(y) + side * ((D.RIVER_HALF - 26.0) if where == "river" else D.RIVER_HALF + randf_range(45, 95)), y)
+			p = c + Vector2(-tg.y, tg.x) * side * ((D.RIVER_HALF - 26.0) if where == "river" else D.RIVER_HALF + randf_range(45, 95))
 		"meadow":
 			p = Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
 			if trees.any(func(t): return t.pos.distance_to(p) < 80): return null
-		"hills_west":
-			p = Vector2(randf_range(120, D.RIVER_BASE_X - 500), randf_range(120, D.H - 120))
-			if p.distance_to(D.VILLAGE) < 650: return null
-		"hills_east":
-			p = Vector2(randf_range(D.RIVER_BASE_X + 450, D.W - 120), randf_range(120, D.H - 120))
+		"hills_home": # on the tribe's own side of the water
+			p = Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
+			if p.distance_to(D.VILLAGE) < 650 or not D.home_side(p) or D.river_dist(p) < 450: return null
+		"hills_far": # across the water (or far off, where no river divides the land)
+			p = Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
+			if D.river_dist(p) < 400 or (D.home_side(p) and (D.REGIONS.size() > 1 or p.distance_to(D.VILLAGE) < 1800)): return null
 	if p.distance_to(D.VILLAGE) < 260 or p.distance_to(D.VILLAGE) > lim: return null
-	if where != "river" and absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 30: return null
+	if where != "river" and D.river_dist(p) < D.RIVER_HALF + 30: return null
 	if where == "river" and p.distance_to(D.VILLAGE) < 260: return null
 	for def in D.RIVALS:
 		if p.distance_to(def["pos"]) < 260: return null
@@ -1044,7 +1066,7 @@ func _herd(dt: float) -> void:
 		_send_herder()
 
 func _lend_oxen() -> void:
-	var gatherers: Array = units.filter(func(u): return not u.dead and not u.sleeping and u.job.get("type", "") == "gather" and D.bank_of(u.pos) == D.bank_of(D.VILLAGE))
+	var gatherers: Array = units.filter(func(u): return not u.dead and not u.sleeping and u.job.get("type", "") == "gather" and D.home_side(u.pos))
 	gatherers.sort_custom(func(a, b): return a.pos.distance_to(D.VILLAGE) > b.pos.distance_to(D.VILLAGE))
 	var n: int = oxen if oxen_working() else 0
 	for u in units: u.ox = false
@@ -1099,7 +1121,7 @@ func _found_burial_ground() -> E.Structure:
 	for r in [300.0, 380.0, 460.0]:
 		for k in 16:
 			var p: Vector2 = D.VILLAGE + Vector2.from_angle(2.4 + k * TAU / 16) * r
-			if D.in_river(p) or D.bank_of(p) != D.bank_of(D.VILLAGE) or p.x < 80 or p.y < 80 or p.y > D.H - 80: continue
+			if D.in_river(p) or not D.home_side(p) or p.x < 80 or p.y < 80 or p.y > D.H - 80: continue
 			if structures.any(func(s): return s.pos.distance_to(p) < (D.STRUCTURES[s.type]["r"] + 60 if not D.STRUCTURES[s.type].get("ring", false) else 0.0)): continue
 			if nodes.any(func(n): return n.kind in ["tree", "boulder", "bush"] and n.pos.distance_to(p) < 85): continue
 			spot = p
@@ -1305,11 +1327,11 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	return true
 
 func _pick_bed(u: E.Unit) -> void:
-	var bank := D.bank_of(u.pos)
-	var near: Vector2 = u.home if D.bank_of(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos
+	var bank := D.region_at(u.pos)
+	var near: Vector2 = u.home if D.region_at(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos
 	var best: E.Structure = null
 	for s in structures:
-		if not s.built or not ours(s) or not s.type in SHELTERS or D.bank_of(s.pos) != bank: continue
+		if not s.built or not ours(s) or not s.type in SHELTERS or D.region_at(s.pos) != bank: continue
 		var cap: int = int(D.STRUCTURES[s.type]["cap"])
 		var used: int = units.filter(func(o): return not o.dead and o != u and o.bed_id == s.id).size()
 		if used >= cap: continue
@@ -1320,7 +1342,7 @@ func _pick_bed(u: E.Unit) -> void:
 		return
 	u.bed_id = -1
 	var fire := _nearest_fire(u.pos)
-	if fire and D.bank_of(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
+	if fire and D.region_at(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
 		var a := float(u.id) * 2.39996 # golden angle: spread the sleepers round the fire
 		u.bed_pos = fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0)
 	else:
@@ -1328,7 +1350,7 @@ func _pick_bed(u: E.Unit) -> void:
 
 func unit_idle(u: E.Unit, dt: float) -> void:
 	u.act = "Resting (sick)" if u.sick > 0 else "Idle"
-	if u.has_trait("devout") and u.role != "contract" and D.bank_of(u.pos) == D.bank_of(u.home):
+	if u.has_trait("devout") and u.role != "contract" and D.same_side(u.pos, u.home):
 		u.idle_t += dt
 		if u.idle_t > 4:
 			u.idle_t = 0
@@ -1442,7 +1464,7 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 				remember(u, tr("struck down a %s on Day %d") % [tr(p.name), day()], 8)
 				add_log(tr("%s struck down a %s!") % [tr(u.name), tr(p.name)], "combat", [u])
 			else:
-				remember(u, tr("slew a %s on the %s bank on Day %d") % [tr(p.name), tr(D.bank_of(p.pos)), day()], 8)
+				remember(u, tr("slew a %s on Day %d") % [tr(p.name), day()], 8)
 				add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat", [u])
 			evo.drift("martial", 4.0)
 		if p.clan != "": rivals.on_rival_killed(p, u)
@@ -1467,11 +1489,12 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			rivals.on_return(p)
 		return
 	if p.fleeing:
-		var out := Vector2(D.W + 40, p.pos.y)
-		if p.kind == "wolf": out = Vector2(-40, p.pos.y) if D.bank_of(p.pos) == "west" else out
-		p.path = [out]
+		if p.path.is_empty() or not p.homeward:
+			p.homeward = true
+			set_dest(p, _way_out(p.pos))
+			if not p.path.is_empty(): p.path[p.path.size() - 1] = _way_out(p.pos, 50.0) # off the map edge
 		step_move(p, dt, p.spd * 1.1)
-		if p.pos.x > D.W or p.pos.x < 0: p.fled = true
+		if p.pos.x >= D.W or p.pos.x <= 0 or p.pos.y >= D.H or p.pos.y <= 0 or p.path.is_empty(): p.fled = true
 		return
 	if p.kind == "wolf":
 		p.raid_t -= dt
@@ -1494,7 +1517,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		if u.dead or p.kind == "hunter" or p.kind == "trader" or in_hut(u): continue
 		var d: float = u.pos.distance_to(p.pos)
 		if p.kind == "wolf" and not _wolf_target(u): continue
-		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
+		if d < best and D.same_side(u.pos, p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
 			best = d
 			prey = u
 	if prey == null and guardian and not guardian.dead and guardian.pos.distance_to(p.pos) < 280:
@@ -1532,10 +1555,12 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			p.prowl_t = randf_range(3, 6)
 			var c: Vector2 = p.den if p.den != null else p.pos
 			var r := 220.0 if p.den != null else 120.0
-			var west: bool = D.bank_of(c) == "west"
-			var rx := D.river_x(c.y)
-			var np := Vector2(clampf(c.x + randf_range(-r, r), 30.0 if west else rx + D.RIVER_HALF + 80, rx - D.RIVER_HALF - 80 if west else D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
-			p.path = [np]
+			var side := D.region_at(c)
+			for k in 4: # somewhere on the same side, clear of the water
+				var np := Vector2(clampf(c.x + randf_range(-r, r), 30, D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
+				if D.river_dist(np) > D.RIVER_HALF + 80 and D.region_at(np) == side:
+					p.path = [np]
+					break
 		step_move(p, dt, p.spd * 0.35)
 
 ## Wolves pick off stragglers: never people by a fire, rarely people in a group.
@@ -1596,6 +1621,7 @@ func _update_guardian(dt: float) -> void:
 func tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
+	story.tick(dt)
 	var f := day_frac()
 	var target := maxf(1.0 if (f > 0.72 and f < 0.97) else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
@@ -1633,7 +1659,7 @@ func tick(dt: float) -> void:
 					n.wander_t = randf_range(2, 5)
 					n.vel = Vector2.from_angle(randf() * TAU) * 14
 				var np: Vector2 = n.pos + n.vel * dt
-				if not D.in_river(np) and D.bank_of(np) == n.bank and np.x > 20 and np.x < D.W - 20 and np.y > 20 and np.y < D.H - 20 and np.distance_to(D.VILLAGE) > 150:
+				if not D.in_river(np) and D.region_at(np) == n.bank and np.x > 20 and np.x < D.W - 20 and np.y > 20 and np.y < D.H - 20 and np.distance_to(D.VILLAGE) > 150:
 					n.pos = np
 				else:
 					n.vel = -n.vel
@@ -1747,7 +1773,7 @@ func _update_vice(dt: float) -> void:
 				"build": assign_build(u, unbuilt)
 				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 				"art": folk.start_art(u)
-				_: assign_gather(u, choice, {"bank": D.bank_of(u.home), "area": u.home, "area_r": 900.0})
+				_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": 900.0})
 			gain_xp(steward, "lore", 0.5)
 			evo.practice(steward, "lead", 2.0)
 		if not idle.is_empty():
@@ -1767,7 +1793,7 @@ func can_place(type: String, p: Vector2) -> String:
 	if sd.has("tech") and not has_tech(sd["tech"]): return "Requires tech"
 	if stock["wood"] < sd["wood"]: return "Not enough wood"
 	if stock["stone"] < sd.get("stone", 0): return "Not enough stone"
-	if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 15: return "Too close to the river"
+	if D.river_dist(p) < D.RIVER_HALF + 15: return "Too close to the river"
 	return ""
 
 func place_structure(type: String, p: Vector2) -> E.Structure:
@@ -1816,7 +1842,7 @@ func renovate(helpers: Array) -> String:
 		s.reno = true
 		s.reno_progress = 0.0
 	if helpers.is_empty():
-		helpers = living().filter(func(u): return u.role != "contract" and D.bank_of(u.pos) == "west" and u.job.get("type", "") in ["", "ritual"]).slice(0, 3)
+		helpers = living().filter(func(u): return u.role != "contract" and D.home_side(u.pos) and u.job.get("type", "") in ["", "ritual"]).slice(0, 3)
 	var i := 0
 	for u in helpers:
 		assign_build(u, list[i % list.size()])
@@ -1840,9 +1866,8 @@ func _check_events() -> void:
 	if legacy.pending != "": # endings come first
 		_fire_event(legacy.pending)
 		return
-	if not flags.has("flood") and time >= (D.FLOOD_DAY - 1) * D.DAY_LEN + 5:
-		flags["flood"] = true
-		_fire_event("flood")
+	if not story.pending.is_empty(): # the scenario's scripted events
+		_fire_event(story.pending.pop_front())
 	elif not flags.has("overpop") and living().size() >= D.OVERPOP_THRESHOLD:
 		flags["overpop"] = true
 		_fire_event("overpop")
@@ -1874,12 +1899,12 @@ func flood_strike() -> void:
 	stock["food"] -= lost
 	var hurt := 0
 	for u in living():
-		if absf(u.pos.x - D.river_x(u.pos.y)) < 260:
+		if D.river_dist(u.pos) < 260:
 			hurt_unit(u, u.max_hp * 0.25, null)
 			hurt += 1
 			remember(u, tr("survived the Great Flood on Day %d") % day(), 7)
 	for s in structures:
-		if ours(s) and s.built and s.type != "palisade" and absf(s.pos.x - D.river_x(s.pos.y)) < 220:
+		if ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < 220:
 			s.built = false
 			s.progress = s.work * 0.4
 	add_log(tr("The Great Flood strikes! %d food washed away, %d hurt, riverside structures damaged.") % [lost, hurt], "danger")
@@ -1914,7 +1939,7 @@ func event_def(id: String) -> Dictionary:
 			return {"title": tr("Overpopulation Crisis"),
 				"text": tr("The tribe now numbers %d. Game is thinning around the bonfire and quarrels break out over the last berries.") % living().size(),
 				"options": [
-					{"label": tr("Frontier Colonization"), "desc": tr("Appoint an experienced leader via a Task Contract to found a sister settlement across the river."), "enabled": true},
+					{"label": tr("Frontier Colonization"), "desc": tr("Appoint an experienced leader via a Task Contract to found a sister settlement on the frontier."), "enabled": true},
 					{"label": tr("Territorial Conquest"), "desc": tr("Rally your 3 best warriors to raid a rival tribe for food and timber. Risky."), "enabled": living().size() >= 3},
 				]}
 		"era2", "era3":
@@ -2138,12 +2163,32 @@ func _discover(lm: Dictionary) -> void:
 		remember(finder, tr("%s on Day %d") % [tr(lm["text"]), day()], 6)
 		gain_xp(finder, "forage", 15)
 
-## Nearest unexplored land cell, preferring the scout's own bank (crossing costs a detour)
+## The nearest point on the map edge (where beasts leave), `out` beyond it (or inside if < 0).
+func _way_out(p: Vector2, out := -10.0) -> Vector2:
+	var best := Vector2(-out, p.y)
+	var d := p.x
+	if D.W - p.x < d:
+		d = D.W - p.x
+		best = Vector2(D.W + out, p.y)
+	if p.y < d:
+		d = p.y
+		best = Vector2(p.x, -out)
+	if D.H - p.y < d:
+		best = Vector2(p.x, D.H + out)
+	return best
+
+## Nearest unexplored land cell, preferring the scout's own side of the water (crossing costs a detour)
 ## and steering clear of known saber-tooth dens.
 func explore_target(u: E.Unit) -> Variant:
 	var best: Variant = null
 	var best_score := INF
-	var my_bank := D.bank_of(u.pos)
+	var my_side := D.region_at(u.pos)
+	var cross := {} # region -> extra walk to get there over a ford
+	for f in D.FORDS:
+		for e in [["a", "ra", "b", "rb"], ["b", "rb", "a", "ra"]]:
+			if f[e[1]] != my_side: continue
+			var extra: float = u.pos.distance_to(f[e[0]]) + 300.0
+			if extra < cross.get(f[e[3]], INF): cross[f[e[3]]] = extra
 	var dens: Array = landmarks.filter(func(l): return l["found"] and l["kind"] == "den").map(func(l): return l["pos"])
 	for j in fog_h:
 		for i in fog_w:
@@ -2151,7 +2196,8 @@ func explore_target(u: E.Unit) -> Variant:
 			var c := _cell_center(i, j)
 			if D.in_river(c): continue
 			var score: float = c.distance_to(u.pos)
-			if D.bank_of(c) != my_bank: score += 2.0 * absf(c.y - D.FORD_Y) + 300.0
+			var side := D.region_at(c)
+			if side != my_side: score += cross.get(side, 4000.0)
 			for dp in dens:
 				if c.distance_to(dp) < 450: score += 2500.0
 			if score < best_score:

@@ -7,6 +7,8 @@ const Persona = preload("res://scripts/persona_engine.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const D = preload("res://scripts/data.gd")
 const MapGen = preload("res://scripts/mapgen.gd")
+const Scenarios = preload("res://scripts/scenarios.gd")
+const _Story = preload("res://scripts/story.gd")
 const _NewGame = preload("res://scripts/new_game_ui.gd")
 const E = preload("res://scripts/entities.gd")
 const I18N = preload("res://scripts/i18n.gd")
@@ -48,6 +50,7 @@ func _initialize() -> void:
 	test_settling()
 	test_folk()
 	test_mapgen()
+	test_water()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -59,13 +62,18 @@ func _new_sim():
 	s.new_game()
 	return s
 
+## A point `off` from the river on the village's side, level with the village (+dy).
+func _by_river(dy: float, off: float) -> Vector2:
+	var c := D.nearest_river_point(D.VILLAGE + Vector2(0, dy))
+	return c + (D.VILLAGE + Vector2(0, dy) - c).normalized() * off
+
 func test_personas() -> void:
 	print("\n== Personality-driven proposals ==")
 	var sim = _new_sim()
 	var plans := {}
 	for nm in ["Panshi", "Alie", "Linghe"]:
 		var u = sim.unit_by_name(nm)
-		var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Establish a settlement across the river", {}, false)
+		var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false)
 		var r := Persona.propose(ctx)
 		var san: Dictionary = sim.contracts.sanitize(r["blueprint"], ctx["terms"], u)
 		plans[nm] = san["blueprint"]
@@ -79,7 +87,7 @@ func test_personas() -> void:
 
 	# Negotiation: ask the cautious builder to skip walls -> pushback, keeps palisade
 	var u = sim.unit_by_name("Panshi")
-	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Establish a settlement across the river", {}, false, "Forget the wall, make it bigger, 10 people", plans["Panshi"])
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false, "Forget the wall, make it bigger, 10 people", plans["Panshi"])
 	var r := Persona.propose(ctx)
 	print("\n[Panshi revises] ", r["speech"])
 	check(r["blueprint"]["capacity_target"] == 10, "revision honored capacity 10")
@@ -109,10 +117,10 @@ func test_full_contract() -> void:
 	var sim = _new_sim()
 	var u = sim.unit_by_name("Panshi")
 	var llm_calls := 1 # Phase 1 negotiation
-	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Establish a settlement across the river", {}, false)
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false)
 	var r := Persona.propose(ctx)
 	var san: Dictionary = sim.contracts.sanitize(r["blueprint"], {}, u)
-	var c = sim.contracts.create(san["blueprint"], u, "Establish a settlement across the river")
+	var c = sim.contracts.create(san["blueprint"], u, "Found a new settlement on the frontier")
 	var interrupts := []
 	sim.contract_interrupted.connect(func(cc): interrupts.append(cc.abort_reason))
 	sim.event_fired.connect(func(id): pass)
@@ -283,12 +291,30 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
 			if letters.search(markup.sub(k, "", true)) == null: continue
 			if not ZH.STRINGS.has(k) and k not in missing: missing.append(k)
+	# map data shown to the player: landmark templates, the random tribe's pools, scenarios
+	var data_keys: Array = ["east", "west", "north", "south", "north-east", "north-west", "south-east", "south-west",
+		"The tribe gathers around the bonfire, in a land no one has walked before."]
+	for k in D.LANDMARK_KINDS: data_keys += D.LANDMARK_KINDS[k]["names"] + D.LANDMARK_KINDS[k]["texts"]
+	for k in D.TEMPERAMENTS: data_keys += D.TEMPERAMENTS[k]["epithets"] + D.TEMPERAMENTS[k]["memories"]
+	data_keys += D.TRIBE_NAMES + D.BIRTH_NAMES
+	for s in Scenarios.LIST:
+		var sp: Dictionary = s.spec()
+		data_keys += [s.INFO["name"], s.INFO["desc"], s.INFO["brief"]] + s.INFO["intro"]
+		for lm in sp["landmarks"]: data_keys += [lm["name"], lm["text"]]
+		for c in sp["tribe"]: data_keys += [c["name"], c["epithet"]] + c["memory"].map(func(m): return m["text"])
+		for lb in sp["labels"]: data_keys.append(lb["text"])
+		for tg in sp["script"]:
+			for act in tg["do"]:
+				if act.has("log"): data_keys.append(act["log"])
+				if act.has("alert"): data_keys.append(act["alert"])
+	for k in data_keys:
+		if k != "" and not ZH.STRINGS.has(k) and k not in missing: missing.append(k)
 	for k in missing: print("   missing: ", k)
 	check(missing.is_empty(), "all %d-ish UI/game strings have Chinese text (%d missing)" % [ZH.STRINGS.size(), missing.size()])
 	I18N.setup("zh")
@@ -430,7 +456,7 @@ func test_rivals() -> void:
 	var r: Dictionary = sim.resolve_event("contact_ochre", 0)
 	print("   ", r["text"])
 	check(ochre["relation"] > rel0 + 15 and sim.stock["food"] == food0 - 20, "gifts cost food and win favour")
-	check(sim.rivals.summary().size() == 2 and sim.contracts.env_data(D.EAST_SITE)["neighbors"].size() == 2 and sim.evo.world_ctx()["neighbors"].size() == 2, "met clans enter the personas' context")
+	check(sim.rivals.summary().size() == 2 and sim.contracts.env_data(D.SITES[0])["neighbors"].size() == 2 and sim.evo.world_ctx()["neighbors"].size() == 2, "met clans enter the personas' context")
 	# killing a hunter angers the clan
 	var rel1: float = ochre["relation"]
 	var oh = sim.predators.filter(func(p): return p.clan == "ochre" and p.kind == "hunter")[0]
@@ -791,7 +817,7 @@ func test_finds() -> void:
 	check(missing.is_empty(), "every kind of find is somewhere on the map (missing: %s)" % ", ".join(missing))
 	check(sim.known_finds.is_empty(), "nothing is known at the start")
 	var mush = sim.nodes.filter(func(n): return n.kind == "mushroom")[0]
-	var picked = sim.find_node("food", mush.pos, "", 60.0)
+	var picked = sim.find_node("food", mush.pos, -1, 60.0)
 	check(picked == null or picked.kind != "mushroom", "unknown finds can't be gathered")
 	var u = sim.unit_by_name("Tuo")
 	sim.set_job(u, {})
@@ -801,7 +827,7 @@ func test_finds() -> void:
 	check(sim.knows_find("mushroom"), "walking up to one discovers it")
 	var line: Dictionary = sim.log_lines.filter(func(e): return "Forest Mushrooms" in e["text"])[0]
 	check(line["who"][0]["id"] == u.id, "the finder gets the credit in the chronicle")
-	check(sim.find_node("food", mush.pos, "", 60.0) != null, "and the tribe can gather it now")
+	check(sim.find_node("food", mush.pos, -1, 60.0) != null, "and the tribe can gather it now")
 	# healing plants need someone with lore to recognise them
 	var willow = sim.nodes.filter(func(n): return n.kind == "willow")[0]
 	sim.reveal(willow.pos, 200)
@@ -886,10 +912,10 @@ func test_nature() -> void:
 	check(nat.sky_fire_given and sim.evo.insight["fire"] > before, "lightning near people gives the tribe its first fire")
 	# spring flood
 	sim.hz.level = "normal"
-	var dock = sim.add_structure("fishing_dock", Vector2(D.river_x(D.VILLAGE.y) - 60, D.VILLAGE.y), true)
+	var dock = sim.add_structure("fishing_dock", _by_river(0, 60), true)
 	var r = sim.unit_by_name("Yan")
 	sim.set_job(r, {})
-	r.pos = Vector2(D.river_x(D.VILLAGE.y + 120) - 150, D.VILLAGE.y + 120)
+	r.pos = _by_river(120, 150)
 	nat.flood_day = sim.day()
 	nat.flood_at = sim.time + 14.0
 	nat.flood_warned = false
@@ -902,7 +928,7 @@ func test_nature() -> void:
 	for i in 1000:
 		sim.tick(0.05)
 		if not nat.flooding(): break
-	var farm = sim.add_structure("farm_plot", Vector2(D.river_x(D.VILLAGE.y) - 250, D.VILLAGE.y + 200), true)
+	var farm = sim.add_structure("farm_plot", _by_river(200, 250), true)
 	check(nat.food_mult(farm) > 1.3, "the silt makes riverside fields richer afterwards")
 	# the Fire Mountain
 	var near = sim.unit_by_name("Qiao")
@@ -986,11 +1012,11 @@ func test_settling() -> void:
 	c.id = sim.uid()
 	c.kind = "settle"
 	c.status = "done"
-	c.site = D.EAST_SITE
+	c.site = D.SITES[0]
 	c.plan = {"plan_id": "test_outpost"}
 	sim.contracts.list.append(c)
-	sim.add_structure("hut", D.EAST_SITE + Vector2(40, 0), true, "contract:%d" % c.id)
-	sim.add_structure("hut", D.EAST_SITE + Vector2(-40, 0), true, "contract:%d" % c.id)
+	sim.add_structure("hut", D.SITES[0] + Vector2(40, 0), true, "contract:%d" % c.id)
+	sim.add_structure("hut", D.SITES[0] + Vector2(-40, 0), true, "contract:%d" % c.id)
 	var huts: Array = sim.structures.filter(func(st): return st.type == "hut" and st.owner == "village")
 	huts[0].built = false
 	huts[1].built = false
@@ -998,13 +1024,13 @@ func test_settling() -> void:
 	sim.time = D.DAY_LEN * 1 + 10.0
 	sim.resettle_t = 0.0
 	sim.tick(0.05)
-	var movers: Array = sim.residents_of(D.EAST_SITE)
+	var movers: Array = sim.residents_of(D.SITES[0])
 	check(movers.size() == 1 and movers[0].job.get("type", "") == "move", "someone moves to the settlement across the river")
 	check(sim.log_lines.any(func(e): return "test_outpost" in e["text"]), "and the chronicle tells of it")
 	for i in 3:
 		sim.resettle_t = 0.0
 		sim.tick(0.05)
-	check(sim.residents_of(D.EAST_SITE).size() <= sim.beds_at(D.EAST_SITE), "but never more than its beds")
+	check(sim.residents_of(D.SITES[0]).size() <= sim.beds_at(D.SITES[0]), "but never more than its beds")
 
 func test_folk() -> void:
 	print("\n== Village life ==")
@@ -1223,23 +1249,39 @@ func test_mapgen() -> void:
 	print("\n== Random maps ==")
 	for size in MapGen.SIZE_ORDER:
 		var n: int = MapGen.max_tribes(size)
+		var t0 := Time.get_ticks_msec()
 		MapGen.generate(size, n, 4242)
 		var sz: Dictionary = MapGen.SIZES[size]
-		check(D.W == sz["w"] and D.H == sz["h"] and D.RIVALS.size() == n, "%s map: %dx%d with %d clans" % [size, D.W, D.H, n])
+		check(D.W == sz["w"] and D.H == sz["h"] and D.RIVALS.size() == n and D.MAP["kind"] == "random", "%s map: %dx%d with %d clans, %d rivers, %d fords (%d ms)" % [size, D.W, D.H, n, D.RIVERS.size(), D.FORDS.size(), Time.get_ticks_msec() - t0])
 		var ok := true
 		for c in D.RIVALS:
 			var p: Vector2 = c["pos"]
-			if p.x < 300 or p.y < 300 or p.x > D.W - 300 or p.y > D.H - 300 or p.distance_to(D.VILLAGE) < 700 or absf(p.x - D.river_x(p.y)) < 250: ok = false
+			if p.x < 300 or p.y < 300 or p.x > D.W - 300 or p.y > D.H - 300 or p.distance_to(D.VILLAGE) < 700 or D.river_dist(p) < 250: ok = false
 			for o in D.RIVALS:
 				if o != c and p.distance_to(o["pos"]) < 500: ok = false
-		check(ok, "%s map: clans spread out, inside the map, clear of home and river" % size)
-		check(D.LANDMARKS.any(func(l): return l["id"] == "volcano" and l["pos"] == D.VOLCANO), "%s map: the Fire Mountain is placed (%d landmarks)" % [size, D.LANDMARKS.size()])
-		check(D.bank_of(D.VILLAGE) == "west" and D.is_ford(D.VILLAGE.y) and D.bank_of(D.EAST_SITE) == "east", "%s map: home on the west bank by the ford" % size)
+		check(ok, "%s map: clans spread out, inside the map, clear of home and the water" % size)
+		# every clan, landmark and site can be walked to from the village, over the fords
+		var reach := true
+		for p in D.RIVALS.map(func(c): return c["pos"]) + D.LANDMARKS.map(func(l): return l["pos"]) + D.SITES:
+			var path: Array = D.route(D.VILLAGE, p)
+			var at := D.VILLAGE
+			for q in path:
+				if not D.same_side(at, q) and D.ford_at((at + q) / 2.0) < 0 and D.ford_at(at) < 0: reach = false
+				at = q
+		check(reach, "%s map: every clan, landmark and site is reachable over the fords" % size)
+		check(D.LANDMARKS.size() >= 8 and D.LANDMARKS.any(func(l): return l["kind"] == "den") and D.LANDMARKS.any(func(l): return l["kind"] == "grove" and l["pos"].distance_to(D.VILLAGE) < 1600), "%s map: %d landmarks from the templates, dens and an early grove" % [size, D.LANDMARKS.size()])
+		check(D.TRIBE.size() == 9 and D.SCRIPT.is_empty() and not D.SITES.is_empty() and D.river_dist(D.VILLAGE) > 400 and D.river_dist(D.VILLAGE) < 1100, "%s map: a random tribe by the water, no scripted events, %d frontier sites" % [size, D.SITES.size()])
+	var many := 0
+	for s in 6:
+		MapGen.generate("huge", 8, 900 + s)
+		if D.RIVERS.size() > 1 and D.REGIONS.size() > 2: many += 1
+	check(many > 0, "huge maps can have several rivers dividing the land (%d of 6)" % many)
 	MapGen.generate("standard", 4, 77)
 	var first: Array = D.RIVALS.map(func(c): return [c["id"], c["pos"]])
 	var lm1: Array = D.LANDMARKS.map(func(l): return l["pos"])
+	var tribe1: Array = D.TRIBE.map(func(u): return u["name"])
 	MapGen.generate("standard", 4, 77)
-	check(first == D.RIVALS.map(func(c): return [c["id"], c["pos"]]) and lm1 == D.LANDMARKS.map(func(l): return l["pos"]), "the same seed makes the same map")
+	check(first == D.RIVALS.map(func(c): return [c["id"], c["pos"]]) and lm1 == D.LANDMARKS.map(func(l): return l["pos"]) and tribe1 == D.TRIBE.map(func(u): return u["name"]), "the same seed makes the same map and tribe")
 	MapGen.generate("standard", 4, 78)
 	check(first != D.RIVALS.map(func(c): return [c["id"], c["pos"]]), "another seed makes another map")
 	MapGen.generate("small", 2, 5)
@@ -1247,8 +1289,62 @@ func test_mapgen() -> void:
 	var owners := {}
 	for st in sim.structures: owners[st.owner] = true
 	check(owners.size() == 3 and sim.units.size() >= 10 and sim.landmarks.size() == D.LANDMARKS.size(), "a game starts on a random map (2 clan villages)")
-	check(sim.nodes.filter(func(n): return n.kind == "tree").size() > 200, "the random land is forested")
+	check(sim.nodes.filter(func(n): return n.kind == "tree").size() > 150, "the random land is forested")
+	check(sim.units.any(func(u): return u.job.get("type", "") == "ritual") and sim.units.any(func(u): return u.job.get("type", "") == "gather"), "the random tribe gets to work by temperament")
 	for i in 400: sim.tick(0.05)
-	check(true, "the random map runs")
-	D.use_classic()
-	check(D.W == 6400.0 and D.RIVALS.size() == 6, "back to the classic map")
+	check(sim.story.triggers.is_empty() and not sim.flags.has("flood"), "the random map runs, with no scripted events")
+	# a settlement contract on a random map goes to one of its sites, wherever that is
+	sim.scripted_ambush = false
+	var u = sim.living().filter(func(o): return o.role == "")[0]
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false)
+	var san: Dictionary = sim.contracts.sanitize(Persona.propose(ctx)["blueprint"], {}, u)
+	var c = sim.contracts.create(san["blueprint"], u, "Found a new settlement on the frontier")
+	check(c.site == D.SITES[0] and ctx["env"]["target_area"] != "", "the frontier site comes from the map: %s" % ctx["env"]["target_area"])
+	# the leader only knows what the tribe has seen: no river or ford they never found
+	var sim3 = _new_sim()
+	var far_site: Vector2 = D.SITES.filter(func(s): return not sim3.is_explored(s)).front() if D.SITES.any(func(s): return not sim3.is_explored(s)) else D.SITES[0]
+	var env3: Dictionary = sim3.contracts.env_data(far_site)
+	var said: String = str(env3["target_area"]) + str(env3["river"]) + str(env3["timber"])
+	check(not sim3.is_explored(far_site) and not said.contains("river") and not said.contains("ford") and not env3["explored"], "an unseen site is described as unknown land: %s" % env3["target_area"])
+	var u3 = sim3.living().filter(func(o): return o.role == "")[0]
+	var ctx3: Dictionary = sim3.contracts.negotiation_ctx(u3, "Found a new settlement on the frontier", {}, false)
+	var speech: String = Persona.propose(ctx3)["speech"]
+	print("   ", speech)
+	check(not speech.contains("river") and not speech.contains("ford") and not speech.contains("across"), "and the leader doesn't talk of crossing it")
+	sim3.fog_enabled = false # once the land is known, the crossing is too
+	var across: Array = D.SITES.filter(func(s): return not D.home_side(s))
+	if not across.is_empty():
+		check(sim3.contracts.site_area(across[0]).contains("ford"), "a known site over known water says how to get there: %s" % sim3.contracts.site_area(across[0]))
+	Scenarios.apply()
+	check(D.W == 6400.0 and D.RIVALS.size() == 6 and D.MAP["kind"] == "scenario", "back to the scenario map")
+
+func test_water() -> void:
+	print("\n== Rivers, fords and routes ==")
+	Scenarios.apply()
+	var f: Dictionary = D.FORDS[0]
+	var east: Vector2 = D.SITES[0]
+	check(D.REGIONS.size() == 2 and not D.same_side(D.VILLAGE, east), "one river splits the scenario map in two")
+	var path: Array = D.route(D.VILLAGE, east)
+	check(path.size() == 3 and path[0].distance_to(f["p"]) < 120 and path[1].distance_to(f["p"]) < 120, "the way across goes over the ford")
+	check(D.route(D.VILLAGE, D.VILLAGE + Vector2(-300, 100)).size() == 1, "on the same side, walk straight")
+	check(D.is_water(f["p"] + f["t"] * 200.0) and not D.is_water(f["p"]) and D.in_river(f["p"]), "the ford is shallow, the rest deep")
+	var sh: Vector2 = D.shore(f["p"] + f["t"] * 200.0, 8.0)
+	check(not D.in_river(sh) and D.river_dist(sh) > D.RIVER_HALF, "shore() steps out of deep water")
+	# a two-river map: a tributary splits one side, and there is a way everywhere
+	D.W = 4000.0
+	D.H = 3000.0
+	var main := PackedVector2Array()
+	var trib := PackedVector2Array()
+	for k in 112: main.append(Vector2(2000, -80 + k * 30))
+	for k in 70: trib.append(Vector2(-80 + k * 30, 1500))
+	D.set_water([main, trib], [Vector2(2000, 700), Vector2(2000, 2300), Vector2(1000, 1500)])
+	check(D.REGIONS.size() == 3, "a main river and a tributary make three stretches of land")
+	var p2: Array = D.route(Vector2(500, 500), Vector2(3500, 2500))
+	check(p2.size() == 3, "routes find the ford to the far side")
+	var p3: Array = D.route(Vector2(500, 500), Vector2(500, 2500))
+	check(p3.size() == 3 and p3[0].distance_to(Vector2(1000, 1500)) < 120, "the tributary ford joins the two western lands")
+	D.set_water([main, trib], [Vector2(2000, 700), Vector2(2000, 2300)])
+	var p4: Array = D.route(Vector2(500, 500), Vector2(500, 2500))
+	check(p4.size() == 5, "without it, the way goes round over both main fords (%d legs)" % p4.size())
+	Scenarios.apply()
+

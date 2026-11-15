@@ -719,12 +719,12 @@ func _refresh_left_content() -> void:
 	var on_contract: bool = u.role == "contract"
 	var child: bool = u.role == "child"
 	if child: sheet_text.text = (tr("[color=#ffd6f0]A child of the tribe: plays, watches and learns. Comes of age in %d days.[/color]\n") % sim.folk.days_to_grow(u)) + sheet_text.text
-	sheet_contract_btn.disabled = on_contract or child or D.bank_of(u.pos) != "west"
+	sheet_contract_btn.disabled = on_contract or child or not D.home_side(u.pos)
 	sheet_contract_btn.text = tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…")
 	sheet_scout_btn.disabled = on_contract or child
-	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
+	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or not D.home_side(u.pos)
 	sheet_envoy_btn.disabled = u.role != ""
-	sheet_war_btn.disabled = u.role != "" or D.bank_of(u.pos) != "west" or not sim.rivals.clans.values().any(func(c): return c["met"])
+	sheet_war_btn.disabled = u.role != "" or not D.home_side(u.pos) or not sim.rivals.clans.values().any(func(c): return c["met"])
 	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
 	sheet_research_btn.text = tr("Seek new wisdom…") if not sim.evo.candidates().is_empty() else tr("No new wisdom within reach")
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
@@ -931,16 +931,29 @@ func _show_intro() -> void:
 	r.text = tr("""You are the [color=#ffd36b]Great Chieftain[/color]. This prototype demonstrates the three-tier control hierarchy:
 
 [color=#ffd36b]Tier 1 · Direct micro[/color] — select tribespeople (click / drag) and right-click trees, bushes, deer, tigers, construction sites or ground.
-[color=#ffd36b]Tier 2 · Task Contracts[/color] — select one person (try [b]Panshi[/b], [b]Alie[/b] or [b]Linghe[/b]) and press [i]Assign Task Contract[/i]. Their LLM persona negotiates a blueprint for a settlement across the river. Once sealed, a deterministic state machine executes it with [b]zero LLM calls[/b] (watch the counter in the top bar) — until an ambush re-awakens the leader.
+[color=#ffd36b]Tier 2 · Task Contracts[/color] — select one person (try [b]%s[/b], [b]%s[/b] or [b]%s[/b]) and press [i]Assign Task Contract[/i]. Their LLM persona negotiates a blueprint for a settlement on the frontier. Once sealed, a deterministic state machine executes it with [b]zero LLM calls[/b] (watch the counter in the top bar) — until an ambush re-awakens the leader.
 [color=#ffd36b]Tier 3 · Vice-Chieftains[/color] — appoint a Steward to auto-manage idle villagers.
-[color=#ffd36b]Exploration[/color] — the land beyond the firelight is hidden. Select someone and press [b]X[/b] (or [i]Scout the unknown[/i]) to auto-explore; landmarks reward the finder with lore, food or wood and a new memory. Beware the saber-tooth dens in the far east. The minimap (bottom left) shows what you know: click it to look, right-click it to send the selected people.
+[color=#ffd36b]Exploration[/color] — the land beyond the firelight is hidden. Select someone and press [b]X[/b] (or [i]Scout the unknown[/i]) to auto-explore; landmarks reward the finder with lore, food or wood and a new memory. Beware the saber-tooth dens. The minimap (bottom left) shows what you know: click it to look, right-click it to send the selected people.
 
 [color=#ffd36b]Evolution[/color] — new wisdom comes from [i]practice[/i] (chopping wood teaches stone tools, rituals lead to totems) or from lore and research contracts. Each age changes homes, gear and what people can do; the tribe's culture drifts with its deeds and adopts traditions. Knowledge lives in people until it is carved into totems or laws.
-Every task grants specialization XP and notable events enter each person's [b]Memory Archive[/b], which is fed back into their next negotiation. Research the Wisdom Tree with lore from rituals. Milestone events: the Great Flood (Day %d), Overpopulation (%d people), Birth of the Chosen One (100%% devotion).
+Every task grants specialization XP and notable events enter each person's [b]Memory Archive[/b], which is fed back into their next negotiation. Research the Wisdom Tree with lore from rituals. Milestone events: Overpopulation (%d people), Birth of the Chosen One (100%% devotion).
 
-LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or GLM with your API key.""") % [D.FLOOD_DAY, D.OVERPOP_THRESHOLD, llm.label()]
+LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or GLM with your API key.""") % (_intro_names() + [D.OVERPOP_THRESHOLD, llm.label()])
+	var brief: String = D.MAP.get("brief", "")
+	if brief != "": r.text = "[color=#ffd36b]%s[/color] — %s\n\n" % [tr(D.MAP.get("name", "")), tr(brief)] + r.text
 	v.add_child(r)
 	v.add_child(_button("Begin", _close_modal))
+
+## Who to try first as contract leaders: the best builder, fighter and mystic.
+func _intro_names() -> Array:
+	var out: Array = []
+	for sk in ["craft", "combat", "lore"]:
+		var best = null
+		for u in sim.living():
+			if u.role == "child" or tr(u.name) in out: continue
+			if best == null or u.lv(sk) > best.lv(sk): best = u
+		out.append(tr(best.name) if best else "?")
+	return out
 
 # ------------------------------------------------------------ Phase 1: negotiation
 var neg := {}
@@ -963,7 +976,7 @@ func open_negotiation(leader, kind := "settle") -> void:
 	v.add_child(dh)
 	dh.add_child(_label("Directive:", 15, COL_DIM))
 	var directive := LineEdit.new()
-	directive.text = tr("Find new wisdom for the tribe") if research else (tr("Raid a neighbouring clan") if war else tr("Establish a settlement across the river"))
+	directive.text = tr("Find new wisdom for the tribe") if research else (tr("Raid a neighbouring clan") if war else tr("Found a new settlement on the frontier"))
 	directive.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dh.add_child(directive)
 	neg["directive"] = directive

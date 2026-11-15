@@ -59,9 +59,11 @@ static func propose(ctx: Dictionary) -> Dictionary:
 			"agrarian": I.t("Your terms, then - but I'm keeping a full larder."),
 			"lazy": I.t("Mm. Changed it. Happy?")}[arch]
 
+	var river_known: bool = ctx.get("env", {}).get("river_known", true) # no dock on water no one has seen
 	if focus == "farming" and not ctx.get("has_farming", false):
-		focus = "fishery"
-		reply += I.t(" We know nothing of farming yet - the river's fish will have to do.")
+		focus = "fishery" if river_known else "balanced"
+		reply += I.t(" We know nothing of farming yet - the river's fish will have to do.") if ctx.get("env", {}).get("river_known", true) else I.t(" We know nothing of farming yet - we will live by what we catch.")
+	if not river_known: focus = {"fishery": "balanced", "fishery_and_defense": "defense"}.get(focus, focus)
 	crew = clampi(crew, 1, ctx.get("max_crew", 5))
 	cap = clampi(cap, 2, 15)
 
@@ -156,9 +158,9 @@ static func _build_plan(arch: String, cap: int, crew: int, focus: String, flags:
 	var frac: float = df["wood_frac"] * (0.5 if flags.get("fast", false) else 1.0)
 	var gather := maxi(20, int(round(wood * frac / 10.0)) * 10)
 	var insert_at := 1 if arch in ["mystic", "agrarian"] else 0
-	clean.insert(insert_at, {"action": "gather_wood", "target_amount": gather, "location": "east_forest"})
+	clean.insert(insert_at, {"action": "gather_wood", "target_amount": gather, "location": "nearby_forest"})
 	return {
-		"plan_id": "east_river_outpost_%s" % {"cautious": "stockade", "warrior": "warcamp", "mystic": "sanctum", "agrarian": "larder", "lazy": "camp"}[arch],
+		"plan_id": "frontier_%s" % {"cautious": "stockade", "warrior": "warcamp", "mystic": "sanctum", "agrarian": "larder", "lazy": "camp"}[arch],
 		"crew_size": crew, "capacity_target": cap, "focus": focus, "steps": clean,
 		"abort_conditions": df["aborts"].duplicate(),
 	}
@@ -194,12 +196,13 @@ static func _speech(arch: String, ctx: Dictionary, bp: Dictionary, reply: String
 		var env: Dictionary = ctx.get("env", {})
 		var timber: String = env.get("timber", I.t("fine timber"))
 		var obs: String = {
-			"cautious": I.t("the east bank has %s, but there are beast tracks in the tall grass.") % timber,
-			"warrior": I.t("Saber-tooth tracks on the east bank? Good. Let them come."),
-			"mystic": I.t("Tracks of the great cat mark the eastern shore - yet the land there is sacred."),
-			"agrarian": I.t("the east bank has berries, and the river there is thick with fish."),
-			"lazy": I.t("the east bank... it's far. And there are tracks. Big ones."),
+			"cautious": I.t("the new land has %s, but there are beast tracks in the tall grass.") % timber,
+			"warrior": I.t("Beast tracks out there? Good. Let them come."),
+			"mystic": I.t("Tracks of the great cat mark that land - yet the land there is sacred."),
+			"agrarian": I.t("the new land has berries, and the game there is thick."),
+			"lazy": I.t("that land... it's far. And there are tracks. Big ones."),
 		}[arch]
+		if not env.get("explored", true): obs = I.t("no one has walked that land yet - we go into the unknown.")
 		parts.append(I.t(OPEN[arch]) + obs)
 		var mem: Array = leader.get("memory_stream", [])
 		if not mem.is_empty():
@@ -213,7 +216,7 @@ static func _speech(arch: String, ctx: Dictionary, bp: Dictionary, reply: String
 	if acts.size() > 1: seq = I.t(", then ").join(acts.slice(0, acts.size() - 1)) + I.t(", and finally ") + acts[acts.size() - 1]
 	var lead := I.t("Forget slow walls - ") if arch == "warrior" and not _has_struct(bp, "palisade") else ""
 	if arch == "cautious": lead = I.t("I suggest we start carefully: ")
-	parts.append(I.t("%sI'll take %s across: first %s - room for %d people.") % [lead, who if helpers > 0 else I.t("only myself"), seq, bp["capacity_target"]])
+	parts.append(I.t("%sI'll take %s out there: first %s - room for %d people.") % [lead, who if helpers > 0 else I.t("only myself"), seq, bp["capacity_target"]])
 	parts.append(I.t(CLOSE[arch]))
 	return ("" if I.is_zh() else " ").join(parts)
 
@@ -365,9 +368,9 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 				"lazy": I.t("Uh. Chieftain. %s. Right here. We're %d%% done, which is... something. Can we go home?") % [sm["threat"], pct],
 			}[arch]
 			opts = {
-				"cautious": [["reinforce", I.t("Hold the half-built camp and wait for reinforcements")], ["retreat", I.t("Abandon the timber and retreat across the river")], ["hold", I.t("Stand behind what we have built and fight")]],
+				"cautious": [["reinforce", I.t("Hold the half-built camp and wait for reinforcements")], ["retreat", I.t("Abandon the timber and fall back to the village")], ["hold", I.t("Stand behind what we have built and fight")]],
 				"warrior": [["hold", I.t("Stand and fight - we crush them!")], ["reinforce", I.t("Send more spears and we finish them faster")], ["retreat", I.t("...Fall back, if you must insist")]],
-				"mystic": [["ward", I.t("Invoke the totem ward to drive them off (10 lore)")], ["hold", I.t("Fight with the spirits at our backs")], ["retreat", I.t("Retreat across the river")]],
+				"mystic": [["ward", I.t("Invoke the totem ward to drive them off (10 lore)")], ["hold", I.t("Fight with the spirits at our backs")], ["retreat", I.t("Fall back to the village")]],
 				"agrarian": [["reinforce", I.t("Send help - we guard the larder")], ["hold", I.t("Fight for our supplies")], ["retreat", I.t("Run, and take what food we can")]],
 				"lazy": [["retreat", I.t("Go home. Please.")], ["reinforce", I.t("Send someone else to deal with them")], ["hold", I.t("Fine, we fight")]],
 			}[arch]
@@ -386,7 +389,7 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 			opts = [["retreat", I.t("Fall back and bring the living home")], ["reinforce", I.t("Send fresh fighters from the village")], ["press_on", I.t("Fight on to the end")]]
 			if arch == "warrior": opts = [opts[2], opts[1], opts[0]]
 		"natural_disaster":
-			speech = I.t("Chieftain, the waters rise over the east bank! We are %d%% done - %s may be lost.") % [pct, half]
+			speech = I.t("Chieftain, the waters rise over the camp! We are %d%% done - %s may be lost.") % [pct, half]
 			match sm.get("disaster", ""):
 				"blizzard": speech = I.t("Chieftain, a blizzard buries the camp! We are %d%% done, but no one can work in this cold.") % pct
 				"wildfire": speech = I.t("Chieftain, the forest is burning around the camp! We are %d%% done - %s may be lost.") % [pct, half]

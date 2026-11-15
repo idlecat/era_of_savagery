@@ -155,11 +155,12 @@ func _herds_leave() -> void:
 	for n in deer.slice(0, deer.size() / 2): sim.nodes.erase(n)
 
 func _herds_return() -> void:
-	var counts := {"west": 0, "east": 0}
+	var want: Dictionary = sim.herd_sizes(26.0 * D.area_k())
+	var counts := {}
 	for n in sim.nodes:
-		if n.kind == "deer": counts[n.bank] += 1
-	for i in maxi(0, 14 - counts["west"]): sim.spawn_deer("west", true)
-	for i in maxi(0, 12 - counts["east"]): sim.spawn_deer("east", true)
+		if n.kind == "deer": counts[n.bank] = counts.get(n.bank, 0) + 1
+	for r in want:
+		for i in maxi(0, want[r] - counts.get(r, 0)): sim.spawn_deer(r, true)
 
 func _weather(dt: float) -> void:
 	if incoming != "":
@@ -216,20 +217,25 @@ func _wolves() -> void:
 func spawn_wolf_pack() -> void:
 	var size := 2 + randi() % 2 + (1 if level == "harsh" else 0) + (1 if winter() and randf() < 0.5 else 0)
 	var c := Vector2.ZERO
-	for k in 40: # somewhere on the tribe's bank, away from the village
-		c = Vector2(randf_range(150, D.RIVER_BASE_X - 200), randf_range(150, D.H - 150))
-		if c.distance_to(D.VILLAGE) > 650 and c.distance_to(D.VILLAGE) < 1800: break
+	for k in 40: # somewhere on the tribe's side of the water, away from the village
+		c = D.VILLAGE + Vector2.from_angle(randf() * TAU) * randf_range(650, 1800)
+		c = Vector2(clampf(c.x, 150, D.W - 150), clampf(c.y, 150, D.H - 150))
+		if D.home_side(c) and not D.in_river(c) and c.distance_to(D.VILLAGE) > 650: break
 	for i in size:
 		var w = sim.spawn_predator(c + Vector2(randf_range(-40, 40), randf_range(-40, 40)), D.VILLAGE + Vector2(randf_range(-200, 200), randf_range(-150, 150)))
-		w.kind = "wolf"
-		w.name = "wolf"
-		w.hp = 28.0 * (1.2 if level == "harsh" else 1.0)
-		w.max_hp = w.hp
-		w.atk = 3.5
-		w.def = 1.0
-		w.spd = 82.0
-		w.raid_t = 160.0 # the pack gives up after a while
+		make_wolf(w)
 	sim.alert(tr("Wolves howl in the dark - a pack of %d is hunting near the village!") % size, c, "danger")
+
+## Turn a freshly spawned predator into a wolf of this season's pack.
+func make_wolf(w) -> void:
+	w.kind = "wolf"
+	w.name = "wolf"
+	w.hp = 28.0 * (1.2 if level == "harsh" else 1.0)
+	w.max_hp = w.hp
+	w.atk = 3.5
+	w.def = 1.0
+	w.spd = 82.0
+	w.raid_t = 160.0 # the pack gives up after a while
 
 func _raids(dt: float) -> void:
 	if sim.day() < 3: return
@@ -281,7 +287,7 @@ func heal_rate(u: E.Unit, warm: bool) -> float:
 			r *= 1.5
 			break
 	for lm in sim.landmarks:
-		if lm["id"] == "spring" and lm["found"]: r *= 1.3
+		if lm["kind"] == "spring" and lm["found"]: r *= 1.3
 	if sim.time < u.herb_t: r *= 2.5 # willow-bark tea
 	if u.hunger < 20: r *= 0.5
 	return r

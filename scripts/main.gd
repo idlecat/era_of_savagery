@@ -10,6 +10,7 @@ const I = preload("res://scripts/i18n.gd")
 const ArtBaker = preload("res://scripts/art_baker.gd")
 const D = preload("res://scripts/data.gd")
 const MapGen = preload("res://scripts/mapgen.gd")
+const Scenarios = preload("res://scripts/scenarios.gd")
 const NewGameUI = preload("res://scripts/new_game_ui.gd")
 
 const STEP := 0.05
@@ -35,10 +36,11 @@ func _ready() -> void:
 	await art.prepare()
 	loading.queue_free()
 	var settings: Dictionary = await _new_game_settings()
-	if settings["map"] == "classic": D.use_classic()
-	else:
+	if MapGen.SIZES.has(settings["map"]): # a random map
 		MapGen.generate(settings["map"], settings["tribes"], settings["seed"])
 		seed(settings["seed"]) # forests, herds and finds grow the same way for the same seed
+	else: # a scenario
+		Scenarios.apply(settings["map"])
 	loading = _loading_screen()
 	await get_tree().process_frame # let "Forging the world…" show while the land is built
 	await get_tree().process_frame
@@ -59,9 +61,9 @@ func _ready() -> void:
 	loading.queue_free()
 	ready_done = true
 
-## Map choice: from the command line (--map=classic|small|standard|large|huge
-## [--tribes=N] [--seed=S]), the classic map for scripted screenshots, otherwise the
-## New Game screen.
+## Map choice: from the command line (--map=<scenario id>|small|standard|large|huge
+## [--tribes=N] [--seed=S]; "classic" = the default scenario), the default scenario for
+## scripted screenshots, otherwise the New Game screen.
 func _new_game_settings() -> Dictionary:
 	var args := {}
 	for a in OS.get_cmdline_user_args():
@@ -75,11 +77,12 @@ func _new_game_settings() -> Dictionary:
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(args["shot"])
 		get_tree().quit()
-		return {"map": "classic", "tribes": 6, "seed": 0}
+		return {"map": Scenarios.DEFAULT, "tribes": 6, "seed": 0}
 	if args.has("map") or args.has("shot"):
-		var m: String = args.get("map", "classic")
-		if m != "classic" and not MapGen.SIZES.has(m): m = "standard"
-		var tribes := int(args.get("tribes", str(MapGen.SIZES[m]["def"]) if m != "classic" else "6"))
+		var m: String = args.get("map", Scenarios.DEFAULT)
+		if m == "classic": m = Scenarios.DEFAULT
+		if not MapGen.SIZES.has(m) and Scenarios.by_id(m) == null: m = "standard"
+		var tribes := int(args.get("tribes", str(MapGen.SIZES[m]["def"]) if MapGen.SIZES.has(m) else "0"))
 		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000)))}
 	var ui := NewGameUI.new()
 	add_child(ui)
@@ -190,9 +193,9 @@ func _debug_shot(args: Dictionary) -> void:
 					st.progress = st.work * spec[1]
 					k += 1
 			if stage >= 2:
-				var dy: float = sim.D.FORD_Y - 80.0
-				var dx: float = sim.D.river_x(dy) - sim.D.RIVER_HALF - 6.0
-				sim.add_structure("fishing_dock", Vector2(dx, dy), true)
+				var fd: Dictionary = sim.D.FORDS[0]
+				var dock: Vector2 = sim.D.shore(fd["p"] - fd["t"] * 80.0 + fd["n"] * 10.0, -6.0)
+				sim.add_structure("fishing_dock", dock, true)
 			sim.renovate([])
 			for st in sim.structures:
 				if st.reno: sim._finish_reno(st, sim.units[0])
@@ -343,7 +346,7 @@ func _debug_shot(args: Dictionary) -> void:
 					sim.nat.flood_at = sim.time + 0.1
 					sim.nat.flood_warned = true
 					for i in int(float(args.get("secs", "3")) / STEP): sim.tick(STEP)
-					focus = Vector2(sim.D.river_x(sim.D.FORD_Y), sim.D.FORD_Y)
+					focus = sim.D.FORDS[0]["p"] if not sim.D.FORDS.is_empty() else sim.D.VILLAGE
 				"eruption", "ash":
 					sim.nat.erupt()
 					var secs := float(args.get("secs", "3" if what == "eruption" else "20"))
@@ -424,7 +427,7 @@ func _debug_shot(args: Dictionary) -> void:
 					dd.pos = sim.D.VILLAGE + Vector2(150, 120)
 					sim.kill_unit(dd, null)
 				sim.kill_unit(sim.unit_by_name("Mo'er"), null)
-				sim.unit_by_name("Mo'er").pos = Vector2(3400, 2300) + sim.D.SHIFT
+				sim.unit_by_name("Mo'er").pos = sim.D.VILLAGE + Vector2(2100, 100)
 				sim.time = 5.0
 				var bt := 0.0
 				while sim.living().size() > 0 and bt < 80 and not (sim.unit_by_name("Bai").buried and sim.unit_by_name("Shan").buried):
@@ -444,22 +447,30 @@ func _debug_shot(args: Dictionary) -> void:
 			var bg = sim.burial_ground()
 			world.focus_on(bg.pos.lerp(sim.D.VILLAGE, 0.5) if bg and args.has("burial") else sim.D.VILLAGE)
 			if args.has("graves") and bg: hud.open_graves(bg)
+		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
+			hud._close_modal()
+			sim.fog_enabled = false
+			for lm in sim.landmarks: lm["found"] = true
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			var z: float = float(args.get("zoom", str(snappedf(minf(1600.0 / ((sim.D.W + sim.D.H) * 0.75), 900.0 / ((sim.D.W + sim.D.H) * 0.375)), 0.01))))
+			world.cam.zoom = Vector2(z, z)
+			world.focus_on(Vector2(sim.D.W, sim.D.H) / 2.0)
 		"explore":
 			hud._close_modal()
-			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))
+			for u in sim.living().filter(func(o): return o.role == "").slice(3, 6): sim.assign_explore(u)
 			for i in int(float(args.get("secs", "240")) / STEP): sim.tick(STEP)
 			sim.paused = false
 			hud._close_modal()
 			world.selected = []
 			world.selection_changed.emit()
 			world.cam.zoom = Vector2(0.42, 0.42)
-			world.focus_on(Vector2(1800, 1200) + sim.D.SHIFT)
+			world.focus_on(sim.D.VILLAGE + Vector2(500, 0))
 		"emergency":
 			hud._close_modal()
 			var u = sim.unit_by_name(args.get("who", "Panshi"))
-			var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Establish a settlement across the river", {}, false)
+			var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false)
 			var san: Dictionary = sim.contracts.sanitize(hud.Persona.propose(ctx)["blueprint"], {}, u)
-			var c = sim.contracts.create(san["blueprint"], u, "Establish a settlement across the river")
+			var c = sim.contracts.create(san["blueprint"], u, "Found a new settlement on the frontier")
 			var t := 0.0
 			while c.status != "interrupted" and t < 400:
 				sim.tick(STEP)
@@ -475,7 +486,9 @@ func _debug_shot(args: Dictionary) -> void:
 				world.focus_on(c.site)
 	if args.has("hover"): # put the mouse over the first structure of that type (adds one by the river if none)
 		var hs = sim.structures.filter(func(st): return st.type == args["hover"])
-		if hs.is_empty(): hs = [sim.add_structure(args["hover"], Vector2(sim.D.river_x(sim.D.FORD_Y + 100) - 70, sim.D.FORD_Y + 100), true)]
+		if hs.is_empty():
+			var fd2: Dictionary = sim.D.FORDS[0]
+			hs = [sim.add_structure(args["hover"], sim.D.shore(fd2["p"] + fd2["t"] * 100.0 + fd2["n"] * 10.0, 24.0), true)]
 		world.focus_on(hs[0].pos)
 		await get_tree().process_frame
 		get_viewport().warp_mouse(world.get_viewport().get_canvas_transform() * world.iso(hs[0].pos))

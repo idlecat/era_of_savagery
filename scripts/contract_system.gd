@@ -11,7 +11,7 @@ const SLOTS := [Vector2(-48, -42), Vector2(48, -42), Vector2(-48, 42), Vector2(4
 const EFFECTS := {
 	"hold": "Crew stands its ground and fights",
 	"reinforce": "Send up to 3 warriors from the village, crew holds",
-	"retreat": "Abandon the task and flee back across the river",
+	"retreat": "Abandon the task and flee back to the village",
 	"ward": "Totem ritual drives beasts away (costs 10 lore)",
 	"rest": "Wounded leader returns to the bonfire; crew carries on",
 	"press_on": "Ignore the wound and keep working",
@@ -43,7 +43,7 @@ func is_running(c: E.Contract) -> bool:
 
 # ------------------------------------------------------------ context for the LLM
 func available_helpers(exclude_id := -1) -> Array:
-	return sim.living().filter(func(u): return u.role == "" and u.id != exclude_id and D.bank_of(u.pos) == "west")
+	return sim.living().filter(func(u): return u.role == "" and u.id != exclude_id and D.home_side(u.pos))
 
 func leader_profile(u: E.Unit) -> Dictionary:
 	var skills := {}
@@ -63,19 +63,22 @@ func leader_profile(u: E.Unit) -> Dictionary:
 		"knows": sim.evo.known_by(u).map(func(id): return tr(sim.evo.tech_def(id)["name"])),
 	}
 
+## What the leader knows about the frontier site: only what the tribe has seen (the fog).
 func env_data(site: Vector2) -> Dictionary:
 	var trees := 0
 	var timber := 0.0
 	var food_nodes := 0
+	var seen: bool = sim.is_explored(site)
 	for n in sim.nodes:
-		if n.pos.distance_to(site) > 650 or D.bank_of(n.pos) != D.bank_of(site): continue
+		if n.pos.distance_to(site) > 650 or not D.same_side(n.pos, site) or not sim.is_explored(n.pos): continue
 		if n.kind == "tree":
 			trees += 1
 			timber += n.amount
 		elif n.res == "food" and n.amount >= 1:
 			food_nodes += 1
-	var threats: Array = [tr("fresh saber-tooth tracks in the tall grass east of the ford")]
-	var near: Array = sim.active_predators_near(site, 700)
+	var threats: Array = []
+	if sim.landmarks.any(func(l): return l["kind"] == "den" and l["found"] and l["pos"].distance_to(site) < 1600.0): threats.append(tr("fresh saber-tooth tracks in the tall grass"))
+	var near: Array = sim.active_predators_near(site, 700).filter(func(p): return sim.is_explored(p.pos))
 	var beasts: int = near.filter(func(p): return p.clan == "").size()
 	if beasts > 0: threats.append(tr("%d saber-toothed tigers seen prowling") % beasts)
 	if near.size() > beasts: threats.append(tr("%d rival warriors seen nearby") % (near.size() - beasts))
@@ -88,9 +91,11 @@ func env_data(site: Vector2) -> Dictionary:
 		if sd.has("tech") and not sim.has_tech(sd["tech"]): continue
 		structs[k] = {"wood": sd["wood"], "houses": sd.get("cap", 0)}
 	return {
-		"target_area": tr("untamed east bank, across the river ford"),
-		"timber": tr("%d trees (~%d wood)") % [trees, timber], "food_sources": food_nodes,
-		"predator_threat": threats, "river": tr("rich fishing waters along the bank"),
+		"target_area": site_area(site),
+		"explored": seen, "river_known": river_known(site),
+		"timber": tr("%d trees (~%d wood)") % [trees, timber] if seen else tr("unknown: no one has seen that land yet"),
+		"food_sources": food_nodes if seen else tr("unknown"),
+		"predator_threat": threats, "river": tr("rich fishing waters along the bank") if river_known(site) else (tr("no river close by") if seen else tr("unknown")),
 		"tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "lore": roundi(sim.stock["lore"])},
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"buildable_structures": structs,
@@ -99,6 +104,52 @@ func env_data(site: Vector2) -> Dictionary:
 		"day": sim.day(),
 	}
 
+## Where the next frontier settlement goes: among the map's sites (D.SITES, nearest first)
+## that no outpost has claimed yet, the first one the tribe has seen, else the nearest;
+## when all are claimed, beside one of them.
+func next_site() -> Vector2:
+	var claimed: Array = list.filter(func(o): return o.kind == "settle" and o.status != "abandoned")
+	var free: Array = D.SITES.filter(func(s): return not claimed.any(func(o): return o.site.distance_to(s) < 500.0))
+	for s in free:
+		if sim.is_explored(s): return s
+	if not free.is_empty(): return free[0]
+	var n := list.size()
+	var base: Vector2 = D.SITES[n % D.SITES.size()] if not D.SITES.is_empty() else D.VILLAGE + Vector2(1000, 0)
+	var p := base + Vector2(0, 260 * (n % 3) * (1 if n % 2 == 0 else -1))
+	return D.shore(p, 60.0)
+
+## Has the tribe seen a river by the site?
+func river_known(site: Vector2) -> bool:
+	if D.river_dist(site) >= 700.0: return false
+	return sim.is_explored(D.river_info(site)["c"])
+
+## Does the tribe know of a river between home and the site, and a ford over it? (The
+## way there crosses a river if its route has ford waypoints; a ford is known once seen.)
+func crossing(site: Vector2) -> String:
+	if D.home_side(site): return "none"
+	var known_river := false
+	var known_ford := false
+	for q in D.route(D.VILLAGE, site):
+		for f in D.FORDS:
+			if q == f["a"] or q == f["b"]:
+				if sim.is_explored(f["p"]): known_ford = true
+				if sim.is_explored(f["a"]) or sim.is_explored(f["b"]): known_river = true
+	if known_ford: return "ford"
+	return "river" if known_river else "unknown"
+
+## The frontier site as the leader hears it described: only what the tribe knows.
+func site_area(site: Vector2) -> String:
+	var dir: String = tr(D.compass(D.VILLAGE, site))
+	if not sim.is_explored(site): return tr("unexplored land to the %s, beyond what our scouts have seen") % dir
+	match crossing(site):
+		"ford": return tr("untamed land across the river to the %s, reached by a ford") % dir
+		"river", "unknown": return tr("land to the %s across the river; no one has found a way over yet") % dir
+	return tr("open land to the %s, a long walk from the village") % dir
+
+## "across the river" (once the tribe knows it is) or "to the north", for the log.
+func site_where(site: Vector2) -> String:
+	return tr("across the river") if crossing(site) == "ford" else tr("to the %s") % tr(D.compass(D.VILLAGE, site))
+
 ## Everything injected into the leader's LLM node for Phase 1 negotiation.
 func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set: bool,
 		player_message := "", previous := {}, history := [], kind := "settle") -> Dictionary:
@@ -106,7 +157,7 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 	if not u.memory.is_empty(): top = tr(u.memory[0]["text"]) # memory is kept sorted by impact
 	return {
 		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
-		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else research_env()),
+		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(next_site()) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else research_env()),
 		"directive": directive, "terms": terms, "terms_set": terms_set,
 		"player_message": player_message, "previous": previous, "history": history,
 		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id).size() + 1),
@@ -157,7 +208,7 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	var pid := str(bp.get("plan_id", "")).to_lower().replace(" ", "_")
 	var re := RegEx.create_from_string("[^a-z0-9_]")
 	pid = re.sub(pid, "", true).left(40)
-	out["plan_id"] = pid if pid != "" else "east_river_outpost_%02d" % (list.size() + 1)
+	out["plan_id"] = pid if pid != "" else "frontier_outpost_%02d" % (list.size() + 1)
 	out["leader_id"] = "unit_%d" % leader.id
 	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 3)), 1, max_crew)
 	out["capacity_target"] = clampi(_int(bp.get("capacity_target"), terms.get("capacity_target", 6)), 2, 15)
@@ -181,9 +232,13 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 					notes.append(tr("Dropped unknown structure '%s'.") % st)
 					continue
 				var sd: Dictionary = D.STRUCTURES[st]
+				var water_known := river_known(next_site())
 				if sd.has("tech") and not sim.has_tech(sd["tech"]):
-					notes.append("%s needs unresearched wisdom; replaced with Fishing Dock." % sd["name"])
-					st = "fishing_dock"
+					notes.append(("%s needs unresearched wisdom; replaced with Fishing Dock." if water_known else "%s needs unresearched wisdom; replaced with a Hut.") % sd["name"])
+					st = "fishing_dock" if water_known else "hut"
+				if st == "fishing_dock" and not water_known:
+					notes.append(tr("Dropped the fishing dock: no one has seen water by the site."))
+					continue
 				var count := clampi(_int(s.get("count"), 1), 1, 4)
 				if st in ["palisade", "bonfire", "weapon_rack", "totem_shrine", "fishing_dock"]:
 					if seen_once.has(st): continue
@@ -325,7 +380,7 @@ func war_env(target: String) -> Dictionary:
 		out.append({"id": id, "name": tr(c["name"]), "chieftain": tr(c["chief"]), "stance": tr(sim.rivals.stance(id)),
 			"their_ways": tr(c["desc"]), "people": c["pop"], "warriors_at_home_estimate": c["warriors"] + 1,
 			"treaties": sim.rivals.treaty_text(id), "behind_a_palisade": c["culture"] == "martial",
-			"distance": "far, across the ford" if D.bank_of(c["pos"]) != "west" else "a long walk south-west"})
+			"distance": ("across the river, " if not D.same_side(c["pos"], D.VILLAGE) else "") + "a %s walk to the %s" % ["long" if D.route_len(D.VILLAGE, c["pos"]) > 2500.0 else "short", D.compass(D.VILLAGE, c["pos"])]})
 	var fighters: Array = available_helpers().map(func(u): return "%s (combat %d)" % [tr(u.name), u.lv("combat")])
 	return {"enemies_known": out, "chieftain_suggests": target, "our_fighters": fighters, "bronze_weapons": sim.has_bronze(),
 		"objectives": WAR_OBJECTIVE_TEXT, "season_and_weather": sim.hz.summary(), "tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"])}}
@@ -358,12 +413,12 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	if c.kind == "war":
 		var tp: Vector2 = sim.rivals.clans[bp["target"]]["pos"]
 		c.site = tp + (D.VILLAGE - tp).normalized() * 330.0
-		if D.is_water(c.site): c.site.x += 120.0 * signf(c.site.x - D.river_x(c.site.y))
+		if D.is_water(c.site): c.site = D.shore(c.site, 120.0)
 	elif c.kind == "research":
 		var n := list.filter(func(o): return o.kind == "research").size()
 		c.site = D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
 	else:
-		c.site = D.EAST_SITE + Vector2(0, 260 * (list.size() % 3) * (1 if list.size() % 2 == 0 else -1))
+		c.site = next_site()
 	c.t = sim.time
 	for s in bp["steps"]:
 		var rs: Dictionary = s.duplicate()
@@ -385,7 +440,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		sim.set_job(u, {})
 	list.append(c)
 	var names: Array = c.crew_ids.map(func(id): return tr(sim.unit_by_id(id).name))
-	var where: String = tr("across the river")
+	var where: String = site_where(c.site)
 	if c.kind == "research": where = tr("to seek %s") % tr(sim.evo.tech_def(bp["tech"])["name"])
 	elif c.kind == "war":
 		where = tr("to make war on the %s") % tr(sim.rivals.clans[bp["target"]]["name"])
@@ -436,8 +491,7 @@ func update(dt: float) -> void:
 			"executing":
 				if _check_aborts(c): continue
 				_run_step(c, dt)
-				c.progress = _progress(c)
-				_maybe_ambush(c)
+				c.progress = _progress(c) # (a scenario may script an ambush at some progress: story.gd)
 			"defending": _defend(c, dt)
 			"sheltering":
 				for u in crew(c): _ensure(u, "c%d_shelter" % c.id, func(): sim.assign_move(u, c.site + Vector2(randf_range(-30, 30), randf_range(-30, 30))))
@@ -481,7 +535,7 @@ func _run_step(c: E.Contract, dt: float) -> void:
 		return
 	var step: Dictionary = c.steps[c.step_idx]
 	var key := "c%d_s%d" % [c.id, c.step_idx]
-	var bank := D.bank_of(c.site)
+	var bank := D.region_at(c.site)
 	match step["action"]:
 		"gather_wood", "gather_food", "gather_stone":
 			var res: String = step["action"].trim_prefix("gather_")
@@ -653,8 +707,8 @@ func _slot_for(c: E.Contract, type: String) -> Vector2:
 			if s and s.type == "bonfire": has_center = true
 		if not has_center: return c.site + Vector2(0, 0)
 	if type == "fishing_dock":
-		var y := c.site.y + 60
-		return Vector2(D.river_x(y) + D.RIVER_HALF + 14, y)
+		var info := D.river_info(c.site + Vector2(0, 60)) # on the near bank of the nearest river
+		return info["c"] + info["n"] * (D.RIVER_HALF + 14) if info["d"] < INF else c.site + Vector2(140, 60)
 	var p: Vector2 = c.site + SLOTS[c.slot_idx % SLOTS.size()] * (1.0 + 0.6 * (c.slot_idx / SLOTS.size()))
 	c.slot_idx += 1
 	return p
@@ -700,16 +754,6 @@ func _progress(c: E.Contract) -> float:
 		total += w
 		done += d
 	return done / total if total > 0 else 1.0
-
-func _maybe_ambush(c: E.Contract) -> void:
-	if not sim.scripted_ambush or c.kind != "settle" or c.ambushed or c.progress < 0.45: return
-	c.ambushed = true
-	for off in [Vector2(380, -260), Vector2(400, 240)]:
-		var p: Vector2 = c.site + off
-		p.x = minf(p.x, D.W - 30)
-		p.y = clampf(p.y, 40, D.H - 40)
-		sim.spawn_predator(p, c.site)
-	sim.add_log(tr("Something moves in the tall grass near '%s'...") % c.plan["plan_id"], "danger")
 
 # ------------------------------------------------------------ abort conditions
 func _check_aborts(c: E.Contract) -> bool:
@@ -800,7 +844,7 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 				u.contract_id = c.id
 				c.reinforcement_ids.append(u.id)
 				sim.set_job(u, {})
-			sim.add_log(tr("%d warriors rush across the ford to reinforce '%s'.") % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
+			sim.add_log(tr("%d warriors rush out to reinforce '%s'.") % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
 			if c.kind == "war":
 				c.abort_cooldowns["heavy_losses"] = sim.time + 60.0
 				_set_status(c, "executing")
@@ -815,10 +859,10 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 		"retreat":
 			for u in crew(c, true):
 				if c.kind == "war": sim.remember(u, tr("fled from the battle with the %s on Day %d") % [tr(sim.rivals.clans[c.plan["target"]]["name"]), sim.day()], 7)
-				else: sim.remember(u, tr("abandoned the half-built camp '%s' on the east bank on Day %d") % [c.plan["plan_id"], sim.day()], 7)
+				else: sim.remember(u, tr("abandoned the half-built camp '%s' on Day %d") % [c.plan["plan_id"], sim.day()], 7)
 				_release(u)
 				sim.assign_flee(u)
-			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees across the river.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
+			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees for home.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
 			c.status = "abandoned"
 		"rest":
 			c.resting_ids.append(ld.id)
@@ -882,7 +926,7 @@ func _complete(c: E.Contract) -> void:
 			u.home = D.VILLAGE
 		else:
 			var lead: bool = u == ld
-			sim.remember(u, (tr("led the founding of '%s' across the river on Day %d (%s)") if lead else tr("helped the founding of '%s' across the river on Day %d (%s)")) % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
+			sim.remember(u, (tr("led the founding of '%s' on the frontier on Day %d (%s)") if lead else tr("helped the founding of '%s' on the frontier on Day %d (%s)")) % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
 			sim.gain_xp(u, "craft", 10)
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
 			u.home = c.site

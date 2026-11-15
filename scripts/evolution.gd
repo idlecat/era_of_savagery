@@ -115,7 +115,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 	insight[id] = float(t["cost"])
 	var learners: Array = []
 	if how == "taught":
-		learners = sim.living().filter(func(o): return o.role != "contract" and D.bank_of(o.pos) == "west")
+		learners = sim.living().filter(func(o): return o.role != "contract" and D.home_side(o.pos))
 		if inventor and inventor not in learners: learners.append(inventor)
 	else:
 		learners = sim.living().filter(func(o): return inventor and o.pos.distance_to(inventor.pos) < 260)

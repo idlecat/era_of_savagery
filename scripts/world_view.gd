@@ -40,8 +40,7 @@ var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
 var decor: Array = []
-var river_l := PackedVector2Array()
-var river_r := PackedVector2Array()
+var river_banks: Array = [] # per river: [left bank, right bank] polylines
 var cmd_marker := {}
 var guardian_trail: Array = []
 var facing := {} # "u12" -> 1 / -1  (screen-space left/right)
@@ -150,11 +149,8 @@ func setup(s) -> void:
 
 # ------------------------------------------------------------ terrain bake
 func _build_terrain() -> void:
-	var y := -20.0
-	while y <= D.H + 20:
-		river_l.append(Vector2(D.river_x(y) - D.RIVER_HALF, y))
-		river_r.append(Vector2(D.river_x(y) + D.RIVER_HALF, y))
-		y += 12
+	river_banks = []
+	for pts in D.RIVERS: river_banks.append([_offset_line(pts, -D.RIVER_HALF), _offset_line(pts, D.RIVER_HALF)])
 	var noise := FastNoiseLite.new()
 	noise.seed = 7
 	noise.frequency = 0.006
@@ -181,25 +177,26 @@ func _build_terrain() -> void:
 	var deep := Color("#2b5878")
 	var shallow := Color("#4b8aa4")
 	var ford := Color("#7fa3a0")
+	var water := _water_field(w, h, D.RIVER_HALF + 60.0) # distance to the nearest river per pixel
 	for j in h:
 		for i in w:
 			var p := Vector2(i * TEX_SCALE + 1.5, j * TEX_SCALE + 1.5)
 			var n := noise.get_noise_2dv(p) * 0.5 + 0.5
 			var f := fine.get_noise_2dv(p) * 0.5 + 0.5
-			var dx := absf(p.x - D.river_x(p.y))
+			var dx: float = water[j * w + i]
 			var c: Color
 			if dx < D.RIVER_HALF:
 				var k := dx / D.RIVER_HALF
 				c = deep.lerp(shallow, k * k)
 				c.a = 0.08 + 0.3 * k
-				if D.is_ford(p.y):
+				if D.is_ford_at(p):
 					c = ford.lerp(shallow, 0.3 * k).lerp(Color("#9a9682"), 0.35 * f)
 					c.a = 0.4
 			elif dx < D.RIVER_HALF + 12 + 8 * n:
 				c = sand.lerp(Color("#8f8058"), f * 0.6)
 				c.a = 0.56
 			else:
-				var east := p.x > D.river_x(p.y)
+				var east := not D.home_side(p) # untamed land beyond the water is darker
 				c = (g_east_a.lerp(g_east_b, n) if east else g_west_a.lerp(g_west_b, n))
 				c = c.lerp(c.darkened(0.18), f * 0.5)
 				var dv := p.distance_to(D.VILLAGE)
@@ -225,6 +222,38 @@ func _build_terrain() -> void:
 	wear_img = Image.create(maxi(sim.wear_w, 1), maxi(sim.wear_h, 1), false, Image.FORMAT_RGBA8)
 	wear_tex = ImageTexture.create_from_image(wear_img)
 	decor.sort_custom(func(a, b): return a["p"].x + a["p"].y < b["p"].x + b["p"].y)
+
+## A river centreline shifted sideways by `off` (negative = left of the flow).
+func _offset_line(pts: PackedVector2Array, off: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for k in pts.size():
+		var tg := (pts[mini(k + 1, pts.size() - 1)] - pts[maxi(k - 1, 0)]).normalized()
+		out.append(pts[k] + Vector2(-tg.y, tg.x) * off)
+	return out
+
+## Distance to the nearest river centreline for each terrain pixel (up to `reach`, else INF):
+## each river segment stamps the pixels around it, much cheaper than asking per pixel.
+func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(w * h)
+	out.fill(INF)
+	var sc := float(TEX_SCALE)
+	for pts in D.RIVERS:
+		for k in pts.size() - 1:
+			var a: Vector2 = pts[k]
+			var b: Vector2 = pts[k + 1]
+			var x0 := maxi(0, int((minf(a.x, b.x) - reach) / sc))
+			var x1 := mini(w - 1, int((maxf(a.x, b.x) + reach) / sc))
+			var y0 := maxi(0, int((minf(a.y, b.y) - reach) / sc))
+			var y1 := mini(h - 1, int((maxf(a.y, b.y) + reach) / sc))
+			var ab := b - a
+			var l2 := maxf(ab.length_squared(), 0.0001)
+			for j in range(y0, y1 + 1):
+				for i in range(x0, x1 + 1):
+					var p := Vector2(i * sc + 1.5, j * sc + 1.5)
+					var d := p.distance_to(a + ab * clampf((p - a).dot(ab) / l2, 0.0, 1.0))
+					if d < out[j * w + i]: out[j * w + i] = d
+	return out
 
 # ------------------------------------------------------------ frame
 func _process(delta: float) -> void:
@@ -298,18 +327,23 @@ func _place_ground_cover() -> void:
 	var soil := FastNoiseLite.new()
 	soil.seed = 23
 	soil.frequency = 0.004
-	var y := 0.0
-	while y < D.H: # reeds along both banks
-		y += randf_range(10, 22)
-		if D.is_ford(y) or D.is_ford(y + 30) or D.is_ford(y - 30): continue
-		for side in [-1, 1]:
-			if randf() < 0.75:
-				var p := Vector2(D.river_x(y) + side * (D.RIVER_HALF + randf_range(2, 22)), y)
-				decor.append({"p": p, "kind": "reeds", "v": randi() % 2, "s": randf_range(0.8, 1.2), "east": side > 0, "tall": false, "c": 0.0})
+	for pts in D.RIVERS: # reeds along both banks, but not at the fords
+		var k := 0
+		while k < pts.size() - 1:
+			var c: Vector2 = pts[k]
+			var tg: Vector2 = (pts[k + 1] - c).normalized()
+			k += 1 if randf() < 0.6 else 0
+			c += tg * randf_range(0, 30)
+			if c.x < 0 or c.y < 0 or c.x > D.W or c.y > D.H: continue
+			if D.FORDS.any(func(f): return f["p"].distance_to(c) < D.FORD_LEN + 40.0): continue
+			for side in [-1, 1]:
+				if randf() < 0.75:
+					var p: Vector2 = c + Vector2(-tg.y, tg.x) * side * (D.RIVER_HALF + randf_range(2, 22))
+					decor.append({"p": p, "kind": "reeds", "v": randi() % 2, "s": randf_range(0.8, 1.2), "east": not D.home_side(p), "tall": false, "c": 0.0})
 	for i in int(2600 * D.W * D.H / (3600.0 * 2400.0)):
 		var p := Vector2(randf() * D.W, randf() * D.H)
-		if absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 14: continue
-		var east := D.bank_of(p) == "east"
+		if D.river_dist(p) < D.RIVER_HALF + 14: continue
+		var east := not D.home_side(p)
 		var fd := _forest_at(p)
 		var m := meadow.get_noise_2dv(p) * 0.5 + 0.5
 		var so := soil.get_noise_2dv(p) * 0.5 + 0.5
@@ -326,7 +360,7 @@ func _place_ground_cover() -> void:
 	while outcrops.size() < n_out and tries < n_out * 25:
 		tries += 1
 		var p := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
-		if p.distance_to(D.VILLAGE) < 700 or p.distance_to(D.EAST_SITE) < 450 or absf(p.x - D.river_x(p.y)) < 250: continue
+		if p.distance_to(D.VILLAGE) < 700 or D.SITES.any(func(s): return p.distance_to(s) < 450) or D.river_dist(p) < 250: continue
 		var ok := true
 		for lm in D.LANDMARKS:
 			if p.distance_to(lm["pos"]) < 260: ok = false
@@ -559,9 +593,11 @@ func draw_overlay() -> void:
 	_draw_weather()
 	_draw_nature()
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
-	var ford_lbl := Vector2(D.river_x(D.FORD_Y1 + 30), D.FORD_Y1 + 30)
-	if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
-	if sim.is_explored(D.EAST_SITE): _draw_label(iso(D.EAST_SITE + Vector2(250, -330)), tr("UNTAMED EAST BANK"), 20, Color(1, 1, 1, 0.4), true)
+	for f in D.FORDS:
+		var ford_lbl: Vector2 = f["p"] + f["t"] * (D.FORD_LEN + 30.0)
+		if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
+	for lb in D.LABELS: # the scenario's own names for places
+		if sim.is_explored(lb["pos"]): _draw_label(iso(lb["pos"]), tr(lb["text"]), int(lb.get("size", 20)), Color(1, 1, 1, 0.4), true)
 	_draw_label(iso(D.VILLAGE + Vector2(-220, -300)), tr("TRIBAL LANDS"), 20, Color(1, 1, 1, 0.4), true)
 	for lm in sim.landmarks:
 		if lm["found"] and _in_view(lm["pos"]):
@@ -636,15 +672,18 @@ func _draw_nature() -> void:
 		if nat.flood_left > 0 and nat.flood_left < 8.0: k = nat.flood_left / 8.0
 		ci.draw_set_transform_matrix(GROUND)
 		var half: float = D.RIVER_HALF + 110.0 * k
-		var left := PackedVector2Array()
-		var right := PackedVector2Array()
-		var y := 0.0
-		while y <= D.H:
-			left.append(Vector2(D.river_x(y) - half, y))
-			right.append(Vector2(D.river_x(y) + half, y))
-			y += 40.0
-		right.reverse()
-		ci.draw_colored_polygon(left + right, Color(0.32, 0.5, 0.72, 0.55 * k))
+		for pts in D.RIVERS:
+			var sparse := PackedVector2Array()
+			for i in range(0, pts.size(), 2): sparse.append(pts[i])
+			sparse.append(pts[pts.size() - 1])
+			var left := _offset_line(sparse, -half)
+			var right := _offset_line(sparse, half)
+			right.reverse()
+			var poly := left + right
+			if Geometry2D.triangulate_polygon(poly).is_empty(): # tight bends: draw it as a thick line instead
+				ci.draw_polyline(sparse, Color(0.32, 0.5, 0.72, 0.55 * k), half * 2.0)
+			else:
+				ci.draw_colored_polygon(poly, Color(0.32, 0.5, 0.72, 0.55 * k))
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	for s in nat.strikes:
 		var a: float = 1.0 - s["t"] / 0.7
@@ -805,18 +844,24 @@ func _draw_slab() -> void:
 		ci.draw_line(b + dn * k, l + dn * k, Color(0, 0, 0, 0.18), 2)
 
 func _draw_water_fx() -> void:
-	ci.draw_polyline(river_l, Color(0.85, 0.92, 1.0, 0.35), 3)
-	ci.draw_polyline(river_r, Color(0.85, 0.92, 1.0, 0.35), 3)
-	for i in 9:
-		var sy: float = lerpf(D.FORD_Y0 + 10, D.FORD_Y1 - 10, float(i % 3) / 2.0)
-		var sx: float = D.river_x(sy) + lerpf(-D.RIVER_HALF + 10, D.RIVER_HALF - 10, float(i / 3) / 2.0)
-		ci.draw_circle(Vector2(sx + 2, sy + 2), 7, Color(0, 0, 0, 0.2))
-		ci.draw_circle(Vector2(sx, sy), 7, Color("#a5a291"))
-	for i in 110:
-		var y := fmod(i * 47.0 + t * 26.0, D.H)
-		if D.is_ford(y): continue
-		var x := D.river_x(y) + sin(i * 12.3) * D.RIVER_HALF * 0.6
-		ci.draw_line(Vector2(x, y), Vector2(x + 3, y + 14), Color(0.75, 0.9, 1.0, 0.35), 2)
+	for bk in river_banks:
+		ci.draw_polyline(bk[0], Color(0.85, 0.92, 1.0, 0.35), 3)
+		ci.draw_polyline(bk[1], Color(0.85, 0.92, 1.0, 0.35), 3)
+	for f in D.FORDS: # stepping stones
+		for i in 9:
+			var sp: Vector2 = f["p"] + f["t"] * lerpf(-D.FORD_LEN + 10, D.FORD_LEN - 10, float(i % 3) / 2.0) + f["n"] * lerpf(-D.RIVER_HALF + 10, D.RIVER_HALF - 10, float(i / 3) / 2.0)
+			ci.draw_circle(sp + Vector2(2, 2), 7, Color(0, 0, 0, 0.2))
+			ci.draw_circle(sp, 7, Color("#a5a291"))
+	for pts in D.RIVERS: # ripples drifting downstream
+		var n: int = pts.size()
+		for i in mini(110, n / 2):
+			var s := fmod(i * 47.3 + t * 0.9, float(n - 1))
+			var k := int(s)
+			var a: Vector2 = pts[k].lerp(pts[k + 1], s - k)
+			var tg: Vector2 = (pts[k + 1] - pts[k]).normalized()
+			var p: Vector2 = a + Vector2(-tg.y, tg.x) * sin(i * 12.3) * D.RIVER_HALF * 0.6
+			if D.is_ford_at(p) or not _in_view(p): continue
+			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.35), 2)
 
 func _draw_decor(d: Dictionary) -> void:
 	var p := iso(d["p"])
@@ -1099,7 +1144,7 @@ func _draw_structure(s) -> void:
 	if s.built and s.type == "farm_plot":
 		var season: String = ["spring", "summer", "autumn", "winter"][sim.hz.season_idx()] if sim.hz.on() else "summer"
 		if _sprite("farm_" + season, b): return
-	var west_dock: bool = s.type == "fishing_dock" and D.bank_of(s.pos) == "west"
+	var west_dock: bool = s.type == "fishing_dock" and D.river_info(s.pos)["n"].x < 0.0 # on the river's west side
 	if s.built and s.type == "fishing_dock" and _sprite(("dock_w" if west_dock else "dock") + _snowy(), b):
 		var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
 		ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
@@ -1596,7 +1641,7 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 ## The procedural tree (also under the flames of a burning one).
 func _draw_tree_shape(n, b: Vector2) -> void:
 	var s: float = n.sz
-	var east: bool = D.bank_of(n.pos) == "east"
+	var east: bool = not D.home_side(n.pos)
 	_ell(b + Vector2(12 * s, 4 * s), 18 * s, 7 * s, SHADOW)
 	ci.draw_rect(Rect2(b.x - 2.5 * s, b.y - 14 * s, 5 * s, 14 * s), Color("#6b4524"))
 	if n.id % 3 != 2:
@@ -1975,7 +2020,7 @@ func _command(sm: Vector2) -> void:
 			bd = d
 			node = n
 	if node:
-		for u in free: sim.assign_gather(u, node.res, {"node_id": node.id, "bank": D.bank_of(node.pos)})
+		for u in free: sim.assign_gather(u, node.res, {"node_id": node.id, "bank": D.region_at(node.pos)})
 		return
 	for s in sim.structures:
 		var r: float = D.STRUCTURES[s.type]["r"]
@@ -2020,7 +2065,7 @@ func hover_info() -> Array:
 	for lm in sim.landmarks:
 		if sim.is_explored(lm["pos"]) and lm["pos"].distance_to(m) < 70:
 			return [tr(lm["name"]), tr("Visited by the tribe.") if lm["found"] else tr("Not yet visited: send someone there to see what it holds.")]
-	if D.in_river(m) and D.is_ford(m.y): return [tr("The Ford"), tr("The one shallow crossing of the river. People and beasts wade across here; anywhere else the river is too deep.")]
+	if D.in_river(m) and D.is_ford_at(m): return [tr("The Ford"), tr("A shallow crossing of the river. People and beasts wade across here; elsewhere the river is too deep.")]
 	return []
 
 func _node_info(n) -> Array:

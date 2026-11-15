@@ -1,20 +1,25 @@
-## The "New Game" screen shown before the world is built: classic map or a random map
-## of a chosen size, how many neighbouring clans, and a seed. Emits `chosen` with
-## {"map": "classic"|size id, "tribes": int, "seed": int} and remembers the choice.
+## The "New Game" screen shown before the world is built. Two modes:
+##   Random map — size, how many neighbouring clans, and a seed; nothing pre-configured.
+##   Scenario   — a hand-made map with its own tribe, clans and scripted events.
+## Emits `chosen` with {"map": size id | scenario id, "tribes": int, "seed": int} and
+## remembers the choice.
 extends CanvasLayer
 
 signal chosen(settings: Dictionary)
 
 const MapGen = preload("res://scripts/mapgen.gd")
+const Scenarios = preload("res://scripts/scenarios.gd")
 const HUD = preload("res://scripts/hud.gd")
 const CFG := "user://newgame.cfg"
-const MAPS := ["classic", "small", "standard", "large", "huge"]
+const MODES := ["random", "scenario"]
 
+var mode_opt: OptionButton
 var map_opt: OptionButton
 var tribe_opt: OptionButton
 var seed_edit: LineEdit
 var desc: Label
 var tribes_by_map := {} # remembered clan count per map size
+var last := {"random": "standard", "scenario": Scenarios.DEFAULT} # remembered map per mode
 
 func _ready() -> void:
 	layer = 10
@@ -48,12 +53,17 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 10)
 	v.add_child(grid)
+	mode_opt = OptionButton.new()
+	mode_opt.add_item(tr("Random map"))
+	mode_opt.add_item(tr("Scenario"))
+	mode_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_opt.item_selected.connect(func(_i): _fill_maps())
+	_row(grid, tr("Mode"), mode_opt)
 	map_opt = OptionButton.new()
-	for m in MAPS:
-		if m == "classic": map_opt.add_item(tr("Classic (hand-made)"))
-		else: map_opt.add_item(tr("Random · %s") % tr(MapGen.SIZES[m]["name"]))
 	map_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_opt.item_selected.connect(func(_i): _refresh_tribes())
+	map_opt.item_selected.connect(func(_i):
+		last[_mode()] = _map()
+		_refresh_tribes())
 	_row(grid, tr("Map"), map_opt)
 	tribe_opt = OptionButton.new()
 	tribe_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -82,7 +92,7 @@ func _ready() -> void:
 	start.pressed.connect(_start)
 	v.add_child(start)
 	_load()
-	_refresh_tribes()
+	_fill_maps()
 	start.grab_focus()
 
 func _row(grid: GridContainer, label: String, ctl: Control) -> void:
@@ -91,18 +101,34 @@ func _row(grid: GridContainer, label: String, ctl: Control) -> void:
 	grid.add_child(l)
 	grid.add_child(ctl)
 
+func _mode() -> String:
+	return MODES[maxi(0, mode_opt.selected)]
+
+## The map ids the current mode offers: sizes, or scenario ids.
+func _maps() -> Array:
+	return MapGen.SIZE_ORDER if _mode() == "random" else Scenarios.ids()
+
+func _map() -> String:
+	var ids := _maps()
+	return ids[clampi(map_opt.selected, 0, ids.size() - 1)]
+
+func _fill_maps() -> void:
+	map_opt.clear()
+	var random := _mode() == "random"
+	for id in _maps():
+		map_opt.add_item(tr(MapGen.SIZES[id]["name"]) if random else tr(Scenarios.by_id(id).INFO["name"]))
+	map_opt.select(maxi(0, _maps().find(last[_mode()])))
+	_refresh_tribes()
+
 func _on_tribes(i: int) -> void:
 	tribes_by_map[_map()] = i + 1
 	_describe()
 
-func _map() -> String:
-	return MAPS[maxi(0, map_opt.selected)]
-
 func _refresh_tribes() -> void:
 	var m := _map()
 	tribe_opt.clear()
-	if m == "classic":
-		tribe_opt.add_item("6")
+	if _mode() == "scenario":
+		tribe_opt.add_item(str(Scenarios.by_id(m).CLANS.size()))
 		tribe_opt.disabled = true
 		seed_edit.editable = false
 	else:
@@ -115,15 +141,16 @@ func _refresh_tribes() -> void:
 
 func _describe() -> void:
 	var m := _map()
-	if m == "classic":
-		desc.text = tr("The hand-made land of the bonfire: the river and its ford, the Red Ochre and Heron clans close by, four more clans in the far reaches.")
+	if _mode() == "scenario":
+		desc.text = tr(Scenarios.by_id(m).INFO["desc"])
 		return
 	var sz: Dictionary = MapGen.SIZES[m]
-	desc.text = tr("A new land every time: %d × %d paces, a river with one ford, %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1]
+	desc.text = tr("A new land every time, with nothing set in advance: %d × %d paces, rivers and their fords, a tribe of strangers and %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1]
 
 func _start() -> void:
 	var m := _map()
-	var s := {"map": m, "tribes": tribe_opt.selected + 1 if m != "classic" else 6,
+	var random := _mode() == "random"
+	var s := {"map": m, "tribes": tribe_opt.selected + 1 if random else 0,
 		"seed": int(seed_edit.text) if seed_edit.text.strip_edges().is_valid_int() else randi() % 1000000}
 	_save(s)
 	chosen.emit(s)
@@ -131,13 +158,18 @@ func _start() -> void:
 func _load() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(CFG) != OK: return
-	map_opt.select(maxi(0, MAPS.find(str(cf.get_value("new_game", "map", "classic")))))
+	var m := str(cf.get_value("new_game", "map", Scenarios.DEFAULT))
+	var random := MapGen.SIZES.has(m)
+	mode_opt.select(0 if random else 1)
+	if random or Scenarios.by_id(m) != null: last["random" if random else "scenario"] = m
+	last["random"] = str(cf.get_value("new_game", "random_map", last["random"]))
 	tribes_by_map = cf.get_value("new_game", "tribes_by_map", {})
 	if bool(cf.get_value("new_game", "keep_seed", false)): seed_edit.text = str(cf.get_value("new_game", "seed", ""))
 
 func _save(s: Dictionary) -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("new_game", "map", s["map"])
+	cf.set_value("new_game", "random_map", last["random"])
 	cf.set_value("new_game", "tribes_by_map", tribes_by_map)
 	cf.set_value("new_game", "seed", s["seed"])
 	cf.set_value("new_game", "keep_seed", seed_edit.text.strip_edges() != "")

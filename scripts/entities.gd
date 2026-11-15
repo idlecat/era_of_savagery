@@ -105,7 +105,7 @@ class ResNode:
 	var regrow_t: float = 0.0
 	var vel: Vector2 = Vector2.ZERO
 	var wander_t: float = 0.0
-	var bank: String = ""
+	var bank: int = -1 # the stretch of land (D.region_at) a deer keeps to
 	var from_deer: bool = false
 	var sz: float = 1.0
 
@@ -161,5 +161,5 @@ class Contract:
 	var clear_t: float = 0.0
 	var events: Array = []
 	var substate: String = ""
-	var kind: String = "settle" # "settle" (outpost across the river), "research" (seek new wisdom) or "war" (raid a rival clan)
+	var kind: String = "settle" # "settle" (a frontier outpost), "research" (seek new wisdom) or "war" (raid a rival clan)
 	var flags: Dictionary = {} # war: blessed, scouted, spoils

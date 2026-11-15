@@ -46,7 +46,9 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 | PRD item | Where |
 |---|---|
-| Map: forests, berries, deer, river + ford, untamed east bank, bonfire, huts, palisades | `sim.gd`, `world_view.gd` |
+| Map: rivers, fords and the land regions between them, routing over fords | `data.gd` |
+| Game modes: random maps (`mapgen.gd`), scenarios with scripted events (`scenarios/*.gd`, `story.gd`), New Game screen | `mapgen.gd`, `scenarios.gd`, `story.gd`, `new_game_ui.gd` |
+| Forests, berries, deer, bonfire, huts, palisades | `sim.gd`, `world_view.gd` |
 | Tier 1 direct micro (select, drag-box, right-click gather/attack/build/move) | `world_view.gd` |
 | Tier 2 Task Contract: LLM negotiation → JSON blueprint → deterministic executor → abort conditions → emergency awakening → resume | `contract_system.gd`, `llm_client.gd`, `hud.gd` |
 | Personality-driven proposals (Panshi cautious, Alie belligerent, Linghe mystic, …) | `persona_engine.gd` (offline) / prompts in `llm_client.gd` |
@@ -176,11 +178,11 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
 
 ## Rival clans
 
-Six clans share the map. Near home are the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (south-west). Farther out live the martial **Tusk Clan** (north-west forests) and **Hawk Clan** (south-east hills), and the spiritual **Elk Clan** (north-east meadows) and **Willow Clan** (southern marshes). Their villages and peaceful hunters start hidden in the fog. Conquest and Unity victories need every clan.
+In the *River Ford* scenario six clans share the map (a random map draws its clans from a pool of ten, adding the Bear, Otter, Raven and Lynx clans). Near home are the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (south-west). Farther out live the martial **Tusk Clan** (north-west forests) and **Hawk Clan** (south-east hills), and the spiritual **Elk Clan** (north-east meadows) and **Willow Clan** (southern marshes). Their villages and peaceful hunters start hidden in the fog. Conquest and Unity victories need every clan.
 
 - **First contact.** The first time you see their people or homes, the game pauses for a choice: offer gifts (20 food, +20 relations), show strength (martial clans respect it, others take it as a threat) or keep your distance.
 - **Relations** run from -100 to 100 (Blood feud · Hostile · Wary · Friendly · Allied) and drift back toward each clan's temperament. They drop when you gather or scout on their hunting grounds, build near them, or attack or kill their people. Clans remember grudges.
-- **Raids.** Hostile clans send war bands (bigger and more often the deeper the feud, worse in winter) to the village or a running outpost. Raiders who reach an undefended camp steal food and carry it home over the ford. Defenders, the War Chief and contract `enemy_attack` aborts all treat them like beasts. With Challenges set to Off, there are no raids or demands.
+- **Raids.** Hostile clans send war bands (bigger and more often the deeper the feud, worse in winter) to the village or a running outpost. Raiders who reach an undefended camp steal food and carry it home over the fords. Defenders, the War Chief and contract `enemy_attack` aborts all treat them like beasts. With Challenges set to Off, there are no raids or demands.
 - **Envoys and parley.** Send someone as envoy (person sheet → *Send as envoy…*, or *Envoy to …* in the clans panel). They walk to the clan's village, and when they arrive a parley opens with the rival chieftain's own LLM node.
   - You offer a treaty (exchange of goods only, a peace pact, or hunting rights on their land), how many days it lasts, a daily food tribute, and what each side hands over. You can also say something in the envoy's voice.
   - The chieftain accepts, refuses or counters, in character, for up to 5 rounds, and remembers grudges and treaties.
@@ -212,8 +214,10 @@ English and Simplified Chinese (简体中文). Switch with the **中文 / Englis
 
 ## Map & exploration
 
-- **New Game screen.** Choose the hand-made *Classic* map or a *random* map: Small (4400×3000, up to 3 clans), Standard (6400×4400, up to 6), Large (8000×5400, up to 8) or Huge (9600×6400, up to 10), how many neighbouring clans, and a seed (the same size, clan count and seed make the same world). Random maps lay a new river course with one ford, put the village on its west bank, draw the clans from a pool of ten (adding the Bear, Otter, Raven and Lynx clans) and scatter them and the landmarks far apart; forests, herds, stone and finds scale with the map's area.
-- The classic map is 6400×4400 world units. The home village, ford and the first two clans sit in the middle; the far reaches hold four more clans and more landmarks (Cave of Hands, Wind Peak, Bison Bone Pit, Mist Spring, Ring of the Ancients, a third Saber-tooth Den). Forests, berry patches, stone, deer and natural finds are scaled up to match.
+- **Two game modes** (chosen on the New Game screen; it appears again after Restart):
+  - **Random map**, with nothing set in advance. Pick Small (4400×3000, up to 3 clans), Standard (6400×4400, up to 6), Large (8000×5400, up to 8) or Huge (9600×6400, up to 10), how many neighbouring clans, and a seed (the same size, clan count and seed make the same world). One to three meandering rivers (tributaries join the main one) split the land into regions; fords are added until every region can be reached. The village sits near water, the clans come from the pool of ten, landmarks are made from templates (as many as the land has room for: groves, flint, caves, standing stones, bone pits, peaks, springs, dens, perhaps a Fire Mountain), frontier settlement sites are picked near water, and the starting tribe gets random names, temperaments, skills and memories. There are no scripted events.
+  - **Scenario**: a hand-made map with its own tribe, clans, landmarks, labels and scripted events. *The River Ford* (6400×4400) is the original map: one river and its ford, Panshi, Alie, Linghe and the rest, the Red Ochre and Heron clans close by and four more in the far reaches, the Great Flood foretold for Day 4 and an ambush on the first frontier camp. A scenario is a script in `scenarios/` (see `the_ford.gd`) listed in `scripts/scenarios.gd`; its triggers (`story.gd`) can test time, day, population, a contract's progress, a landmark found or a clan met, and can fire a dilemma, write to the chronicle, raise an alert, spawn beasts, give stock or reveal land.
+- **Rivers and fords are general.** People and beasts route over whichever fords connect the regions between them (`D.route`); beasts keep to their own side; scouts weigh the detour. A Task Contract's settlement goes to the map's next free frontier site, wherever it is (across a river or far along the same bank), and the leader hears it described with only what the tribe has seen: "unexplored land to the east, beyond what our scouts have seen" until scouts find the river, then "untamed land across the river to the north-east, reached by a ford" once a ford is found. Timber, food, beasts and fishing are reported only for explored land, and no fishing dock is planned on water no one has seen. Floods, docks, reeds and riverbank finds follow every river.
 - Fog of war works like AoE2:
   - **Black:** never seen.
   - **Dimmed:** explored. Terrain, trees and buildings are remembered, but animals and beasts are hidden.
@@ -262,7 +266,7 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 ## POC simplifications
 - Overpopulation fires at 12 people instead of PRD's 20, and the flood comes on Day 4, so both show up in a short session.
 - The mid-contract ambush is scripted at ~45% progress (toggle it in LLM Settings).
-- Pathfinding is waypoint-based (it routes through the ford) rather than a navmesh.
+- Pathfinding is waypoint-based (it routes over the fords between land regions) rather than a navmesh.
 
 ## Layout
 ```

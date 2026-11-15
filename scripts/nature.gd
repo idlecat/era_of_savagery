@@ -84,7 +84,7 @@ func grow_mult() -> float: return 1.0 - 0.5 * ash
 func food_mult(s: E.Structure) -> float:
 	var m := grow_mult()
 	if s.type == "farm_plot":
-		if sim.time < silt_until and absf(s.pos.x - D.river_x(s.pos.y)) < 500: m *= 1.4
+		if sim.time < silt_until and D.river_dist(s.pos) < 500: m *= 1.4
 		if sim.time < fertile_until and ash < 0.2: m *= 1.3
 	return m
 
@@ -276,12 +276,11 @@ func _flood_tick(dt: float) -> void:
 			flood_warned = false
 	if flood_at > 0 and not flood_warned and sim.time >= flood_at - 15.0:
 		flood_warned = true
-		sim.alert(tr("The river is rising! Get away from the banks."), Vector2(D.river_x(D.VILLAGE.y), D.VILLAGE.y), "danger")
+		sim.alert(tr("The river is rising! Get away from the banks."), river_near_home(), "danger")
 		for u in sim.living():
-			if absf(u.pos.x - D.river_x(u.pos.y)) < 240 and u.job.get("type", "") != "attack":
-				var side := signf(u.pos.x - D.river_x(u.pos.y))
-				if side == 0: side = -1.0
-				sim.set_job(u, {"type": "move", "to": Vector2(D.river_x(u.pos.y) + side * 380.0, u.pos.y), "flee": true})
+			var info := D.river_info(u.pos)
+			if info["d"] < 240 and u.job.get("type", "") != "attack":
+				sim.set_job(u, {"type": "move", "to": info["c"] + info["n"] * 380.0, "flee": true})
 	if flood_at > 0 and sim.time >= flood_at:
 		flood_at = -1.0
 		_flood_strike()
@@ -299,27 +298,32 @@ func _flood_strike() -> void:
 	flood_left = 45.0
 	sim.flood_fx = maxf(sim.flood_fx, 0.5)
 	sim.flags["flood_active"] = sim.time
-	_disaster("flood", Vector2(D.river_x(D.VILLAGE.y), D.VILLAGE.y), -1.0)
+	_disaster("flood", river_near_home(), -1.0)
 	var hurt := 0
 	for u in sim.living():
-		if absf(u.pos.x - D.river_x(u.pos.y)) < 130:
+		if D.river_dist(u.pos) < 130:
 			_hurt(u, u.max_hp * 0.2, tr("swept away by the river"))
 			hurt += 1
 	var damaged: Array = []
 	for s in sim.structures:
-		if sim.ours(s) and s.built and s.type != "palisade" and absf(s.pos.x - D.river_x(s.pos.y)) < 170:
+		if sim.ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < 170:
 			s.built = false
 			s.progress = s.work * 0.5
 			damaged.append(tr(D.STRUCTURES[s.type]["name"]))
 	for n in sim.nodes:
-		if n.kind in ["bush", "willow", "yarrow", "tubers", "grain"] and absf(n.pos.x - D.river_x(n.pos.y)) < 160: n.amount = 0.0
+		if n.kind in ["bush", "willow", "yarrow", "tubers", "grain"] and D.river_dist(n.pos) < 160: n.amount = 0.0
 	var what := (tr(" Damaged: %s.") % ", ".join(damaged)) if not damaged.is_empty() else ""
 	var caught := (tr(" %d caught by the water.") % hurt) if hurt > 0 else ""
-	sim.alert(tr("The river floods its banks!%s%s") % [caught, what], Vector2(D.river_x(D.VILLAGE.y), D.VILLAGE.y), "danger")
+	sim.alert(tr("The river floods its banks!%s%s") % [caught, what], river_near_home(), "danger")
 	for u in sim.living(): sim.remember(u, tr("saw the river flood in the spring of Year %d") % sim.hz.year(), 3)
+
+## The stretch of river nearest the village (where flood alerts point).
+func river_near_home() -> Vector2:
+	return D.nearest_river_point(D.VILLAGE) if not D.RIVERS.is_empty() else D.VILLAGE
 
 # ------------------------------------------------------------ Fire Mountain
 func _volcano_tick(dt: float) -> void:
+	if not D.has_volcano(): return
 	if erupt_left > 0:
 		erupt_left -= dt
 		shake = maxf(shake, 0.6)
@@ -333,6 +337,7 @@ func _volcano_tick(dt: float) -> void:
 		erupt()
 
 func erupt() -> void:
+	if not D.has_volcano(): return
 	erupt_left = 25.0
 	shake = 4.0
 	ash_until = sim.time + D.DAY_LEN * 0.8
@@ -353,7 +358,7 @@ func erupt() -> void:
 		var p: Vector2 = D.VOLCANO + Vector2.from_angle(randf_range(1.6, 3.4)) * randf_range(220, 380)
 		p = Vector2(clampf(p.x, 40, D.W - 40), clampf(p.y, 40, D.H - 40))
 		var o = sim._node("obsidian", "stone", p, D.FINDS["obsidian"]["amount"])
-		o.bank = D.bank_of(p)
+		o.bank = D.region_at(p)
 	for u in sim.living(): sim.remember(u, tr("saw the Fire Mountain erupt on Day %d") % sim.day(), 5)
 
 func _ash_tick(dt: float) -> void:
@@ -426,8 +431,9 @@ func quake() -> void:
 		for u in sim.living():
 			if u.pos.distance_to(s.pos) < 40: _hurt(u, u.max_hp * 0.2, tr("crushed when the earth shook"))
 	# a rockslide bares new stone
-	var c := Vector2(randf_range(200, D.RIVER_BASE_X - 300), randf_range(200, D.H - 200))
-	if c.distance_to(D.VILLAGE) > 400:
+	var c := D.VILLAGE + Vector2.from_angle(randf() * TAU) * randf_range(400, 1600)
+	c = Vector2(clampf(c.x, 200, D.W - 200), clampf(c.y, 200, D.H - 200))
+	if c.distance_to(D.VILLAGE) > 400 and D.home_side(c) and D.river_dist(c) > 120:
 		for k in 3: sim._node("boulder", "stone", c + Vector2(randf_range(-40, 40), randf_range(-30, 30)), 40)
 	_disaster("earthquake", D.VILLAGE, -1.0)
 	var what := (tr(" Fallen: %s.") % ", ".join(fallen)) if not fallen.is_empty() else ""
