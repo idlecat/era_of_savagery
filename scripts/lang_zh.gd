@@ -1648,4 +1648,9 @@ const STRINGS := {
 	"Clay Lamp": "陶灯",
 	"Light for night-long tales: the tribe gathers a little more lore.": "照亮通宵讲述的故事：部落获得更多学识。",
 	"Needs Primitive Pottery, and long nights of tales.": "需要原始制陶，以及许多讲故事的长夜。",
+	"★ Vice-Chieftain   ⚑ on a Task Contract   ◎ scouting · hover a row for details": "★ 副酋长   ⚑ 执行任务契约   ◎ 侦察中 · 悬停查看详情",
+	"★ Vice-Chieftain: %s": "★ 副酋长：%s",
+	"⚑ On the Task Contract '%s'": "⚑ 正在执行任务契约「%s」",
+	"⚑ On a Task Contract": "⚑ 正在执行任务契约",
+	"◎ Scouting the unknown": "◎ 正在探索未知",
 }

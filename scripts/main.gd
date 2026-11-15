@@ -213,6 +213,9 @@ func _debug_shot(args: Dictionary) -> void:
 			world.focus_on(V + Vector2(float(args.get("fx", "0")), float(args.get("fy", "30"))))
 			if args.has("tech"): hud._open_tech()
 			if args.has("ability"):
+				sim.appoint(sim.unit_by_name("Panshi"), "steward") # (shows the marks)
+				sim.assign_explore(sim.unit_by_name("Yan"))
+				world.select_only(null)
 				hud.roster_mode = "ability"
 				hud.sort_key = args["ability"]
 				hud._refresh_left()

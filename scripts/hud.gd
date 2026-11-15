@@ -601,7 +601,7 @@ func _build_ability_table() -> void:
 	var cols: Array = [["name", "Name", "Sort by name"]] + SORT_COLS
 	for col in cols:
 		var arrow := (" ▼" if sort_desc else " ▲") if col[0] == sort_key else ""
-		var hb := _button(col[1] + arrow, func():
+		var hb := _button(tr(col[1]) + arrow, func():
 			if sort_key == col[0]: sort_desc = not sort_desc
 			else:
 				sort_key = col[0]
@@ -627,10 +627,7 @@ func _build_ability_table() -> void:
 		row.offset_left = 8
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(row)
-		var icon := ""
-		if u.role == "contract": icon = "⚑ "
-		elif u.job.get("type", "") == "explore": icon = "◎ "
-		var nm := _label(icon + tr(u.name) + (" ★" if tr(u.title) != "" else ""), 15, Color("#fff4d6"))
+		var nm := _label(_marks(u) + tr(u.name), 15, Color("#fff4d6"))
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.clip_text = true
 		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -646,12 +643,32 @@ func _build_ability_table() -> void:
 			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(l)
+	roster_box.add_child(_label(tr("★ Vice-Chieftain   ⚑ on a Task Contract   ◎ scouting · hover a row for details"), 12, COL_DIM))
+
+## Status marks shown before a name in the ability table: ★ Vice-Chieftain, ⚑ on a Task
+## Contract, ◎ scouting.
+func _marks(u) -> String:
+	var s := ""
+	if tr(u.title) != "": s += "★"
+	if u.role == "contract": s += "⚑"
+	elif u.job.get("type", "") == "explore": s += "◎"
+	return s + " " if s != "" else ""
+
+## What the marks mean for this person, for the row's tooltip.
+func _marks_tip(u) -> String:
+	var lines: Array = []
+	if tr(u.title) != "": lines.append(tr("★ Vice-Chieftain: %s") % tr(u.title))
+	if u.role == "contract":
+		var c = sim.contracts.by_id(u.contract_id)
+		lines.append(tr("⚑ On the Task Contract '%s'") % c.plan["plan_id"] if c else tr("⚑ On a Task Contract"))
+	elif u.job.get("type", "") == "explore": lines.append(tr("◎ Scouting the unknown"))
+	return "\n" + "\n".join(lines) if not lines.is_empty() else ""
 
 func _roster_signature() -> String:
 	if roster_mode == "ability": # rebuild when the order or any shown value changes
 		var parts2: Array = [sort_key, str(sort_desc)]
 		for u in _sorted_living():
-			parts2.append(tr("%d:%d%d%d%d:%s%s") % [u.id, u.lv("forage"), u.lv("craft"), u.lv("combat"), u.lv("lore"), u.role, u.job.get("type", "") == "explore"])
+			parts2.append("%d:%d%d%d%d%d:%s:%s%s" % [u.id, u.lv("forage"), u.lv("craft"), u.lv("combat"), u.lv("lore"), u.lv("trade"), u.title, u.role, u.job.get("type", "") == "explore"])
 		return ",".join(parts2)
 	var parts: Array = []
 	for u in sim.living():
@@ -679,7 +696,7 @@ func _refresh_left_content() -> void:
 			for id in roster_buttons:
 				var au = sim.unit_by_id(id)
 				roster_buttons[id].modulate = COL_ACCENT if au.id in world.selected else Color.WHITE
-				roster_buttons[id].tooltip_text = tr("%s · %s\nHP %d/%d · ATK %.1f · DEF %.1f\nNow: %s") % [tr(au.name), tr(D.TRAITS[au.traits[0]]["name"]), au.hp, au.max_hp, sim.unit_atk(au), sim.unit_def(au), I.act(au.act)]
+				roster_buttons[id].tooltip_text = tr("%s · %s\nHP %d/%d · ATK %.1f · DEF %.1f\nNow: %s") % [tr(au.name), tr(D.TRAITS[au.traits[0]]["name"]), au.hp, au.max_hp, sim.unit_atk(au), sim.unit_def(au), I.act(au.act)] + _marks_tip(au)
 			return
 		for g in _roster_groups():
 			if roster_headers.has(g["key"]): roster_headers[g["key"]].text = _group_title(g["key"], g["units"])
