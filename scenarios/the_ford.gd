@@ -117,7 +117,7 @@ const TRIBE := [
 	 "memory": [{"day": -300, "text": "dreamed of a white heron circling the eastern bank for three nights", "impact": 7},
 				{"day": -90, "text": "calmed a fever spirit that had seized two children", "impact": 6}]},
 	{"name": "Tuo", "epithet": "Berry Keeper", "traits": ["gluttonous"], "color": Color("#9bbf5a"),
-	 "hp": 52, "atk": 4, "def": 3, "spd": 0.9, "skills": {"forage": 3, "craft": 1, "combat": 1, "lore": 0},
+	 "hp": 52, "atk": 4, "def": 3, "spd": 0.9, "skills": {"forage": 3, "craft": 1, "combat": 1, "lore": 0, "trade": 2},
 	 "memory": [{"day": -150, "text": "found the great berry thicket that fed the tribe through the lean moon", "impact": 7}]},
 	{"name": "Mo'er", "epithet": "Dozer by the Fire", "traits": ["lazy"], "color": Color("#b7a58f"),
 	 "hp": 46, "atk": 4, "def": 2, "spd": 0.9, "skills": {"forage": 1, "craft": 2, "combat": 1, "lore": 1},
