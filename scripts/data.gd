@@ -34,10 +34,10 @@ const SIGHT_BONFIRE := 300.0
 const RIVALS := [
 	{"id": "ochre", "name": "Red Ochre Clan", "chief": "Gor", "epithet": "the Scarred", "culture": "martial",
 		"color": Color("#c8452e"), "pos": Vector2(3180, 1300), "base": -25.0, "start": -20.0, "pop": 11, "era": 2,
-		"strength": 1.2, "hunter_name": "Red Ochre hunter", "warrior_name": "Red Ochre warrior", "desc": "Hunters who paint themselves in red earth. They prize strength and take what they need."},
+		"strength": 1.2, "hunter_name": "Red Ochre hunter", "warrior_name": "Red Ochre warrior", "trader_name": "Red Ochre trader", "sells": "stone", "wants": "food", "knows": ["fire", "tools", "hide", "domestication"], "desc": "Hunters who paint themselves in red earth. They prize strength and take what they need."},
 	{"id": "heron", "name": "Heron Clan", "chief": "Ama", "epithet": "Who Listens to Water", "culture": "spiritual",
 		"color": Color("#3e8fc0"), "pos": Vector2(360, 2180), "base": 10.0, "start": 5.0, "pop": 9, "era": 1,
-		"strength": 0.85, "hunter_name": "Heron hunter", "warrior_name": "Heron warrior", "desc": "River folk led by a seer. Slow to anger, but they never forget a wrong."},
+		"strength": 0.85, "hunter_name": "Heron hunter", "warrior_name": "Heron warrior", "trader_name": "Heron trader", "sells": "food", "wants": "wood", "knows": ["fire", "pottery", "totems"], "desc": "River folk led by a seer. Slow to anger, but they never forget a wrong."},
 ]
 const RIVAL_TERRITORY := 520.0 # gathering or building this close to a clan's village angers them
 

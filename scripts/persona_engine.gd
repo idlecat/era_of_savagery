@@ -32,6 +32,7 @@ const NUM := ["no one", "one", "two", "three", "four", "five"]
 ##       player_message:String, previous:Dictionary, has_farming:bool, max_crew:int}
 static func propose(ctx: Dictionary) -> Dictionary:
 	if ctx.get("kind", "settle") == "research": return propose_research(ctx)
+	if ctx.get("kind", "settle") == "war": return propose_war(ctx)
 	var arch: String = ctx["arch"]
 	var df: Dictionary = DEFAULTS.get(arch, DEFAULTS["cautious"])
 	var prev: Dictionary = ctx.get("previous", {})
@@ -300,6 +301,50 @@ static func propose_research(ctx: Dictionary) -> Dictionary:
 		((I.t("%s helper") if crew == 2 else I.t("%s helpers")) % _num(crew - 1)) if crew > 1 else I.t("the quiet of the workshop"), exp_len]
 	return {"speech": speech, "blueprint": bp}
 
+## A war party: each personality picks its own objective and way of fighting.
+static func propose_war(ctx: Dictionary) -> Dictionary:
+	var arch: String = ctx["arch"]
+	var env: Dictionary = ctx.get("env", {})
+	var enemies: Array = env.get("enemies_known", [])
+	if enemies.is_empty():
+		return {"speech": I.t("Chieftain, we know of no clan to fight. Let the scouts find our neighbours first."), "blueprint": {}}
+	var prev: Dictionary = ctx.get("previous", {})
+	var t: Dictionary = ctx.get("terms", {}) if ctx.get("terms_set", false) else {}
+	var target: String = t.get("target", prev.get("target", env.get("chieftain_suggests", "")))
+	var foe: Dictionary = enemies[0]
+	for e in enemies:
+		if e["id"] == target: foe = e
+	var obj: String = {"warrior": "burn", "cautious": "loot", "mystic": "break", "agrarian": "loot", "lazy": "loot"}[arch]
+	obj = t.get("objective", prev.get("objective", obj))
+	var msg: String = str(ctx.get("player_message", "")).to_lower()
+	var reply := ""
+	if _any(msg, ["burn", "fire", "torch", "烧", "火"]): obj = "burn"
+	elif _any(msg, ["food", "loot", "plunder", "steal", "抢", "粮", "食物"]): obj = "loot"
+	elif _any(msg, ["warrior", "break", "kill", "crush", "战士", "击溃", "杀"]): obj = "break"
+	var crew: int = clampi(t.get("crew_size", prev.get("crew_size", {"warrior": 6, "cautious": 5, "mystic": 4, "agrarian": 4, "lazy": 3}[arch])), 2, ctx.get("max_crew", 6))
+	var scout: bool = arch in ["cautious", "mystic"] or _any(msg, ["scout", "watch", "careful", "侦察", "小心"])
+	if _any(msg, ["no scout", "fast", "quick", "now", "快", "立刻"]): scout = false
+	var steps: Array = []
+	if arch in ["warrior", "mystic"]: steps.append({"action": "war_dance", "duration_sec": 6 if arch == "warrior" else 12})
+	if scout: steps.append({"action": "scout", "duration_sec": 15 if arch == "cautious" else 8})
+	steps += [{"action": "assault"}, {"action": obj, "duration_sec": 10}, {"action": "return"}]
+	var aborts: Array = ["heavy_losses"]
+	if arch == "cautious": aborts.append("hp_below_50%")
+	elif arch != "warrior": aborts.append("hp_below_30%")
+	var bp := {"kind": "war", "plan_id": "%s_raid_%s" % [obj, foe["id"]], "target": foe["id"], "objective": obj, "crew_size": crew, "steps": steps, "abort_conditions": aborts}
+	if msg != "": reply = I.t("So be it. ")
+	var goal: String = {"loot": I.t("we take their food and timber"), "burn": I.t("we burn their huts"), "break": I.t("we break their warriors")}[obj]
+	var speech: String = {
+		"warrior": I.t("%sAt last! The %s have grown fat and proud. Give me %d spears, we dance, we strike, and %s!") % [reply, foe["name"], crew, goal],
+		"cautious": I.t("%sIf it must be the %s, we do it carefully: we watch their village first, strike with %d of us, %s, and come home before they gather. We stop if blood runs too freely.") % [reply, foe["name"], crew, goal],
+		"mystic": I.t("%sThe spirits demand it. We dance for the ancestors, then %d of us fall upon the %s and %s.") % [reply, crew, foe["name"], goal],
+		"agrarian": I.t("%sThe %s's stores would fill our bellies through winter. %d of us, quick and quiet - %s.") % [reply, foe["name"], crew, goal],
+		"lazy": I.t("%sA long walk to the %s... fine. %d of us, %s, and home again.") % [reply, foe["name"], crew, goal],
+	}[arch]
+	var mem: Array = ctx["leader"].get("memory_stream", [])
+	if not mem.is_empty(): speech += I.t(" I have not forgotten the day I %s.") % _best_memory(ctx)
+	return {"speech": speech, "blueprint": bp}
+
 ## ctx: {arch, name, summary:{...}, allowed:Array}
 static func emergency(ctx: Dictionary) -> Dictionary:
 	var arch: String = ctx["arch"]
@@ -333,6 +378,13 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 			}.get(arch, I.t("Chieftain, I am wounded (%s HP) and the work is only %d%% done.") % [sm["leader_hp"], pct])
 			opts = [["rest", I.t("Let me return to the bonfire; the crew carries on")], ["press_on", I.t("I'll bind the wound and keep working")], ["retreat", I.t("Abandon the contract")]]
 			if arch == "warrior": opts = [opts[1], opts[0], opts[2]]
+		"heavy_losses":
+			speech = {
+				"warrior": I.t("They fight like cornered bears, Chieftain! Half our spears are down - but %s still stand. One more push!") % sm["threat"],
+				"cautious": I.t("Chieftain, half our war party is down. %s still hold the village. We should not throw away the rest.") % sm["threat"],
+			}.get(arch, I.t("Chieftain, we have lost half our war party! %s still stand against us.") % sm["threat"])
+			opts = [["retreat", I.t("Fall back and bring the living home")], ["reinforce", I.t("Send fresh fighters from the village")], ["press_on", I.t("Fight on to the end")]]
+			if arch == "warrior": opts = [opts[2], opts[1], opts[0]]
 		"natural_disaster":
 			speech = I.t("Chieftain, the waters rise over the east bank! We are %d%% done - %s may be lost.") % [pct, half]
 			if sm.get("disaster", "") == "blizzard":

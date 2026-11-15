@@ -40,6 +40,9 @@ func setup() -> void:
 		c["last_demand"] = -999.0
 		c["demand"] = 0
 		c["envoy"] = -1 # unit id of our envoy on the way / in parley
+		c["war_t"] = -9999.0 # when we last attacked their village
+		c["trade_t"] = D.DAY_LEN * 1.5
+		c["trade_offers"] = []
 		clans[c["id"]] = c
 		_build_village(c)
 		for i in 2: _spawn(c, "hunter")
@@ -100,7 +103,7 @@ func treaty_text(id: String) -> String:
 	return ", ".join(parts)
 
 func owns_event(ev: String) -> bool:
-	return ev.begins_with("contact_") or ev.begins_with("demand_")
+	return ev.begins_with("contact_") or ev.begins_with("demand_") or ev.begins_with("trade_")
 
 func owner_clan(owner: String) -> String:
 	return owner.trim_prefix("rival:") if owner.begins_with("rival:") else ""
@@ -130,9 +133,9 @@ func on_rival_killed(p: E.Predator, by) -> void:
 	var c: Dictionary = clans[p.clan]
 	c["pop"] = maxi(2, c["pop"] - 1)
 	if p.kind == "warrior": c["warriors"] = maxi(0, c["warriors"] - 1)
-	var raiding: bool = p.kind == "warrior" and p.raid
+	var raiding: bool = p.kind == "warrior" and (p.raid or p.guard) # killed in a fight they chose / in our attack
 	if not raiding: _break_peace(p.clan)
-	change(p.clan, -6.0 if raiding else -30.0, tr("our %s was slain by your people") % tr("hunter" if p.kind == "hunter" else "warrior"))
+	change(p.clan, -6.0 if raiding else -30.0, tr("our %s was slain by your people") % tr({"hunter": "hunter", "trader": "trader"}.get(p.kind, "warrior")))
 	if not raiding:
 		sim.alert(tr("We killed one of the %s's people. They will not forget it.") % tr(c["name"]), p.pos, "danger")
 
@@ -140,6 +143,10 @@ func on_rival_killed(p: E.Predator, by) -> void:
 func on_hunter_attacked(p: E.Predator) -> void:
 	var c: Dictionary = clans[p.clan]
 	_break_peace(p.clan)
+	if p.kind == "trader":
+		change(p.clan, -20.0, tr("you attacked our trader"))
+		sim.alert(tr("We attacked a trader of the %s. He flees home with his goods.") % tr(c["name"]), p.pos, "warn")
+		return
 	change(p.clan, -12.0, tr("you attacked our hunter"))
 	sim.alert(tr("We attacked a hunter of the %s. He runs home to tell his clan.") % tr(c["name"]), p.pos, "warn")
 
@@ -185,6 +192,8 @@ func update(dt: float) -> void:
 		_trespass(c, dt)
 		_raids(c, dt)
 		_hunters(c, dt)
+		_traders(c, dt)
+		_guards_home(c)
 		# people and warriors regrow
 		if randf() < dt / (D.DAY_LEN * 2.0): c["pop"] = mini(14, c["pop"] + 1)
 		c["warriors"] = clampi(c["warriors"], 0, int(c["pop"] / 2))
@@ -288,6 +297,7 @@ func _hunters(c: Dictionary, dt: float) -> void:
 # ------------------------------------------------------------ first-contact choice
 func event_def(ev: String) -> Dictionary:
 	if ev.begins_with("demand_"): return _demand_def(ev.trim_prefix("demand_"))
+	if ev.begins_with("trade_"): return _trade_def(ev.trim_prefix("trade_"))
 	var id := ev.trim_prefix("contact_")
 	var c: Dictionary = clans[id]
 	return {"title": tr("First Contact: the %s") % tr(c["name"]),
@@ -300,6 +310,7 @@ func event_def(ev: String) -> Dictionary:
 
 func resolve(ev: String, idx: int) -> String:
 	if ev.begins_with("demand_"): return _demand_resolve(ev.trim_prefix("demand_"), idx)
+	if ev.begins_with("trade_"): return _trade_resolve(ev.trim_prefix("trade_"), idx)
 	var id := ev.trim_prefix("contact_")
 	var c: Dictionary = clans[id]
 	match idx:
@@ -378,11 +389,11 @@ func end_parley(u: E.Unit, id: String) -> void:
 	if not u.dead: sim.set_job(u, {"type": "move", "to": u.home + Vector2(randf_range(-20, 20), randf_range(10, 30))})
 
 func empty_terms() -> Dictionary:
-	return {"treaty": "none", "days": 15, "tribute": 0, "tribe_gives": {"food": 0, "wood": 0, "stone": 0}, "clan_gives": {"food": 0, "wood": 0, "stone": 0}}
+	return {"treaty": "none", "days": 15, "tribute": 0, "teach": "", "tribe_gives": {"food": 0, "wood": 0, "stone": 0}, "clan_gives": {"food": 0, "wood": 0, "stone": 0}}
 
 ## LLM output is untrusted: whitelist the treaty, clamp every number, and never let
 ## the tribe promise more than it has.
-func sanitize_terms(raw: Variant, fallback: Dictionary) -> Dictionary:
+func sanitize_terms(raw: Variant, fallback: Dictionary, id := "") -> Dictionary:
 	if not (raw is Dictionary): return fallback.duplicate(true)
 	var t := empty_terms()
 	var tr_id := str(raw.get("treaty", "none")).to_lower().replace(" ", "_")
@@ -390,6 +401,10 @@ func sanitize_terms(raw: Variant, fallback: Dictionary) -> Dictionary:
 	t["treaty"] = tr_id if tr_id in TREATIES else "none"
 	t["days"] = clampi(_int(raw.get("days", 15)), 5, 40)
 	t["tribute"] = clampi(_int(raw.get("tribute", raw.get("tribute_per_day", 0))), 0, 10) if t["treaty"] == "peace" else 0
+	var teach := str(raw.get("teach", raw.get("clan_teaches", ""))).to_lower()
+	for td in D.TECHS: # names as well as ids
+		if teach == td["name"].to_lower() or teach == tr(td["name"]).to_lower(): teach = td["id"]
+	t["teach"] = teach if teach in teachable(id) else ""
 	for side in ["tribe_gives", "clan_gives"]:
 		var g: Variant = raw.get(side, {})
 		if not (g is Dictionary): g = {}
@@ -425,6 +440,7 @@ func deal_value(id: String, t: Dictionary, envoy: E.Unit, round_i := 0) -> float
 		v -= t["clan_gives"][r] * w[r]
 	v += given
 	if given > 0 and not martial: v += 5.0 # the Heron honour any gift
+	if t.get("teach", "") != "": v -= 28.0 if martial else 16.0 # secrets are not given lightly
 	match t["treaty"]:
 		"peace":
 			v -= (30.0 if martial else 12.0) + t["days"] * 0.6
@@ -470,6 +486,7 @@ func terms_text(t: Dictionary) -> String:
 	for r in RES:
 		if t["tribe_gives"][r] > 0: give.append("%d %s" % [t["tribe_gives"][r], tr(r)])
 		if t["clan_gives"][r] > 0: take.append("%d %s" % [t["clan_gives"][r], tr(r)])
+	if t.get("teach", "") != "": parts.append(tr("they teach us %s") % tr(sim.evo.tech_def(t["teach"])["name"]))
 	if not give.is_empty(): parts.append(tr("we give %s") % ", ".join(give))
 	if not take.is_empty(): parts.append(tr("they give %s") % ", ".join(take))
 	return " · ".join(parts) if not parts.is_empty() else tr("nothing at all")
@@ -489,6 +506,7 @@ func parley_ctx(envoy: E.Unit, id: String, offer: Dictionary, message: String, h
 		"envoy": {"name": tr(envoy.name), "epithet": tr(envoy.epithet), "traits": trs, "lore": envoy.lv("lore"), "combat": envoy.lv("combat")},
 		"their_tribe": {"people": sim.living().size(), "food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"])},
 		"offer": offer, "offer_text": terms_text(offer), "envoy_says": message, "history": history,
+		"you_could_teach": teachable(id).map(func(tid): return {"id": tid, "name": tr(sim.evo.tech_def(tid)["name"])}),
 		"inclination": inclination(v),
 	}
 
@@ -512,7 +530,7 @@ func chief_reply(ctx: Dictionary, envoy: E.Unit) -> Dictionary:
 func check_reply(id: String, raw: Dictionary, offer: Dictionary, envoy: E.Unit, round_i: int, fallback: Dictionary) -> Dictionary:
 	var verdict := str(raw.get("verdict", "")).to_lower()
 	if not verdict in ["accept", "counter", "refuse"]: return fallback
-	var terms := sanitize_terms(raw.get("terms", offer), offer)
+	var terms := sanitize_terms(raw.get("terms", offer), offer, id)
 	if verdict == "accept": terms = offer.duplicate(true)
 	var v := deal_value(id, terms, envoy, round_i)
 	if verdict in ["accept", "counter"] and v < -25.0: # too generous for the clan: hold to the engine's terms
@@ -528,6 +546,9 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 		var g: int = mini(t["tribe_gives"][r], int(sim.stock[r]))
 		sim.stock[r] -= g
 		sim.stock[r] += t["clan_gives"][r]
+	if t.get("teach", "") != "" and not sim.has_tech(t["teach"]):
+		sim.evo.seed(t["teach"], 0.6, envoy)
+		sim.remember(envoy, tr("was taught the secret of %s by the %s on Day %d") % [tr(sim.evo.tech_def(t["teach"])["name"]), tr(c["name"]), sim.day()], 7)
 	if t["treaty"] != "none":
 		c["treaties"][t["treaty"]] = {"until": sim.time + t["days"] * D.DAY_LEN, "tribute": t["tribute"]}
 		if t["treaty"] == "peace": c["tribute_day"] = sim.day()
@@ -537,3 +558,133 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 	sim.gain_xp(envoy, "lore", 12)
 	sim.alert(tr("Agreement with the %s: %s.") % [tr(c["name"]), what], c["pos"], "info")
 	return what
+
+# ------------------------------------------------------------ knowledge
+## Wisdom this clan has that we lack and could learn now.
+func teachable(id: String) -> Array:
+	if not clans.has(id): return []
+	return clans[id]["knows"].filter(func(tid): return not sim.has_tech(tid) and sim.evo.prereqs_met(tid))
+
+# ------------------------------------------------------------ war: our attack on their village
+## Our war party is at the gates: the clan's warriors (and a few more) turn out to defend.
+func defend(id: String, contract) -> int:
+	var c: Dictionary = clans[id]
+	c["met"] = true
+	c["war_t"] = sim.time
+	if has_treaty(id, "peace"): _break_peace(id)
+	else: change(id, -35.0, tr("you attacked our village"))
+	c["treaties"].erase("hunting_rights")
+	var n: int = clampi(c["warriors"] + 2 + (0 if contract.flags.get("scouted", false) else 1), 2, 8)
+	c["warriors"] = 0
+	for i in n:
+		var g := _spawn(c, "warrior")
+		g.guard = true
+		g.pos = c["pos"] + Vector2.from_angle(i * TAU / n) * 50.0
+	sim.alert(tr("Our war party attacks the village of the %s!") % tr(c["name"]), c["pos"], "danger")
+	return n
+
+## Guards go back to their huts once no war party of ours is in the field.
+func _guards_home(c: Dictionary) -> void:
+	if sim.contracts.list.any(func(k): return k.kind == "war" and k.plan.get("target", "") == c["id"] and sim.contracts.is_running(k)): return
+	for p in sim.predators:
+		if p.clan == c["id"] and p.guard and not p.dead and not p.fleeing:
+			p.fleeing = true
+
+## What victory takes from them. Returns a short description for logs and memories.
+func war_spoils(id: String, objective: String, contract) -> String:
+	var c: Dictionary = clans[id]
+	sim.evo.drift("martial", 4.0)
+	match objective:
+		"burn":
+			var huts: Array = sim.structures.filter(func(st): return st.owner == "rival:" + id and st.type in ["hut", "large_hut"])
+			var n := mini(2, huts.size())
+			for i in n: sim.structures.erase(huts[i])
+			c["pop"] = maxi(2, c["pop"] - 3)
+			change(id, -25.0, tr("you burned our homes"))
+			sim.popup(c["pos"] + Vector2(0, -60), tr("%d huts burned!") % n, Color("#ff9b5a"), true)
+			return tr("burned %d of their huts") % n
+		"break":
+			c["warriors"] = 0
+			c["raid_t"] = maxf(c["raid_t"], D.DAY_LEN * 6.0)
+			change(id, -15.0, tr("you hunted down our warriors"))
+			return tr("broke their warriors - no raids from them for many days")
+	var food: int = mini(60, 20 + c["pop"] * 3)
+	var wood := 15
+	sim.stock["food"] += food
+	sim.stock["wood"] += wood
+	change(id, -10.0, tr("you plundered our stores"))
+	sim.popup(c["pos"] + Vector2(0, -60), tr("+%d food, +%d wood") % [food, wood], Color("#ffe08a"), true)
+	return tr("carried off %d food and %d wood") % [food, wood]
+
+# ------------------------------------------------------------ trade caravans
+func _traders(c: Dictionary, dt: float) -> void:
+	if not c["met"] or c["relation"] < 15 or sim.time - c["war_t"] < D.DAY_LEN * 5: return
+	if sim.predators.any(func(p): return p.clan == c["id"] and p.kind == "trader" and not p.dead and not p.fled): return
+	c["trade_t"] -= dt
+	if c["trade_t"] > 0: return
+	c["trade_t"] = D.DAY_LEN * (2.5 if c["relation"] < 50 else 1.6) * randf_range(0.85, 1.15)
+	var tp := _spawn(c, "trader", D.VILLAGE + Vector2(randf_range(60, 120), randf_range(40, 90)))
+	tp.name = c["trader_name"]
+	tp.atk = 1.5
+	sim.add_log(tr("A trader of the %s sets out for our village.") % tr(c["name"]), "info")
+
+func trader_arrived(p: E.Predator) -> void:
+	var c: Dictionary = clans[p.clan]
+	var rate := 1.0 + (0.3 if c["relation"] >= 50 else 0.0)
+	var sells: String = c["sells"]
+	var wants: String = c["wants"]
+	var offers: Array = [
+		{"give": {wants: 15}, "get": {sells: roundi(12 * rate)}},
+		{"give": {wants: 30}, "get": {sells: roundi(26 * rate)}},
+	]
+	var tl := teachable(p.clan)
+	if not tl.is_empty(): offers.append({"give": {wants: 20}, "teach": tl[0]})
+	c["trade_offers"] = offers
+	sim.alert(tr("A trader of the %s has come to our fire.") % tr(c["name"]), p.pos, "info")
+	pending.append("trade_" + p.clan)
+
+func _offer_text(o: Dictionary) -> String:
+	var give: Array = []
+	for r in o["give"]: give.append("%d %s" % [o["give"][r], tr(r)])
+	if o.has("teach"): return tr("%s for a lesson in %s") % [", ".join(give), tr(sim.evo.tech_def(o["teach"])["name"])]
+	var get_: Array = []
+	for r in o["get"]: get_.append("%d %s" % [o["get"][r], tr(r)])
+	return tr("%s for %s") % [", ".join(give), ", ".join(get_)]
+
+func _trade_def(id: String) -> Dictionary:
+	var c: Dictionary = clans[id]
+	var opts: Array = []
+	for o in c["trade_offers"]:
+		var ok := true
+		for r in o["give"]: ok = ok and sim.stock[r] >= o["give"][r]
+		opts.append({"label": tr("Trade"), "desc": _offer_text(o), "enabled": ok})
+	opts.append({"label": tr("Send them home"), "desc": tr("Thank the trader and trade nothing."), "enabled": true})
+	return {"title": tr("A Trader of the %s") % tr(c["name"]),
+		"text": tr("A trader of the %s lays out goods by our fire. They have %s to spare and want %s.") % [tr(c["name"]), tr(c["sells"]), tr(c["wants"])],
+		"options": opts}
+
+func _trade_resolve(id: String, idx: int) -> String:
+	var c: Dictionary = clans[id]
+	for p in sim.predators:
+		if p.clan == id and p.kind == "trader" and p.arrived: p.fleeing = true
+	var offers: Array = c["trade_offers"]
+	c["trade_offers"] = []
+	if idx >= offers.size():
+		return tr("The trader shrugs, packs up and heads home.")
+	var o: Dictionary = offers[idx]
+	for r in o["give"]:
+		if sim.stock[r] < o["give"][r]: return tr("We cannot pay what we promised. The trader leaves.")
+	for r in o["give"]: sim.stock[r] -= o["give"][r]
+	change(id, 3.0)
+	if o.has("teach"):
+		var tid: String = o["teach"]
+		var learner = sim.best_unit("lore", false)
+		sim.evo.seed(tid, 0.35, learner)
+		if learner: sim.remember(learner, tr("learned something of %s from a trader of the %s on Day %d") % [tr(sim.evo.tech_def(tid)["name"]), tr(c["name"]), sim.day()], 6)
+		return tr("The trader shows us how his people work. We understand more of %s.") % tr(sim.evo.tech_def(tid)["name"])
+	for r in o["get"]: sim.stock[r] += o["get"][r]
+	var known := teachable(id)
+	if not known.is_empty() and randf() < 0.3: # watching strangers work teaches a little
+		sim.evo.seed(known[0], 0.1, null)
+		return tr("Goods change hands: %s. Watching the trader work, our people learn a little of %s.") % [_offer_text(o), tr(sim.evo.tech_def(known[0])["name"])]
+	return tr("Goods change hands: %s.") % _offer_text(o)

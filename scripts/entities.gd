@@ -72,6 +72,8 @@ class Predator:
 	var clan: String = "" # rival clan id for warriors and hunters
 	var loot: bool = false # a raider carrying stolen food home
 	var homeward: bool = false # a clan member routing back to its village
+	var guard: bool = false # defending its own village against our war party
+	var arrived: bool = false # a trader who has reached our village
 	var raid: bool = false # a den tiger out hunting in the village
 	var raid_t: float = 0.0
 
@@ -140,4 +142,5 @@ class Contract:
 	var clear_t: float = 0.0
 	var events: Array = []
 	var substate: String = ""
-	var kind: String = "settle" # "settle" (outpost across the river) or "research" (seek new wisdom)
+	var kind: String = "settle" # "settle" (outpost across the river), "research" (seek new wisdom) or "war" (raid a rival clan)
+	var flags: Dictionary = {} # war: blessed, scouted, spoils

@@ -34,6 +34,7 @@ func _initialize() -> void:
 	test_hardships()
 	test_rivals()
 	test_diplomacy()
+	test_war_and_trade()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -540,3 +541,92 @@ func test_diplomacy() -> void:
 	sim.time += D.DAY_LEN * 6
 	R.update(0.05)
 	check(not R.has_treaty("ochre", "hunting_rights"), "treaties expire")
+
+func test_war_and_trade() -> void:
+	print("\n== War contracts, trade caravans, knowledge ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	for id in R.clans: R.clans[id]["met"] = true
+	R.pending.clear()
+	var u = sim.unit_by_name("Alie")
+	var terms := {"kind": "war", "target": "heron", "objective": "loot", "crew_size": 5}
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Raid the Heron Clan", terms, true, "", {}, [], "war")
+	check(ctx["env"]["enemies_known"].size() == 2 and ctx["max_crew"] >= 5, "the war leader knows the enemies and our fighters")
+	var r := Persona.propose(ctx)
+	print("   [Alie] ", r["speech"])
+	var san: Dictionary = sim.contracts.sanitize(r["blueprint"], terms, u)
+	var acts: Array = san["blueprint"]["steps"].map(func(st): return st["action"])
+	check(san["ok"] and san["blueprint"]["target"] == "heron" and san["blueprint"]["objective"] == "loot", "the war plan honours the Chieftain's terms")
+	check(acts.slice(-3) == ["assault", "loot", "return"] and "heavy_losses" in san["blueprint"]["abort_conditions"], "war plans follow the fixed skeleton (%s)" % ", ".join(acts))
+	var junk: Dictionary = sim.contracts.sanitize({"kind": "war", "target": "Atlantis", "objective": "nuke", "crew_size": 99, "steps": [{"action": "build", "structure": "hut"}, {"action": "scout", "duration_sec": 999}]}, {"kind": "war"}, u)
+	check(junk["ok"] and junk["blueprint"]["target"] in R.clans and junk["blueprint"]["objective"] == "loot" and junk["blueprint"]["crew_size"] <= 6 and junk["blueprint"]["steps"][0]["duration_sec"] == 25, "LLM war plans are whitelisted and clamped")
+	# fight it out
+	var c = sim.contracts.create(san["blueprint"], u, "Raid the Heron Clan")
+	check(c.kind == "war" and c.crew_ids.size() == 5, "a war party of %d sets out" % c.crew_ids.size())
+	var food0: float = sim.stock["food"]
+	var rel0: float = R.clans["heron"]["relation"]
+	var t := 0.0
+	var saw_guards := false
+	while sim.contracts.is_running(c) and t < 500.0:
+		sim.tick(0.05)
+		t += 0.05
+		if sim.predators.any(func(p): return p.guard and not p.dead): saw_guards = true
+		if c.status == "interrupted": sim.contracts.resolve(c, "press_on")
+		if sim.paused:
+			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0 if sim.pending_event.begins_with("demand_") else 2)
+			sim.paused = false
+	print("   status %s after %.0fs: %s" % [c.status, t, c.flags.get("spoils", "-")])
+	check(saw_guards, "their warriors turn out to defend the village")
+	check(c.status == "done" and c.flags.get("spoils", "") != "", "the war party wins and comes home")
+	check(sim.stock["food"] > food0 - 20 and R.clans["heron"]["relation"] < rel0 - 30, "loot taken; the Heron now hate us (%d)" % R.clans["heron"]["relation"])
+	check(sim.living().filter(func(o): return o.memory.any(func(m): return "war party" in m["text"])).size() >= 1, "the warriors remember the war")
+	# burning and breaking
+	var huts0: int = sim.structures.filter(func(st): return st.owner == "rival:ochre" and st.type in ["hut", "large_hut"]).size()
+	R.war_spoils("ochre", "burn", c)
+	check(sim.structures.filter(func(st): return st.owner == "rival:ochre" and st.type in ["hut", "large_hut"]).size() == huts0 - 2, "burning destroys their huts")
+	R.war_spoils("ochre", "break", c)
+	check(R.clans["ochre"]["warriors"] == 0 and R.clans["ochre"]["raid_t"] >= D.DAY_LEN * 6, "breaking their warriors stops raids for days")
+	# heavy losses wake the leader
+	var sim2 = _new_sim()
+	for id in sim2.rivals.clans: sim2.rivals.clans[id]["met"] = true
+	var u2 = sim2.unit_by_name("Panshi")
+	var bp2: Dictionary = sim2.contracts.sanitize({"kind": "war", "target": "ochre", "objective": "break", "crew_size": 4}, {"kind": "war"}, u2)["blueprint"]
+	var c2 = sim2.contracts.create(bp2, u2, "war")
+	c2.status = "executing"
+	for id in c2.crew_ids.slice(1, 3): sim2.kill_unit(sim2.unit_by_id(id), null)
+	sim2.contracts.update(0.05)
+	check(c2.status == "interrupted" and c2.abort_reason == "heavy_losses" and "retreat" in sim2.contracts.allowed_effects(c2), "heavy losses wake the war leader's LLM node")
+	var em := Persona.emergency(sim2.contracts.emergency_ctx(c2))
+	check(em["options"].size() >= 2, "the leader offers choices after heavy losses")
+	# trade caravans
+	var sim3 = _new_sim()
+	var heron: Dictionary = sim3.rivals.clans["heron"]
+	heron["met"] = true
+	heron["relation"] = 40.0
+	heron["trade_t"] = 0.0
+	sim3.rivals.update(0.05)
+	var tr_ = sim3.predators.filter(func(p): return p.kind == "trader")
+	check(tr_.size() == 1 and tr_[0].clan == "heron", "a friendly clan sends a trader")
+	check(sim3.active_predators_near(tr_[0].pos, 100).is_empty(), "traders are not threats")
+	tr_[0].pos = tr_[0].goal + Vector2(5, 0)
+	tr_[0].path = []
+	sim3.update_predator(tr_[0], 0.05)
+	check(tr_[0].arrived and "trade_heron" in sim3.rivals.pending, "the trader reaches our fire and offers goods")
+	var d: Dictionary = sim3.event_def("trade_heron")
+	check(d["options"].size() == 4, "two trades, a lesson in their craft, or no deal")
+	var wood0: float = sim3.stock["wood"]
+	var food1: float = sim3.stock["food"]
+	sim3.resolve_event("trade_heron", 0)
+	check(sim3.stock["wood"] == wood0 - 15 and sim3.stock["food"] > food1 and tr_[0].fleeing, "goods change hands and the trader heads home")
+	# knowledge from the parley table
+	sim3.techs["fire"] = true
+	var tl: Array = sim3.rivals.teachable("heron")
+	check("pottery" in tl and not "totems" in tl, "they can teach what we're ready to learn (%s)" % ", ".join(tl))
+	var ins0: float = sim3.evo.insight_frac("pottery")
+	var lesson: Dictionary = sim3.rivals.empty_terms()
+	lesson["teach"] = "pottery"
+	check(sim3.rivals.deal_value("heron", lesson, sim3.unit_by_name("Linghe")) < sim3.rivals.deal_value("heron", sim3.rivals.empty_terms(), sim3.unit_by_name("Linghe")), "secrets cost more at the parley")
+	var bad: Dictionary = sim3.rivals.sanitize_terms({"teach": "bronze"}, sim3.rivals.empty_terms(), "heron")
+	check(bad["teach"] == "", "a clan can't teach what it doesn't know")
+	sim3.rivals.seal(sim3.unit_by_name("Linghe"), "heron", lesson, 0)
+	check(sim3.evo.insight_frac("pottery") > ins0 + 0.5, "being taught a secret brings it within reach (%d%%)" % roundi(sim3.evo.insight_frac("pottery") * 100))

@@ -102,6 +102,22 @@ Allowed steps: {"action": "gather_wood"|"gather_food", "target_amount": <5-60>},
 Pick the idea that fits YOUR personality and memories, unless the Chieftain names one. Describe the idea only in words your tribe could use - you have not discovered it yet.
 Mention at least one memory from your memory_stream naturally. Primal, vivid language; no modern words."""
 
+const WAR_RULES := """The Chieftain asks you to lead a WAR PARTY (a Task Contract) against a neighbouring clan.
+You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
+{"speech": "<2-4 sentences, in character, addressed to the Great Chieftain: how you will fight and why>",
+ "blueprint": {
+   "kind": "war",
+   "plan_id": "<snake_case name>",
+   "target": "<id of ONE clan from enemies_known>",
+   "objective": "loot" | "burn" | "break",
+   "crew_size": <int 2-%d, including yourself>,
+   "steps": [ <ordered: optional {"action": "war_dance", "duration_sec": 4-20}, optional {"action": "scout", "duration_sec": 4-25}, then {"action": "assault"}, {"action": "<objective>"}, {"action": "return"}> ],
+   "abort_conditions": [ "heavy_losses", optional "hp_below_<N>%%" ]
+ }}
+Objectives: loot = carry off their food and wood; burn = burn their huts (they shrink, they hate us); break = hunt down their warriors so they cannot raid for many days.
+Scouting first means fewer defenders surprise us; a war dance strengthens our spears. Your personality MUST shape the plan (cautious: scout, small risks, call off early; belligerent: dance, burn, never stop; devout: dance for the spirits; gluttonous: loot; lazy: quick and small).
+If you think the war is foolish, say so in your speech - but still give a plan. Honour the Chieftain's terms. Mention a memory naturally. Primal, vivid language; no modern words."""
+
 func _structure_costs() -> String:
 	var parts: Array = []
 	for k in D.CONTRACT_STRUCTURES:
@@ -136,6 +152,7 @@ func negotiate(ctx: Dictionary) -> Dictionary:
 	var research: bool = ctx.get("kind", "settle") == "research"
 	var system: String = _persona_header(ctx["leader"], ctx.get("world", {}))
 	if research: system += RESEARCH_RULES % mini(4, ctx.get("max_crew", 4))
+	elif ctx.get("kind", "settle") == "war": system += WAR_RULES % ctx.get("max_crew", 6)
 	else: system += RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
 	var user := {
 		"directive": ctx["directive"],
@@ -207,7 +224,8 @@ Toward the neighbouring tribe whose envoy now stands at your fire you feel: %s (
 Speak to the envoy in character, 1-3 vivid sentences, as a proud chieftain would. Weigh the offer for your clan's interests and honour.
 Your inclination, judged from your clan's needs: %s. You may be moved a little by the envoy's words and manner, but do not give your clan away.
 Treaty ids: "none" (only an exchange of goods), "peace" (no raids between our peoples while it lasts; "tribute" = food the envoy's tribe pays you each day), "hunting_rights" (their people may hunt and gather on your lands without offence). Resources: food, wood, stone.
-Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept" | "counter" | "refuse", "terms": {"treaty": "<id>", "days": <5-40>, "tribute": <0-10>, "tribe_gives": {"food": n, "wood": n, "stone": n}, "clan_gives": {"food": n, "wood": n, "stone": n}}}
+Your clan may also teach them one secret ("teach": a wisdom id from you_could_teach, or ""). Secrets are precious - ask a high price, or refuse.
+Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept" | "counter" | "refuse", "terms": {"treaty": "<id>", "days": <5-40>, "tribute": <0-10>, "teach": "<id or empty>", "tribe_gives": {"food": n, "wood": n, "stone": n}, "clan_gives": {"food": n, "wood": n, "stone": n}}}
 "tribe_gives" is what the envoy's tribe hands over, "clan_gives" what your clan hands over. For "accept", repeat the offer as terms. For "counter", give the terms you WOULD accept. They cannot give more than they have.""" % [
 		ch["name"], ch["epithet"], ch["clan"], ch["ways"], ch["culture"], ch["stance"].to_lower(), ch["relation"],
 		(" You remember these wrongs: " + "; ".join(ch["wrongs_remembered"]) + ".") if not ch["wrongs_remembered"].is_empty() else "",
@@ -219,6 +237,7 @@ Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept
 		"the_envoy": ctx["envoy"], "envoy_says": ctx["envoy_says"] if ctx["envoy_says"] != "" else "(says nothing more)",
 		"offer": ctx["offer"], "offer_in_words": ctx["offer_text"], "their_tribe": ctx["their_tribe"],
 		"your_clan": {"people": ch["people"], "warriors": ch["warriors"], "season": ch["season"]},
+		"you_could_teach": ctx.get("you_could_teach", []),
 		"conversation_so_far": ctx["history"],
 	}
 	var res := await chat_json(system, JSON.stringify(user))

@@ -17,6 +17,12 @@ const EFFECTS := {
 	"press_on": "Ignore the wound and keep working",
 	"shelter": "Take shelter and wait for the danger to pass",
 }
+const WAR_OBJECTIVES := ["loot", "burn", "break"]
+const WAR_OBJECTIVE_TEXT := {
+	"loot": "carry off their stores of food and wood",
+	"burn": "burn their huts so they are fewer and weaker",
+	"break": "break their warriors so they cannot raid for a long time",
+}
 
 var sim
 var list: Array = []
@@ -100,10 +106,10 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 	if not u.memory.is_empty(): top = tr(u.memory[0]["text"]) # memory is kept sorted by impact
 	return {
 		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
-		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE) if kind == "settle" else research_env(),
+		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(D.EAST_SITE) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else research_env()),
 		"directive": directive, "terms": terms, "terms_set": terms_set,
 		"player_message": player_message, "previous": previous, "history": history,
-		"has_farming": sim.has_tech("farming"), "max_crew": mini(5, available_helpers(u.id).size() + 1),
+		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id).size() + 1),
 		"top_memory": top,
 	}
 
@@ -141,7 +147,9 @@ func emergency_ctx(c: E.Contract) -> Dictionary:
 ## {"ok": bool, "blueprint": Dictionary, "notes": Array[String]}.
 func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	var bp0: Dictionary = raw if raw is Dictionary else {}
-	if terms.get("kind", bp0.get("kind", "settle")) == "research": return _sanitize_research(bp0, terms, leader)
+	var kind0: String = str(terms.get("kind", bp0.get("kind", "settle")))
+	if kind0 == "research": return _sanitize_research(bp0, terms, leader)
+	if kind0 == "war": return _sanitize_war(bp0, terms, leader)
 	var notes: Array = []
 	var bp: Dictionary = bp0
 	var max_crew := mini(5, available_helpers(leader.id).size() + 1)
@@ -254,6 +262,74 @@ func _sanitize_research(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Di
 	out["abort_conditions"] = aborts
 	return {"ok": true, "blueprint": out, "notes": notes}
 
+## War plans are built from a fixed skeleton: [war dance] -> [scout] -> assault ->
+## objective -> return. The LLM chooses the target, objective, crew, the optional
+## steps and when to call off the fight; nothing else is understood.
+func _sanitize_war(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Dictionary:
+	var notes: Array = []
+	var out := {"kind": "war", "focus": "war", "capacity_target": 0}
+	var met: Array = sim.rivals.clans.keys().filter(func(id): return sim.rivals.clans[id]["met"])
+	if met.is_empty(): return {"ok": false, "blueprint": out, "notes": ["We know of no clan to fight."]}
+	var target := str(bp.get("target", terms.get("target", ""))).to_lower()
+	for id in sim.rivals.clans: # accept names too
+		var nm: String = sim.rivals.clans[id]["name"].to_lower()
+		if target == nm or (target != "" and target in nm) or target == tr(sim.rivals.clans[id]["name"]).to_lower(): target = id
+	if terms.get("target", "") in met and target != terms["target"]:
+		notes.append("The Chieftain named the %s as the enemy." % sim.rivals.clans[terms["target"]]["name"])
+		target = terms["target"]
+	if target not in met:
+		target = met[0]
+		notes.append("Unknown enemy; marching on the %s." % sim.rivals.clans[target]["name"])
+	out["target"] = target
+	var obj := str(bp.get("objective", terms.get("objective", "loot"))).to_lower()
+	obj = {"raid": "loot", "plunder": "loot", "steal": "loot", "fire": "burn", "torch": "burn", "slay": "break", "kill": "break", "crush": "break"}.get(obj, obj)
+	if terms.get("objective", "") in WAR_OBJECTIVES: obj = terms["objective"]
+	out["objective"] = obj if obj in WAR_OBJECTIVES else "loot"
+	var pid := RegEx.create_from_string("[^a-z0-9_]").sub(str(bp.get("plan_id", "")).to_lower().replace(" ", "_"), "", true).left(40)
+	out["plan_id"] = pid if pid != "" else "war_on_%s_%02d" % [target, list.size() + 1]
+	out["leader_id"] = "unit_%d" % leader.id
+	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 4)), 2, mini(6, available_helpers(leader.id).size() + 1))
+	if available_helpers(leader.id).is_empty(): out["crew_size"] = 1
+	var dance := 0
+	var scout := 0
+	var raw_steps: Array = bp.get("steps", []) if bp.get("steps") is Array else []
+	for st in raw_steps:
+		if not (st is Dictionary): continue
+		var a := str(st.get("action", "")).to_lower()
+		match a:
+			"war_dance", "ritual": dance = clampi(_int(st.get("duration_sec", st.get("duration")), 8), 4, 20)
+			"scout": scout = clampi(_int(st.get("duration_sec", st.get("duration")), 10), 4, 25)
+			"loot", "burn", "break":
+				if a != out["objective"] and not terms.has("objective"): out["objective"] = a
+	var steps: Array = []
+	if dance > 0: steps.append({"action": "war_dance", "duration_sec": dance})
+	if scout > 0: steps.append({"action": "scout", "duration_sec": scout})
+	steps.append({"action": "assault"})
+	steps.append({"action": out["objective"], "duration_sec": 10})
+	steps.append({"action": "return"})
+	out["steps"] = steps
+	var aborts: Array = ["heavy_losses"]
+	for a in (bp.get("abort_conditions", []) if bp.get("abort_conditions") is Array else []):
+		var m := RegEx.create_from_string("hp_below_(\\d+)").search(str(a))
+		if m: aborts.append("hp_below_%d%%" % clampi(int(m.get_string(1)), 10, 80))
+	out["abort_conditions"] = aborts
+	if sim.rivals.has_treaty(target, "peace"): notes.append("We are at peace with them - this attack breaks our oath.")
+	return {"ok": true, "blueprint": out, "notes": notes}
+
+## What a war leader knows before the march.
+func war_env(target: String) -> Dictionary:
+	var out: Array = []
+	for id in sim.rivals.clans:
+		var c: Dictionary = sim.rivals.clans[id]
+		if not c["met"]: continue
+		out.append({"id": id, "name": tr(c["name"]), "chieftain": tr(c["chief"]), "stance": tr(sim.rivals.stance(id)),
+			"their_ways": tr(c["desc"]), "people": c["pop"], "warriors_at_home_estimate": c["warriors"] + 1,
+			"treaties": sim.rivals.treaty_text(id), "behind_a_palisade": c["culture"] == "martial",
+			"distance": "far, across the ford" if D.bank_of(c["pos"]) != "west" else "a long walk south-west"})
+	var fighters: Array = available_helpers().map(func(u): return "%s (combat %d)" % [tr(u.name), u.lv("combat")])
+	return {"enemies_known": out, "chieftain_suggests": target, "our_fighters": fighters, "bronze_weapons": sim.has_bronze(),
+		"objectives": WAR_OBJECTIVE_TEXT, "season_and_weather": sim.hz.summary(), "tribe_stockpile": {"food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"])}}
+
 func _int(v: Variant, fallback: int) -> int:
 	if v is int or v is float: return int(v)
 	if v is String and v.is_valid_float(): return int(float(v))
@@ -279,7 +355,11 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	c.directive = directive
 	c.leader_id = leader.id
 	c.kind = bp.get("kind", "settle")
-	if c.kind == "research":
+	if c.kind == "war":
+		var tp: Vector2 = sim.rivals.clans[bp["target"]]["pos"]
+		c.site = tp + (D.VILLAGE - tp).normalized() * 330.0
+		if D.is_water(c.site): c.site.x += 120.0 * signf(c.site.x - D.river_x(c.site.y))
+	elif c.kind == "research":
 		var n := list.filter(func(o): return o.kind == "research").size()
 		c.site = D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
 	else:
@@ -292,7 +372,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		c.steps.append(rs)
 	# Crew: leader + best helpers for the focus.
 	var skill := "craft"
-	if bp["focus"] in ["hunting", "defense"]: skill = "combat"
+	if bp["focus"] in ["hunting", "defense", "war"]: skill = "combat"
 	elif bp["focus"] in ["farming", "fishery"]: skill = "forage"
 	var helpers := available_helpers(leader.id).filter(func(u): return sim.vice["steward"] != u.id and sim.vice["warchief"] != u.id)
 	helpers.sort_custom(func(a, b): return a.lv(skill) + a.lv("craft") * 0.5 > b.lv(skill) + b.lv("craft") * 0.5)
@@ -305,7 +385,11 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		sim.set_job(u, {})
 	list.append(c)
 	var names: Array = c.crew_ids.map(func(id): return tr(sim.unit_by_id(id).name))
-	var where: String = tr("across the river") if c.kind == "settle" else tr("to seek %s") % tr(sim.evo.tech_def(bp["tech"])["name"])
+	var where: String = tr("across the river")
+	if c.kind == "research": where = tr("to seek %s") % tr(sim.evo.tech_def(bp["tech"])["name"])
+	elif c.kind == "war":
+		where = tr("to make war on the %s") % tr(sim.rivals.clans[bp["target"]]["name"])
+		sim.evo.drift("martial", 5.0)
 	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract")
 	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
 	return c
@@ -382,9 +466,9 @@ func _assemble(c: E.Contract) -> void:
 		i += 1
 		var spot: Vector2 = c.site + Vector2(cos(i * 1.7) * 30, sin(i * 1.7) * 30)
 		_ensure(u, "c%d_assemble" % c.id, func(): sim.assign_move(u, spot))
-		u.act = "Crossing the river (contract)" if c.kind == "settle" else "Gathering at the workshop"
+		u.act = {"settle": "Crossing the river (contract)", "war": "Marching to war"}.get(c.kind, "Gathering at the workshop")
 		if u.pos.distance_to(c.site) > 70: all_there = false
-	if all_there or c.state_t > 45:
+	if all_there or c.state_t > (150 if c.kind == "war" else 45):
 		_set_status(c, "executing")
 		_clog(c, tr("Crew arrived at the site."))
 
@@ -451,6 +535,8 @@ func _run_step(c: E.Contract, dt: float) -> void:
 				sim.evo.seed(c.plan["tech"], 0.7 * dt * rate / maxf(1.0, total), ld)
 			c.substate = tr("Experimenting on %s (%ds/%ds)") % [tr(tname), step["done"], step["duration_sec"]]
 			if step["done"] >= step["duration_sec"]: _next_step(c)
+		"war_dance", "scout", "assault", "loot", "burn", "break", "return":
+			_run_war_step(c, step, key, dt)
 		"ritual":
 			var ld := leader(c)
 			if c.leader_id in c.resting_ids:
@@ -467,11 +553,90 @@ func _run_step(c: E.Contract, dt: float) -> void:
 				sim.gain_xp(ld, "lore", 8)
 				_next_step(c)
 
+## War steps. Defenders are real clan people (kind "warrior", guard=true), so the fight
+## itself is the ordinary unit-vs-predator combat; the executor only directs it.
+func _run_war_step(c: E.Contract, step: Dictionary, key: String, dt: float) -> void:
+	var R = sim.rivals
+	var id: String = c.plan["target"]
+	var rc: Dictionary = R.clans[id]
+	var cname: String = tr(rc["name"])
+	var vpos: Vector2 = rc["pos"]
+	var cr := crew(c)
+	match step["action"]:
+		"war_dance":
+			var ld := leader(c)
+			c.substate = tr("War dance before the battle (%ds/%ds)") % [step.get("done", 0), step["duration_sec"]]
+			var i := 0
+			for u in cr:
+				var spot: Vector2 = c.site + Vector2.from_angle(i * TAU / maxf(1, cr.size())) * 34
+				_ensure(u, key, func(): sim.assign_ritual(u, spot))
+				i += 1
+			if ld.job.get("type", "") == "ritual" and ld.act == "Performing ritual": step["done"] = step.get("done", 0.0) + dt
+			if step.get("done", 0.0) >= step["duration_sec"]:
+				c.flags["blessed"] = true
+				for u in cr: sim.gain_xp(u, "combat", 3)
+				_next_step(c)
+		"scout":
+			c.substate = tr("Watching the %s's village (%ds/%ds)") % [cname, step.get("done", 0), step["duration_sec"]]
+			var ld := leader(c)
+			_ensure(ld, key, func(): sim.assign_move(ld, vpos + (c.site - vpos).normalized() * 200.0))
+			for u in cr:
+				if u != ld: _ensure(u, key, func(): sim.assign_move(u, c.site + Vector2(randf_range(-30, 30), randf_range(-30, 30))))
+			step["done"] = step.get("done", 0.0) + dt
+			if step["done"] >= step["duration_sec"]:
+				c.flags["scouted"] = true
+				_clog(c, tr("Scouts counted about %d warriors in the village.") % (rc["warriors"] + 1))
+				_next_step(c)
+		"assault":
+			if not step.get("started", false):
+				step["started"] = true
+				var n: int = R.defend(id, c)
+				step["total"] = n
+				_clog(c, tr("We fall upon the %s! %d defenders come out to meet us.") % [cname, n])
+			var guards: Array = sim.predators.filter(func(p): return p.clan == id and p.guard and not p.dead and not p.fled and not p.fleeing)
+			c.substate = tr("Assaulting the %s (%d defenders left)") % [cname, guards.size()]
+			step["left"] = guards.size()
+			if guards.is_empty():
+				step["clear"] = step.get("clear", 0.0) + dt
+				for u in cr: _ensure(u, key + "_in", func(): sim.assign_move(u, vpos + Vector2(randf_range(-50, 50), randf_range(-40, 40))))
+				if step["clear"] > 1.5:
+					_clog(c, tr("The defenders of the %s are beaten.") % cname)
+					_next_step(c)
+				return
+			for u in cr:
+				if u.job.get("type", "") != "attack":
+					var nearest = guards[0]
+					for p in guards:
+						if p.pos.distance_to(u.pos) < nearest.pos.distance_to(u.pos): nearest = p
+					sim.assign_attack(u, nearest, key + "_atk")
+		"loot", "burn", "break":
+			var verb: String = {"loot": "Plundering", "burn": "Burning", "break": "Hunting down warriors of"}[step["action"]]
+			c.substate = tr("%s the %s (%ds/%ds)") % [tr(verb), cname, step.get("done", 0), step["duration_sec"]]
+			var i := 0
+			for u in cr:
+				var spot: Vector2 = vpos + Vector2.from_angle(i * 2.1) * (40 + 10 * i)
+				_ensure(u, key, func(): sim.assign_move(u, spot))
+				i += 1
+			if cr.any(func(u): return u.pos.distance_to(vpos) < 130): step["done"] = step.get("done", 0.0) + dt
+			if step.get("done", 0.0) >= step["duration_sec"]:
+				c.flags["spoils"] = R.war_spoils(id, step["action"], c)
+				_clog(c, tr("Done: %s.") % c.flags["spoils"])
+				_next_step(c)
+		"return":
+			c.substate = tr("Marching home")
+			var home_all := true
+			for u in cr:
+				_ensure(u, key, func(): sim.assign_move(u, D.VILLAGE + Vector2(randf_range(-60, 60), randf_range(-40, 60))))
+				u.act = "Marching home"
+				if u.pos.distance_to(D.VILLAGE) > 160: home_all = false
+			step["done"] = step.get("done", 0.0) + dt
+			if home_all or step["done"] > 150: _next_step(c)
+
 func _next_step(c: E.Contract) -> void:
 	var step: Dictionary = c.steps[c.step_idx]
 	var desc := _step_text(step)
 	for u in crew(c):
-		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "gather_stone": "forage", "build": "craft", "ritual": "lore", "experiment": "lore"}[step["action"]]
+		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "gather_stone": "forage", "build": "craft", "ritual": "lore", "experiment": "lore"}.get(step["action"], "combat")
 		sim.gain_xp(u, skill, 6)
 	_clog(c, tr("Step %d done: %s.") % [c.step_idx + 1, desc])
 	c.step_idx += 1
@@ -519,9 +684,15 @@ func _progress(c: E.Contract) -> float:
 				for id in s["ids"]:
 					var st = sim.struct_by_id(id)
 					if st: d += minf(st.progress, st.work)
-			"ritual":
+			"ritual", "war_dance", "scout", "loot", "burn", "break":
 				w = s["duration_sec"] * 2.0
-				d = minf(s["done"] * 2.0, w)
+				d = minf(s.get("done", 0.0) * 2.0, w)
+			"assault":
+				w = 40.0
+				if s.get("started", false): d = w * (1.0 - float(s.get("left", 0)) / maxf(1.0, s.get("total", 1)))
+			"return":
+				w = 20.0
+				d = minf(s.get("done", 0.0) / 60.0, 1.0) * w
 		if i < c.step_idx: d = w
 		total += w
 		done += d
@@ -546,6 +717,9 @@ func _check_aborts(c: E.Contract) -> bool:
 			for u in crew(c):
 				if sim.time - u.last_hit_t < 1.0: near = true
 			if near: reason = "enemy_attack"
+		elif cond == "heavy_losses":
+			var total: int = c.crew_ids.size() + c.reinforcement_ids.size()
+			if total >= 2 and crew(c).size() * 2 <= total: reason = "heavy_losses" # half the party dead or limping home
 		elif cond == "natural_disaster":
 			if sim.flags.get("flood_active", -1.0) >= c.t or sim.flags.get("disaster_t", -1.0) >= c.t: reason = "natural_disaster"
 		elif cond.begins_with("hp_below_"):
@@ -573,6 +747,7 @@ func allowed_effects(c: E.Contract) -> Array:
 			return fx
 		"leader_wounded": return ["rest", "press_on", "retreat"]
 		"natural_disaster": return ["shelter", "retreat"]
+		"heavy_losses": return ["press_on", "reinforce", "retreat"]
 	return ["hold", "retreat"]
 
 func summary(c: E.Contract) -> Dictionary:
@@ -623,7 +798,10 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 				c.reinforcement_ids.append(u.id)
 				sim.set_job(u, {})
 			sim.add_log(tr("%d warriors rush across the ford to reinforce '%s'.") % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
-			_set_status(c, "defending")
+			if c.kind == "war":
+				c.abort_cooldowns["heavy_losses"] = sim.time + 60.0
+				_set_status(c, "executing")
+			else: _set_status(c, "defending")
 		"ward":
 			sim.stock["lore"] -= 10
 			var n: int = sim.scare_predators(c.site, 600)
@@ -633,7 +811,8 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 			_set_status(c, "executing")
 		"retreat":
 			for u in crew(c, true):
-				sim.remember(u, tr("abandoned the half-built camp '%s' on the east bank on Day %d") % [c.plan["plan_id"], sim.day()], 7)
+				if c.kind == "war": sim.remember(u, tr("fled from the battle with the %s on Day %d") % [tr(sim.rivals.clans[c.plan["target"]]["name"]), sim.day()], 7)
+				else: sim.remember(u, tr("abandoned the half-built camp '%s' on the east bank on Day %d") % [c.plan["plan_id"], sim.day()], 7)
 				_release(u)
 				sim.assign_flee(u)
 			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees across the river.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
@@ -644,7 +823,7 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 			c.abort_cooldowns["leader_wounded"] = INF
 			_set_status(c, "executing")
 		"press_on":
-			c.abort_cooldowns["leader_wounded"] = sim.time + 45.0
+			c.abort_cooldowns[c.abort_reason] = INF if c.abort_reason == "heavy_losses" else sim.time + 45.0
 			_set_status(c, "executing")
 		"shelter":
 			c.abort_cooldowns["natural_disaster"] = INF
@@ -685,6 +864,9 @@ func _complete(c: E.Contract) -> void:
 	if c.kind == "research":
 		_complete_research(c)
 		return
+	if c.kind == "war":
+		_complete_war(c)
+		return
 	var built: Array = []
 	for id in c.struct_ids:
 		var s = sim.struct_by_id(id)
@@ -705,6 +887,20 @@ func _complete(c: E.Contract) -> void:
 		sim.set_job(u, {})
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
 	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [c.plan["plan_id"], what, housing(c.plan)], "contract")
+	sim.contract_finished.emit(c)
+
+func _complete_war(c: E.Contract) -> void:
+	var ld := leader(c)
+	var cname: String = tr(sim.rivals.clans[c.plan["target"]]["name"])
+	var spoils: String = c.flags.get("spoils", "")
+	for u in crew(c, true):
+		var lead: bool = u == ld
+		sim.remember(u, (tr("led the war party against the %s on Day %d (%s)") if lead else tr("fought in the war party against the %s on Day %d (%s)")) % [cname, sim.day(), spoils], 9 if lead else 7)
+		sim.gain_xp(u, "combat", 15 if lead else 10)
+		_release(u)
+		sim.set_job(u, {})
+	sim.popup(D.VILLAGE + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
+	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [c.plan["plan_id"], cname, spoils], "contract")
 	sim.contract_finished.emit(c)
 
 func _complete_research(c: E.Contract) -> void:
@@ -741,6 +937,13 @@ func _step_text(s: Dictionary) -> String:
 		"experiment": return tr("%ds of experiments") % s["duration_sec"]
 		"build": return tr("build %s%s") % [("%d x " % s["count"]) if s["count"] > 1 else "", tr(D.STRUCTURES[s["structure"]]["name"])]
 		"ritual": return tr("%ds blessing ritual") % s["duration_sec"]
+		"war_dance": return tr("%ds war dance") % s["duration_sec"]
+		"scout": return tr("watch their village for %ds") % s["duration_sec"]
+		"assault": return tr("assault the village")
+		"loot": return tr("plunder their stores")
+		"burn": return tr("burn their huts")
+		"break": return tr("hunt down their warriors")
+		"return": return tr("march home")
 	return s["action"]
 
 func step_text(s: Dictionary) -> String: return _step_text(s)

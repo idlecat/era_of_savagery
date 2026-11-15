@@ -252,7 +252,7 @@ func _process(delta: float) -> void:
 	attacking.clear()
 	for p in sim.predators:
 		_track("p%d" % p.id, p.pos)
-		if p.dead or p.fled or p.fleeing or p.kind == "hunter": continue
+		if p.dead or p.fled or p.fleeing or p.kind == "hunter" or p.kind == "trader": continue
 		for u in sim.units:
 			if not u.dead and u.pos.distance_to(p.pos) < 26.0:
 				attacking["p%d" % p.id] = true
@@ -1536,6 +1536,9 @@ func _draw_clansman(p, b: Vector2) -> void:
 	var col: Color = sim.rivals.clans[p.clan]["color"]
 	var walk: bool = moving.get(key, false)
 	var war: bool = p.kind == "warrior"
+	if p.kind == "trader": # a pack ox laden with goods walks behind
+		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 20.0
+		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * facing.get(key, 1.0), 3), facing.get(key, 1.0), walk)
 	_ell(b + Vector2(2, 0), 9, 4, SHADOW)
 	if art and art.has("man_idle_0_0"):
 		var di := _dir_index(key)
@@ -1559,6 +1562,10 @@ func _draw_clansman(p, b: Vector2) -> void:
 			var hand := b + Vector2(6 * f, -14)
 			ci.draw_line(hand + Vector2(0, 10), hand + Vector2(0, -22), Color("#8a6a42"), 1.6)
 			ci.draw_colored_polygon(PackedVector2Array([hand + Vector2(-2, -22), hand + Vector2(2, -22), hand + Vector2(0, -29)]), Color("#8d8d93"))
+	elif p.kind == "trader": # a bundle of goods on the back
+		var pk := b + Vector2(-5 * f, -17)
+		ci.draw_rect(Rect2(pk - Vector2(4, 5), Vector2(8, 9)), Color("#9a7448"))
+		ci.draw_line(pk + Vector2(-4, -1), pk + Vector2(4, -1), Color("#5a3d22"), 1.2)
 	else: # hunter: bow over the shoulder
 		ci.draw_arc(b + Vector2(-4 * f, -16), 8, -PI * 0.5 - 0.9, -PI * 0.5 + 0.9, 8, Color("#6b4524"), 1.4)
 	if p.loot:

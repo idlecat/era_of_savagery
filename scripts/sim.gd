@@ -308,6 +308,9 @@ func unit_atk(u: E.Unit) -> float:
 	if evo.has_trad("warrior_initiation"): a += 2
 	if has_bronze(): a *= 1.6
 	if _struct_near("weapon_rack", u.pos, 160): a *= 1.2
+	if u.role == "contract":
+		var c = contracts.by_id(u.contract_id)
+		if c and c.flags.get("blessed", false): a *= 1.15 # the war dance
 	return a
 
 func unit_def(u: E.Unit) -> float:
@@ -800,12 +803,16 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 		if u:
 			u.kills += 1
 			gain_xp(u, "combat", 18)
-			remember(u, tr("slew a %s on the %s bank on Day %d") % [tr(p.name), tr(D.bank_of(p.pos)), day()], 8)
+			if p.clan != "": # a person, not a beast
+				remember(u, tr("struck down a %s on Day %d") % [tr(p.name), day()], 8)
+				add_log(tr("%s struck down a %s!") % [tr(u.name), tr(p.name)], "combat")
+			else:
+				remember(u, tr("slew a %s on the %s bank on Day %d") % [tr(p.name), tr(D.bank_of(p.pos)), day()], 8)
+				add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat")
 			evo.drift("martial", 4.0)
-			add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat")
 		if p.clan != "": rivals.on_rival_killed(p, u)
 		else: _node("carcass", "food", p.pos, 35)
-	elif p.kind == "hunter" and not p.fleeing: # attacked hunters run home and tell their clan
+	elif (p.kind == "hunter" or p.kind == "trader") and not p.fleeing: # attacked hunters run home and tell their clan
 		p.fleeing = true
 		rivals.on_hunter_attacked(p)
 	elif p.hp < p.max_hp * 0.2 and not p.fleeing:
@@ -843,13 +850,13 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			p.raid = false
 			p.goal = null
 			p.path = []
-	if p.kind == "warrior" and not p.raid and p.goal == null: # a war band done with its raid
+	if p.kind == "warrior" and not p.raid and p.goal == null and not p.guard: # a war band done with its raid
 		p.fleeing = true
 		return
 	var prey = null
 	var best := 280.0
 	for u in units:
-		if u.dead or p.kind == "hunter": continue
+		if u.dead or p.kind == "hunter" or p.kind == "trader": continue
 		var d: float = u.pos.distance_to(p.pos)
 		if p.kind == "wolf" and not _wolf_target(u): continue
 		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
@@ -871,7 +878,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 				popup(prey.pos + Vector2(0, -20), tr("-%d") % roundi(dmg), Color("#ff8080"))
 	elif p.goal != null:
 		if p.pos.distance_to(p.goal) > 30:
-			if p.raid or p.kind == "wolf" or p.kind == "warrior": # long trips: route over the ford
+			if p.raid or p.kind == "wolf" or p.kind == "warrior" or p.kind == "trader": # long trips: route over the ford
 				if p.path.is_empty(): set_dest(p, p.goal)
 			else:
 				p.path = [p.goal]
@@ -881,6 +888,9 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			p.path = []
 		elif p.kind == "warrior" and p.raid: # in the camp and nobody to stop them
 			rivals.steal(p)
+		elif p.kind == "trader" and not p.arrived:
+			p.arrived = true
+			rivals.trader_arrived(p)
 	else:
 		p.prowl_t -= dt
 		if p.prowl_t <= 0:
@@ -902,7 +912,7 @@ func _wolf_target(u: E.Unit) -> bool:
 	return near < 2
 
 func active_predators_near(center: Vector2, r: float) -> Array:
-	return predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.kind != "hunter" and p.pos.distance_to(center) < r)
+	return predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.kind != "hunter" and p.kind != "trader" and p.pos.distance_to(center) < r)
 
 func scare_predators(center: Vector2, r: float) -> int:
 	var n := 0

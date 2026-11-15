@@ -98,6 +98,13 @@ Two neighbouring clans live on the map: the martial **Red Ochre Clan** (east ban
   - The chieftain's reply is untrusted, just like contract blueprints. The treaty type is whitelisted, numbers are clamped, the tribe can't promise more than it has, and a deal that is far too generous for the clan is held to the deterministic engine's counter-offer.
   - The offline chieftain uses the same valuation, so it plays fine without a cloud LLM.
 - **Treaties.** A peace pact stops raids and demands and halves trespass anger. Hunting rights remove trespass anger entirely. A daily tribute is paid from stores: miss one and the peace ends. Attacking or killing their people during a peace breaks it; they remember you as oath-breakers (-30 on top of the usual penalty).
+- **War contracts.** Select someone and press *Lead a war party…*. It's a Task Contract like the others: the leader's LLM persona plans the raid, then the deterministic executor runs it with zero LLM calls.
+  - The plan picks the enemy, an objective (*loot*: carry off food and wood; *burn*: destroy huts, so the clan shrinks; *break*: kill their warriors so they can't raid for days), crew of 2–6, an optional war dance (+15% attack) and an optional scouting step (one fewer defender comes out). The steps always run in this order: war dance (if any), scouting (if any), assault, objective, return.
+  - The clan's warriors turn out as real defenders, and the fight is ordinary unit combat.
+  - Abort conditions are `heavy_losses` (half the party dead or wounded) and the leader's HP threshold. Either one wakes the leader's LLM node to offer: press on, send reinforcements, or retreat.
+  - Attacking their village breaks any peace with them and makes them hate you.
+- **Trade caravans.** Friendly or Allied clans send a trader with a pack ox. The Red Ochre sell stone for food; the Heron sell food for wood. Each visit offers two trades, a lesson in one of their crafts, or no deal. Allied clans give better rates, and watching their traders work sometimes teaches a little.
+- **Knowledge.** Each clan knows some wisdom: the Red Ochre know fire, tools, hide working and domestication; the Heron know fire, pottery and totems. At a parley you can ask them to *teach us* one thing you're ready to learn. It's a costly term, especially to the martial Red Ochre, and it brings the tech most of the way to discovery.
 - **Demands.** Before a raid, a known clan often sends a runner demanding food. Pay, and they leave you alone for a while; refuse, and the war band comes now.
 - The **NEIGHBORING CLANS** panel shows each clan's stance and any war bands on the march. Personas know the clans you've met (stance, ways and grudges), in both negotiation and emergency prompts.
 

@@ -77,6 +77,17 @@ func _run() -> void:
 	check(rr["source"] != "offline fallback", "research negotiated via cloud LLM")
 	check(rs["ok"], "research blueprint valid")
 	check(not ("bronze" in rr["speech"].to_lower()), "persona does not name unknown bronze")
+	# a war party: Alie plans a raid on the Red Ochre
+	for cid in sim.rivals.clans: sim.rivals.clans[cid]["met"] = true
+	var wu = sim.unit_by_name("Alie")
+	var wctx: Dictionary = sim.contracts.negotiation_ctx(wu, "Teach the Red Ochre Clan to fear us", {"kind": "war", "target": "ochre"}, false, "", {}, [], "war")
+	t0 = Time.get_ticks_msec()
+	var wr: Dictionary = await llm.negotiate(wctx)
+	var ws: Dictionary = sim.contracts.sanitize(wr["blueprint"], {"kind": "war"}, wu)
+	print("\n[Alie WAR] (%s, %d ms) %s" % [wr["source"], Time.get_ticks_msec() - t0, wr["speech"]])
+	print("   target %s, objective %s, crew %d, steps %s, aborts %s, notes %s" % [ws["blueprint"].get("target"), ws["blueprint"].get("objective"), ws["blueprint"].get("crew_size", 0), ws["blueprint"].get("steps", []).map(func(st): return st["action"]), ws["blueprint"].get("abort_conditions"), ws["notes"]])
+	check(wr["source"] != "offline fallback", "war plan negotiated via cloud LLM")
+	check(ws["ok"], "war blueprint valid")
 	# diplomacy: the Red Ochre chieftain answers our envoy
 	var R = sim.rivals
 	R.clans["ochre"]["met"] = true

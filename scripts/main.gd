@@ -225,6 +225,31 @@ func _debug_shot(args: Dictionary) -> void:
 			world.cam.zoom = Vector2(1.1, 1.1)
 			world.focus_on(sim.rivals.clans[pid]["pos"])
 			if args.has("propose"): hud._par_propose()
+		"war": # debug: a war party assaults a rival village (--clan, --who, --secs into the fight, --trader)
+			hud._close_modal()
+			sim.fog_enabled = false
+			var wid: String = args.get("clan", "heron")
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			var wl = sim.unit_by_name(args.get("who", "Alie"))
+			var wterms := {"kind": "war", "target": wid, "objective": args.get("objective", "burn"), "crew_size": 5}
+			var wctx: Dictionary = sim.contracts.negotiation_ctx(wl, "Raid", wterms, true, "", {}, [], "war")
+			var wbp: Dictionary = sim.contracts.sanitize(hud.Persona.propose(wctx)["blueprint"], wterms, wl)["blueprint"]
+			var wc = sim.contracts.create(wbp, wl, "Raid")
+			var into := float(args.get("secs", "3"))
+			var fight_t := -1.0
+			var tt := 0.0
+			while sim.contracts.is_running(wc) and tt < 400.0:
+				sim.tick(STEP)
+				tt += STEP
+				if sim.paused:
+					if sim.pending_event != "": sim.resolve_event(sim.pending_event, 2)
+					if wc.status == "interrupted": sim.contracts.resolve(wc, "press_on")
+					sim.paused = false
+				if fight_t < 0 and wc.step_idx < wc.steps.size() and wc.steps[wc.step_idx]["action"] == "assault": fight_t = tt
+				if fight_t >= 0 and tt - fight_t > into: break
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.3")), float(args.get("zoom", "1.3")))
+			world.focus_on(sim.rivals.clans[wid]["pos"] + Vector2(0, 60))
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))
