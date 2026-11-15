@@ -1956,6 +1956,72 @@ func _command(sm: Vector2) -> void:
 		sim.assign_move(u, m + off)
 		i += 1
 
+# ------------------------------------------------------------ hover info
+## What is under the cursor, for the HUD's map tooltip: [title, body] or [] for nothing.
+func hover_info() -> Array:
+	if _ui_has_pointer() or build_type != "": return []
+	var sm := get_global_mouse_position()
+	var m := uniso(sm)
+	for p in sim.predators:
+		if not p.dead and not p.fled and sim.is_visible(p.pos) and _pick_dist(sm, p.pos, 28) < 20:
+			if p.clan != "":
+				var c: Dictionary = sim.rivals.clans[p.clan]
+				return [tr(p.name), tr("Of the %s (%s).") % [tr(c["name"]), tr(sim.rivals.stance(p.clan))]]
+			return [tr(p.name), tr("A dangerous beast. Fight it with several people, or stay near the fires.")]
+	var best = null
+	var bd := 18.0
+	for n in sim.nodes:
+		if not (sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)): continue
+		var d := _pick_dist(sm, n.pos, 40.0 if n.kind == "tree" else 12.0)
+		if d < bd:
+			bd = d
+			best = n
+	if best: return _node_info(best)
+	for s in sim.structures:
+		if not sim.is_explored(s.pos): continue
+		var sd: Dictionary = D.STRUCTURES[s.type]
+		var r: float = sd["r"]
+		var hit: bool = absf(s.pos.distance_to(m) - r) < 14 if sd.get("ring", false) else s.pos.distance_to(m) < r + 10
+		if hit: return _struct_info(s)
+	for lm in sim.landmarks:
+		if sim.is_explored(lm["pos"]) and lm["pos"].distance_to(m) < 70:
+			return [tr(lm["name"]), tr("Visited by the tribe.") if lm["found"] else tr("Not yet visited: send someone there to see what it holds.")]
+	if D.in_river(m) and D.is_ford(m.y): return [tr("The Ford"), tr("The one shallow crossing of the river. People and beasts wade across here; anywhere else the river is too deep.")]
+	return []
+
+func _node_info(n) -> Array:
+	if D.FINDS.has(n.kind):
+		var fd: Dictionary = D.FINDS[n.kind]
+		if not sim.knows_find(n.kind):
+			var hint: String = {"lore": tr("Someone with Lore might know what it is."), "tools": tr("Someone who knows stone-working might know what it is.")}.get(fd.get("needs", ""), tr("Walk someone up to it to find out."))
+			return [tr("Something unfamiliar"), hint]
+		return [tr(fd["name"]), tr(fd["desc"]) + "\n" + (tr("Left: %d") % roundi(n.amount))]
+	match n.kind:
+		"tree": return [tr("Tree"), tr("Wood: %d left. Felled trees regrow in time.") % roundi(n.amount)]
+		"stump", "burnt": return [tr("Stump") if n.kind == "stump" else tr("Burnt tree"), tr("A tree will grow here again.")]
+		"bush": return [tr("Berry bush"), tr("Food: %d. Berries regrow, but not in winter.") % roundi(n.amount)]
+		"boulder": return [tr("Stone outcrop"), tr("Stone: %d. Needs Polished Stone Tools to quarry.") % roundi(n.amount)]
+		"deer": return [tr("Deer"), tr("Hunt it for food. Half the herds leave in winter.")]
+		"carcass": return [tr("Carcass"), tr("Meat to butcher: %d food.") % roundi(n.amount)]
+	return []
+
+func _struct_info(s) -> Array:
+	var sd: Dictionary = D.STRUCTURES[s.type]
+	var title: String = tr(sd["name"])
+	if not sim.ours(s):
+		var cid: String = s.owner.trim_prefix("rival:")
+		return [title, tr("Belongs to the %s.") % tr(sim.rivals.clans[cid]["name"])]
+	var body: String = tr(sd.get("desc", ""))
+	if not s.built:
+		body = (tr("Being built: %d%%.") % roundi(s.progress / s.work * 100.0) if s.paid else tr("Awaiting wood.")) + "\n" + body
+	if s.type in sim.SHELTERS and s.built:
+		var inside: Array = sim.units.filter(func(u): return not u.dead and u.bed_id == s.id and u.sleeping).map(func(u): return tr(u.name))
+		if not inside.is_empty(): body += "\n" + tr("Asleep inside: %s") % ", ".join(inside)
+	if s.type == "burial_ground" and not s.graves.is_empty():
+		body += "\n" + tr("Here lie: %s") % ", ".join(s.graves.map(func(g): return tr(g["name"])))
+	if s.type == "aurochs_pen": body += "\n" + tr("Oxen %d/%d") % [sim.oxen, sim.ox_cap()]
+	return [title, body]
+
 # ------------------------------------------------------------ cached, y-sorted canvas items
 ## Every upright thing is its own canvas item, positioned at its iso base so Godot's
 ## y-sort gives the painter's order. Godot caches each item's draw commands, so static

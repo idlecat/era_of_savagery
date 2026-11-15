@@ -24,6 +24,9 @@ var sheet_steward_btn: Button
 var sheet_chief_btn: Button
 var contracts_text: RichTextLabel
 var log_tabs: TabContainer
+var map_tip: PanelContainer
+var map_tip_text: RichTextLabel
+var tip_t := 0.0
 var clans_text: RichTextLabel
 var log_text: RichTextLabel
 var policy_opt: OptionButton
@@ -434,9 +437,36 @@ func _build_right(root: Control) -> void:
 	log_tabs.set_tab_title(0, tr("Chronicle"))
 	v.add_child(_label("LMB select/drag · RMB command (tree/bush/deer = gather, tiger = attack, site = build) · pan: WASD / screen edge / MMB drag / two-finger swipe · zoom: wheel / pinch · Space pause · F11 fullscreen", 12, COL_DIM))
 
+## A small panel by the cursor naming what is under it on the map.
+func _map_tip(delta: float) -> void:
+	if map_tip == null:
+		map_tip = PanelContainer.new()
+		map_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		map_tip.theme = (get_child(0) as Control).theme
+		map_tip_text = _rich(0, true)
+		map_tip_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		map_tip_text.custom_minimum_size = Vector2(300, 0)
+		map_tip.add_child(map_tip_text)
+		add_child(map_tip)
+		map_tip.visible = false
+	tip_t -= delta
+	if tip_t <= 0:
+		tip_t = 0.12
+		var info: Array = world.hover_info() if not modal_open() else []
+		map_tip.visible = not info.is_empty()
+		if map_tip.visible: map_tip_text.text = "[b][color=#ffd36b]%s[/color][/b]\n[font_size=13]%s[/font_size]" % [info[0], info[1]]
+	if map_tip.visible:
+		var mp := get_viewport().get_mouse_position() + Vector2(18, 20)
+		var vs := get_viewport().get_visible_rect().size
+		map_tip.reset_size()
+		mp.x = minf(mp.x, vs.x - map_tip.size.x - 6)
+		mp.y = minf(mp.y, vs.y - map_tip.size.y - 6)
+		map_tip.position = mp
+
 # ------------------------------------------------------------ periodic refresh
 func _process(delta: float) -> void:
 	if minimap: minimap.queue_redraw()
+	_map_tip(delta)
 	_expire_alerts()
 	refresh_t -= delta
 	if refresh_t > 0: return

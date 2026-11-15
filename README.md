@@ -22,6 +22,7 @@ A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.
   - *By quest* (default): people are grouped under each running Task Contract (leader first), then scouts, then the village. Click a group header to select the whole group.
   - *By ability*: a table of level and the four skills. Click a column to sort by it; click it again to reverse. Hover a row to see HP, ATK, DEF and what the person is doing.
   - In both views, Shift-click adds a person to the selection or removes them.
+- **Hover the map:** point at a building, plant, ore, animal, landmark or the ford to see what it is and what it does (and, for huts and the burial ground, who is inside).
 - **Chronicle:** names of our people are links. Click one to select that person and centre the view on them (for the dead, the view goes to where they lie).
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 

@@ -403,6 +403,12 @@ func _debug_shot(args: Dictionary) -> void:
 					t += STEP
 				hud._close_modal()
 				world.focus_on(c.site)
+	if args.has("hover"): # put the mouse over the first structure of that type (adds one by the river if none)
+		var hs = sim.structures.filter(func(st): return st.type == args["hover"])
+		if hs.is_empty(): hs = [sim.add_structure(args["hover"], Vector2(sim.D.river_x(1300) - 70, 1300), true)]
+		world.focus_on(hs[0].pos)
+		await get_tree().process_frame
+		get_viewport().warp_mouse(world.get_viewport().get_canvas_transform() * world.iso(hs[0].pos))
 	await get_tree().create_timer(float(args.get("delay", "2"))).timeout
 	get_viewport().get_texture().get_image().save_png(args["shot"])
 	get_tree().quit()
