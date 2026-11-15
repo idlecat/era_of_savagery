@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 14
+const ART_VERSION := 15
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -226,13 +226,13 @@ func segment(parent: Node3D, a: Vector3, b: Vector3, r: float, m: Material) -> M
 	if axis.length() > 0.001: n.basis = Basis(axis.normalized(), Vector3.UP.angle_to(up))
 	return n
 
-func cyl(r_top: float, r_bot: float, h: float, seg := 12) -> CylinderMesh:
+func cyl(r_top: float, r_bot: float, h: float, seg := 12, rings := 1) -> CylinderMesh:
 	var c := CylinderMesh.new()
 	c.top_radius = r_top
 	c.bottom_radius = r_bot
 	c.height = h
 	c.radial_segments = seg
-	c.rings = 1
+	c.rings = rings
 	return c
 
 func sph(r: float, seg := 12, rings := 7) -> SphereMesh:
@@ -255,6 +255,106 @@ func cap(r: float, h: float) -> CapsuleMesh:
 	c.radial_segments = 10
 	c.rings = 3
 	return c
+
+## Set extra shader parameters on a material (countershading, stripes, moss...).
+func tune(m: ShaderMaterial, params: Dictionary) -> ShaderMaterial:
+	for k in params: m.set_shader_parameter(k, params[k])
+	return m
+
+## A smooth lofted tube through rings [center, rx, ry]: rx is the width across, ry the
+## depth along `up` (projected square to the tube). Ends are capped. Bodies, necks,
+## limbs, tails and branches are all made this way, so they bend smoothly.
+func tube(rings: Array, up := Vector3.UP, seg := 10) -> ArrayMesh:
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var idx := PackedInt32Array()
+	var n := rings.size()
+	for i in n:
+		var c: Vector3 = rings[i][0]
+		var t: Vector3 = (rings[mini(i + 1, n - 1)][0] - rings[maxi(i - 1, 0)][0]).normalized()
+		var u: Vector3 = up - t * up.dot(t)
+		if u.length() < 0.05:
+			var alt := Vector3(0, 0, 1) if absf(t.z) < 0.9 else Vector3(1, 0, 0)
+			u = alt - t * alt.dot(t)
+		u = u.normalized()
+		var s := t.cross(u).normalized()
+		var rx: float = maxf(rings[i][1], 0.02)
+		var ry: float = maxf(rings[i][2], 0.02)
+		for k in seg:
+			var a := k * TAU / seg
+			verts.append(c + s * cos(a) * rx + u * sin(a) * ry)
+			norms.append((s * cos(a) / rx + u * sin(a) / ry).normalized())
+	for i in n - 1:
+		for k in seg:
+			var a := i * seg + k
+			var b := i * seg + (k + 1) % seg
+			idx.append_array([a, b, a + seg, b, b + seg, a + seg])
+	for end in [0, n - 1]:
+		var ci := verts.size()
+		var tt: Vector3 = (rings[1][0] - rings[0][0]).normalized() if end == 0 else (rings[n - 1][0] - rings[n - 2][0]).normalized()
+		verts.append(rings[end][0] + (-tt if end == 0 else tt) * minf(rings[end][1], rings[end][2]) * 0.6)
+		norms.append(-tt if end == 0 else tt)
+		for k in seg:
+			var a: int = end * seg + k
+			var b: int = end * seg + (k + 1) % seg
+			if end == 0: idx.append_array([ci, a, b])
+			else: idx.append_array([ci, b, a])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
+
+## A tube placed straight into the parent's space (mesh space == parent space, which the
+## countershading and stripes rely on).
+func loft(parent: Node3D, rings: Array, m: Material, up := Vector3.UP, seg := 10) -> MeshInstance3D:
+	return mi(parent, tube(rings, up, seg), m, Vector3.ZERO)
+
+## Push a primitive's vertices in and out along their normals with noise: lumpy thatch,
+## rocks, foliage clumps. faceted = flat-shaded (stone), otherwise smooth (leaves).
+func lumpy(src: PrimitiveMesh, amt: float, seed: int, freq := 0.25, faceted := false) -> ArrayMesh:
+	var arr := src.get_mesh_arrays()
+	var nz := FastNoiseLite.new()
+	nz.seed = seed
+	nz.frequency = freq
+	nz.fractal_octaves = 2
+	var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	for i in vs.size():
+		vs[i] += ns[i] * nz.get_noise_3dv(vs[i]) * amt
+	arr[Mesh.ARRAY_VERTEX] = vs
+	var st := SurfaceTool.new()
+	st.create_from_arrays(arr)
+	if faceted: st.deindex()
+	st.generate_normals()
+	return st.commit()
+
+## A rough boulder of radius r.
+func boulder(parent: Node3D, pos: Vector3, r: float, m: Material, seed: int, squash := 0.75, yaw := 0.0) -> MeshInstance3D:
+	return mi(parent, lumpy(sph(r, 9, 6), r * 0.35, seed, 0.6 / r, true), m, pos, Vector3(0, yaw, 0), Vector3(1, squash, 1))
+
+## A foliage clump (smooth, knobbly sphere).
+func clump(parent: Node3D, pos: Vector3, r: float, m: Material, seed: int, sc := Vector3.ONE) -> MeshInstance3D:
+	return mi(parent, lumpy(sph(r, 14, 9), r * 0.45, seed, 0.9 / r), m, pos, Vector3(0, seed * 37 % 360, 0), sc)
+
+## A limb or branch through joint points with matching radii (a tube with rounded joints).
+func limb(parent: Node3D, pts: Array, radii: Array, m: Material, seg := 8) -> MeshInstance3D:
+	var rings := []
+	for i in pts.size(): rings.append([pts[i], radii[i], radii[i]])
+	return loft(parent, rings, m, Vector3.UP, seg)
+
+## Joint points down from `top`: each segment has a length and an angle from straight
+## down (radians, + = toward +z).
+func chain(top: Vector3, lens: Array, angles: Array) -> Array:
+	var pts := [top]
+	var p := top
+	for i in lens.size():
+		p += Vector3(0, -cos(angles[i]), sin(angles[i])) * lens[i]
+		pts.append(p)
+	return pts
 
 # ------------------------------------------------------------ the catalogue
 func _jobs() -> Array:
@@ -344,96 +444,122 @@ func _jobs() -> Array:
 	return jobs
 
 # ---- nature
+## Conifer: a tapering trunk with whorls of drooping branch sprays (flattened lofts),
+## shorter towards the top, each spray a slightly different green.
 func _pine(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 100 + v
-	var bark := mat(Color("#5a3a20"), "streak", 0.14, Vector3(1, 5, 1), 0.55)
+	var bark := mat(Color("#57391f"), "streak", 0.14, Vector3(1, 5, 1), 0.6)
 	root.rotation_degrees = Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)) # trees lean a little
-	mi(root, cyl(1.5, 2.4, 20, 8), bark, Vector3(0, 10, 0))
-	mi(root, cyl(2.4, 4.2, 3, 8), bark, Vector3(0, 1.5, 0)) # root flare
-	var dark := Color("#24472a") if v % 2 == 0 else Color("#203f2c")
-	var lite := Color("#3d6e3a") if v % 2 == 0 else Color("#3a6a40")
-	var tiers := 6
-	var h := 9.0
+	limb(root, [Vector3(0, -0.5, 0), Vector3(0, 2, 0), Vector3(0.3, 20, 0.2), Vector3(0, 44, 0)], [4.4, 2.5, 1.7, 0.3], bark, 9)
+	for i in 4: # root flare
+		var a := i * TAU / 4 + rng.randf()
+		limb(root, [Vector3(0, 3.5, 0), Vector3(cos(a) * 4.5, 0.2, sin(a) * 4.5)], [1.6, 0.4], bark, 6)
+	var dark := Color("#1f4128") if v % 2 == 0 else Color("#1d3b2c")
+	var lite := Color("#40703a") if v % 2 == 0 else Color("#3c6a42")
+	var sn := 0.45 if snowy else 0.0
+	var tiers := 7
+	var h := 8.0
 	for i in tiers:
-		var k := float(i) / (tiers - 1)
-		var r := lerpf(15.5, 4.0, k) + rng.randf_range(-1.2, 1.2)
-		var ch := lerpf(11.0, 9.0, k)
-		var leaf := mat(dark.lerp(lite, k * 0.8), "fine", 0.2, Vector3.ONE, 0.6, 0.85 if snowy else 0.0)
-		mi(root, cyl(0.0, r, ch, 7 + (i % 2)), leaf, Vector3(rng.randf_range(-0.9, 0.9), h + ch / 2, rng.randf_range(-0.9, 0.9)),
-			Vector3(rng.randf_range(-6, 6), rng.randf_range(0, 50), rng.randf_range(-6, 6)), Vector3(1, 1, rng.randf_range(0.85, 1.1)))
-		h += lerpf(6.0, 4.5, k)
-	mi(root, cyl(0.0, 1.6, 6, 6), mat(lite, "fine", 0.2, Vector3.ONE, 0.5, 0.85 if snowy else 0.0), Vector3(0, h + 5, 0))
+		var t := float(i) / (tiers - 1)
+		var r := lerpf(16.0, 4.5, t) + rng.randf_range(-1.0, 1.0)
+		var n := 9 - i / 2
+		for j in n:
+			var a := (j + rng.randf_range(-0.25, 0.25)) * TAU / n + i * 0.5
+			var dir := Vector3(cos(a), 0, sin(a))
+			var droop := rng.randf_range(3.0, 5.5) * (1.0 - t * 0.5)
+			var len := r * rng.randf_range(0.85, 1.1)
+			var col := dark.lerp(lite, clampf(t * 0.7 + rng.randf_range(0.0, 0.35), 0.0, 1.0))
+			var m := mat(col, "fine", 0.25, Vector3.ONE, 0.65, sn)
+			var base := Vector3(0, h + 3.5, 0)
+			loft(root, [[base, 1.2, 1.4], [base + dir * len * 0.45 + Vector3(0, -droop * 0.25, 0), len * 0.32, 1.6], [base + dir * len * 0.8 + Vector3(0, -droop * 0.7, 0), len * 0.2, 1.1], [base + dir * len + Vector3(0, -droop, 0), 0.3, 0.3]], m, Vector3.UP, 8)
+		mi(root, cyl(r * 0.25, r * 0.55, 5.0, 9), mat(dark.lerp(lite, t * 0.6), "fine", 0.25, Vector3.ONE, 0.6, sn), Vector3(0, h + 3.0, 0))
+		h += lerpf(5.6, 4.0, t)
+	mi(root, cyl(0.0, 2.2, 7, 7), mat(lite, "fine", 0.25, Vector3.ONE, 0.5, sn), Vector3(0, h + 4.5, 0))
 	return root
 
-## Broadleaf: a gnarled, forked trunk with branches and many leaf clusters.
+## Broadleaf: a gnarled, forked trunk with branches and lumpy leaf clumps.
 func _leafy(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 200 + v
-	var bark := mat(Color("#654429"), "streak", 0.14, Vector3(1, 5, 1), 0.6)
-	mi(root, cyl(2.4, 4.4, 3, 8), bark, Vector3(0, 1.5, 0))
-	mi(root, cyl(1.9, 2.6, 12, 8), bark, Vector3(0, 7.5, 0), Vector3(0, 0, rng.randf_range(-6, 6)))
+	var bark := mat(Color("#5e4129"), "streak", 0.14, Vector3(1, 5, 1), 0.6)
+	var lean := Vector3(rng.randf_range(-1.5, 1.5), 0, rng.randf_range(-1.5, 1.5))
+	var fork := Vector3(0, 13, 0) + lean
+	limb(root, [Vector3(0, -0.5, 0), Vector3(0, 2.5, 0), lean * 0.5 + Vector3(0, 8, 0), fork], [4.2, 2.6, 2.1, 1.9], bark, 9)
+	for i in 4: # root flare
+		var a := i * TAU / 4 + rng.randf()
+		limb(root, [Vector3(0, 3.5, 0), Vector3(cos(a) * 5, 0.2, sin(a) * 5)], [1.7, 0.4], bark, 6)
 	var tips: Array = []
-	for i in 3: # main forks
+	for i in 3: # main forks, each splitting once
 		var a := i * TAU / 3 + rng.randf()
-		var tilt := rng.randf_range(22, 38)
-		var lenb := rng.randf_range(11, 15)
-		var dir := Vector3(cos(a) * sin(deg_to_rad(tilt)), cos(deg_to_rad(tilt)), sin(a) * sin(deg_to_rad(tilt)))
-		var tip := Vector3(0, 13, 0) + dir * lenb
-		segment(root, Vector3(0, 12.5, 0), tip, 1.2, bark)
-		segment(root, tip - dir * 4.0, tip + Vector3(-dir.z, 0.6, dir.x) * 5.0, 0.6, bark) # a side branch
+		var tilt := deg_to_rad(rng.randf_range(38, 55))
+		var dir := Vector3(cos(a) * sin(tilt), cos(tilt), sin(a) * sin(tilt))
+		var mid := fork + dir * rng.randf_range(6, 8)
+		var tip := mid + (dir + Vector3(0, 0.3, 0)).normalized() * rng.randf_range(6, 8)
+		var side := mid + Vector3(-dir.z, 0.5, dir.x).normalized() * 7.0
+		limb(root, [fork, mid, tip], [1.5, 1.0, 0.45], bark, 7)
+		limb(root, [mid, side], [0.8, 0.3], bark, 6)
 		tips.append(tip)
-	var greens := [Color("#3a7333"), Color("#4a8238"), Color("#356a30"), Color("#55893c")]
+		tips.append(side)
+	var greens := [Color("#356b30"), Color("#437a35"), Color("#2f6030"), Color("#4f8638")]
+	var sn := 0.8 if snowy else 0.0
+	var k := 0
 	for t in tips:
-		for j in 5:
-			var r := rng.randf_range(4.5, 7.0)
-			var off := Vector3(rng.randf_range(-6, 6), rng.randf_range(-2, 5), rng.randf_range(-6, 6))
-			var leaf := mat(greens[(j + v) % 4], "fine", 0.2, Vector3.ONE, 0.6, 0.8 if snowy else 0.0)
-			mi(root, sph(r, 9, 6), leaf, t + off, Vector3(rng.randf_range(0, 40), rng.randf_range(0, 360), 0), Vector3(1, rng.randf_range(0.75, 1.0), 1))
-	mi(root, sph(8, 10, 6), mat(greens[v % 4], "fine", 0.2, Vector3.ONE, 0.6, 0.8 if snowy else 0.0), Vector3(0, 30, 0), Vector3.ZERO, Vector3(1, 0.8, 1))
+		for j in 3:
+			var r := rng.randf_range(5.5, 8.0)
+			var off := Vector3(rng.randf_range(-5, 5), rng.randf_range(-1.5, 3.5), rng.randf_range(-5, 5))
+			clump(root, t + off, r, mat(greens[(j + k + v) % 4], "fine", 0.22, Vector3.ONE, 0.65, sn), 200 + v * 31 + k * 7 + j, Vector3(1, rng.randf_range(0.75, 0.95), 1))
+		k += 1
+	clump(root, Vector3(0, 29, 0) + lean, 10.0, mat(greens[(v + 1) % 4], "fine", 0.22, Vector3.ONE, 0.65, sn), 300 + v, Vector3(1, 0.8, 1))
 	return root
 
 func _bush(full: bool, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 400
-	for i in 7:
-		var a := i * TAU / 7
-		var leaf := mat([Color("#3b6a2e"), Color("#46763a"), Color("#33602a")][i % 3], "fine", 0.22, Vector3.ONE, 0.55, 0.8 if snowy else 0.0)
-		mi(root, sph(rng.randf_range(3.5, 5.0), 8, 5), leaf, Vector3(cos(a) * 5, rng.randf_range(3.5, 6.5), sin(a) * 5))
-	mi(root, sph(5.5, 9, 6), mat(Color("#41702f"), "fine", 0.22, Vector3.ONE, 0.55, 0.8 if snowy else 0.0), Vector3(0, 7, 0))
+	var sn := 0.8 if snowy else 0.0
+	for i in 6:
+		var a := i * TAU / 6 + rng.randf_range(-0.3, 0.3)
+		var leaf := mat([Color("#3b6a2e"), Color("#46763a"), Color("#33602a")][i % 3], "fine", 0.22, Vector3.ONE, 0.6, sn)
+		clump(root, Vector3(cos(a) * 4.8, rng.randf_range(3.0, 5.5), sin(a) * 4.8), rng.randf_range(3.4, 4.6), leaf, 400 + i, Vector3(1, 0.85, 1))
+	clump(root, Vector3(0, 7, 0), 5.2, mat(Color("#41702f"), "fine", 0.22, Vector3.ONE, 0.6, sn), 410, Vector3(1, 0.85, 1))
 	if full:
-		var berry := mat(Color("#c8283a"), "fine", 0.3, Vector3.ONE, 0.2)
-		for i in 16:
+		var berry := mat(Color("#c42638"), "fine", 0.3, Vector3.ONE, 0.2)
+		for i in 18:
 			var a := i * 2.4
-			mi(root, sph(1.1, 6, 4), berry, Vector3(cos(a) * rng.randf_range(5.5, 7.5), rng.randf_range(3.5, 10), sin(a) * rng.randf_range(5.5, 7.5)))
+			var p := Vector3(cos(a) * rng.randf_range(5.5, 7.2), rng.randf_range(3.5, 10), sin(a) * rng.randf_range(5.5, 7.2))
+			mi(root, sph(0.85, 6, 4), berry, p)
+			mi(root, sph(0.7, 6, 4), berry, p + Vector3(0.9, -0.5, 0.4))
 	return root
 
 func _stump(snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	var bark := mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1))
-	mi(root, cyl(3.4, 4.0, 5, 9), bark, Vector3(0, 2.5, 0))
-	mi(root, cyl(4.0, 5.2, 1.6, 9), bark, Vector3(0, 0.8, 0))
-	mi(root, cyl(3.3, 3.3, 0.4, 9), mat(Color("#c09060") if not snowy else Color("#eef2f8"), "fine", 0.5), Vector3(0, 5.1, 0))
-	mi(root, cyl(0.25, 0.25, 6, 4), mat(Color("#cfc0a0"), "fine"), Vector3(4, 0.6, 2), Vector3(0, 30, 85)) # a chip of wood
+	var bark := mat(Color("#654628"), "streak", 0.2, Vector3(1, 4, 1), 0.6)
+	mi(root, lumpy(cyl(3.4, 4.0, 5, 12), 0.35, 5, 0.6), bark, Vector3(0, 2.5, 0))
+	for i in 4:
+		var a := i * TAU / 4 + 0.4
+		limb(root, [Vector3(0, 3, 0), Vector3(cos(a) * 5.5, 0.2, sin(a) * 5.5)], [1.6, 0.4], bark, 6)
+	mi(root, cyl(3.2, 3.2, 0.4, 12), mat(Color("#c79868") if not snowy else Color("#eef2f8"), "fine", 0.5, Vector3.ONE, 0.4), Vector3(0, 5.1, 0))
+	if not snowy: mi(root, cyl(1.6, 1.6, 0.42, 10), mat(Color("#a87848"), "fine", 0.5), Vector3(0, 5.12, 0))
+	mi(root, box(Vector3(0.6, 0.4, 2.6)), mat(Color("#cfc0a0"), "fine"), Vector3(5, 0.3, 2), Vector3(0, 30, 0)) # a chip of wood
 	return root
 
 func _rocks(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 300 + v
-	var stone := mat(Color("#8b877d"), "coarse", 0.15, Vector3.ONE, 0.6, 0.7 if snowy else 0.0)
-	var dark := mat(Color("#6f6b62"), "coarse", 0.15, Vector3.ONE, 0.6, 0.7 if snowy else 0.0)
-	var moss := mat(Color("#5d7a3a"), "fine", 0.3, Vector3.ONE, 0.5, 0.7 if snowy else 0.0)
+	var sn := 0.75 if snowy else 0.45
+	var moss_col := Color("#eef2f8") if snowy else Color("#5d7a3a")
+	var stone := tune(mat(Color("#8b877d"), "coarse", 0.15, Vector3.ONE, 0.6, sn), {"snow_color": moss_col})
+	var dark := tune(mat(Color("#706b62"), "coarse", 0.15, Vector3.ONE, 0.6, sn * 0.6), {"snow_color": moss_col})
 	for i in 3 + v:
 		var sc := rng.randf_range(4, 8.5)
-		var pos := Vector3(rng.randf_range(-9, 9), sc * 0.45, rng.randf_range(-7, 7))
-		mi(root, sph(sc, 6, 4), stone if i % 2 == 0 else dark, pos, Vector3(rng.randf_range(0, 60), rng.randf_range(0, 360), 0), Vector3(1.0, rng.randf_range(0.6, 1.0), rng.randf_range(0.7, 1.2)))
-		if i % 2 == 1: mi(root, sph(sc * 0.55, 6, 3), moss, pos + Vector3(0, sc * 0.45, 0), Vector3.ZERO, Vector3(1, 0.3, 1))
-	for i in 5: # pebbles
-		mi(root, sph(rng.randf_range(0.8, 1.6), 5, 3), stone, Vector3(rng.randf_range(-13, 13), 0.4, rng.randf_range(-10, 10)))
+		var pos := Vector3(rng.randf_range(-9, 9), sc * 0.4, rng.randf_range(-7, 7))
+		boulder(root, pos, sc, stone if i % 2 == 0 else dark, 300 + v * 10 + i, rng.randf_range(0.6, 0.9), rng.randf_range(0, 360))
+	for i in 6: # pebbles
+		boulder(root, Vector3(rng.randf_range(-13, 13), 0.3, rng.randf_range(-10, 10)), rng.randf_range(0.8, 1.6), dark, 350 + i, 0.6)
 	return root
 
 # ---- village props (placed beside homes)
@@ -480,7 +606,7 @@ func _tent(big: bool, snowy: bool) -> Node3D:
 	var h := 36.0 if big else 30.0
 	var hide := mat(Color("#b48a5c"), "coarse", 0.1, Vector3(1, 3, 1), 0.45, 0.6 if snowy else 0.0)
 	var seam := mat(Color("#7a5a38"), "fine", 0.3)
-	mi(root, cyl(0.6, r, h, 10), hide, Vector3(0, h / 2, 0))
+	mi(root, lumpy(cyl(0.6, r, h, 20, 6), 0.3, 34, 0.22), hide, Vector3(0, h / 2, 0))
 	for i in 5: # sewn seams running up the hide panels
 		var a := (i + 0.5) * TAU / 5
 		segment(root, Vector3(cos(a) * (r + 0.3), 0.2, sin(a) * (r + 0.3)), Vector3(0, h - 0.5, 0), 0.35, seam)
@@ -489,13 +615,13 @@ func _tent(big: bool, snowy: bool) -> Node3D:
 		var a := i * TAU / 6
 		mi(root, cyl(0.5, 0.6, 13, 5), pole, Vector3(cos(a) * 1.6, h + 3.5, sin(a) * 1.6), Vector3(rad_to_deg(sin(a)) * 0.4, 0, -rad_to_deg(cos(a)) * 0.4))
 	# open door flap and stones weighing down the hem
-	mi(root, box(Vector3(8, h * 0.45, 1.0)), mat(Color("#2a1a0e"), "fine"), Vector3(0, h * 0.22, r * 0.74), Vector3(-30, 0, 0))
-	mi(root, box(Vector3(5, h * 0.4, 0.6)), hide, Vector3(5, h * 0.2, r * 0.8), Vector3(-30, 25, -10))
+	mi(root, box(Vector3(8, h * 0.45, 1.4)), mat(Color("#2a1a0e"), "fine"), Vector3(0, h * 0.22, r * 0.78), Vector3(-30, 0, 0))
+	mi(root, box(Vector3(5, h * 0.4, 0.6)), hide, Vector3(5, h * 0.2, r * 0.86), Vector3(-30, 25, -10))
 	var stone := mat(Color("#8b877d"), "coarse", 0.25, Vector3.ONE, 0.5, 0.6 if snowy else 0.0)
 	for i in 12:
 		var a := i * TAU / 12 + 0.2
 		if absf(a - PI / 2) < 0.4: continue
-		mi(root, sph(1.6, 6, 4), stone, Vector3(cos(a) * (r + 0.6), 0.8, sin(a) * (r + 0.6)), Vector3.ZERO, Vector3(1, 0.7, 1))
+		boulder(root, Vector3(cos(a) * (r + 0.6), 0.8, sin(a) * (r + 0.6)), 1.7, stone, 40 + i, 0.7, i * 30)
 	_drying_rack(root, Vector3(-r - 6, 0, 4), 70)
 	_woodpile(root, Vector3(r + 2, 0, -8), 20)
 	return root
@@ -509,14 +635,14 @@ func _round_hut(big: bool, snowy: bool) -> Node3D:
 	var thatch := mat(thatch_col, "streak", 0.2, Vector3(1, 6, 1), 0.65, 0.85 if snowy else 0.0)
 	var wh := 13.0 if big else 11.0
 	var rh := 31.0 if big else 25.0
-	mi(root, cyl(r, r + 0.6, wh, 18), wall, Vector3(0, wh / 2, 0))
+	mi(root, lumpy(cyl(r, r + 0.6, wh, 28, 4), 0.45, 33, 0.3), wall, Vector3(0, wh / 2, 0))
 	mi(root, cyl(r + 0.8, r + 1.0, 1.4, 18), mat(Color("#7a6040"), "coarse", 0.2), Vector3(0, 0.7, 0)) # plinth
 	for i in 10: # wall posts
 		var a := i * TAU / 10 + 0.15
 		mi(root, cyl(0.8, 0.9, wh + 1, 5), post, Vector3(cos(a) * (r + 0.3), wh / 2, sin(a) * (r + 0.3)))
 	# two-layer thatch with a fringe at the eave and a bound knot over the smoke hole
-	mi(root, cyl(r * 0.55, r * 1.24, rh * 0.6, 18), thatch, Vector3(0, wh + rh * 0.3, 0))
-	mi(root, cyl(0.6, r * 0.62, rh * 0.5, 16), mat(thatch_col.lightened(0.06), "streak", 0.2, Vector3(1, 6, 1), 0.65, 0.85 if snowy else 0.0), Vector3(0, wh + rh * 0.6 + rh * 0.23, 0))
+	mi(root, lumpy(cyl(r * 0.55, r * 1.24, rh * 0.6, 28, 6), 1.1, 31, 0.18), thatch, Vector3(0, wh + rh * 0.3, 0))
+	mi(root, lumpy(cyl(0.6, r * 0.62, rh * 0.5, 24, 5), 0.8, 32, 0.2), mat(thatch_col.lightened(0.06), "streak", 0.2, Vector3(1, 6, 1), 0.65, 0.85 if snowy else 0.0), Vector3(0, wh + rh * 0.6 + rh * 0.23, 0))
 	_fringe(root, wh + 0.2, r * 1.22, 26, thatch_col, snowy)
 	var rib := mat(thatch_col.darkened(0.3), "streak", 0.3, Vector3(1, 4, 1), 0.4, 0.5 if snowy else 0.0)
 	for i in 16: # bundle ribs down the roof
@@ -559,7 +685,7 @@ func _longhouse(big: bool, snowy: bool) -> Node3D:
 	for side in [-1, 1]:
 		for i in int(length / 5.5):
 			var x := -length / 2 + 2.5 + i * 5.5
-			mi(root, sph(2.8, 6, 4), stone if i % 2 == 0 else stone2, Vector3(x, 3.4, side * (depth / 2 + 2.2)), Vector3(0, rng.randf_range(0, 90), 0), Vector3(1.1, 0.7, 0.9))
+			boulder(root, Vector3(x, 3.4, side * (depth / 2 + 2.2)), 2.9, stone if i % 2 == 0 else stone2, 60 + i * 2 + side, 0.7, rng.randf_range(0, 90))
 	# vertical plank walls with corner posts and a sill beam
 	mi(root, box(Vector3(length - 1, 14, depth - 1)), plank_b, Vector3(0, 11.5, 0))
 	var n := int(length / 3.4)
@@ -611,7 +737,8 @@ func _fire_base(snowy: bool) -> Node3D:
 	var stone := mat(Color("#8b877d"), "coarse", 0.25, Vector3.ONE, 0.5, 0.6 if snowy else 0.0)
 	for i in 10:
 		var a := i * TAU / 10
-		mi(root, sph(2.6, 7, 4), stone, Vector3(cos(a) * 11, 1.2, sin(a) * 11), Vector3.ZERO, Vector3(1, 0.7, 1))
+		boulder(root, Vector3(cos(a) * 11, 1.2, sin(a) * 11), 2.7, stone, 80 + i, 0.7, i * 37)
+	mi(root, cyl(9, 9, 0.3, 14), mat(Color("#3a3430"), "coarse", 0.3), Vector3(0, 0.15, 0)) # ash bed
 	var lg := mat(Color("#4a2e16"), "streak", 0.2, Vector3(4, 1, 1))
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2, 0), Vector3(0, 30, 80))
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2.6, 0), Vector3(0, -40, 80))
@@ -659,7 +786,7 @@ func _hot_spring(snowy: bool) -> Node3D:
 	var stone := mat(Color("#9a9286"), "coarse", 0.2, Vector3.ONE, 0.55, 0.8 if snowy else 0.0)
 	for i in 16:
 		var a := i * TAU / 16
-		mi(root, sph(randf_range(3.5, 5.5), 7, 4), stone, Vector3(cos(a) * 42, 1.5, sin(a) * 26), Vector3(0, randf() * 90, 0), Vector3(1, 0.65, 1))
+		boulder(root, Vector3(cos(a) * 42, 1.5, sin(a) * 26), randf_range(3.5, 5.5), stone, 90 + i, 0.65, randf() * 90)
 	mi(root, cyl(40, 40, 1.0, 24), mat(Color("#c2b48e"), "coarse", 0.2, Vector3.ONE, 0.4), Vector3(0, 0.3, 0), Vector3.ZERO, Vector3(1, 1, 0.62))
 	mi(root, cyl(36, 36, 1.0, 24), mat(Color("#3fa6b2"), "fine", 0.08, Vector3.ONE, 0.35), Vector3(0, 0.9, 0), Vector3.ZERO, Vector3(1, 1, 0.6))
 	mi(root, cyl(16, 16, 1.0, 20), mat(Color("#7fd6dc"), "fine", 0.1, Vector3.ONE, 0.3), Vector3(-6, 1.0, -2), Vector3.ZERO, Vector3(1, 1, 0.6))
@@ -800,10 +927,10 @@ func _outcrop(v: int, snowy: bool) -> Node3D:
 			var a := rng.randf() * TAU
 			var off := Vector3(cos(a), 0, sin(a)) * rng.randf_range(0, r * 0.4)
 			var sz := Vector3(rng.randf_range(r * 0.7, r * 1.2), 8.0, rng.randf_range(r * 0.5, r * 0.9))
-			mi(root, box(sz), mat(tones[(layer + i) % 3], "coarse", 0.08, Vector3(1, 0.3, 1), 0.6, 0.8 if snowy else 0.0), off + Vector3(0, y + 4, 0), Vector3(rng.randf_range(-6, 6), rng.randf_range(0, 180), rng.randf_range(-6, 6)))
+			mi(root, lumpy(box(sz), 1.6, 920 + layer * 10 + i, 0.12, true), mat(tones[(layer + i) % 3], "coarse", 0.08, Vector3(1, 0.3, 1), 0.6, 0.8 if snowy else 0.0), off + Vector3(0, y + 4, 0), Vector3(rng.randf_range(-6, 6), rng.randf_range(0, 180), rng.randf_range(-6, 6)))
 	for i in 8: # fallen boulders and scrub at the foot
 		var a := rng.randf() * TAU
-		mi(root, sph(rng.randf_range(2.5, 5), 6, 4), mat(tones[i % 3], "coarse", 0.15, Vector3.ONE, 0.5, 0.6 if snowy else 0.0), Vector3(cos(a) * 38, 1.5, sin(a) * 30), Vector3(0, rng.randf() * 90, 0), Vector3(1, 0.7, 1))
+		boulder(root, Vector3(cos(a) * 38, 1.5, sin(a) * 30), rng.randf_range(2.5, 5), mat(tones[i % 3], "coarse", 0.15, Vector3.ONE, 0.5, 0.6 if snowy else 0.0), 910 + i, 0.7, rng.randf() * 90)
 	for i in 5:
 		var a := rng.randf() * TAU
 		var g := _grass(i, snowy)
@@ -910,46 +1037,122 @@ func _granary(snowy: bool) -> Node3D:
 	_pot(root, Vector3(-19, 0, 3), 0.8)
 	return root
 
+## Clay bloomery furnace on a stone footing, with bellows, charcoal and ore heaps and
+## cast bronze.
 func _smelter(snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	var stone := mat(Color("#7d776c"), "coarse", 0.2, Vector3.ONE, 0.6, 0.5 if snowy else 0.0)
-	mi(root, sph(13, 12, 7), stone, Vector3(0, 6, 0), Vector3.ZERO, Vector3(1, 1.1, 1))
-	mi(root, cyl(3.2, 4.2, 16, 8), stone, Vector3(4, 20, -3))
-	mi(root, box(Vector3(7, 7, 4)), flat(Color(1.0, 0.55, 0.15)), Vector3(0, 4.5, 11))
+	var sn := 0.5 if snowy else 0.0
+	var clay := mat(Color("#9a6a48"), "coarse", 0.2, Vector3.ONE, 0.6, sn)
+	var stone := mat(Color("#7d776c"), "coarse", 0.2, Vector3.ONE, 0.6, sn)
+	for i in 11: # footing stones
+		var a := i * TAU / 11
+		boulder(root, Vector3(cos(a) * 9.5, 1.6, sin(a) * 9.5), 2.8, stone, 700 + i, 0.75, i * 40)
+	mi(root, lumpy(cyl(5.0, 9.5, 16, 14), 0.7, 71, 0.3), clay, Vector3(0, 8, 0))
+	mi(root, lumpy(cyl(3.6, 5.0, 8, 12), 0.5, 72, 0.3), clay, Vector3(0, 20, 0))
+	mi(root, cyl(3.2, 3.2, 0.6, 12), flat(Color(0.95, 0.45, 0.12)), Vector3(0, 24.0, 0)) # glowing throat
+	mi(root, box(Vector3(5, 5.5, 3)), flat(Color(1.0, 0.55, 0.15)), Vector3(0, 3.2, 8.0)) # tapping arch
+	mi(root, box(Vector3(6.4, 1.2, 3.2)), stone, Vector3(0, 6.4, 8.2))
+	# leather bellows feeding a clay pipe
+	var leather := mat(Color("#7a5232"), "coarse", 0.4, Vector3.ONE, 0.5)
+	mi(root, lumpy(sph(3.2, 10, 6), 0.4, 73, 0.5), leather, Vector3(-13, 2.6, 4), Vector3.ZERO, Vector3(1.2, 0.7, 1))
+	limb(root, [Vector3(-10.5, 3, 3.5), Vector3(-7.5, 4, 2.5)], [0.7, 0.6], clay, 6)
+	mi(root, cyl(0.35, 0.35, 7, 5), mat(Color("#6b4524"), "streak", 0.3, Vector3(1, 4, 1)), Vector3(-13, 5.4, 4), Vector3(0, 0, 70))
+	var coal := mat(Color("#26221f"), "coarse", 0.3, Vector3.ONE, 0.4)
+	var ore := mat(Color("#8a4a32"), "coarse", 0.3, Vector3.ONE, 0.6)
+	for i in 7:
+		boulder(root, Vector3(10 + (i % 3) * 2.2, 0.8 + (i / 3) * 1.4, -9 + (i % 2) * 2.0), 1.5, coal, 720 + i)
+		boulder(root, Vector3(-11 + (i % 3) * 2.2, 0.8 + (i / 3) * 1.4, -8 + (i % 2) * 2.0), 1.4, ore, 740 + i)
 	var bronze := mat(Color("#d49a3a"), "fine", 0.3, Vector3.ONE, 0.3)
-	for i in 3: mi(root, box(Vector3(6, 1.6, 2.6)), bronze, Vector3(15 + i * 1.5, 0.8 + i * 1.6, 6 - i))
+	for i in 3: mi(root, box(Vector3(5, 1.3, 2.2)), bronze, Vector3(13, 0.7 + i * 1.3, 7 - i * 0.4), Vector3(0, i * 25, 0))
 	return root
 
+## Ring of standing stones with log benches round a fire pit and a talking pole.
 func _council(snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	var stone := mat(Color("#9a968c"), "coarse", 0.2, Vector3.ONE, 0.55, 0.7 if snowy else 0.0)
-	for i in 10:
-		var a := i * TAU / 10
-		mi(root, box(Vector3(8, 5, 4)), stone, Vector3(cos(a) * 30, 2.5, sin(a) * 30), Vector3(0, -rad_to_deg(a) + 90, 0))
-	mi(root, cyl(1.5, 1.8, 18, 6), mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1)), Vector3(0, 9, 0))
-	mi(root, box(Vector3(5, 3, 5)), mat(Color("#c0392b"), "fine", 0.3), Vector3(0, 16, 0))
+	var sn := 0.7 if snowy else 0.35
+	var moss := Color("#eef2f8") if snowy else Color("#6a7f45")
+	var stone := tune(mat(Color("#9a968c"), "coarse", 0.18, Vector3.ONE, 0.55, sn), {"snow_color": moss})
+	for i in 9:
+		var a := i * TAU / 9 + 0.2
+		var h := 9.0 + (i % 3) * 2.5
+		mi(root, lumpy(box(Vector3(5.5, h, 3.6)), 0.8, 800 + i, 0.35, true), stone, Vector3(cos(a) * 31, h / 2 - 0.5, sin(a) * 31), Vector3(randf_range(-4, 4), -rad_to_deg(a) + 90, randf_range(-5, 5)))
+	var log_m := mat(Color("#6e4b2a"), "streak", 0.25, Vector3(4, 1, 1), 0.5, sn * 0.6)
+	for i in 4: # log benches
+		var a := i * TAU / 4 + 0.6
+		var c := Vector3(cos(a) * 18, 1.6, sin(a) * 18)
+		mi(root, cyl(1.6, 1.6, 12, 8), log_m, c, Vector3(0, -rad_to_deg(a), 90))
+	var ring := mat(Color("#7d776c"), "coarse", 0.25, Vector3.ONE, 0.5, sn)
+	for i in 9:
+		var a := i * TAU / 9
+		boulder(root, Vector3(cos(a) * 6, 0.9, sin(a) * 6), 1.8, ring, 820 + i)
+	mi(root, cyl(5, 5, 0.3, 12), mat(Color("#3a3430"), "coarse", 0.3), Vector3(0, 0.2, 0))
+	var wood := mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1), 0.55)
+	limb(root, [Vector3(0, 0, -11), Vector3(0, 17, -11)], [1.4, 1.1], wood, 8)
+	mi(root, lumpy(sph(2.4, 10, 6), 0.4, 830, 0.5), mat(Color("#e8dcc0"), "fine", 0.3), Vector3(0, 18.6, -11), Vector3.ZERO, Vector3(1, 0.85, 1.25)) # a skull atop
+	for i in 3: limb(root, [Vector3(0, 15.5 - i * 1.2, -10.2), Vector3(0, 11 - i * 1.6, -9.4 + i * 0.3)], [0.25, 0.12], mat([Color("#c0392b"), Color("#e6b33a"), Color("#f0ece0")][i], "fine"), 4)
 	return root
 
+## A totem: carved animal faces stacked up a pole, painted, with spread thunderbird
+## wings at the top. The grand altar raises a taller one on a stepped stone mound.
 func _shrine(grand: bool, snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	var stone := mat(Color("#9a968c"), "coarse", 0.2, Vector3.ONE, 0.55, 0.7 if snowy else 0.0)
+	var sn := 0.7 if snowy else 0.0
+	var stone := mat(Color("#9a968c"), "coarse", 0.18, Vector3.ONE, 0.55, sn)
+	var stone2 := mat(Color("#86827a"), "coarse", 0.18, Vector3.ONE, 0.55, sn)
 	var base_h := 0.0
 	if grand:
-		mi(root, box(Vector3(56, 7, 56)), stone, Vector3(0, 3.5, 0))
-		mi(root, box(Vector3(38, 8, 38)), stone, Vector3(0, 11, 0))
+		for tier in 3:
+			var hw := 27.0 - tier * 8.0
+			var y := 2.4 + tier * 4.6
+			var n := int(hw * 8 / 5.5)
+			for i in n: # dressed stones around each tier's edge
+				var t := float(i) / n * 4.0
+				var e := int(t)
+				var f := t - e
+				var p: Vector3 = [Vector3(-hw + 2 * hw * f, 0, -hw), Vector3(hw, 0, -hw + 2 * hw * f), Vector3(hw - 2 * hw * f, 0, hw), Vector3(-hw, 0, hw - 2 * hw * f)][e]
+				boulder(root, p + Vector3(0, y, 0), 3.0, stone if i % 2 == 0 else stone2, 900 + tier * 50 + i, 0.8, i * 23)
+			mi(root, box(Vector3(hw * 2 - 1, 4.6, hw * 2 - 1)), stone2, Vector3(0, y, 0))
 		base_h = 15.0
+		for side in [-1, 1]: # fire bowls on the top tier
+			mi(root, cyl(2.4, 1.4, 2.2, 10), mat(Color("#5a5048"), "coarse", 0.3), Vector3(side * 8, base_h + 1, 8))
+			mi(root, sph(1.6, 8, 5), flat(Color(1.0, 0.6, 0.2)), Vector3(side * 8, base_h + 2.6, 8), Vector3.ZERO, Vector3(1, 1.4, 1))
 	else:
-		for i in 6:
-			var a := i * TAU / 6
-			mi(root, sph(2.6, 7, 4), stone, Vector3(cos(a) * 11, 1.2, sin(a) * 11))
+		for i in 7:
+			var a := i * TAU / 7
+			boulder(root, Vector3(cos(a) * 10.5, 1.4, sin(a) * 10.5), 2.6, stone if i % 2 == 0 else stone2, 950 + i, 0.75, i * 50)
+		_pot(root, Vector3(6, 0, 12), 0.8)
+		mi(root, lumpy(sph(1.8, 8, 5), 0.3, 960, 0.6), mat(Color("#e8dcc0"), "fine", 0.3), Vector3(-6, 1.2, 12), Vector3.ZERO, Vector3(1, 0.8, 1.3))
 	var h := 58.0 if grand else 44.0
-	var wood := mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1))
-	mi(root, cyl(3.6, 4.2, h, 8), wood, Vector3(0, base_h + h / 2, 0))
-	var cols := [Color("#c0392b"), Color("#e6b33a"), Color("#2e86ab"), Color("#c0392b")]
-	for i in 4:
-		mi(root, cyl(4.6, 4.6, h * 0.12, 8), mat(cols[i], "fine", 0.3, Vector3.ONE, 0.3), Vector3(0, base_h + h - 5 - i * h * 0.22, 0))
-	var wing := mat(Color("#e6b33a"), "fine", 0.3, Vector3.ONE, 0.3, 0.6 if snowy else 0.0)
-	mi(root, box(Vector3(26 if grand else 20, 1.2, 6)), wing, Vector3(0, base_h + h - 3, 0), Vector3(0, 0, 0))
+	var wood := mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1), 0.55)
+	var paints := [Color("#b03a2b"), Color("#e0aa36"), Color("#2e7a9b"), Color("#2a1c12")]
+	var faces := 4 if grand else 3
+	var seg_h := (h - 10.0) / faces
+	mi(root, cyl(3.4, 4.0, h, 10), wood, Vector3(0, base_h + h / 2, 0))
+	for i in faces: # one carved face per block: brow, big eyes, a beak or snout, teeth
+		var y := base_h + 2.0 + i * seg_h + seg_h / 2
+		var r := 4.6 - i * 0.25
+		mi(root, lumpy(cyl(r, r + 0.3, seg_h - 0.8, 12), 0.3, 970 + i, 0.4), wood, Vector3(0, y, 0))
+		var paint := mat(paints[(i + 1) % 3], "fine", 0.3, Vector3.ONE, 0.3)
+		mi(root, cyl(r + 0.35, r + 0.35, 1.2, 12), paint, Vector3(0, y + seg_h / 2 - 1.4, 0))
+		mi(root, box(Vector3(r * 1.6, 1.1, 1.6)), paint, Vector3(0, y + 1.8, r - 0.2))
+		for side in [-1, 1]:
+			mi(root, sph(1.25, 8, 5), mat(Color("#f0ece0"), "fine"), Vector3(side * r * 0.42, y + 0.6, r - 0.3), Vector3.ZERO, Vector3(1, 1, 0.5))
+			mi(root, sph(0.6, 6, 4), mat(paints[3], "fine"), Vector3(side * r * 0.42, y + 0.6, r + 0.15))
+		if i % 2 == 0: # beak
+			loft(root, [[Vector3(0, y - 0.6, r - 0.5), 1.2, 1.3], [Vector3(0, y - 1.4, r + 2.2), 0.8, 0.8], [Vector3(0, y - 2.8, r + 3.0), 0.15, 0.15]], mat(paints[1], "fine", 0.3), Vector3.UP, 7)
+		else: # snout with teeth
+			mi(root, box(Vector3(r * 1.0, 1.8, 2.4)), wood, Vector3(0, y - 1.4, r + 0.6))
+			for t in 4: mi(root, box(Vector3(0.45, 0.8, 0.4)), mat(Color("#f0ece0"), "fine"), Vector3(-1.2 + t * 0.8, y - 2.5, r + 1.7))
+	# thunderbird on top: head, spread wings (flattened lofts), painted feather tips
+	var top := base_h + h
+	var wing_m := mat(paints[0], "fine", 0.3, Vector3.ONE, 0.3, sn)
+	var tip_m := mat(paints[3], "fine", 0.3, Vector3.ONE, 0.3, sn)
+	var span := 16.0 if grand else 12.0
+	for side in [-1, 1]:
+		loft(root, [[Vector3(0, top - 2, 0), 1.5, 2.5], [Vector3(side * span * 0.4, top - 0.5, 0), 0.8, 3.4], [Vector3(side * span * 0.8, top + 1.5, 0), 0.6, 3.0], [Vector3(side * span, top + 3.0, 0), 0.3, 1.0]], wing_m, Vector3(0, 0, 1), 8)
+		loft(root, [[Vector3(side * span * 0.75, top + 1.2, 0), 0.7, 3.1], [Vector3(side * span * 1.02, top + 3.1, 0), 0.25, 0.9]], tip_m, Vector3(0, 0, 1), 6)
+	mi(root, sph(2.6, 10, 6), wood, Vector3(0, top + 1.2, 0.6))
+	loft(root, [[Vector3(0, top + 1.2, 2.4), 0.9, 0.9], [Vector3(0, top + 0.6, 4.6), 0.6, 0.7], [Vector3(0, top - 0.6, 5.2), 0.1, 0.1]], mat(paints[1], "fine"), Vector3.UP, 6)
 	return root
 
 func _rack(snowy: bool) -> Node3D:
@@ -975,6 +1178,7 @@ func _pen(snowy: bool) -> Node3D:
 	for p in [Vector3(-8, 0, 4), Vector3(9, 0, -5)]:
 		var ox := _beast("aurochs", 30.0 + p.x * 9, 0.0, false)
 		ox.position = p
+		ox.scale = Vector3.ONE * 0.85
 		root.add_child(ox)
 	return root
 
@@ -1012,180 +1216,345 @@ func _peak(snowy: bool) -> Node3D:
 
 # ---- animals
 ## A four-legged animal (deer, tiger, wolf, aurochs) yawed to face `yaw`, legs mid-stride.
+## Body plans: torso / neck / head are rings [z, y, half-width, half-depth] along the
+## spine (+z = forward); legs are joint chains from the hip (lengths, rest angles from
+## straight down, radii at each joint).
+const BEASTS := {
+	"deer": {"col": "#94653a", "under": "#e6d6b6", "under_y": 14.2, "leg_col": "#7a522e", "sock": "#3e2a18", "sock_y": 3.5,
+		"torso": [[-11.6, 16.8, 0.6, 0.6], [-10.6, 16.8, 3.0, 3.5], [-7.5, 16.9, 3.9, 4.4], [-3, 16.4, 3.4, 3.9], [2, 16.5, 3.6, 4.5], [6, 17.0, 3.4, 4.5], [8.6, 18.2, 2.5, 3.4], [9.6, 19.3, 1.0, 1.0]],
+		"neck": [[7.0, 18.4, 2.2, 2.8], [8.8, 21.5, 1.7, 2.1], [10.2, 24.6, 1.45, 1.8], [11.0, 26.6, 1.3, 1.5]],
+		"head": [[10.0, 27.6, 0.7, 0.7], [10.8, 27.6, 1.8, 1.95], [12.6, 27.0, 1.55, 1.6], [14.4, 25.9, 0.95, 1.05], [15.6, 25.2, 0.55, 0.55]],
+		"front": [Vector3(2.0, 15.0, 6.2), [5.6, 5.4, 4.6], [0.06, -0.04, 0.0], [1.6, 0.85, 0.55, 0.45]],
+		"hind": [Vector3(2.2, 15.4, -7.4), [6.0, 5.8, 5.6], [0.42, -0.55, -0.04], [2.5, 1.2, 0.6, 0.45]],
+		"foot": "hoof", "foot_r": 0.55,
+		"tail": [[-10.8, 18.0, 0.9, 0.6], [-11.9, 17.2, 1.1, 0.8], [-12.4, 15.6, 0.7, 0.5]], "tail_col": "#f0e6d0",
+		"ears": "leaf", "eye_r": 0.42},
+	"wolf": {"col": "#7b7b80", "under": "#cfccc4", "under_y": 11.6, "leg_col": "#8c8a86", "sock": "#b8b4ac", "sock_y": 2.5, "back": "#4e4e54",
+		"torso": [[-9.6, 13.2, 0.6, 0.6], [-8.6, 13.2, 2.8, 3.0], [-5.6, 13.4, 3.1, 3.3], [-1, 13.0, 2.7, 2.9], [3.4, 12.8, 3.3, 4.4], [6.8, 13.4, 3.4, 4.4], [8.8, 14.8, 2.6, 3.2], [9.6, 15.8, 1.0, 1.0]],
+		"neck": [[6.8, 14.6, 3.1, 3.8], [9.2, 16.6, 2.7, 3.1], [10.8, 18.0, 2.2, 2.4]],
+		"head": [[9.6, 19.0, 0.8, 0.8], [10.6, 19.0, 2.3, 2.2], [12.4, 18.5, 1.9, 1.8], [14.0, 17.7, 1.0, 1.0], [15.6, 17.3, 0.72, 0.65], [16.3, 17.1, 0.3, 0.3]],
+		"front": [Vector3(1.7, 11.8, 6.0), [4.6, 4.3, 2.8], [0.08, -0.05, 0.16], [1.5, 0.85, 0.6, 0.55]],
+		"hind": [Vector3(1.9, 12.4, -6.0), [4.9, 4.7, 3.7], [0.5, -0.62, 0.0], [2.2, 1.15, 0.6, 0.55]],
+		"foot": "paw", "foot_r": 0.85,
+		"tail": [[-9.0, 14.2, 0.9, 0.9], [-10.8, 13.0, 1.6, 1.7], [-12.6, 10.6, 1.9, 1.9], [-13.8, 8.2, 1.4, 1.4], [-14.3, 6.8, 0.35, 0.35]], "tail_col": "#5e5e64",
+		"ears": "point", "eye_r": 0.36, "eye_col": "#d8a030"},
+	"tiger": {"col": "#d6832a", "under": "#f3e9d4", "under_y": 10.6, "leg_col": "#d6832a", "sock": "#f3e9d4", "sock_y": 2.6, "stripes": true,
+		"torso": [[-12.2, 12.8, 0.7, 0.7], [-11.2, 12.8, 3.9, 4.2], [-7.2, 12.8, 4.5, 4.8], [-1.2, 12.3, 4.1, 4.3], [4.8, 12.7, 4.7, 5.3], [8.8, 13.5, 4.5, 5.1], [11.2, 14.6, 3.4, 3.8], [12.2, 15.4, 1.2, 1.2]],
+		"neck": [[9.4, 14.6, 3.6, 4.2], [11.8, 15.6, 3.2, 3.4], [13.2, 16.1, 2.8, 2.8]],
+		"head": [[12.6, 17.0, 1.0, 1.0], [13.4, 17.0, 3.4, 3.1], [15.3, 16.5, 3.0, 2.7], [17.0, 15.6, 1.8, 1.6], [18.1, 15.2, 1.0, 0.9], [18.6, 15.1, 0.4, 0.4]],
+		"front": [Vector3(2.6, 10.8, 7.6), [4.1, 3.9, 2.4], [0.1, -0.05, 0.25], [2.3, 1.5, 1.2, 1.1]],
+		"hind": [Vector3(2.8, 11.4, -7.6), [4.6, 4.3, 3.1], [0.45, -0.58, 0.05], [3.1, 1.7, 1.1, 1.0]],
+		"foot": "paw", "foot_r": 1.5,
+		"tail": [[-12.0, 13.6, 1.1, 1.1], [-15.0, 12.6, 1.0, 1.0], [-18.0, 10.2, 0.9, 0.9], [-20.2, 8.8, 0.8, 0.8], [-22.2, 9.4, 0.7, 0.7], [-23.2, 11.0, 0.5, 0.5]], "tail_col": "#d6832a",
+		"ears": "round", "eye_r": 0.5, "eye_col": "#e8c040"},
+	"packox": {"col": "#5c3e28", "under": "#7d6048", "under_y": 9.0, "leg_col": "#4e3420", "sock": "#2e1e12", "sock_y": 2.0,
+		"torso": [[-10.2, 12.2, 0.8, 0.8], [-9.2, 12.3, 4.6, 4.8], [-5, 12.4, 5.4, 5.6], [0, 12.2, 5.4, 5.8], [4.6, 13.2, 5.6, 6.6], [7.8, 14.0, 4.8, 5.8], [9.8, 15.0, 3.0, 3.6], [10.6, 15.6, 1.2, 1.2]],
+		"neck": [[7.8, 13.6, 3.6, 4.6], [10.4, 13.0, 3.0, 3.7], [11.8, 12.6, 2.6, 3.0]],
+		"head": [[11.2, 14.0, 1.2, 1.2], [12.0, 13.6, 2.8, 3.0], [13.8, 12.6, 2.4, 2.6], [15.4, 11.3, 2.0, 1.9], [16.2, 10.7, 1.45, 1.35], [16.6, 10.4, 0.6, 0.6]],
+		"front": [Vector3(3.0, 9.4, 6.0), [3.3, 3.3, 2.4], [0.05, -0.03, 0.0], [2.6, 1.5, 1.1, 1.0]],
+		"hind": [Vector3(3.2, 9.8, -6.4), [3.7, 3.5, 2.7], [0.35, -0.45, 0.0], [3.2, 1.6, 1.1, 1.0]],
+		"foot": "hoof", "foot_r": 1.1,
+		"tail": [[-10.0, 13.6, 0.6, 0.6], [-10.8, 10.0, 0.5, 0.5], [-11.0, 6.2, 0.45, 0.45], [-11.0, 4.6, 0.95, 0.95], [-11.0, 3.2, 0.2, 0.2]], "tail_col": "#2e1e12",
+		"ears": "flat", "eye_r": 0.4},
+	"aurochs": {"col": "#33241a", "under": "#4a3626", "under_y": 10.0, "leg_col": "#2c1f15", "sock": "#cfc2a8", "sock_y": 2.6, "back": "#8a6a44",
+		"torso": [[-11.4, 13.4, 0.8, 0.8], [-10.4, 13.5, 5.0, 5.2], [-6, 13.6, 5.8, 6.0], [0, 13.4, 5.8, 6.2], [5.2, 14.6, 6.2, 7.2], [8.8, 15.4, 5.2, 6.2], [11.0, 16.4, 3.2, 3.8], [11.8, 17.0, 1.2, 1.2]],
+		"neck": [[8.8, 15.0, 3.9, 5.0], [11.6, 14.2, 3.2, 4.0], [13.2, 13.8, 2.8, 3.2]],
+		"head": [[12.6, 15.4, 1.2, 1.2], [13.4, 15.0, 3.0, 3.2], [15.2, 14.0, 2.6, 2.8], [16.9, 12.6, 2.1, 2.0], [17.7, 12.0, 1.5, 1.4], [18.1, 11.7, 0.6, 0.6]],
+		"front": [Vector3(3.3, 10.6, 6.6), [3.8, 3.7, 2.6], [0.05, -0.03, 0.0], [2.8, 1.6, 1.15, 1.05]],
+		"hind": [Vector3(3.5, 11.0, -7.0), [4.2, 3.9, 3.0], [0.35, -0.45, 0.0], [3.4, 1.7, 1.15, 1.05]],
+		"foot": "hoof", "foot_r": 1.15,
+		"tail": [[-11.2, 15.0, 0.6, 0.6], [-12.0, 11.0, 0.5, 0.5], [-12.2, 6.8, 0.45, 0.45], [-12.2, 5.0, 1.0, 1.0], [-12.2, 3.6, 0.2, 0.2]], "tail_col": "#1a120c",
+		"ears": "flat", "eye_r": 0.42},
+}
+
 func _beast(kind: String, yaw: float, phase: float, walking: bool, anim := "") -> Node3D:
 	var holder := Node3D.new()
 	holder.rotation_degrees.y = yaw
 	var root := Node3D.new()
 	holder.add_child(root)
+	var sp: Dictionary = BEASTS[kind]
 	var lunge := 0.0
 	if anim == "attack": # crouch, then spring forward with forelegs up
 		lunge = [0.0, 0.3, 1.0, 0.6][int(phase * 4) % 4]
 		root.position.z = lunge * 5.0
-		root.rotation_degrees.x = -lunge * 18.0
+		root.rotation_degrees.x = -lunge * 16.0
 	elif anim == "dead": # lying on its side
-		root.rotation_degrees.z = 88.0
-		root.position.y = 1.0
-	var spec: Dictionary = {
-		"deer": {"col": Color("#9a6a3c"), "belly": Color("#d8c09a"), "blen": 17.0, "r": 4.6, "leg": 11.0, "neck": 7.0, "head": 3.2},
-		"tiger": {"col": Color("#d98a2b"), "belly": Color("#f2d6a8"), "blen": 22.0, "r": 6.0, "leg": 9.0, "neck": 3.0, "head": 5.0},
-		"wolf": {"col": Color("#7a7a80"), "belly": Color("#b4b4ba"), "blen": 16.0, "r": 4.2, "leg": 8.5, "neck": 3.0, "head": 3.6},
-		"aurochs": {"col": Color("#3d2a1c"), "belly": Color("#5a4232"), "blen": 20.0, "r": 6.5, "leg": 8.0, "neck": 2.0, "head": 4.6},
-		"packox": {"col": Color("#4a3322"), "belly": Color("#6a5240"), "blen": 16.0, "r": 5.2, "leg": 6.5, "neck": 2.0, "head": 3.8},
-	}[kind]
-	var hide := mat(spec["col"], "fine", 0.25, Vector3.ONE, 0.35)
-	var blen: float = spec["blen"]
-	var leg_h: float = spec["leg"]
-	var body_y: float = leg_h + spec["r"] * 0.6
-	var body := mi(root, cap(spec["r"], blen), hide, Vector3(0, body_y, 0), Vector3(90, 0, 0))
-	mi(root, cap(spec["r"] * 0.7, blen * 0.8), mat(spec["belly"], "fine", 0.25, Vector3.ONE, 0.3), Vector3(0, body_y - spec["r"] * 0.35, 0), Vector3(90, 0, 0))
-	if kind == "tiger":
-		var stripe := flat(Color("#2a1608"))
-		for i in 5: mi(root, box(Vector3(spec["r"] * 2.05, 1.1, 1.2)), stripe, Vector3(0, body_y + 0.8, -blen * 0.35 + i * blen * 0.17), Vector3(0, 0, 0), Vector3(1, 1, 1))
-	var sw := sin(phase * TAU) * 28.0 if walking else 0.0
-	if anim == "attack": sw = 0.0
-	for i in 4:
-		var front := i < 2
-		var side := -1 if i % 2 == 0 else 1
-		var hip := Node3D.new()
-		hip.position = Vector3(side * spec["r"] * 0.55, leg_h, blen * (0.32 if front else -0.32))
-		hip.rotation_degrees.x = sw * (1 if (i == 0 or i == 3) else -1)
-		if anim == "attack" and front: hip.rotation_degrees.x = -55.0 * lunge
-		if anim == "dead": hip.rotation_degrees.x = 25.0 if front else -25.0
-		root.add_child(hip)
-		mi(hip, cyl(spec["r"] * 0.22, spec["r"] * 0.16, leg_h, 6), hide, Vector3(0, -leg_h / 2, 0))
-	var neck := Node3D.new()
-	neck.position = Vector3(0, body_y + spec["r"] * 0.4, blen * 0.5)
-	root.add_child(neck)
-	if spec["neck"] > 4.0: mi(neck, cyl(1.6, 2.2, spec["neck"], 6), hide, Vector3(0, spec["neck"] * 0.4, 1.5), Vector3(30, 0, 0))
-	var head_pos := Vector3(0, spec["neck"] * 0.8, 3.0 + spec["head"] * 0.4)
-	mi(neck, sph(spec["head"], 10, 6), hide, head_pos, Vector3.ZERO, Vector3(0.9, 0.9, 1.3))
+		root.rotation_degrees.z = 86.0
+		root.position = Vector3(sp["torso"][3][1] * 0.98, sp["torso"][3][2] * 0.95, 0)
+	var stripes: bool = sp.get("stripes", false)
+	var hide := tune(mat(Color(sp["col"]), "fine", 0.25, Vector3.ONE, 0.3), {"under_color": Color(sp["under"]), "under_amt": 1.0, "under_y": sp["under_y"], "under_soft": 1.6})
+	if stripes: tune(hide, {"stripe_color": Color("#1c1009"), "stripe_amt": 0.95, "stripe_axis": Vector3(0, 0.25, 1), "stripe_freq": 1.15})
+	var legm := tune(mat(Color(sp["leg_col"]), "fine", 0.25, Vector3.ONE, 0.3), {"under_color": Color(sp["sock"]), "under_amt": 1.0, "under_y": sp["sock_y"], "under_soft": 1.2})
+	if stripes: tune(legm, {"stripe_color": Color("#1c1009"), "stripe_amt": 0.8, "stripe_axis": Vector3(0, 1, 0), "stripe_freq": 1.3})
+	var dark := mat(Color("#1a1410"), "fine", 0.3, Vector3.ONE, 0.2)
+	var plain := mat(Color(sp["col"]), "fine", 0.25, Vector3.ONE, 0.3) # small primitives (their mesh space is local)
+	# head bobs with the stride; a grazing deer lowers it when idle
+	var bobz := sin(phase * TAU * 2.0) * 0.4 if walking else 0.0
+	var _ring := func(r: Array, dy := 0.0, dz := 0.0) -> Array: return [Vector3(0, r[1] + dy, r[0] + dz), r[2], r[3]]
+	var rings := []
+	for r in sp["torso"]: rings.append(_ring.call(r, bobz * 0.3))
+	loft(root, rings, hide, Vector3.UP, 14)
+	if sp.has("back"): # darker saddle along the spine
+		var saddle := []
+		for r in sp["torso"].slice(1, 6): saddle.append([Vector3(0, r[1] + r[3] * 0.55 + bobz * 0.3, r[0]), r[2] * 0.62, r[3] * 0.42])
+		loft(root, saddle, mat(Color(sp["back"]), "fine", 0.25, Vector3.ONE, 0.35), Vector3.UP, 10)
+	var head_drop := 0.0
+	var neck := []
+	for r in sp["neck"]: neck.append(_ring.call(r, bobz - head_drop * 0.5))
+	loft(root, neck, hide, Vector3.UP, 12)
+	var head := []
+	for r in sp["head"]: head.append(_ring.call(r, bobz - head_drop))
+	loft(root, head, hide, Vector3.UP, 12)
+	var hd: Array = sp["head"]
+	var skull := Vector3(0, hd[1][1] + bobz - head_drop, hd[1][0])
+	var nose := Vector3(0, hd[hd.size() - 1][1] + bobz - head_drop, hd[hd.size() - 1][0])
+	mi(root, sph(maxf(0.5, hd[hd.size() - 2][2] * 0.55), 8, 5), dark, nose + Vector3(0, 0.2, -0.1))
+	var eye_m := mat(Color(sp.get("eye_col", "#140e0a")), "fine", 0.3, Vector3.ONE, 0.1)
+	for side in [-1, 1]:
+		mi(root, sph(sp["eye_r"], 6, 4), eye_m, skull + Vector3(side * hd[1][2] * 0.78, hd[1][3] * 0.35, hd[1][2] * 0.6))
+		var ear_base := skull + Vector3(side * hd[1][2] * 0.7, hd[1][3] * 0.75, -0.6)
+		match sp["ears"]:
+			"leaf": loft(root, [[ear_base, 0.5, 0.3], [ear_base + Vector3(side * 1.6, 1.4, -0.6), 1.1, 0.35], [ear_base + Vector3(side * 3.2, 2.4, -1.0), 0.15, 0.1]], hide, Vector3(0, 0, 1), 6)
+			"point": loft(root, [[ear_base, 0.9, 0.5], [ear_base + Vector3(side * 0.5, 1.5, -0.2), 0.6, 0.35], [ear_base + Vector3(side * 0.7, 3.0, -0.4), 0.08, 0.08]], hide, Vector3(0, 0, 1), 6)
+			"round": mi(root, sph(1.1, 8, 5), plain, ear_base + Vector3(side * 0.3, 0.5, -0.4), Vector3.ZERO, Vector3(1, 1, 0.5))
+			"flat": loft(root, [[ear_base + Vector3(0, -1.0, 0), 0.5, 0.3], [ear_base + Vector3(side * 1.6, -0.9, -0.2), 0.8, 0.3], [ear_base + Vector3(side * 2.8, -1.2, -0.3), 0.1, 0.1]], hide, Vector3(0, 0, 1), 6)
 	match kind:
-		"deer":
-			var antler := mat(Color("#e0d0b0"), "fine", 0.3)
+		"deer": # branching antlers
+			var antler := mat(Color("#e2d3b2"), "fine", 0.3, Vector3.ONE, 0.25)
 			for side in [-1, 1]:
-				mi(neck, cyl(0.3, 0.45, 7, 4), antler, head_pos + Vector3(side * 1.4, 4, -0.5), Vector3(-15, 0, side * 25))
-				mi(neck, cyl(0.25, 0.35, 4, 4), antler, head_pos + Vector3(side * 2.8, 6.5, 1), Vector3(30, 0, side * 50))
-		"tiger":
-			var fang := mat(Color("#ffffff"), "fine", 0.3, Vector3.ONE, 0.1)
-			for side in [-1, 1]: mi(neck, cyl(0.25, 0.5, 4, 4), fang, head_pos + Vector3(side * 1.4, -3.2, 4.2), Vector3(180, 0, 0))
-		"wolf":
-			mi(neck, cyl(0.6, 1.6, 4, 6), hide, head_pos + Vector3(0, -0.6, 4.2), Vector3(90, 0, 0))
-			for side in [-1, 1]: mi(neck, cyl(0.0, 1.1, 3, 4), hide, head_pos + Vector3(side * 1.6, 3.4, -0.5))
-		"aurochs", "packox":
-			var horn := mat(Color("#e8dcc0"), "fine", 0.3)
-			for side in [-1, 1]: mi(neck, cyl(0.3, 0.8, 6, 5), horn, head_pos + Vector3(side * 3.5, 2.5, 0), Vector3(0, 0, side * -70))
-	if kind == "packox": # bundles slung over its back
-		var hide2 := mat(Color("#a0784a"), "coarse", 0.3, Vector3.ONE, 0.5)
-		mi(root, box(Vector3(spec["r"] * 2.6, 4.5, blen * 0.45)), hide2, Vector3(0, body_y + spec["r"] * 0.8, -1))
-		for side in [-1, 1]: mi(root, cyl(1.6, 1.6, blen * 0.4, 7), mat(Color("#6e4b2a"), "streak", 0.3, Vector3(4, 1, 1)), Vector3(side * spec["r"] * 1.2, body_y + 1, -1), Vector3(90, 0, 0))
-	var tail_len := 10.0 if kind == "tiger" else (3.0 if kind == "deer" else 7.0)
-	mi(root, cyl(0.5, 1.0, tail_len, 5), hide, Vector3(0, body_y + 1, -blen * 0.5 - tail_len * 0.4), Vector3(-60 + (sin(phase * TAU) * 10.0 if walking else 0.0), 0, 0))
+				var a0 := skull + Vector3(side * 0.9, hd[1][3] * 0.85, -0.2)
+				var a1 := a0 + Vector3(side * 1.6, 3.2, -0.8)
+				var a2 := a1 + Vector3(side * 1.2, 3.0, 0.4)
+				var a3 := a2 + Vector3(side * 0.4, 2.2, 1.2)
+				limb(root, [a0, a1, a2, a3], [0.45, 0.38, 0.3, 0.12], antler, 5)
+				limb(root, [a1, a1 + Vector3(side * 0.2, 1.4, 1.6)], [0.3, 0.08], antler, 5)
+				limb(root, [a2, a2 + Vector3(side * 1.6, 1.2, -0.6)], [0.25, 0.07], antler, 5)
+		"tiger": # white cheek ruff and muzzle
+			var white := mat(Color("#f3e9d4"), "fine", 0.25, Vector3.ONE, 0.2)
+			for side in [-1, 1]: mi(root, sph(1.5, 8, 5), white, skull + Vector3(side * 2.2, -1.0, 1.6), Vector3.ZERO, Vector3(0.8, 1, 1.1))
+			mi(root, sph(1.4, 8, 5), white, Vector3(0, hd[3][1] - 0.5 + bobz, hd[3][0] + 0.3), Vector3.ZERO, Vector3(1.1, 0.7, 1))
+			for side in [-1, 1]: mi(root, cyl(0.12, 0.4, 2.0, 4), mat(Color.WHITE, "fine"), Vector3(side * 0.7, hd[4][1] - 1.4 + bobz, hd[4][0] - 0.1), Vector3(180, 0, 0))
+		"wolf": # pale muzzle
+			mi(root, sph(1.0, 8, 5), mat(Color("#cfccc4"), "fine", 0.25), Vector3(0, hd[3][1] - 0.4 + bobz, hd[3][0] + 0.6), Vector3.ZERO, Vector3(1, 0.6, 1.8))
+		"aurochs": # great lyre horns swept forward
+			var horn := tune(mat(Color("#e6dac0"), "fine", 0.3, Vector3.ONE, 0.25), {"under_color": Color("#2a2018"), "under_amt": 1.0, "under_y": skull.y + 3.5, "under_soft": 1.5})
+			for side in [-1, 1]:
+				var h0 := skull + Vector3(side * 2.2, hd[1][3] * 0.6, -0.4)
+				limb(root, [h0, h0 + Vector3(side * 3.4, 0.8, 0.0), h0 + Vector3(side * 5.6, 3.2, 1.6), h0 + Vector3(side * 5.4, 6.0, 4.0)], [1.0, 0.75, 0.45, 0.1], horn, 6)
+		"packox": # curved horns, a hump blanket and panniers
+			var horn := mat(Color("#e6dac0"), "fine", 0.3, Vector3.ONE, 0.25)
+			for side in [-1, 1]:
+				var h0 := skull + Vector3(side * 2.0, hd[1][3] * 0.6, -0.4)
+				limb(root, [h0, h0 + Vector3(side * 2.4, 0.6, 0.2), h0 + Vector3(side * 3.8, 2.2, 0.8), h0 + Vector3(side * 4.0, 3.8, 1.4)], [0.8, 0.6, 0.38, 0.1], horn, 6)
+			var blanket := mat(Color("#a8323a"), "coarse", 0.3, Vector3.ONE, 0.4)
+			var top_y: float = 13.2 + 6.6
+			loft(root, [[Vector3(0, top_y - 2.6, -4), 5.9, 2.8], [Vector3(0, top_y - 2.2, 0), 6.1, 3.0], [Vector3(0, top_y - 2.4, 3.5), 6.0, 2.9]], blanket, Vector3.UP, 12)
+			var bundle := mat(Color("#a0784a"), "coarse", 0.3, Vector3.ONE, 0.5)
+			var rope := mat(Color("#d8c8a0"), "fine", 0.4)
+			for side in [-1, 1]:
+				var c := Vector3(side * 6.4, 12.6, -0.5)
+				mi(root, lumpy(cap(2.6, 8.0), 0.5, 7 + side), bundle, c, Vector3(90, 0, 0))
+				mi(root, cyl(2.75, 2.75, 0.6, 10), rope, c, Vector3(90, 0, 0))
+			mi(root, cyl(1.5, 1.5, 9.0, 8), mat(Color("#6e4b2a"), "streak", 0.3, Vector3(4, 1, 1)), Vector3(0, top_y + 0.8, -0.5), Vector3(0, 0, 90))
+	# legs: diagonal pairs move together; the lower joints fold on the forward swing
+	var hips := [[sp["front"], 1, 0.0], [sp["front"], -1, 0.5], [sp["hind"], 1, 0.5], [sp["hind"], -1, 0.0]]
+	var foot_r: float = sp["foot_r"]
+	for h in hips:
+		var spec: Array = h[0]
+		var side: int = h[1]
+		var front: bool = spec == sp["front"]
+		var ph: float = (phase + h[2]) * TAU
+		var angles: Array = spec[2].duplicate()
+		if walking:
+			var sw := sin(ph) * 0.42
+			var flex := maxf(0.0, cos(ph)) * 0.7
+			angles[0] += sw
+			if front:
+				angles[1] += sw - flex * 0.2
+				angles[2] += sw - flex * 1.1
+			else:
+				angles[1] += sw - flex * 0.6
+				angles[2] += sw + flex * 0.3
+		if anim == "attack" and front:
+			angles = [spec[2][0] + 1.4 * lunge, spec[2][1] + 0.6 * lunge, spec[2][2] + 0.1 * lunge]
+		if anim == "attack" and not front:
+			angles = [spec[2][0] - 0.3 * lunge, spec[2][1] - 0.2 * lunge, spec[2][2] - 0.4 * lunge]
+		if anim == "dead": angles = [spec[2][0] * 0.4 + (0.35 if front else -0.35), 0.1, 0.0]
+		var top: Vector3 = spec[0]
+		# scale the rest pose so standing feet reach the ground
+		var lens: Array = spec[1]
+		var reach := 0.0
+		for i in lens.size(): reach += lens[i] * cos(spec[2][i])
+		var k: float = (top.y + bobz * 0.3) / reach
+		var sl := []
+		for l in lens: sl.append(l * k)
+		var pts := chain(Vector3(side * top.x, top.y + bobz * 0.3, top.z), sl, angles)
+		limb(root, pts, spec[3], legm, 8)
+		var foot: Vector3 = pts[pts.size() - 1]
+		if sp["foot"] == "hoof":
+			mi(root, cyl(foot_r * 0.8, foot_r * 1.1, 1.3, 7), dark, foot + Vector3(0, 0.45, 0.15))
+		else:
+			mi(root, sph(foot_r, 8, 5), legm, foot + Vector3(0, foot_r * 0.45, foot_r * 0.4), Vector3.ZERO, Vector3(1, 0.6, 1.3))
+	# tail sways while walking
+	var tail := []
+	var wag := sin(phase * TAU) * 1.2 if walking else 0.0
+	var tl: Array = sp["tail"]
+	for i in tl.size():
+		var r: Array = tl[i]
+		tail.append([Vector3(wag * i / tl.size(), r[1], r[0]), r[2], r[3]])
+	var tail_m: Material = hide if kind == "tiger" else tune(mat(Color(sp["col"]), "fine", 0.25, Vector3.ONE, 0.3), {"under_color": Color(sp["tail_col"]), "under_amt": 1.0, "under_y": tl[1][1] + 0.4, "under_soft": 1.2})
+	loft(root, tail, tail_m, Vector3.UP, 8)
+	if kind == "tiger": mi(root, sph(0.6, 6, 4), dark, tail[tail.size() - 1][0])
 	return holder
 
 # ---- people
 ## A villager in a pose. cloth_only renders the tunic white and everything else black
-## so the game can tint the clothes per person.
+## so the game can tint the clothes per person. Legs bend at the knee (feet stay on the
+## ground: the body drops to the lowest standing leg), arms bend at the elbow.
 func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "stone") -> Node3D:
 	var holder := Node3D.new()
 	holder.rotation_degrees.y = yaw
 	var root := Node3D.new()
 	holder.add_child(root)
-	var skin: Material = mat(Color("#d29e74"), "fine", 0.4, Vector3.ONE, 0.15)
-	var hair: Material = mat(Color("#2b1a0e"), "fine", 0.5, Vector3.ONE, 0.3)
-	var cloth: Material = mat(Color("#d8d4cc") if not cloth_only else Color(1, 1, 1), "coarse", 0.4, Vector3.ONE, 0.35)
-	var fur: Material = mat(Color("#7a5a3a"), "fine", 0.5, Vector3.ONE, 0.4)
+	var skin: Material = mat(Color("#cf9a70"), "fine", 0.4, Vector3.ONE, 0.12)
+	var hair: Material = mat(Color("#24160c"), "streak", 0.5, Vector3(1, 3, 1), 0.35)
+	var cloth: Material = mat(Color("#d8d0c0") if not cloth_only else Color(1, 1, 1), "coarse", 0.4, Vector3.ONE, 0.35)
+	var fur: Material = mat(Color("#7a5a3a"), "fine", 0.6, Vector3(1, 2, 1), 0.7)
+	var leather: Material = mat(Color("#5a3a22"), "coarse", 0.5, Vector3.ONE, 0.4)
 	var wood: Material = mat(Color("#6b4524"), "streak", 0.4, Vector3(1, 4, 1))
-	var head_m: Material = mat(Color("#8d8d93"), "coarse", 0.5) if tool == "stone" else mat(Color("#d49a3a"), "fine", 0.4, Vector3.ONE, 0.3)
+	var head_m: Material = mat(Color("#7d7d86"), "coarse", 0.5, Vector3.ONE, 0.6) if tool == "stone" else mat(Color("#d49a3a"), "fine", 0.4, Vector3.ONE, 0.3)
+	var dark: Material = mat(Color("#140c08"), "fine", 0.3, Vector3.ONE, 0.1)
 	if cloth_only:
 		var black := flat(Color.BLACK)
 		skin = black
 		hair = black
 		fur = black
+		leather = black
 		wood = black
 		head_m = black
+		dark = black
 	var k := int(phase * 4) % 4 # frame index for 4-frame actions
-	var swing := 0.0 # legs
-	var arm_l := 0.0
-	var arm_r := 0.0
-	var spread := 0.0 # arms out to the sides
+	var s := sin(phase * TAU)
+	var c := cos(phase * TAU)
+	var legs := {-1: [0.0, 0.05], 1: [0.0, 0.05]} # side -> [thigh angle fwd, knee flex] (radians)
+	var arm := {-1: 4.0, 1: 4.0} # shoulder pitch, degrees (- = forward/up)
+	var elbow := {-1: -12.0, 1: -12.0} # - = forearm forward
+	var spread := 4.0 # arms out to the sides
 	var tilt := 0.0 # upper body leaning forward
 	var bob := 0.0
 	var held := "" # tool in the right hand
 	match anim:
 		"walk":
-			swing = sin(phase * TAU) * 30.0
-			arm_l = -swing * 0.8
-			arm_r = swing * 0.8
-			bob = absf(sin(phase * TAU)) * 0.8
+			legs = {1: [s * 0.48, maxf(0.0, c) * 0.95 + 0.05], -1: [-s * 0.48, maxf(0.0, -c) * 0.95 + 0.05]}
+			arm = {1: s * 26.0, -1: -s * 26.0}
+			elbow = {1: -18.0 - maxf(0.0, -s) * 20.0, -1: -18.0 - maxf(0.0, s) * 20.0}
+			tilt = 4.0
 		"chop": # overhead swing with an axe
-			arm_r = [-150.0, -95.0, -10.0, 25.0][k]
-			arm_l = -20.0
+			arm = {1: [-150.0, -95.0, -10.0, 25.0][k], -1: -30.0}
+			elbow = {1: [-25.0, -10.0, 0.0, -8.0][k], -1: -60.0}
 			tilt = [0.0, 6.0, 16.0, 20.0][k]
+			legs = {1: [0.22, 0.2], -1: [-0.22, 0.12]}
 			held = "axe"
 		"build": # crouched hammering with a mallet
-			arm_r = [-100.0, -60.0, -20.0, -45.0][k]
-			arm_l = -40.0
+			arm = {1: [-100.0, -60.0, -20.0, -45.0][k], -1: -45.0}
+			elbow = {1: -30.0, -1: -45.0}
 			tilt = 25.0
-			swing = 12.0
+			legs = {1: [0.85, 1.35], -1: [0.6, 1.25]}
 			held = "mallet"
 		"gather": # bending low, hands reaching into the bush
 			tilt = 38.0
-			arm_r = [-40.0, -70.0, -50.0, -25.0][k]
-			arm_l = [-70.0, -40.0, -25.0, -50.0][k]
+			arm = {1: [-40.0, -70.0, -50.0, -25.0][k], -1: [-70.0, -40.0, -25.0, -50.0][k]}
+			elbow = {1: -20.0, -1: -20.0}
+			legs = {1: [0.3, 0.45], -1: [0.1, 0.35]}
 		"attack": # spear: draw back, thrust
-			arm_r = [-40.0, -10.0, -95.0, -80.0][k]
-			arm_l = -55.0
+			arm = {1: [-40.0, -10.0, -95.0, -80.0][k], -1: -55.0}
+			elbow = {1: [-60.0, -75.0, -5.0, -15.0][k], -1: -45.0}
 			tilt = [-5.0, -8.0, 14.0, 10.0][k]
-			swing = [8.0, 12.0, -10.0, -6.0][k]
+			legs = {1: [[0.25, 0.3, 0.55, 0.45][k], 0.35], -1: [[-0.25, -0.3, -0.4, -0.35][k], 0.1]}
 			held = "spear"
-		"ritual": # arms raised to the sky, swaying
-			arm_r = -165.0 + sin(phase * TAU) * 15.0
-			arm_l = -165.0 - sin(phase * TAU) * 15.0
+		"ritual": # arms raised to the sky, swaying, stamping
+			arm = {1: -165.0 + s * 15.0, -1: -165.0 - s * 15.0}
+			elbow = {1: -15.0, -1: -15.0}
 			spread = 18.0
-			bob = absf(sin(phase * TAU)) * 1.2
+			legs = {1: [maxf(0.0, s) * 0.5, maxf(0.0, s) * 0.9 + 0.1], -1: [maxf(0.0, -s) * 0.5, maxf(0.0, -s) * 0.9 + 0.1]}
+			bob = absf(s) * 0.6
 		"dead":
 			root.rotation_degrees.x = 86.0 # face down on the ground
-			root.position = Vector3(0, 3.5, -12)
-			arm_r = -150.0
-			arm_l = -120.0
+			root.position = Vector3(0, 3.2, -12)
+			arm = {1: -150.0, -1: -120.0}
+			elbow = {1: -20.0, -1: -40.0}
+			legs = {1: [0.0, 0.15], -1: [0.15, 0.4]}
+	var hip_y := 11.2
+	var l1 := 5.6
+	var l2 := 5.5
+	var reach := 0.0 # hips sit at the height of the longest standing leg
+	for side in [-1, 1]:
+		var a: float = legs[side][0]
+		reach = maxf(reach, l1 * cos(a) + l2 * cos(a - legs[side][1]) + 0.4)
 	var body := Node3D.new()
-	body.position.y = bob
+	body.position.y = (reach - hip_y) + bob if anim != "dead" else 0.0
 	root.add_child(body)
-	for side in [-1, 1]: # legs swing at the hip
-		var hip := Node3D.new()
-		hip.position = Vector3(side * 1.8, 11, 0)
-		hip.rotation_degrees.x = swing * side if anim != "build" else -swing
-		body.add_child(hip)
-		mi(hip, cap(1.5, 11), skin, Vector3(0, -5.5, 0))
-	mi(body, cyl(3.4, 4.6, 6, 10), cloth, Vector3(0, 10.5, 0)) # skirt
-	mi(body, cyl(3.7, 3.7, 1.0, 10), mat(Color("#5a3a20"), "fine") if not cloth_only else flat(Color.BLACK), Vector3(0, 12.8, 0)) # belt
+	for side in [-1, 1]:
+		var a: float = legs[side][0]
+		var pts := chain(Vector3(side * 1.75, hip_y, 0), [l1, l2], [a, a - legs[side][1]])
+		limb(body, pts, [1.6, 1.15, 0.85], skin, 8)
+		var ankle: Vector3 = pts[2]
+		var knee: Vector3 = pts[1]
+		limb(body, [knee.lerp(ankle, 0.45), ankle], [1.12, 1.0], fur, 8) # fur leg wraps
+		mi(body, sph(1.0, 8, 5), leather, ankle + Vector3(0, 0.15, 0.85), Vector3(-rad_to_deg(a - legs[side][1]) * 0.5, 0, 0), Vector3(0.95, 0.6, 1.75))
+	# tunic skirt, belt and pouch
+	loft(body, [[Vector3(0, 14.4, 0), 3.3, 2.5], [Vector3(0, 12.2, 0.05), 3.7, 2.9], [Vector3(0, 9.6, 0.2), 4.3, 3.5], [Vector3(0, 7.6, 0.3), 4.7, 3.9]], cloth, Vector3(0, 0, 1), 14)
+	mi(body, cyl(3.6, 3.75, 1.0, 14), leather, Vector3(0, 13.2, 0), Vector3.ZERO, Vector3(1, 1, 0.8))
+	mi(body, sph(1.1, 7, 5), leather, Vector3(3.4, 12.0, 0.9), Vector3.ZERO, Vector3(0.7, 1.1, 1))
 	var upper := Node3D.new() # everything above the hips bends forward
 	upper.position.y = 12.0
 	upper.rotation_degrees.x = tilt
 	body.add_child(upper)
-	mi(upper, cap(3.6, 12), cloth, Vector3(0, 4, 0), Vector3.ZERO, Vector3(1.05, 1, 0.8))
-	mi(upper, cyl(4.2, 4.6, 2.2, 10), fur, Vector3(0, 9, 0), Vector3.ZERO, Vector3(1, 1, 0.85))
-	mi(upper, sph(3.3, 12, 8), skin, Vector3(0, 13.3, 0))
-	mi(upper, sph(3.5, 10, 6), hair, Vector3(0, 14.2, -0.6), Vector3(-15, 0, 0), Vector3(1, 0.8, 1))
-	for side in [-1, 1]: # arms swing at the shoulder
+	loft(upper, [[Vector3(0, 0.6, 0), 3.35, 2.5], [Vector3(0, 3.2, 0.1), 3.1, 2.3], [Vector3(0, 6.2, 0.25), 3.8, 2.7], [Vector3(0, 8.4, 0.05), 4.15, 2.55], [Vector3(0, 9.7, -0.1), 3.0, 2.1], [Vector3(0, 10.3, -0.1), 1.8, 1.5]], cloth, Vector3(0, 0, 1), 14)
+	# fur mantle over the shoulders
+	loft(upper, [[Vector3(0, 6.6, -0.25), 4.3, 3.0], [Vector3(0, 8.4, -0.25), 4.95, 3.3], [Vector3(0, 9.8, -0.25), 4.0, 2.9], [Vector3(0, 10.5, -0.15), 2.3, 2.0]], fur, Vector3(0, 0, 1), 12)
+	limb(upper, [Vector3(0, 9.6, 0), Vector3(0, 12.2, 0.25)], [1.3, 1.15], skin, 8) # neck
+	# head: skull, jaw, nose, ears, eyes and brows, hair with a knot at the back
+	var hc := Vector3(0, 13.9, 0.25)
+	mi(upper, sph(2.85, 14, 9), skin, hc, Vector3.ZERO, Vector3(0.94, 1.06, 1.0))
+	mi(upper, sph(2.1, 10, 6), skin, hc + Vector3(0, -1.35, 0.7), Vector3.ZERO, Vector3(0.95, 0.8, 1.0))
+	mi(upper, cyl(0.15, 0.55, 1.4, 6), skin, hc + Vector3(0, -0.2, 2.85), Vector3(75, 0, 0))
+	for side in [-1, 1]:
+		mi(upper, sph(0.7, 6, 4), skin, hc + Vector3(side * 2.65, 0.0, -0.1), Vector3.ZERO, Vector3(0.5, 1.0, 0.8))
+		mi(upper, sph(0.32, 6, 4), dark, hc + Vector3(side * 0.95, 0.35, 2.45))
+		mi(upper, box(Vector3(1.3, 0.35, 0.5)), hair, hc + Vector3(side * 0.95, 0.95, 2.45), Vector3(0, 0, side * -8))
+	mi(upper, sph(3.1, 14, 8), hair, hc + Vector3(0, 0.55, -0.5), Vector3(-12, 0, 0), Vector3(1.0, 0.92, 1.04))
+	loft(upper, [[hc + Vector3(0, 0.4, -2.4), 2.3, 1.1], [hc + Vector3(0, -1.6, -2.8), 2.0, 1.0], [hc + Vector3(0, -3.6, -2.7), 1.4, 0.8]], hair, Vector3(0, 0, 1), 8)
+	mi(upper, sph(1.15, 8, 5), hair, hc + Vector3(0, 2.4, -1.9))
+	for side in [-1, 1]: # arms swing at the shoulder and bend at the elbow
 		var sh := Node3D.new()
-		sh.position = Vector3(side * 4.6, 8.5, 0)
-		sh.rotation_degrees = Vector3(arm_r if side > 0 else arm_l, 0, side * spread)
+		sh.position = Vector3(side * 4.1, 8.9, 0)
+		sh.rotation_degrees = Vector3(arm[side], 0, side * spread)
 		upper.add_child(sh)
-		mi(sh, cap(1.2, 9.5), skin, Vector3(0, -4.5, 0))
+		limb(sh, [Vector3.ZERO, Vector3(0, -4.8, 0)], [1.35, 1.0], skin, 8)
+		var el := Node3D.new()
+		el.position = Vector3(0, -4.8, 0)
+		el.rotation_degrees.x = elbow[side]
+		sh.add_child(el)
+		limb(el, [Vector3.ZERO, Vector3(0, -4.3, 0)], [1.0, 0.78], skin, 8)
+		mi(el, cyl(0.9, 0.9, 1.0, 8), leather, Vector3(0, -3.6, 0)) # wrist wrap
+		mi(el, sph(0.95, 8, 5), skin, Vector3(0, -5.0, 0.15), Vector3.ZERO, Vector3(0.8, 1.0, 0.95))
 		if side > 0:
+			var hand := Vector3(0, -5.0, 0)
 			match held:
 				"axe":
-					mi(sh, cyl(0.45, 0.45, 9, 5), wood, Vector3(0, -9, 3), Vector3(90, 0, 0))
-					mi(sh, box(Vector3(1.2, 2.6, 3.2)), head_m, Vector3(0, -9, 7.2))
+					mi(el, cyl(0.45, 0.5, 10, 6), wood, hand + Vector3(0, 0, 3.4), Vector3(90, 0, 0))
+					mi(el, lumpy(box(Vector3(1.2, 3.0, 3.6)), 0.25, 11, 0.6, true) if tool == "stone" else box(Vector3(0.8, 3.4, 3.2)), head_m, hand + Vector3(0, 0.2, 7.6))
+					mi(el, cyl(0.7, 0.7, 1.2, 6), leather, hand + Vector3(0, 0, 7.6), Vector3(90, 0, 0))
 				"mallet":
-					mi(sh, cyl(0.4, 0.4, 6, 5), wood, Vector3(0, -9, 2), Vector3(90, 0, 0))
-					mi(sh, cyl(1.3, 1.3, 3.2, 7), head_m, Vector3(0, -9, 5.2))
+					mi(el, cyl(0.4, 0.45, 6.5, 6), wood, hand + Vector3(0, 0, 2.2), Vector3(90, 0, 0))
+					mi(el, cyl(1.35, 1.35, 3.4, 8), head_m, hand + Vector3(0, 0, 5.4))
 				"spear": # counter-rotated so the spear stays level, pointing forward
 					var grip := Node3D.new()
-					grip.position = Vector3(0, -9, 0)
-					grip.rotation_degrees.x = -(arm_r + tilt)
-					sh.add_child(grip)
-					mi(grip, cyl(0.35, 0.35, 26, 5), wood, Vector3(0, 0, 3), Vector3(90, 0, 0))
-					mi(grip, cyl(0.0, 0.9, 3.6, 5), head_m, Vector3(0, 0, 17.5), Vector3(90, 0, 0))
+					grip.position = hand
+					grip.rotation_degrees.x = -(arm[1] + elbow[1] + tilt)
+					el.add_child(grip)
+					mi(grip, cyl(0.35, 0.38, 26, 6), wood, Vector3(0, 0, 3), Vector3(90, 0, 0))
+					mi(grip, cyl(0.0, 1.0, 3.8, 6), head_m, Vector3(0, 0, 17.8), Vector3(90, 0, 0), Vector3(1, 1, 0.45))
+					mi(grip, cyl(0.55, 0.55, 1.2, 6), leather, Vector3(0, 0, 15.6), Vector3(90, 0, 0))
 	return holder
