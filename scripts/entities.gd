@@ -44,6 +44,10 @@ class Unit:
 	var fell_t: float = 0.0 # when they died
 	var buried: bool = false
 	var carrier_id: int = -1
+	var carry_kind: String = "" # node kind of the load being carried (mushroom, honey...)
+	var herb_t: float = -1.0 # willow-bark tea working until
+	var salve_t: float = -1.0 # yarrow poultice working until
+	var walked: float = 0.0 # distance walked since the last meal tick (walking makes people hungry)
 	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load) # who is carrying the body to the burial ground
 	var kills: int = 0
 	var unlocked: Dictionary = {}

@@ -126,6 +126,9 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.stock["lore"] = 2000
 			sim.stock["wood"] = 2000
 			sim.stock["stone"] = 500
+			for f in sim.D.FINDS: sim.known_finds[f] = 1
+			sim.stock["copper"] = 50
+			sim.stock["tin"] = 50
 			var order := ["fire", "tools", "hide", "pottery", "domestication", "farming", "bronze", "totems", "code"]
 			for id in order.slice(0, {1: 3, 2: 6, 3: 9}[stage]): sim.research(id)
 			sim.pending_event = ""
@@ -279,6 +282,67 @@ func _debug_shot(args: Dictionary) -> void:
 				hud._open_legacy()
 			else:
 				for i in int(1.5 / STEP): sim.tick(STEP)
+		"nature": # debug: a force of nature, --what=fire|flood|eruption|ash|eclipse|storm
+			hud._close_modal()
+			sim.fog_enabled = false
+			for p in sim.predators: p.fled = true
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			sim.nat.quake_at = INF
+			var what: String = args.get("what", "fire")
+			var focus := Vector2(1300, 1200)
+			match what:
+				"fire":
+					var trees = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(Vector2(1300, 1200)) < 700)
+					sim.nat.ignite(trees[0])
+					focus = trees[0].pos
+					for i in int(float(args.get("secs", "8")) / STEP): sim.tick(STEP)
+				"flood":
+					sim.nat.flood_day = sim.day()
+					sim.nat.flood_at = sim.time + 0.1
+					sim.nat.flood_warned = true
+					for i in int(float(args.get("secs", "3")) / STEP): sim.tick(STEP)
+					focus = Vector2(sim.D.river_x(1200), 1200)
+				"eruption", "ash":
+					sim.nat.erupt()
+					var secs := float(args.get("secs", "3" if what == "eruption" else "20"))
+					for i in int(secs / STEP): sim.tick(STEP)
+					focus = sim.nat.VOLCANO + Vector2(-150, 250) if what == "eruption" else Vector2(1300, 1200)
+				"eclipse":
+					sim.time = 90.0 * 2 + 90.0 * 0.35
+					sim.nat.eclipse_at = sim.time
+					for i in int(float(args.get("secs", "8")) / STEP):
+						sim.tick(STEP)
+						if sim.paused: break
+				"storm":
+					sim.hz._start("storm")
+					sim.nat.strikes.append({"pos": Vector2(1450, 1050), "t": 0.05})
+			sim.paused = false
+			sim.pending_event = sim.pending_event if what == "eclipse" else ""
+			if what != "eclipse": hud._close_modal()
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.2")), float(args.get("zoom", "1.2")))
+			world.focus_on(focus)
+		"finds": # debug: look at the natural finds (all known, fog off), --kind=mushroom to centre on one
+			hud._close_modal()
+			sim.fog_enabled = false
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			for f in sim.D.FINDS: sim.known_finds[f] = 1
+			sim.stock["herbs"] = 6
+			sim.stock["copper"] = 12
+			sim.stock["tin"] = 4
+			var fk: String = args.get("kind", "mushroom")
+			var fn = sim.nodes.filter(func(n): return n.kind == fk)
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.6")), float(args.get("zoom", "1.6")))
+			if not fn.is_empty(): world.focus_on(fn[0].pos)
+			for i in int(1.0 / STEP): sim.tick(STEP)
+			sim.pending_event = ""
+			sim.paused = false
+			hud._close_modal()
+			if args.has("tech"):
+				sim.known_finds.erase("tin")
+				sim.known_finds.erase("salt")
+				hud._open_tech()
 		"night": # debug: the tribe asleep (--secs into the night; --burial: two buried first)
 			hud._close_modal()
 			sim.fog_enabled = false

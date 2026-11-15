@@ -80,6 +80,13 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Alarms:** beasts or raiders at the village (within the War Chief's 500-unit range), someone being hit, or a flood rouse the camp ("Danger in the night! The camp is roused."). Fighters answer the War Chief or defend themselves. Everyone in a hut stays inside ("Sheltering in a hut"), and outdoor sleepers get up and keep watch. Nobody goes back to the day's work, and once the danger is gone they sleep on. A wolf pack prowling the woods doesn't wake the village: hut sleepers are safe from it, and someone sleeping in the open keeps watch only if a beast comes within 300 units.
 - **The Steward** hands out no work during sleeping hours.
 
+## Distance and settlements
+
+- **Distance costs:** every step burns food, half again while carrying a load (`WALK_HUNGER`): a villager walking all day gets about 70% hungrier. Loads also slow the walk home (−15%, or −5% with a pack ox). Gatherers weigh distance more heavily when choosing a tree, bush or seam.
+- **Drop-off points:** loads go to the nearest of our settlements, and food also to a Granary, so building near the work pays off.
+- **Settlements:** every finished settlement contract becomes a home. Its crew live there, take local jobs from the Steward, and sleep in its huts. When the village has more people than beds and a settlement has empty ones, someone moves across (one at a time, by day, never past its beds), and the chronicle records it. People sleep in a bed near their own home first.
+- **Shelters:** huts, large huts and granaries all hold sleepers up to their housing size. Whoever doesn't fit sleeps on a hide bedroll by the fire.
+
 ## The dead
 
 - When the first person dies, the tribe lays out a **Burial Ground** at a quiet edge of the village. A free villager (idle first, else a gatherer) fetches each body, drags it home on a hide litter and buries it under a mound with a marker stone. The gravedigger remembers it, and each burial adds devotion and a little spiritual culture.
@@ -97,6 +104,48 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Sickness:** a coughing fever breaks out in hard times (winter, hunger, crowding) and spreads between people close together. Fire, shrines, a nearby shaman (Lore 3+) and the discovered Hot Spring speed recovery, and survivors are immune for a while.
 - **Famine:** you're warned when the stores drop below about a day's food, then again when people are starving. A meal costs 3 food and stores spoil, so you can't hoard forever.
 - **Alerts:** dangers appear as AoE-style banners at the top of the screen; click one to look. Season and weather show in the top bar. LLM personas are told the season, the weather and how many days of food remain.
+
+## Natural finds
+
+Twelve kinds of finds are scattered over the map, clustered where they belong: forests, meadows, riverbanks, the shallows, and the hills on each bank. Each kind is unknown, and can't be gathered, until someone who can recognise it walks near one. Healing plants need someone with Lore 1+. Ores need Polished Stone Tools or someone with Craft. The finder gets the credit in the chronicle, plus a memory and a little insight. The Wisdom & Culture panel lists them under **Discoveries**.
+
+| Group | Find | What it does |
+|---|---|---|
+| Food | Forest Mushrooms | Food. A gatherer below Lore 2 may be poisoned by a bad one, until the tribe has eaten enough to know the safe ones. |
+| | Wild Tubers | Slow to dig, but they **still yield in winter**. |
+| | Wild Grain | Food, and gathering it teaches Slash-and-Burn Farming twice as fast. |
+| | Wild Honey | Food plus devotion. Bees sting unless Friction Fire is known. |
+| | Fish Shoal | Fished from the bank: plentiful and quick to return, but iced over in winter. |
+| Medicine | Willow Bark | Fills the **herbs** stock. A fevered person drinks willow-bark tea and recovers 2.5× faster. |
+| | Yarrow | Uses the same herbs. The wounded heal twice as fast at the village. |
+| Ore and earth | Flint | Worked by hand (no tools needed), and brings Polished Stone Tools much closer. |
+| | Copper Ore, Tin Ore | Their own stocks. **Bronze can only be researched once both have been found.** A smelter only arms people while it has copper and tin, and uses one of each per day. |
+| | Red Ochre | Each load becomes lore, and the tribe grows more spiritual. |
+| | Salt Lick | Once found, the stores spoil half as fast. |
+| | Obsidian | Appears only after the Fire Mountain erupts. Black-glass blades give +15% ATK until bronze. |
+
+## Forces of nature (`nature.gd`; none of them happen with Challenges set to Off)
+
+- **Lightning** strikes 1–3 times per thunderstorm.
+  - Most strikes split a tree, or set it alight: a 60% chance in summer or drought, 25% otherwise.
+  - Some set a building on fire, so it has to be rebuilt.
+  - Rarely it hits someone in the open. A survivor is "touched by the sky" (+lore and a strong memory).
+  - Before Friction Fire is known, a strike near people gives the tribe its first fire (+50% insight).
+- **Wildfire** spreads from tree to tree: faster in drought, slower in rain or winter. It burns people and buildings in its path and leaves charred trunks that take a long time to regrow. Berries sprout in the ashes.
+- **River floods** (spring) start with a warning: people near the banks run for high ground. Then riverside buildings are damaged, anyone near the water is hurt, and riverside plants are washed out. Afterwards the silt gives farms near the river +40% food for 2 days, and the fish return.
+- **The Fire Mountain**, a volcano in the far north-east, is also a landmark scouts can find.
+  - It erupts every 9–14 days, with tremors 30 s before. Lava burns everything within about 460 units, and obsidian is left on the slopes.
+  - Ash falls for most of a day: berries and farms grow at half speed, sight is 30% shorter, and coughing fever is more likely.
+  - Afterwards the fields are fertile: +30% farm food for a few days.
+- **Eclipse:** every 12–20 days, at midday, the sun is devoured. The chieftain chooses:
+  - beat the drums (+devotion, martial);
+  - offer 15 food (+devotion, spiritual);
+  - let the shaman read the omen. Only Lore 3+ or Megalithic Totems calms the tribe (+20 lore); otherwise the people panic and hide in their huts until the light returns.
+- **Earthquakes:** every 10–16 days, a building or two collapse, and people beside them are hurt. A rockslide bares a new stone outcrop.
+- **Effects on the rest of the game:**
+  - Any of these near the village wakes a sleeping camp.
+  - Floods, eruptions, earthquakes and nearby wildfires count as natural disasters for Task Contracts (abort `natural_disaster`), and the leader's emergency speech names the disaster.
+  - The top bar shows what is happening, e.g. *River in flood · Ashfall*, and LLM prompts receive it as `omens`.
 
 ## Rival clans
 
@@ -162,6 +211,7 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 
 **What each tech changes:**
 - **Actions:** stone tools let people quarry stone; torches at night.
+- **Hover a build button** to see the building's cost and what it does.
 - **Pack oxen** (Beast Domestication):
   - **Where they live:** the herd lives in Aurochs Pens, up to 2 per pen. Finishing a pen tames the first calf, and another comes at a later dawn while there's room, at least 30 food and good care.
   - **What they do:** each ox goes with one gatherer, starting with whoever works furthest from the village, and lets them carry 15 instead of 10. The top bar shows `Oxen n/max`.

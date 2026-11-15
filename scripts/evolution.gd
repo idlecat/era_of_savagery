@@ -44,6 +44,8 @@ static func tech_def(id: String) -> Dictionary:
 func prereqs_met(id: String) -> bool:
 	for r in tech_def(id).get("req", []):
 		if not sim.has_tech(r): return false
+	for f in tech_def(id).get("finds", []): # e.g. bronze needs copper and tin found
+		if not sim.knows_find(f): return false
 	return true
 
 ## Techs the tribe could discover next (prerequisites known, tech itself not).
@@ -255,4 +257,5 @@ func world_ctx() -> Dictionary:
 		"age": tr(D.ERA_NAMES[era]), "known_wisdom": known, "traditions": trads,
 		"tribe_culture": culture_summary(), "unknown_things_you_have_no_words_for": unknown_words,
 		"neighbors": sim.rivals.summary() if sim.rivals else [],
+		"found_in_the_land": sim.known_finds.keys().map(func(id): return tr(D.FINDS[id]["name"])),
 	}

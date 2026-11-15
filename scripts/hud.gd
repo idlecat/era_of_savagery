@@ -23,6 +23,7 @@ var sheet_contract_btn: Button
 var sheet_steward_btn: Button
 var sheet_chief_btn: Button
 var contracts_text: RichTextLabel
+var log_tabs: TabContainer
 var clans_text: RichTextLabel
 var log_text: RichTextLabel
 var policy_opt: OptionButton
@@ -415,15 +416,22 @@ func _build_right(root: Control) -> void:
 	v.add_child(clans_text)
 	clans_btns = HFlowContainer.new()
 	v.add_child(clans_btns)
-	v.add_child(_header("TASK CONTRACTS"))
-	contracts_text = _rich(150)
-	v.add_child(contracts_text)
-	v.add_child(_header("CHRONICLE"))
+	# The chronicle and the Task Contracts share the rest of the panel as two tabs.
+	log_tabs = TabContainer.new()
+	log_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	log_tabs.custom_minimum_size = Vector2(0, 200)
+	v.add_child(log_tabs)
 	log_text = _rich(0)
+	log_text.name = "Chronicle"
 	log_text.meta_clicked.connect(_on_log_link)
 	log_text.meta_underlined = false
 	log_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.add_child(log_text)
+	log_tabs.add_child(log_text)
+	contracts_text = _rich(0)
+	contracts_text.name = "Contracts"
+	contracts_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	log_tabs.add_child(contracts_text)
+	log_tabs.set_tab_title(0, tr("Chronicle"))
 	v.add_child(_label("LMB select/drag · RMB command (tree/bush/deer = gather, tiger = attack, site = build) · pan: WASD / screen edge / MMB drag / two-finger swipe · zoom: wheel / pinch · Space pause · F11 fullscreen", 12, COL_DIM))
 
 # ------------------------------------------------------------ periodic refresh
@@ -439,16 +447,22 @@ func _process(delta: float) -> void:
 
 func _refresh_top() -> void:
 	var f: float = sim.day_frac()
-	var phase := tr("Night") if sim.night_amt > 0.5 else (tr("Dusk") if f > 0.65 else tr("Day"))
+	var phase := tr("Night") if sim.night_amt > 0.5 and sim.nat.eclipse_t < 0 else (tr("Dusk") if f > 0.65 else tr("Day"))
 	if sim.night_ff(): phase = "[color=#a8c8ff]%s[/color]" % tr("Night, all asleep")
 	if sim.hz.on():
 		phase += " · " + tr("Year %d") % sim.hz.year() + " " + tr(sim.hz.season())
 		if sim.hz.weather != "clear" or sim.hz.winter(): phase += " · [color=#cfe8ff]%s[/color]" % tr(sim.hz.weather_name())
+		for omen in sim.nat.status(): phase += " · [color=#ffb07a]%s[/color]" % omen
 	var since: String = tr("%.0fs") % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
 	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
 		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), sim.stock["food"], sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
 		sim.devotion, sim.explored_pct(), sim.llm_calls]
 	top_stats.tooltip_text = tr("LLM node: %s") % llm.label()
+	var extra: Array = [] # stocks that exist once their find is known
+	if sim.knows_find("willow") or sim.knows_find("yarrow"): extra.append("[color=#9ad88a]%s[/color]" % (tr("Herbs %d") % sim.stock["herbs"]))
+	if sim.knows_find("copper"): extra.append("[color=#d9965a]%s[/color]" % (tr("Copper %d") % sim.stock["copper"]))
+	if sim.knows_find("tin"): extra.append("[color=#a8b0b8]%s[/color]" % (tr("Tin %d") % sim.stock["tin"]))
+	if not extra.is_empty(): top_stats.text += "   " + "   ".join(extra)
 	if sim.ox_cap() > 0: # the herd: count, and a warning colour when it needs tending or feeding
 		var oc: String = "#ff8a7a" if sim.ox_care < 25 or sim.ox_hunger > 0 else "#e0c89a"
 		top_stats.text += "   [color=%s]%s[/color]" % [oc, tr("Oxen %d/%d") % [sim.oxen, sim.ox_cap()]]
@@ -689,7 +703,7 @@ func _refresh_right() -> void:
 		var bb: Button = build_btns[k]
 		bb.text = "%s\n%s" % [tr(sd["name"]), why if why != "" else _cost_long(sd)]
 		bb.disabled = why != ""
-		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd)
+		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd) + "\n" + tr(sd.get("desc", ""))
 	var old: Array = sim.outdated()
 	reno_btn.visible = not old.is_empty()
 	if not old.is_empty():
@@ -708,6 +722,9 @@ func _refresh_right() -> void:
 		s += tr("  [color=#8a9aa8]LLM calls: 1 negotiation + %d awakenings[/color]\n") % c.interruptions
 		for line in c.events.slice(0, 3): s += tr("  [color=#a89878]%s[/color]\n") % line
 	contracts_text.text = s
+	var running: int = sim.contracts.list.filter(func(c): return sim.contracts.is_running(c)).size()
+	var alarm: bool = sim.contracts.list.any(func(c): return c.status in ["interrupted", "defending"])
+	log_tabs.set_tab_title(1, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
 	clans_text.text = _clans_bbcode()
 	var met: Array = sim.rivals.clans.keys().filter(func(id): return sim.rivals.clans[id]["met"])
 	var sig := ",".join(met) + I.lang
@@ -838,9 +855,20 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 		sb.set_border_width_all(3)
 		p.add_theme_stylebox_override("panel", sb)
 	cc.add_child(p)
+	# Content taller than the window scrolls instead of running off the screen.
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(sc)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
-	p.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(v)
+	var fit := func():
+		if not is_instance_valid(sc): return
+		var need: Vector2 = v.get_combined_minimum_size()
+		sc.custom_minimum_size = Vector2(maxf(width - 24.0, need.x), minf(need.y, get_viewport().get_visible_rect().size.y - 80.0))
+	v.minimum_size_changed.connect(fit)
+	fit.call()
 	v.add_child(_label(title, 22, Color("#ff8a7a") if danger else COL_ACCENT))
 	return v
 
@@ -1243,6 +1271,23 @@ func _open_tech() -> void:
 			tt += tr("[color=#6a5a48]○ %s - needs %s[/color]\n") % [tr(t["name"]), pole]
 	trads.text = tt
 	cg.add_child(trads)
+	v.add_child(_header(tr("DISCOVERIES · %d / %d") % [sim.known_finds.size(), D.FINDS.size()]))
+	var fg := HBoxContainer.new()
+	fg.add_theme_constant_override("separation", 16)
+	v.add_child(fg)
+	for g in D.FIND_GROUPS:
+		var col := _rich(0, true)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var ft := "[color=#ffd36b]%s[/color]\n" % tr(D.FIND_GROUPS[g]).to_upper()
+		for id in D.FINDS:
+			var fd: Dictionary = D.FINDS[id]
+			if fd["group"] != g: continue
+			if sim.knows_find(id):
+				ft += tr("[color=#b6f28a]✔ %s[/color] (Day %d) - [font_size=13]%s[/font_size]\n") % [tr(fd["name"]), sim.known_finds[id], tr(fd["desc"])]
+			else:
+				ft += "[color=#6a5a48]○ ???[/color]\n"
+		col.text = ft
+		fg.add_child(col)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
 
 func _abort_text(a: String) -> String:
@@ -1276,6 +1321,8 @@ func _tech_card(tdef: Dictionary, was_paused: bool) -> Control:
 			var names: Array = []
 			for rq in tdef["req"]:
 				if not sim.has_tech(rq): names.append(tr(sim.evo.tech_def(rq)["name"]))
+			for f in tdef.get("finds", []):
+				if not sim.knows_find(f): names.append(tr("finding %s") % tr(D.FINDS[f]["name"]))
 			info.text += tr("\n[color=#8a7a60]Requires %s[/color]") % ", ".join(names)
 	pv.add_child(info)
 	if not known:

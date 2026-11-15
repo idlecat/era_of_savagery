@@ -41,6 +41,9 @@ func _initialize() -> void:
 	test_burials()
 	test_night_contracts()
 	test_herd()
+	test_finds()
+	test_nature()
+	test_settling()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -275,7 +278,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -586,7 +589,7 @@ func test_war_and_trade() -> void:
 		if sim.predators.any(func(p): return p.guard and not p.dead): saw_guards = true
 		if c.status == "interrupted": sim.contracts.resolve(c, "press_on")
 		if sim.paused:
-			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0 if sim.pending_event.begins_with("demand_") else 2)
+			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0 if sim.pending_event.begins_with("demand_") else (1 if sim.pending_event.begins_with("submit_") else 2)) # (sparing a beaten clan would undo the feud)
 			sim.paused = false
 	print("   status %s after %.0fs: %s" % [c.status, t, c.flags.get("spoils", "-")])
 	check(saw_guards, "their warriors turn out to defend the village")
@@ -774,6 +777,216 @@ func test_herd() -> void:
 	sim.time = D.DAY_LEN * 4 + 2.0
 	sim._herd(0.05)
 	check(sim.oxen == 2, "but never beyond 2 per pen")
+
+func test_finds() -> void:
+	print("\n== Natural finds ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var missing: Array = D.FINDS.keys().filter(func(id): return D.FINDS[id]["count"] > 0 and not sim.nodes.any(func(n): return n.kind == id))
+	check(missing.is_empty(), "every kind of find is somewhere on the map (missing: %s)" % ", ".join(missing))
+	check(sim.known_finds.is_empty(), "nothing is known at the start")
+	var mush = sim.nodes.filter(func(n): return n.kind == "mushroom")[0]
+	var picked = sim.find_node("food", mush.pos, "", 60.0)
+	check(picked == null or picked.kind != "mushroom", "unknown finds can't be gathered")
+	var u = sim.unit_by_name("Tuo")
+	sim.set_job(u, {})
+	u.pos = mush.pos + Vector2(30, 0)
+	sim.reveal(mush.pos, 200)
+	for i in 20: sim.tick(0.05)
+	check(sim.knows_find("mushroom"), "walking up to one discovers it")
+	var line: Dictionary = sim.log_lines.filter(func(e): return "Forest Mushrooms" in e["text"])[0]
+	check(line["who"][0]["id"] == u.id, "the finder gets the credit in the chronicle")
+	check(sim.find_node("food", mush.pos, "", 60.0) != null, "and the tribe can gather it now")
+	# healing plants need someone with lore to recognise them
+	var willow = sim.nodes.filter(func(n): return n.kind == "willow")[0]
+	sim.reveal(willow.pos, 200)
+	var plain: Array = sim.living().filter(func(o): return o.lv("lore") == 0)
+	var wise: Array = sim.living().filter(func(o): return o.lv("lore") >= 1)
+	for o in sim.living():
+		sim.set_job(o, {})
+		o.pos = D.VILLAGE
+	plain[0].pos = willow.pos + Vector2(20, 0)
+	for i in 20: sim.tick(0.05)
+	check(not sim.knows_find("willow"), "someone without lore walks past willow bark")
+	wise[0].pos = willow.pos + Vector2(20, 0)
+	for i in 20: sim.tick(0.05)
+	check(sim.knows_find("willow"), "a person with lore recognises it")
+	# willow-bark tea
+	var sick = sim.unit_by_name("Shan")
+	sick.sick = 1.0
+	sim.stock["herbs"] = 3.0
+	sim.unit_needs(sick, 0.05)
+	check(sim.stock["herbs"] == 2.0 and sim.time < sick.herb_t, "a fevered person drinks willow-bark tea from the herbs")
+	var r_tea: float = sim.hz.heal_rate(sick, false)
+	sick.herb_t = -1.0
+	check(r_tea > sim.hz.heal_rate(sick, false) * 2.0, "and recovers faster")
+	# bronze needs copper and tin
+	for id in ["fire", "tools", "domestication"]: sim.techs[id] = true
+	check(not sim.evo.prereqs_met("bronze"), "Bronze can't be reached before copper and tin are found")
+	sim.known_finds["copper"] = 1
+	sim.known_finds["tin"] = 1
+	check(sim.evo.prereqs_met("bronze"), "with both ores found it can")
+	sim.techs["bronze"] = true
+	sim.add_structure("smelter", D.VILLAGE + Vector2(150, 150), true)
+	sim.stock["copper"] = 0.0
+	sim.stock["tin"] = 0.0
+	check(not sim.has_bronze(), "a smelter without ore arms no one")
+	sim.stock["copper"] = 3.0
+	sim.stock["tin"] = 2.0
+	check(sim.has_bronze(), "with copper and tin it does")
+	# honey lifts the spirit; fish are iced over in winter
+	sim.devotion = 0.0
+	u.carry_kind = "honey"
+	sim._find_effects(u, 10)
+	check(sim.devotion > 0.0, "a load of honey raises devotion")
+	sim.known_finds["fish"] = 1
+	var fish = sim.nodes.filter(func(n): return n.kind == "fish")[0]
+	check(sim._can_gather_find(fish), "fish can be caught in the warm seasons")
+	sim.hz.level = "normal"
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + 10.0
+	check(sim.hz.winter() and not sim._can_gather_find(fish), "but not through winter ice")
+
+func test_nature() -> void:
+	print("\n== Forces of nature ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var nat = sim.nat
+	# wildfire
+	var tree = sim.nodes.filter(func(n): return n.kind == "tree" and sim.nodes.filter(func(o): return o.kind == "tree" and o.pos.distance_to(n.pos) < 60).size() >= 3)[0]
+	nat.ignite(tree)
+	check(nat.burning.has(tree.id) and "Wildfire" in nat.status() or nat.status().has(sim.tr("Wildfire")), "a tree catches fire: wildfire")
+	var u = sim.unit_by_name("Tuo")
+	sim.set_job(u, {})
+	u.pos = tree.pos + Vector2(20, 0)
+	var hp0: float = u.hp
+	for i in 30: sim.tick(0.05)
+	check(u.hp < hp0, "people too close to the flames get burned")
+	for i in 900:
+		sim.tick(0.05)
+		if nat.burning.is_empty(): break
+	check(nat.burning.is_empty() and tree.kind == "burnt" and nat.fire_size >= 1, "the fire burns out and leaves burnt trees (%d)" % nat.fire_size)
+	# lightning on a person
+	var v = sim.unit_by_name("Shan")
+	v.hp = v.max_hp
+	nat._hit_person(v)
+	check(not v.dead and v.memory.any(func(m): return "lightning" in m["text"]), "someone struck by lightning can live, touched by the sky")
+	var w = sim.unit_by_name("Bai")
+	w.hp = 5.0
+	nat._hit_person(w)
+	check(w.dead and sim.log_lines.any(func(e): return "struck by lightning" in e["text"]), "or die of it, and the chronicle says how")
+	# fire from the sky before Friction Fire
+	check(not sim.has_tech("fire"), "(no fire yet)")
+	var before: float = sim.evo.insight["fire"]
+	nat._sky_fire(sim.unit_by_name("Linghe").pos + Vector2(50, 0))
+	check(nat.sky_fire_given and sim.evo.insight["fire"] > before, "lightning near people gives the tribe its first fire")
+	# spring flood
+	sim.hz.level = "normal"
+	var dock = sim.add_structure("fishing_dock", Vector2(D.river_x(D.VILLAGE.y) - 60, D.VILLAGE.y), true)
+	var r = sim.unit_by_name("Yan")
+	sim.set_job(r, {})
+	r.pos = Vector2(D.river_x(D.VILLAGE.y + 120) - 150, D.VILLAGE.y + 120)
+	nat.flood_day = sim.day()
+	nat.flood_at = sim.time + 14.0
+	nat.flood_warned = false
+	sim.tick(0.05)
+	sim.tick(0.05)
+	check(nat.flood_warned and r.job.get("flee", false), "when the river rises, people near the banks run for high ground")
+	check(nat.alarm(), "a rising river wakes the camp")
+	for i in 300: sim.tick(0.05)
+	check(nat.flooding() and not dock.built, "the flood damages riverside buildings")
+	for i in 1000:
+		sim.tick(0.05)
+		if not nat.flooding(): break
+	var farm = sim.add_structure("farm_plot", Vector2(D.river_x(D.VILLAGE.y) - 250, D.VILLAGE.y + 200), true)
+	check(nat.food_mult(farm) > 1.3, "the silt makes riverside fields richer afterwards")
+	# the Fire Mountain
+	var near = sim.unit_by_name("Qiao")
+	near.pos = nat.VOLCANO + Vector2(-200, 200)
+	near.hp = near.max_hp
+	nat.erupt()
+	check(near.hp < near.max_hp, "the eruption burns anyone near the mountain")
+	check(sim.nodes.any(func(n): return n.kind == "obsidian"), "and leaves obsidian on its slopes")
+	for i in 400: sim.tick(0.05)
+	check(nat.ash > 0.5 and nat.grow_mult() < 0.8 and nat.sight_mult() < 0.9, "ash darkens the sky, slows growth and shortens sight")
+	# eclipse
+	var sim2 = _new_sim()
+	sim2.hz.level = "normal"
+	sim2.time = D.DAY_LEN * 2 + D.DAY_LEN * 0.35
+	sim2.nat.eclipse_at = sim2.time
+	sim2.nat.quake_at = INF
+	sim2.nat.erupt_at = INF
+	for i in 140:
+		sim2.tick(0.05)
+		if sim2.pending_event != "": break
+	check(sim2.pending_event == "eclipse" and sim2.nat.darkness() > 0.9, "the sun is devoured at midday, and the chieftain must answer")
+	for o in sim2.living(): o.skills["lore"]["lv"] = 0
+	var res: Dictionary = sim2.resolve_event("eclipse", 2)
+	sim2.paused = false
+	check(sim2.nat.panicking(), "a shaman with no answer: the people panic")
+	for i in 120: sim2.tick(0.05)
+	check(sim2.living().any(func(o): return o.act == "Hiding in a hut"), "and hide in their huts")
+	sim2.techs["totems"] = true
+	sim2.nat.panic_until = -1.0
+	var lore0: float = sim2.stock["lore"]
+	sim2.nat.resolve("eclipse", 2)
+	check(sim2.stock["lore"] >= lore0 + 20 and not sim2.nat.panicking(), "with the totems' knowledge the omen calms the tribe and teaches it")
+	# earthquake
+	var built: int = sim2.structures.filter(func(st): return st.built and sim2.ours(st)).size()
+	sim2.nat.quake()
+	check(sim2.structures.filter(func(st): return st.built and sim2.ours(st)).size() < built, "an earthquake brings buildings down")
+
+func test_settling() -> void:
+	print("\n== Distance and settlements ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	# walking far costs food; loads slow the walk
+	var a = sim.unit_by_name("Tuo")
+	var b = sim.unit_by_name("Shan")
+	for u in [a, b]:
+		sim.set_job(u, {})
+		u.hunger = 80.0
+	a.pos = D.VILLAGE
+	sim.go_to(a, D.VILLAGE + Vector2(-600, 0))
+	for i in 100:
+		sim.step_move(a, 0.05, 58.0)
+		sim.unit_needs(a, 0.05)
+		sim.unit_needs(b, 0.05)
+	check(a.hunger < b.hunger - 0.8, "walking far makes people hungrier (%.1f vs %.1f)" % [a.hunger, b.hunger])
+	var v0: float = sim.unit_speed(a)
+	a.carry_amt = 8
+	check(sim.unit_speed(a) < v0 * 0.9, "a load slows the walk home")
+	a.carry_amt = 0
+	# a Granary takes food in closer to the fields
+	var gran = sim.add_structure("granary", D.VILLAGE + Vector2(-500, 0), true)
+	a.pos = gran.pos + Vector2(-100, 0)
+	var dp: Vector2 = sim._dropoff_point({"dropoff": -1, "res": "food"}, a)
+	check(dp == gran.pos, "food is dropped at the nearest Granary")
+	check(sim._dropoff_point({"dropoff": -1, "res": "wood"}, a) == D.VILLAGE, "wood still goes to the village")
+	gran.built = false
+	# a crowded village sends people to a settlement with empty beds
+	var c = E.Contract.new()
+	c.id = sim.uid()
+	c.kind = "settle"
+	c.status = "done"
+	c.site = D.EAST_SITE
+	c.plan = {"plan_id": "test_outpost"}
+	sim.contracts.list.append(c)
+	sim.add_structure("hut", D.EAST_SITE + Vector2(40, 0), true, "contract:%d" % c.id)
+	sim.add_structure("hut", D.EAST_SITE + Vector2(-40, 0), true, "contract:%d" % c.id)
+	var huts: Array = sim.structures.filter(func(st): return st.type == "hut" and st.owner == "village")
+	huts[0].built = false
+	huts[1].built = false
+	check(sim.residents_of(D.VILLAGE).size() > sim.beds_at(D.VILLAGE), "(the village is crowded: %d people, %d beds)" % [sim.residents_of(D.VILLAGE).size(), sim.beds_at(D.VILLAGE)])
+	sim.time = D.DAY_LEN * 1 + 10.0
+	sim.resettle_t = 0.0
+	sim.tick(0.05)
+	var movers: Array = sim.residents_of(D.EAST_SITE)
+	check(movers.size() == 1 and movers[0].job.get("type", "") == "move", "someone moves to the settlement across the river")
+	check(sim.log_lines.any(func(e): return "test_outpost" in e["text"]), "and the chronicle tells of it")
+	for i in 3:
+		sim.resettle_t = 0.0
+		sim.tick(0.05)
+	check(sim.residents_of(D.EAST_SITE).size() <= sim.beds_at(D.EAST_SITE), "but never more than its beds")
 
 func test_burials() -> void:
 	print("\n== Burials ==")

@@ -228,6 +228,7 @@ func _build_terrain() -> void:
 func _process(delta: float) -> void:
 	t += delta
 	_pan_keys(delta)
+	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
 	night.color = _sky_tint()
 	_sync_lights()
 	if sim.guardian and not sim.guardian.dead:
@@ -553,6 +554,7 @@ func draw_overlay() -> void:
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 	_draw_weather()
+	_draw_nature()
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
 	var ford_lbl := Vector2(D.river_x(D.FORD_Y1 + 30), D.FORD_Y1 + 30)
 	if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
@@ -622,6 +624,43 @@ func _draw_weather() -> void:
 			var y := view.position.y + fmod(i * 91.37 + t * (140.0 if w == "blizzard" else 45.0), view.size.y)
 			ci.draw_circle(Vector2(x, y), 1.6 + fmod(i * 0.37, 1.6), Color(1, 1, 1, 0.75))
 		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+
+## Lightning bolts and flashes, falling ash, the swollen spring river.
+func _draw_nature() -> void:
+	var nat = sim.nat
+	if nat.flood_left > 0 or (nat.flood_at > 0 and sim.time >= nat.flood_at - 15.0):
+		var k: float = 1.0 if nat.flood_left > 0 else clampf(1.0 - (nat.flood_at - sim.time) / 15.0, 0.0, 1.0) * 0.5
+		if nat.flood_left > 0 and nat.flood_left < 8.0: k = nat.flood_left / 8.0
+		ci.draw_set_transform_matrix(GROUND)
+		var half: float = D.RIVER_HALF + 110.0 * k
+		var left := PackedVector2Array()
+		var right := PackedVector2Array()
+		var y := 0.0
+		while y <= D.H:
+			left.append(Vector2(D.river_x(y) - half, y))
+			right.append(Vector2(D.river_x(y) + half, y))
+			y += 40.0
+		right.reverse()
+		ci.draw_colored_polygon(left + right, Color(0.32, 0.5, 0.72, 0.55 * k))
+		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	for s in nat.strikes:
+		var a: float = 1.0 - s["t"] / 0.7
+		var g := iso(s["pos"])
+		if s["t"] < 0.15: ci.draw_rect(view, Color(1, 1, 0.92, 0.3 * (1.0 - s["t"] / 0.15)))
+		var pts := PackedVector2Array([g + Vector2(0, -520)])
+		var k2 := 0
+		while k2 < 8:
+			k2 += 1
+			pts.append(g + Vector2(sin(k2 * 2.7 + s["pos"].x) * 22.0, -520.0 + k2 * 65.0))
+		ci.draw_polyline(pts, Color(1, 1, 0.85, a), 5.0)
+		ci.draw_polyline(pts, Color(1, 1, 1, a), 2.0)
+		ci.draw_circle(g, 18.0 * a, Color(1, 0.95, 0.7, 0.6 * a))
+	if nat.ash > 0.02:
+		ci.draw_rect(view, Color(0.3, 0.27, 0.25, 0.42 * nat.ash))
+		for i in int(380 * nat.ash):
+			var x := view.position.x + fmod(i * 131.3 + t * 18.0 + sin(t * 0.7 + i) * 10.0, view.size.x)
+			var y := view.position.y + fmod(i * 77.9 + t * 30.0, view.size.y)
+			ci.draw_circle(Vector2(x, y), 1.8 + fmod(i * 0.29, 1.8), Color(0.42, 0.4, 0.38, 0.8))
 
 func _draw_wolf(p) -> void:
 	var b := iso(p.pos)
@@ -718,6 +757,24 @@ func _draw_landmark(lm: Dictionary) -> void:
 			var e := b + Vector2(-30 + sin(t * 0.6) * 40, -130 + cos(t * 0.6) * 10)
 			ci.draw_line(e, e + Vector2(-8, -4), Color("#2a1d10"), 2)
 			ci.draw_line(e, e + Vector2(8, -4), Color("#2a1d10"), 2)
+		"volcano":
+			var erupting: bool = sim.nat.erupt_left > 0
+			_ell(b + Vector2(30, 10), 150, 42, SHADOW)
+			ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-150, 14), b + Vector2(-40, -150), b + Vector2(40, -150), b + Vector2(160, 14)]), Color("#4a3e38"))
+			ci.draw_colored_polygon(PackedVector2Array([b + Vector2(40, -150), b + Vector2(160, 14), b + Vector2(30, 14)]), Color("#3a302c"))
+			_ell(b + Vector2(0, -150), 40, 10, Color("#2a201c"))
+			_ell(b + Vector2(0, -150), 28, 6, Color("#ff6a20") if erupting else Color("#8a3a1a"))
+			if erupting:
+				for k in 3: # lava runs
+					var x0 := -20.0 + k * 20.0
+					ci.draw_polyline(PackedVector2Array([b + Vector2(x0, -148), b + Vector2(x0 * 1.6 + sin(k) * 10, -90), b + Vector2(x0 * 2.6, -30), b + Vector2(x0 * 3.2, 6)]), Color(1.0, 0.45 + 0.1 * sin(t * 6 + k), 0.1), 5.0)
+				for k in 6:
+					var kk := fmod(t * 1.4 + k / 6.0, 1.0)
+					ci.draw_circle(b + Vector2(sin(k * 1.9) * 40 * kk, -160 - 120 * kk), 3, Color(1, 0.6, 0.2, 1.0 - kk))
+			var plume: float = 1.0 if erupting else (0.6 if sim.nat.ash > 0.1 or sim.time >= sim.nat.erupt_at - 30.0 else 0.25)
+			for k in 7:
+				var kk := fmod(t * 0.12 + k / 7.0, 1.0)
+				ci.draw_circle(b + Vector2(-10 + 70 * kk + sin(t * 0.5 + k) * 8, -160 - 220 * kk), (12 + 40 * kk) * plume, Color(0.25, 0.23, 0.22, 0.55 * (1.0 - kk) * plume))
 		"spring":
 			_ell(b, 46, 20, Color("#b5a88a"))
 			_ell(b, 38, 15, Color("#4fb0b8"))
@@ -910,6 +967,14 @@ func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
 
 func _draw_node(n) -> void:
 	var b := iso(n.pos)
+	if sim.nat.burning.has(n.id): # a burning tree, then flames
+		if not _sprite(("pine_%d" if n.id % 3 != 2 else "leaf_%d") % (n.id % 4), b, n.sz, Color(0.55, 0.45, 0.4)): _draw_tree_shape(n, b)
+		var left: float = sim.nat.burning[n.id]
+		var hgt: float = 34.0 * n.sz * clampf(left / 6.0, 0.4, 1.0)
+		_flame(b + Vector2(0, -10 * n.sz), 9.0 * n.sz, hgt * (1.0 + 0.2 * sin(t * 12 + n.id)), Color("#ff8a2a"))
+		_flame(b + Vector2(-5, -20 * n.sz), 6.0 * n.sz, hgt * 0.7 * (1.0 + 0.2 * sin(t * 15 + n.id * 2)), Color("#ffd040"))
+		_smoke(b - Vector2(0, 40 * n.sz), n.id)
+		return
 	match n.kind:
 		"tree":
 			if _sprite(("pine_%d" if n.id % 3 != 2 else "leaf_%d") % (n.id % 4) + _snowy(), b, n.sz): return
@@ -925,29 +990,9 @@ func _draw_node(n) -> void:
 			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, clampf(n.amount / 40.0, 0.45, 1.0)): return
 	match n.kind:
 		"tree":
-			var s: float = n.sz
-			var east: bool = D.bank_of(n.pos) == "east"
-			_ell(b + Vector2(12 * s, 4 * s), 18 * s, 7 * s, SHADOW)
-			ci.draw_rect(Rect2(b.x - 2.5 * s, b.y - 14 * s, 5 * s, 14 * s), Color("#6b4524"))
-			if n.id % 3 != 2:
-				var dark := Color("#24452a") if east else Color("#2c5a2e")
-				var lite := Color("#2f5c34") if east else Color("#3d7a3a")
-				for i in 3:
-					var by := b.y - (10 + i * 10) * s
-					var hw := (15 - i * 3.5) * s
-					var tip := Vector2(b.x, by - 18 * s)
-					ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x + hw, by), tip]), dark)
-					ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x - hw * 0.1, by + 2 * s), tip]), lite)
-					if sim.hz.snow > 0.5:
-						ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-hw * 0.45, 8 * s), tip + Vector2(hw * 0.45, 8 * s)]), Color("#f4f8ff"))
-			else:
-				var c0 := Color("#2f5a2a") if not east else Color("#29482a")
-				ci.draw_circle(b + Vector2(0, -26 * s), 14 * s, c0)
-				ci.draw_circle(b + Vector2(-7, -22) * s, 9 * s, c0)
-				ci.draw_circle(b + Vector2(7, -21) * s, 9 * s, c0.darkened(0.15))
-				ci.draw_circle(b + Vector2(-4, -31) * s, 8 * s, c0.lightened(0.18))
-				ci.draw_circle(b + Vector2(-6, -34) * s, 3.5 * s, c0.lightened(0.32))
-				if sim.hz.snow > 0.5: _ell(b + Vector2(-2, -36) * s, 10 * s, 4 * s, Color("#f4f8ff"))
+			_draw_tree_shape(n, b)
+		"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "flint", "copper", "tin", "ochre", "salt", "obsidian":
+			_draw_find(n, b)
 		"boulder":
 			var k: float = clampf(n.amount / 40.0, 0.35, 1.0)
 			_ell(b + Vector2(8, 3), 22 * k, 8 * k, SHADOW)
@@ -956,6 +1001,11 @@ func _draw_node(n) -> void:
 				var h: float = (14.0 - i * 3.0) * k
 				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-9, 0) * k, q + Vector2(-7 * k, -h), q + Vector2(2 * k, -h - 4 * k), q + Vector2(9 * k, -h * 0.4), q + Vector2(8, 0) * k]), Color("#8e8a80"))
 				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-7 * k, -h), q + Vector2(2 * k, -h - 4 * k), q + Vector2(0, -h * 0.5)]), Color("#b0aca2"))
+		"burnt":
+			_ell(b + Vector2(2, 1), 8, 3.5, Color(0.1, 0.08, 0.06, 0.5))
+			ci.draw_line(b, b + Vector2(1, -22 * n.sz), Color("#2a2420"), 4.0)
+			ci.draw_line(b + Vector2(1, -14 * n.sz), b + Vector2(-7, -22 * n.sz), Color("#2a2420"), 2.0)
+			ci.draw_line(b + Vector2(1, -18 * n.sz), b + Vector2(7, -26 * n.sz), Color("#2a2420"), 2.0)
 		"stump":
 			_ell(b + Vector2(2, 1), 7, 3.5, SHADOW)
 			ci.draw_rect(Rect2(b.x - 5, b.y - 5, 10, 5), Color("#6b4a2a"))
@@ -1448,6 +1498,8 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 ## Asleep in the open: lying down under a hide, with drifting z's.
 func _draw_sleeper(u, b: Vector2) -> void:
 	if u.id in selected: _ell_line(b, 16, 7, Color("#ffe066"), 2)
+	_ell(b + Vector2(1, 1), 17, 6.5, Color("#6e5236")) # a hide bedroll
+	_ell(b, 15, 5.2, Color("#9a7650"))
 	if art and art.has("man_dead_0_0"):
 		var dn := "man_dead_%d_0" % _dir_index("u%d" % u.id)
 		_sprite(dn, b, 0.95)
@@ -1513,6 +1565,123 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 		for i in 3:
 			var kk := fmod(t * 0.7 + i / 3.0, 1.0)
 			ci.draw_circle(b + Vector2(sin(t * 2 + i * 2) * 10, -10 - 30 * kk), 1.8, Color(0.8, 0.7, 1, 1 - kk))
+
+## The procedural tree (also under the flames of a burning one).
+func _draw_tree_shape(n, b: Vector2) -> void:
+	var s: float = n.sz
+	var east: bool = D.bank_of(n.pos) == "east"
+	_ell(b + Vector2(12 * s, 4 * s), 18 * s, 7 * s, SHADOW)
+	ci.draw_rect(Rect2(b.x - 2.5 * s, b.y - 14 * s, 5 * s, 14 * s), Color("#6b4524"))
+	if n.id % 3 != 2:
+		var dark := Color("#24452a") if east else Color("#2c5a2e")
+		var lite := Color("#2f5c34") if east else Color("#3d7a3a")
+		for i in 3:
+			var by := b.y - (10 + i * 10) * s
+			var hw := (15 - i * 3.5) * s
+			var tip := Vector2(b.x, by - 18 * s)
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x + hw, by), tip]), dark)
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - hw, by), Vector2(b.x - hw * 0.1, by + 2 * s), tip]), lite)
+			if sim.hz.snow > 0.5:
+				ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-hw * 0.45, 8 * s), tip + Vector2(hw * 0.45, 8 * s)]), Color("#f4f8ff"))
+	else:
+		var c0 := Color("#2f5a2a") if not east else Color("#29482a")
+		ci.draw_circle(b + Vector2(0, -26 * s), 14 * s, c0)
+		ci.draw_circle(b + Vector2(-7, -22) * s, 9 * s, c0)
+		ci.draw_circle(b + Vector2(7, -21) * s, 9 * s, c0.darkened(0.15))
+		ci.draw_circle(b + Vector2(-4, -31) * s, 8 * s, c0.lightened(0.18))
+		ci.draw_circle(b + Vector2(-6, -34) * s, 3.5 * s, c0.lightened(0.32))
+		if sim.hz.snow > 0.5: _ell(b + Vector2(-2, -36) * s, 10 * s, 4 * s, Color("#f4f8ff"))
+
+## Natural finds (foods, medicines, ores): small hand-drawn props. Picked-over plants look bare.
+func _draw_find(n, b: Vector2) -> void:
+	var full: bool = n.amount >= 1
+	var a := 1.0 if full else 0.45
+	var snow: bool = sim.hz.snow > 0.5
+	match n.kind:
+		"mushroom":
+			_ell(b + Vector2(2, 1), 10, 3.5, SHADOW)
+			for i in (3 if full else 1):
+				var q := b + Vector2(-6 + i * 6, (i % 2) * 2.0)
+				ci.draw_line(q, q + Vector2(0, -5), Color(0.93, 0.9, 0.82, a), 2)
+				_ell(q + Vector2(0, -6), 4.5, 2.6, Color(0.72, 0.2, 0.16, a) if (n.id + i) % 2 == 0 else Color(0.62, 0.42, 0.24, a))
+				ci.draw_circle(q + Vector2(-1.5, -7), 0.9, Color(1, 1, 1, a))
+		"tubers":
+			_ell(b, 11, 4.5, Color(0.42, 0.3, 0.18, 0.85))
+			for i in 4:
+				var q := b + Vector2(-7 + i * 5, -1 + (i % 2) * 2)
+				ci.draw_line(q, q + Vector2(-2 + i, -9), Color(0.3, 0.55, 0.22, a), 2)
+				_ell(q + Vector2(-2 + i, -10), 3, 1.6, Color(0.36, 0.64, 0.26, a))
+			if full:
+				for i in 2: _ell(b + Vector2(-3 + i * 6, 1), 2.6, 1.6, Color("#9a6a3a"))
+		"grain":
+			for i in 9:
+				var q := b + Vector2(-10 + i * 2.5, (i % 3) * 1.5)
+				var h := 10.0 + float((n.id + i * 7) % 5)
+				var col := Color(0.86, 0.72, 0.34, a) if not snow else Color(0.8, 0.78, 0.7, a)
+				ci.draw_line(q, q + Vector2(1, -h), col.darkened(0.2), 1.2)
+				if full: _ell(q + Vector2(1.5, -h - 2), 1.4, 3, col)
+		"honey":
+			_ell(b + Vector2(5, 2), 10, 4, SHADOW)
+			ci.draw_rect(Rect2(b.x - 4, b.y - 26, 8, 26), Color("#5e4128"))
+			ci.draw_line(b + Vector2(-4, -26), b + Vector2(-9, -34), Color("#5e4128"), 3)
+			if full:
+				_ell(b + Vector2(5, -16), 5, 7, Color("#d9a33a"))
+				for i in 3: ci.draw_line(b + Vector2(1, -20 + i * 4), b + Vector2(9, -20 + i * 4), Color("#8a5a1c"), 1)
+				for i in 3: ci.draw_circle(b + Vector2(10 + i * 3, -24 + (i % 2) * 5), 1, Color(0.1, 0.08, 0.02))
+		"fish":
+			if sim.hz.winter():
+				_ell(b, 13, 5, Color(0.86, 0.92, 1.0, 0.75))
+			else:
+				for i in 2: _ell_line(b + Vector2(0, -1), 7 + i * 5, 2.5 + i * 2, Color(1, 1, 1, 0.35 * a), 1)
+				if full:
+					for i in 2:
+						var q := b + Vector2(-5 + i * 9, -3 - i * 2)
+						_ell(q, 4, 1.6, Color("#b8c8d0"))
+						ci.draw_colored_polygon(PackedVector2Array([q + Vector2(3.5, 0), q + Vector2(6.5, -2), q + Vector2(6.5, 2)]), Color("#9aaab4"))
+		"willow":
+			_ell(b + Vector2(5, 2), 10, 4, SHADOW)
+			ci.draw_line(b, b + Vector2(1, -20), Color("#6a5236"), 3)
+			var top := b + Vector2(1, -22)
+			ci.draw_circle(top, 9, Color(0.5, 0.62, 0.3, a))
+			for i in 7:
+				var x := -9.0 + i * 3.0
+				ci.draw_line(top + Vector2(x, -2), top + Vector2(x * 1.2, 14 - absf(x) * 0.6), Color(0.62, 0.72, 0.36, a), 1.3)
+		"yarrow":
+			for i in 4:
+				var q := b + Vector2(-8 + i * 5, (i % 2) * 2)
+				ci.draw_line(q, q + Vector2(0, -9), Color(0.36, 0.55, 0.3, a), 1.3)
+				if full: ci.draw_circle(q + Vector2(0, -10), 2.4, Color(0.96, 0.95, 0.88))
+		"flint":
+			_ell(b + Vector2(4, 2), 11, 4, SHADOW)
+			for i in 3:
+				var q := b + Vector2(-6 + i * 6, (i % 2) * 2)
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-4, 0), q + Vector2(-2, -6), q + Vector2(3, -5), q + Vector2(4, 0)]), Color(0.2, 0.2, 0.24, a))
+				ci.draw_line(q + Vector2(-2, -6), q + Vector2(3, -5), Color(0.6, 0.62, 0.7, a), 1)
+		"copper", "tin":
+			var k: float = clampf(n.amount / 40.0, 0.5, 1.0)
+			var rock := Color("#7c6e60") if n.kind == "copper" else Color("#4c4c54")
+			_ell(b + Vector2(7, 3), 18 * k, 7 * k, SHADOW)
+			for i in 2:
+				var q := b + Vector2((i * 2 - 1) * 7 * k, i * 2)
+				var h := (13.0 - i * 3.0) * k
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-8, 0) * k, q + Vector2(-6 * k, -h), q + Vector2(2 * k, -h - 3 * k), q + Vector2(8, 0) * k]), rock)
+				if n.kind == "copper":
+					ci.draw_line(q + Vector2(-4 * k, -h * 0.4), q + Vector2(3 * k, -h * 0.8), Color("#4fb08a"), 2)
+				else:
+					ci.draw_circle(q + Vector2(-1, -h * 0.6), 1.3, Color("#e8eef4"))
+					ci.draw_circle(q + Vector2(3, -h * 0.3), 1, Color("#e8eef4"))
+		"ochre":
+			_ell(b, 13, 5, Color(0.66, 0.26, 0.16, 0.8 * a + 0.2))
+			for i in 3: _ell(b + Vector2(-6 + i * 6, -2), 3, 2, Color(0.76, 0.32, 0.2, a))
+		"obsidian":
+			_ell(b + Vector2(4, 2), 12, 4, SHADOW)
+			for i in 3:
+				var q := b + Vector2(-7 + i * 7, (i % 2) * 2)
+				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-4, 0), q + Vector2(-1, -9 + i), q + Vector2(4, 0)]), Color(0.08, 0.06, 0.1, a))
+				ci.draw_line(q + Vector2(-1, -9 + i), q + Vector2(2, -2), Color(0.55, 0.5, 0.75, a), 1.2)
+		"salt":
+			_ell(b, 13, 5, Color(0.92, 0.92, 0.88, 0.85 * a + 0.15))
+			for i in 4: ci.draw_circle(b + Vector2(-8 + i * 5, -1 + (i % 2)), 1.6, Color(1, 1, 1, a))
 
 ## Stone before Polished Stone Tools is crude grey-brown; bronze once a smelter stands.
 func _blade_col() -> Color:
@@ -1884,13 +2053,15 @@ func _sync_items() -> void:
 	for n in sim.nodes:
 		var key := "n%d" % n.id
 		seen[key] = true
-		var it := _item(key, 0, n, iso(n.pos), n.kind == "deer")
+		var anim: bool = n.kind == "deer" or sim.nat.burning.has(n.id)
+		var it := _item(key, 0, n, iso(n.pos), anim)
+		if it.dynamic != anim: it.dynamic = anim
 		it.visible = sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)
 		_touch(it, n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0))
 	for lm in sim.landmarks:
 		var key: String = "lm_" + lm["id"]
 		seen[key] = true
-		var it := _item(key, 6, lm, iso(lm["pos"]), lm["kind"] in ["den", "stones", "peak", "spring"])
+		var it := _item(key, 6, lm, iso(lm["pos"]), lm["kind"] in ["den", "stones", "peak", "spring", "volcano"])
 		it.visible = sim.is_explored(lm["pos"])
 		_touch(it, 0)
 	for st in sim.structures:

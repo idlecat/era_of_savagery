@@ -768,7 +768,7 @@ func summary(c: E.Contract) -> Dictionary:
 		"plan_id": c.plan["plan_id"], "progress_pct": roundi(c.progress * 100),
 		"current_step": c.substate, "built": built, "half_built": partial,
 		"threat": _threat_text(c.site),
-		"reason": c.abort_reason, "disaster": "blizzard" if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
+		"reason": c.abort_reason, "disaster": sim.flags.get("disaster", "blizzard") if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
 		"crew": crew_state, "tribe_lore": roundi(sim.stock["lore"]),
 		"idle_warriors_in_village": available_helpers().size(),
 	}

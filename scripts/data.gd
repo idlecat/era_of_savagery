@@ -58,6 +58,8 @@ const LANDMARKS := [
 		"text": "climbed Eagle Peak and saw the whole east bank spread below"},
 	{"id": "spring", "insight": {"pottery": 0.4}, "kind": "spring", "name": "Hot Spring", "pos": Vector2(3050, 2120), "reward": {"food": 20, "lore": 15},
 		"text": "found a steaming Hot Spring deep in the east"},
+	{"id": "volcano", "insight": {"fire": 0.3, "bronze": 0.15}, "kind": "volcano", "name": "Fire Mountain", "pos": Vector2(3380, 250), "reward": {"lore": 20},
+		"text": "climbed toward the smoking Fire Mountain, where the rocks are warm and the ground growls"},
 	{"id": "den_n", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(3260, 760), "reward": {"lore": 10}, "den": 2,
 		"text": "found a Saber-tooth Den littered with bones and lived to tell of it"},
 	{"id": "den_s", "insight": {"hide": 0.2}, "kind": "den", "name": "Saber-tooth Den", "pos": Vector2(2620, 2180), "reward": {"lore": 10}, "den": 1,
@@ -93,23 +95,74 @@ const SKILL_UNLOCKS := {
 	"lore": "Totem Miracles",
 }
 
+# Natural finds: foods, medicines and ores scattered over the map. Each kind is unknown (and
+# can't be gathered) until a villager who can recognise it comes near one.
+#   res      what a load becomes in the stores ("herbs", "copper", "tin" are their own stocks)
+#   rate     work speed vs. berries (1.0); needs: "" | "lore" (Lore 1+ to recognise) | "tools"
+#   regrow   per second (0 = a seam that runs out); winter: still yields in winter
+#   where    world-gen placement; count = clusters
+#   act      activity text; practice = evolution activity it counts as
+const FINDS := {
+	"mushroom": {"name": "Forest Mushrooms", "group": "food", "res": "food", "amount": 18, "rate": 1.0, "regrow": 0.06, "winter": false,
+		"where": "forest", "count": 6, "act": "Gathering mushrooms", "practice": "berry",
+		"desc": "Food from the forest floor - but a bad one poisons the gatherer until the tribe learns which are safe (or a Lore 2+ gatherer picks)."},
+	"tubers": {"name": "Wild Tubers", "group": "food", "res": "food", "amount": 30, "rate": 0.7, "regrow": 0.05, "winter": true,
+		"where": "meadow", "count": 5, "act": "Digging tubers", "practice": "berry",
+		"desc": "Slow to dig, but they keep in the ground: food even in winter."},
+	"grain": {"name": "Wild Grain", "group": "food", "res": "food", "amount": 26, "rate": 0.9, "regrow": 0.08, "winter": false,
+		"where": "meadow", "count": 4, "act": "Cutting wild grain", "practice": "berry", "practice_x": 2.0,
+		"desc": "Seed-heads of wild grass. Gathering them teaches farming twice as fast."},
+	"honey": {"name": "Wild Honey", "group": "food", "res": "food", "amount": 24, "rate": 0.8, "regrow": 0.05, "winter": false, "cluster": 1,
+		"where": "forest_edge", "count": 4, "act": "Taking honey", "practice": "hunt",
+		"desc": "Sweet food that lifts the spirit (+devotion). The bees sting - unless Friction Fire is known to smoke them out."},
+	"fish": {"name": "Fish Shoal", "group": "food", "res": "food", "amount": 24, "rate": 1.2, "regrow": 0.14, "winter": false,
+		"where": "river", "count": 6, "act": "Fishing", "practice": "hunt",
+		"desc": "Fish in the river shallows: plenty and quick to return - but none while the river is iced over in winter."},
+	"willow": {"name": "Willow Bark", "group": "medicine", "res": "herbs", "amount": 14, "rate": 0.8, "regrow": 0.04, "winter": true, "needs": "lore",
+		"where": "riverbank", "count": 4, "act": "Stripping willow bark", "practice": "ritual",
+		"desc": "Willow-bark tea breaks a fever: the sick recover 2.5x faster while the tribe has herbs."},
+	"yarrow": {"name": "Yarrow", "group": "medicine", "res": "herbs", "amount": 14, "rate": 0.9, "regrow": 0.05, "winter": false, "needs": "lore",
+		"where": "meadow", "count": 4, "act": "Picking yarrow", "practice": "ritual",
+		"desc": "Yarrow staunches wounds: the hurt heal twice as fast at the village while the tribe has herbs."},
+	"flint": {"name": "Flint", "group": "ore", "res": "stone", "amount": 30, "rate": 0.8, "regrow": 0.0, "winter": true,
+		"where": "riverbank", "count": 3, "act": "Knapping flint", "practice": "chop",
+		"desc": "Sharp stone that can be worked by hand (no tools needed). Finding it brings Polished Stone Tools much closer."},
+	"copper": {"name": "Copper Ore", "group": "ore", "res": "copper", "amount": 40, "rate": 0.5, "regrow": 0.0, "winter": true, "needs": "tools",
+		"where": "hills_west", "count": 3, "act": "Mining copper", "practice": "quarry",
+		"desc": "Green-streaked rock. With tin, it makes bronze."},
+	"tin": {"name": "Tin Ore", "group": "ore", "res": "tin", "amount": 30, "rate": 0.45, "regrow": 0.0, "winter": true, "needs": "tools",
+		"where": "hills_east", "count": 2, "act": "Mining tin", "practice": "quarry",
+		"desc": "Heavy dark stones, rare and far. Bronze cannot be made without it."},
+	"ochre": {"name": "Red Ochre", "group": "ore", "res": "lore", "amount": 20, "rate": 0.7, "regrow": 0.0, "winter": true,
+		"where": "meadow", "count": 2, "act": "Digging red ochre", "practice": "ritual",
+		"desc": "Red earth for painting bodies, walls and the dead: each load is lore, and the tribe grows more spiritual."},
+	"obsidian": {"name": "Obsidian", "group": "ore", "res": "stone", "amount": 20, "rate": 0.7, "regrow": 0.0, "winter": true,
+		"where": "volcano", "count": 0, "act": "Gathering obsidian", "practice": "quarry",
+		"desc": "Black glass left on the slopes of the Fire Mountain: blades of it cut deep (+15% ATK until bronze)."},
+	"salt": {"name": "Salt Lick", "group": "ore", "res": "food", "amount": 25, "rate": 0.7, "regrow": 0.01, "winter": true,
+		"where": "meadow", "count": 2, "act": "Scraping salt", "practice": "hearth",
+		"desc": "Salt to cure meat: once found, the stores spoil half as fast."},
+}
+## Activity text of each find, for translation (kept as literal tr() keys).
+const FIND_GROUPS := {"food": "Foods", "medicine": "Medicines", "ore": "Ores & earths"}
+
 # wood = material cost, work = build points, cap = population capacity
 const STRUCTURES := {
-	"hut":          {"name": "Hut", "wood": 15, "work": 30.0, "cap": 3, "r": 20.0},
-	"large_hut":    {"name": "Large Hut", "wood": 22, "work": 42.0, "cap": 5, "r": 26.0},
-	"palisade":     {"name": "Wooden Palisade", "wood": 20, "work": 36.0, "r": 100.0, "ring": true},
-	"fishing_dock": {"name": "Fishing Dock", "wood": 14, "work": 26.0, "r": 16.0, "food": 0.12},
-	"bonfire":      {"name": "Bonfire", "wood": 8, "work": 12.0, "r": 12.0},
-	"weapon_rack":  {"name": "Weapon Rack", "wood": 10, "work": 16.0, "r": 12.0},
-	"totem_shrine": {"name": "Totem Shrine", "wood": 18, "work": 30.0, "r": 14.0, "lore": 0.06},
-	"farm_plot":    {"name": "Farm Plot", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
-	"granary":      {"name": "Granary", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
-	"grand_altar":  {"name": "Grand Altar", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
-	"aurochs_pen":  {"name": "Aurochs Pen", "wood": 25, "work": 30.0, "r": 30.0, "tech": "domestication"}, # keeps the herd (sim.oxen)
-	"smelter":      {"name": "Bronze Smelter", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
-	"council_ring": {"name": "Council Ring", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
+	"hut":          {"name": "Hut", "desc": "Houses 3 people. At night 3 sleep inside, warm and safe from wolves.", "wood": 15, "work": 30.0, "cap": 3, "r": 20.0},
+	"large_hut":    {"name": "Large Hut", "desc": "Houses 5 people, and 5 can sleep inside at night.", "wood": 22, "work": 42.0, "cap": 5, "r": 26.0},
+	"palisade":     {"name": "Wooden Palisade", "desc": "A ring of stakes: people inside it get +3 DEF. Floods can't wash it away.", "wood": 20, "work": 36.0, "r": 100.0, "ring": true},
+	"fishing_dock": {"name": "Fishing Dock", "desc": "Steady food from the river (less in winter).", "wood": 14, "work": 26.0, "r": 16.0, "food": 0.12},
+	"bonfire":      {"name": "Bonfire", "desc": "Warmth: nobody near it freezes, the sick heal faster, and those who don't fit in huts sleep around it. Lights up the land around it.", "wood": 8, "work": 12.0, "r": 12.0},
+	"weapon_rack":  {"name": "Weapon Rack", "desc": "People near it fight with +20% ATK.", "wood": 10, "work": 16.0, "r": 12.0},
+	"totem_shrine": {"name": "Totem Shrine", "desc": "A trickle of lore. Rituals near it give 50% more lore, and the sick nearby heal faster.", "wood": 18, "work": 30.0, "r": 14.0, "lore": 0.06},
+	"farm_plot":    {"name": "Farm Plot", "desc": "Steady food from the field (none in winter, less in drought).", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
+	"granary":      {"name": "Granary", "desc": "Houses 4 people (and they sleep here). Gatherers drop food here, so build it near the fields.", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
+	"grand_altar":  {"name": "Grand Altar", "desc": "Summons Yinglong the winged dragon to guard the village. Rituals and healing as a shrine. Needed for Victory by Wisdom.", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
+	"aurochs_pen":  {"name": "Aurochs Pen", "desc": "Home to up to 2 pack oxen. Each ox eats food and needs tending, and lets one gatherer carry 50% more.", "wood": 25, "work": 30.0, "r": 30.0, "tech": "domestication"}, # keeps the herd (sim.oxen)
+	"smelter":      {"name": "Bronze Smelter", "desc": "Arms the tribe in bronze (+60% ATK, +3 DEF) while it has copper and tin; it uses one of each per day.", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
+	"council_ring": {"name": "Council Ring", "desc": "A trickle of lore. Where the chiefs of the clans can meet: needed for Victory by Unity.", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
 	# laid out by the tribe itself when the first of them dies (not in the build menu)
-	"burial_ground": {"name": "Burial Ground", "wood": 0, "work": 1.0, "r": 40.0},
+	"burial_ground": {"name": "Burial Ground", "desc": "Where the tribe lays its dead to rest.", "wood": 0, "work": 1.0, "r": 40.0},
 }
 ## Homes and walls get a new look per era (style = era they were built or renovated in).
 const STYLED := ["hut", "large_hut", "palisade", "granary"]
@@ -144,8 +197,8 @@ const TECHS := [
 		"desc": "Unlocks the Aurochs Pen, home to up to 2 pack oxen. Each ox lets one gatherer carry 50% more, but oxen eat food and must be tended.", "words": ["tamed beasts", "oxen", "pens", "riding"]},
 	{"id": "farming", "era": 2, "name": "Slash-and-Burn Farming", "cost": 35, "req": ["fire"], "practice": {"berry": 1.0},
 		"desc": "Unlocks Farm Plots for steady food.", "words": ["farms", "fields", "planting", "crops"]},
-	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "practice": {"quarry": 1.0, "build": 0.3},
-		"desc": "Unlocks the Bronze Smelter; once one stands, the tribe is armed in bronze (+60% ATK, +3 DEF).", "words": ["bronze", "metal", "smelting"]},
+	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "finds": ["copper", "tin"], "practice": {"quarry": 1.0, "build": 0.3},
+		"desc": "Unlocks the Bronze Smelter; while one stands with copper and tin to work, the tribe is armed in bronze (+60% ATK, +3 DEF).", "words": ["bronze", "metal", "smelting"]},
 	{"id": "totems", "era": 3, "name": "Megalithic Totems", "cost": 70, "req": ["pottery"], "practice": {"ritual": 1.0},
 		"desc": "Unlocks the Grand Altar (mythic guardian). Carved totems preserve all the tribe's knowledge.", "words": ["great totems", "altars", "megaliths"]},
 	{"id": "code", "era": 3, "name": "Tribal Code", "cost": 60, "req": ["farming"], "practice": {"lead": 1.0, "build": 0.3},

@@ -198,19 +198,9 @@ func _start(w: String) -> void:
 			sim.alert(tr("Drought: berries wither and the fields go dry."), Vector2.ZERO, "warn")
 		"storm":
 			sim.alert(tr("A thunderstorm rolls over the land."), Vector2.ZERO, "warn")
-			_lightning()
+			sim.nat.strike()
 		"rain":
 			sim.alert(tr("Rain. Work outdoors goes slower."), Vector2.ZERO, "info")
-
-## Lightning splits a tree near the people - a bad omen (and a little lore for the shaman).
-func _lightning() -> void:
-	var trees: Array = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(D.VILLAGE) < 900)
-	if trees.is_empty(): return
-	var n = trees.pick_random()
-	n.kind = "stump"
-	n.regrow_t = 200
-	sim.popup(n.pos + Vector2(0, -40), tr("Lightning!"), Color("#fff6a0"), true)
-	sim.devotion = minf(100.0, sim.devotion + 3)
 
 # ------------------------------------------------------------ wild animals
 func _wolves() -> void:
@@ -262,7 +252,7 @@ func _sickness(dt: float) -> void:
 		sick_roll = 45.0
 		var alive: Array = sim.living()
 		var crowd: float = maxf(0.0, float(alive.size()) / maxf(1.0, sim.pop_cap()) - 0.8)
-		var risk := 0.03 + (0.10 if winter() else 0.0) + (0.08 if sim.stock["food"] < alive.size() else 0.0) + crowd * 0.4
+		var risk: float = 0.03 + (0.10 if winter() else 0.0) + (0.08 if sim.stock["food"] < alive.size() else 0.0) + crowd * 0.4 + sim.nat.sick_risk()
 		if randf() < risk * mult():
 			var cands: Array = alive.filter(func(u): return u.sick <= 0 and sim.time > u.immune_t and u.role != "contract")
 			if not cands.is_empty():
@@ -292,6 +282,7 @@ func heal_rate(u: E.Unit, warm: bool) -> float:
 			break
 	for lm in sim.landmarks:
 		if lm["id"] == "spring" and lm["found"]: r *= 1.3
+	if sim.time < u.herb_t: r *= 2.5 # willow-bark tea
 	if u.hunger < 20: r *= 0.5
 	return r
 
@@ -312,5 +303,5 @@ func _famine(dt: float) -> void:
 
 ## For LLM personas and the HUD.
 func summary() -> Dictionary:
-	return {"season": tr(season()), "year": year(), "weather": tr(weather_name()),
+	return {"season": tr(season()), "year": year(), "weather": tr(weather_name()), "omens": sim.nat.status(),
 		"days_of_food": snappedf(sim.stock["food"] / maxf(1.0, sim.living().size() * 0.9), 0.1)}

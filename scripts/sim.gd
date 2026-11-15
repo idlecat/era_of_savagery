@@ -8,6 +8,7 @@ const Evolution = preload("res://scripts/evolution.gd")
 const Hazards = preload("res://scripts/hazards.gd")
 const Rivals = preload("res://scripts/rivals.gd")
 const Legacy = preload("res://scripts/legacy.gd")
+const Nature = preload("res://scripts/nature.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -20,7 +21,11 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0}
+var known_finds := {} # find id -> day discovered
+var mushroom_loads := 0 # the tribe learns which mushrooms are safe
+var find_t := 0.0
+var smelter_day := 0
 var devotion := 0.0
 var units: Array = []
 var nodes: Array = []
@@ -43,6 +48,7 @@ var night_alarm := false # something stirs in the dark: the sleepers are up
 var alarm_until := -1.0
 var was_rest_time := false
 var bury_t := 0.0
+var resettle_t := 4.0
 var oxen := 0 # the tribe's pack oxen, kept in Aurochs Pens
 var ox_care := 100.0 # 0 = neglected: they won't carry, and wander off
 var ox_hunger := 0.0 # seconds the herd has gone without food
@@ -65,6 +71,8 @@ var contracts: ContractSystem
 const MEAL := 3.0 # food per meal
 var evo: Evolution
 var hz: Hazards
+var nat: Nature
+var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
 var alerts: Array = [] # {text, pos, level, t}
@@ -79,6 +87,7 @@ func _init() -> void:
 	contracts = ContractSystem.new(self)
 	evo = Evolution.new(self)
 	hz = Hazards.new(self)
+	nat = Nature.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -106,6 +115,7 @@ func new_game() -> void:
 		n.regrow = 0.1
 	_wilds()
 	_boulders()
+	_place_finds()
 	for def in D.RIVALS: # clear the rival villages' grounds
 		nodes = nodes.filter(func(n): return n.pos.distance_to(def["pos"]) > 230)
 	rivals.setup()
@@ -256,8 +266,9 @@ func popup(p: Vector2, text: String, color := Color("#ffe08a"), big := false) ->
 func day() -> int: return int(time / D.DAY_LEN) + 1
 func day_frac() -> float: return fmod(time, D.DAY_LEN) / D.DAY_LEN
 func has_tech(t: String) -> bool: return techs.has(t)
-## Bronze arms the tribe only once a smelter actually stands.
-func has_bronze() -> bool: return has_tech("bronze") and _struct_exists("smelter")
+## Bronze arms the tribe only while a smelter stands and has copper and tin to work.
+func has_bronze() -> bool: return has_tech("bronze") and _struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1
+func knows_find(id: String) -> bool: return known_finds.has(id)
 func _struct_exists(type: String) -> bool:
 	for s in structures:
 		if s.built and ours(s) and s.type == type: return true
@@ -326,6 +337,7 @@ func unit_atk(u: E.Unit) -> float:
 	if has_tech("tools"): a += 2
 	if evo.has_trad("warrior_initiation"): a += 2
 	if has_bronze(): a *= 1.6
+	elif knows_find("obsidian"): a *= 1.15 # black-glass blades
 	if _struct_near("weapon_rack", u.pos, 160): a *= 1.2
 	if u.role == "contract":
 		var c = contracts.by_id(u.contract_id)
@@ -349,10 +361,13 @@ func unit_speed(u: E.Unit) -> float:
 	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
 	if evo.has_trad("wayfinders"): s *= 1.1
 	s *= hz.speed_mult()
+	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
 	return s
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult()
 func carry_cap(u: E.Unit) -> int: return 15 if u.ox else 10
+## Hunger per unit of distance walked: a villager walking all day gets ~70% hungrier.
+const WALK_HUNGER := 0.004
 
 # ------------------------------------------------------------------ XP & memory
 func xp_need(lv: int) -> float: return 25.0 + lv * 20.0
@@ -414,6 +429,7 @@ func step_move(e, dt: float, spd: float) -> bool:
 	var d: float = e.pos.distance_to(wp)
 	var step := sp * dt
 	if d <= step:
+		if e is E.Unit: e.walked += d * (1.5 if e.carry_amt > 0 else 1.0)
 		e.pos = wp
 		e.path.pop_front()
 		return e.path.is_empty()
@@ -421,6 +437,7 @@ func step_move(e, dt: float, spd: float) -> bool:
 	if D.is_water(np) and not D.is_water(e.pos): # slide along the bank
 		var rx := D.river_x(np.y)
 		np.x = rx - D.RIVER_HALF - 1 if D.bank_of(e.pos) == "west" else rx + D.RIVER_HALF + 1
+	if e is E.Unit: e.walked += step * (1.5 if e.carry_amt > 0 else 1.0) # a load is heavier going
 	e.pos = np
 	if e is E.Unit and wear_w > 0:
 		var wi := clampi(int(np.x / WEAR_CELL), 0, wear_w - 1) + clampi(int(np.y / WEAR_CELL), 0, wear_h - 1) * wear_w
@@ -464,13 +481,14 @@ func find_node(res: String, from: Vector2, bank: String, max_dist: float) -> E.R
 	for n in nodes:
 		if n.res != res or n.amount < 1: continue
 		if n.kind == "boulder" and not has_tech("tools"): continue
+		if D.FINDS.has(n.kind) and not _can_gather_find(n): continue
 		if bank != "" and D.bank_of(n.pos) != bank: continue
 		var d: float = n.pos.distance_to(from)
 		if d > max_dist: continue
 		var claims := 0
 		for u in units:
 			if not u.dead and u.job.get("node_id", -2) == n.id: claims += 1
-		var score := d + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0)
+		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0)
 		if score < best_score:
 			best_score = score
 			best = n
@@ -646,17 +664,23 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			else:
 				u.act = "Walking to ritual ground"
 
-func _dropoff_point(j: Dictionary) -> Vector2:
+func _dropoff_point(j: Dictionary, u: E.Unit) -> Vector2:
 	if j["dropoff"] >= 0:
 		var c = contracts.by_id(j["dropoff"])
 		if c: return c.site
-	return D.VILLAGE
+	var best: Vector2 = D.VILLAGE # the nearest of our settlements takes the load (food: a Granary too)
+	for p in settlements():
+		if p.distance_to(u.pos) < best.distance_to(u.pos): best = p
+	if j["res"] == "food":
+		for s in structures:
+			if s.built and ours(s) and s.type == "granary" and s.pos.distance_to(u.pos) < best.distance_to(u.pos): best = s.pos
+	return best
 
 func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var cap := carry_cap(u)
 	if j["phase"] == "deliver" or u.carry_amt >= cap:
 		j["phase"] = "deliver"
-		var dp := _dropoff_point(j) + Vector2((u.id * 13) % 30 - 15, (u.id * 7) % 30 - 15)
+		var dp := _dropoff_point(j, u) + Vector2((u.id * 13) % 30 - 15, (u.id * 7) % 30 - 15)
 		u.act = "Hauling " + j["res"]
 		if approach(u, dp, 20, dt):
 			if u.carry_amt > 0: deposit(u, j, u.carry_amt)
@@ -677,7 +701,17 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		set_job(u, {})
 		popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools"), Color("#ff9b7a"))
 		return
-	if approach(u, n.pos, 16.0 if n.kind in ["tree", "boulder"] else 14.0, dt):
+	var fd: Dictionary = D.FINDS.get(n.kind, {})
+	if not fd.is_empty() and not _can_gather_find(n):
+		if u.pos.distance_to(n.pos) < 90 and not knows_find(n.kind) and not can_recognise(u, n.kind):
+			set_job(u, {})
+			popup(u.pos + Vector2(0, -30), tr("%s doesn't know what to make of it") % tr(u.name), Color("#ff9b7a"))
+			return
+		if knows_find(n.kind): # known but not workable now (tools, frozen river)
+			set_job(u, {})
+			popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools") if fd.get("needs", "") == "tools" else tr("The river is frozen"), Color("#ff9b7a"))
+			return
+	if approach(u, n.pos, {"tree": 16.0, "boulder": 16.0, "fish": 34.0}.get(n.kind, 14.0), dt): # (fish: from the bank)
 		if n.kind == "deer": # the hunt
 			evo.practice(u, "hunt", 3.0)
 			n.kind = "carcass"
@@ -688,12 +722,12 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			if randf() < 0.05 * u.lv("forage"):
 				popup(u.pos + Vector2(0, -30), tr("Lethal strike!"), Color("#ffb36b"))
 				n.amount += 5
-		u.act = {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
-		var base: float = {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
+		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
+		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
 		var rate := base * (1.0 + 0.1 * u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
-		var activity: String = {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
-		evo.practice(u, activity, dt)
+		var activity: String = fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
+		evo.practice(u, activity, dt * fd.get("practice_x", 1.0))
 		match activity:
 			"hunt", "berry": evo.drift("settled", -0.006 * dt)
 			_: evo.drift("spiritual", -0.004 * dt)
@@ -702,7 +736,11 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.gather_t -= 1
 			n.amount -= 1
 			u.carry_type = j["res"]
+			u.carry_kind = n.kind
 			u.carry_amt += 1
+			if n.kind == "honey" and not has_tech("fire") and randf() < 0.06: # no smoke: the bees fight back
+				hurt_unit(u, 2.0, null)
+				popup(u.pos + Vector2(0, -30), tr("Stung!"), Color("#ffd36b"))
 			if u.carry_amt >= cap:
 				j["phase"] = "deliver"
 				break
@@ -716,12 +754,13 @@ func _deplete(n: E.ResNode) -> void:
 	if n.kind == "tree":
 		n.kind = "stump"
 		n.regrow_t = 140
-	elif n.kind == "carcass" or n.kind == "boulder":
-		nodes.erase(n)
+	elif n.kind == "carcass" or n.kind == "boulder" or (D.FINDS.has(n.kind) and D.FINDS[n.kind]["regrow"] <= 0.0):
+		nodes.erase(n) # (a worked-out seam is gone; plants grow back)
 		if n.from_deer and not hz.winter(): spawn_deer(n.bank, true) # no new herds arrive in winter
 
 func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	gain_xp(u, "forage", amt * 0.45)
+	_find_effects(u, amt)
 	if j["dropoff"] >= 0:
 		var c = contracts.by_id(j["dropoff"])
 		if c:
@@ -747,6 +786,175 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	popup(s.pos + Vector2(0, -30), tr("%s complete!") % name, Color("#b6f28a"), true)
 	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build", [u] if u else [])
 	if s.type == "grand_altar": summon_guardian(s)
+
+# ------------------------------------------------------------------ natural finds
+## Scatter clusters of each find over the map (see D.FINDS "where").
+func _place_finds() -> void:
+	var trees: Array = nodes.filter(func(n): return n.kind == "tree")
+	for id in D.FINDS:
+		var fd: Dictionary = D.FINDS[id]
+		var made := 0
+		var tries := 0
+		while made < fd["count"] and tries < 300:
+			tries += 1
+			var c = _find_spot(fd["where"], trees, made == 0 and fd["group"] != "ore")
+			if c == null: continue
+			var k_max: int = fd.get("cluster", 2 if fd["group"] == "ore" else 3)
+			for k in k_max:
+				var p: Vector2 = c + Vector2(randf_range(-30, 30), randf_range(-22, 22)) if k > 0 else c
+				if fd["where"] != "river" and absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 12: continue
+				if fd["where"] == "river": p = Vector2(c.x, c.y + randf_range(-40, 40) * k) # a shoal strings along the shallows
+				if fd["where"] == "river": p.x = D.river_x(p.y) + signf(c.x - D.river_x(c.y)) * (D.RIVER_HALF - 26.0)
+				p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 30, D.H - 30))
+				var n := _node(id, fd["res"], p, fd["amount"])
+				n.regrow = fd["regrow"]
+				n.bank = D.bank_of(p)
+			made += 1
+
+## A spot for a cluster, or null. near_home: the first cluster of a food or medicine stays
+## within reach of the village, so the early game has something to find.
+func _find_spot(where: String, trees: Array, near_home: bool) -> Variant:
+	var lim := 950.0 if near_home else INF
+	var p := Vector2.ZERO
+	match where:
+		"forest", "forest_edge":
+			if trees.is_empty(): return null
+			var tr_n = trees.pick_random()
+			p = tr_n.pos + (Vector2.from_angle(randf() * TAU) * (randf_range(15, 40) if where == "forest" else randf_range(70, 110)))
+		"river", "riverbank":
+			var y := randf_range(120, D.H - 120)
+			if D.is_ford(y) or absf(y - D.FORD_Y0) < 180 or absf(y - D.FORD_Y1) < 180: return null
+			var side := -1.0 if randf() < 0.5 else 1.0
+			p = Vector2(D.river_x(y) + side * ((D.RIVER_HALF - 26.0) if where == "river" else D.RIVER_HALF + randf_range(45, 95)), y)
+		"meadow":
+			p = Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
+			if trees.any(func(t): return t.pos.distance_to(p) < 80): return null
+		"hills_west":
+			p = Vector2(randf_range(120, D.RIVER_BASE_X - 500), randf_range(120, D.H - 120))
+			if p.distance_to(D.VILLAGE) < 650: return null
+		"hills_east":
+			p = Vector2(randf_range(D.RIVER_BASE_X + 450, D.W - 120), randf_range(120, D.H - 120))
+	if p.distance_to(D.VILLAGE) < 260 or p.distance_to(D.VILLAGE) > lim: return null
+	if where != "river" and absf(p.x - D.river_x(p.y)) < D.RIVER_HALF + 30: return null
+	if where == "river" and p.distance_to(D.VILLAGE) < 260: return null
+	for def in D.RIVALS:
+		if p.distance_to(def["pos"]) < 260: return null
+	for lm in D.LANDMARKS:
+		if p.distance_to(lm["pos"]) < 100: return null
+	return p
+
+## Who can tell what a find is: healing plants need someone with lore; ores, someone who
+## knows stone-working (Polished Stone Tools) or has a crafter's eye.
+func can_recognise(u: E.Unit, id: String) -> bool:
+	match D.FINDS[id].get("needs", ""):
+		"lore": return u.lv("lore") >= 1
+		"tools": return has_tech("tools") or u.lv("craft") >= 1
+	return true
+
+func _can_gather_find(n: E.ResNode) -> bool:
+	if not knows_find(n.kind): return false
+	if D.FINDS[n.kind].get("needs", "") == "tools" and not has_tech("tools"): return false
+	if n.kind == "fish" and hz.winter(): return false # iced over
+	return true
+
+## Twice a second: anyone near an unknown find who can recognise it discovers it. Once a day:
+## the smelter eats copper and tin.
+func _finds_tick(dt: float) -> void:
+	find_t -= dt
+	if find_t > 0: return
+	find_t = 0.5
+	for n in nodes:
+		if not D.FINDS.has(n.kind) or knows_find(n.kind) or not is_explored(n.pos): continue
+		for u in units:
+			if u.dead or u.sleeping or u.pos.distance_to(n.pos) > 80 or not can_recognise(u, n.kind): continue
+			discover_find(n.kind, u, n.pos)
+			break
+	if has_tech("bronze") and _struct_exists("smelter") and day() != smelter_day and not rest_time():
+		smelter_day = day()
+		if stock["copper"] >= 1 and stock["tin"] >= 1:
+			stock["copper"] -= 1
+			stock["tin"] -= 1
+		else:
+			alert(tr("The smelter is cold: it needs copper and tin. Without them, no bronze arms the tribe."), D.VILLAGE, "warn")
+
+func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
+	if knows_find(id): return
+	known_finds[id] = day()
+	var fd: Dictionary = D.FINDS[id]
+	add_log(tr("Discovery! %s found %s: %s") % [tr(u.name), tr(fd["name"]), tr(fd["desc"])], "story", [u])
+	popup(at + Vector2(0, -40), tr("Discovered: %s") % tr(fd["name"]), Color("#ffd36b"), true)
+	remember(u, tr("found %s on Day %d") % [tr(fd["name"]), day()], 6)
+	gain_xp(u, "lore" if fd["group"] == "medicine" else "forage", 5)
+	match id:
+		"flint": evo.seed("tools", 0.45, u)
+		"grain": evo.seed("farming", 0.25, u)
+		"copper", "tin": evo.seed("bronze", 0.12, u)
+		"ochre": evo.drift("spiritual", 3.0)
+		"willow", "yarrow": stock["lore"] += 5
+
+## What a load does when it reaches the stores, beyond the food or lore it is.
+func _find_effects(u: E.Unit, amt: int) -> void:
+	var kind := u.carry_kind
+	u.carry_kind = ""
+	match kind:
+		"mushroom":
+			mushroom_loads += 1
+			if mushroom_loads <= 8 and u.lv("lore") < 2 and randf() < 0.3:
+				hurt_unit(u, 10.0, null)
+				popup(u.pos + Vector2(0, -30), tr("A bad mushroom!"), Color("#c8a8ff"))
+				remember(u, tr("was poisoned by a bad mushroom on Day %d") % day(), 4)
+			elif mushroom_loads == 9:
+				add_log(tr("The tribe has learned which mushrooms are safe to eat."), "story")
+		"honey":
+			devotion = minf(100.0, devotion + amt * 0.12)
+			popup(u.pos + Vector2(0, -40), tr("Sweet honey!"), Color("#ffd36b"))
+		"ochre":
+			evo.drift("spiritual", 0.6)
+
+# ------------------------------------------------------------------ settlements
+## Where our people live: the home village, plus every outpost a settle contract founded.
+func settlements() -> Array:
+	var out: Array = [D.VILLAGE]
+	for c in contracts.list:
+		if c.kind == "settle" and c.status == "done": out.append(c.site)
+	return out
+
+func beds_at(p: Vector2) -> int:
+	var n := 0
+	for s in structures:
+		if s.built and ours(s) and s.type in SHELTERS and s.pos.distance_to(p) < 450: n += int(D.STRUCTURES[s.type]["cap"])
+	return n
+
+func residents_of(p: Vector2) -> Array:
+	return units.filter(func(u): return not u.dead and u.home.distance_to(p) < 60)
+
+func settlement_name(p: Vector2) -> String:
+	for c in contracts.list:
+		if c.kind == "settle" and c.site == p: return c.plan["plan_id"]
+	return tr("the village")
+
+## A crowded village sends someone to a settlement with empty beds (one at a time, by day).
+func _resettle(dt: float) -> void:
+	resettle_t -= dt
+	if resettle_t > 0: return
+	resettle_t = 8.0
+	if rest_time(): return
+	var homes := settlements()
+	if homes.size() < 2: return
+	var crowded: Array = homes.filter(func(p): return residents_of(p).size() > beds_at(p))
+	if crowded.is_empty(): return
+	for p in homes:
+		if p in crowded or residents_of(p).size() >= beds_at(p): continue
+		for from in crowded:
+			var movers: Array = residents_of(from).filter(func(u): return u.role == "" and u.title == "" and not u.sleeping and u.job.get("type", "") in ["", "gather"])
+			if movers.is_empty(): continue
+			movers.sort_custom(func(a, b): return a.job.is_empty() and not b.job.is_empty())
+			var u: E.Unit = movers[0]
+			u.home = p
+			set_job(u, {"type": "move", "to": p + Vector2(randf_range(-40, 40), randf_range(-30, 30))})
+			add_log(tr("%s moves to '%s', where there are empty beds.") % [tr(u.name), settlement_name(p)], "story", [u])
+			remember(u, tr("moved to '%s' on Day %d") % [settlement_name(p), day()], 6)
+			return
 
 # ------------------------------------------------------------------ the herd
 const OX_PER_PEN := 2
@@ -960,7 +1168,7 @@ func _end_errand(u: E.Unit) -> void:
 		set_job(u, {})
 
 # ------------------------------------------------------------------ night rest
-const SHELTERS := ["hut", "large_hut"]
+const SHELTERS := ["hut", "large_hut", "granary"] # everything that houses people
 const BED_FAR := 700.0 # further than this from a bed, people camp where they are
 
 ## Sleeping hours: a little inside the dark part of the day.
@@ -981,7 +1189,7 @@ func in_hut(u: E.Unit) -> bool: return u.sleeping and u.bed_id >= 0
 ## woods does not count: people in huts are safe from it, and outdoor sleepers watch for
 ## themselves (`_night_rest`).
 func _danger_near() -> bool:
-	if time - flags.get("flood_active", -99.0) < 20.0: return true
+	if time - flags.get("flood_active", -99.0) < 20.0 or nat.alarm(): return true
 	if not active_predators_near(D.VILLAGE, 500).is_empty(): return true
 	for u in units:
 		if not u.dead and time - u.last_hit_t < 4.0 and u.attacker_id >= 0: return true
@@ -1038,7 +1246,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	var crew: bool = u.role != ""
 	var duty: bool = jt == "attack" or jt == "bury" or u.job.get("flee", false) \
 		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start())
-	if not rest_time() or duty:
+	if not (rest_time() or nat.panicking()) or duty:
 		if u.sleeping or u.bed_pos != null: wake(u)
 		return false
 	if u.bed_pos == null: _pick_bed(u)
@@ -1049,7 +1257,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 			u.sleeping = false
 			u.act = "Keeping watch"
 		elif not outdoors:
-			u.act = "Sheltering in a hut" if danger else "Sleeping in a hut"
+			u.act = "Hiding in a hut" if nat.panicking() else ("Sheltering in a hut" if danger else "Sleeping in a hut")
 		else:
 			u.act = "Sleeping"
 		return true
@@ -1064,13 +1272,14 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 
 func _pick_bed(u: E.Unit) -> void:
 	var bank := D.bank_of(u.pos)
+	var near: Vector2 = u.home if D.bank_of(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos
 	var best: E.Structure = null
 	for s in structures:
 		if not s.built or not ours(s) or not s.type in SHELTERS or D.bank_of(s.pos) != bank: continue
 		var cap: int = int(D.STRUCTURES[s.type]["cap"])
 		var used: int = units.filter(func(o): return not o.dead and o != u and o.bed_id == s.id).size()
 		if used >= cap: continue
-		if best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos): best = s
+		if best == null or s.pos.distance_to(near) < best.pos.distance_to(near): best = s # beds at home first
 	if best and best.pos.distance_to(u.pos) < BED_FAR:
 		u.bed_id = best.id
 		u.bed_pos = best.pos + Vector2(0, 6)
@@ -1103,7 +1312,8 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 
 func unit_needs(u: E.Unit, dt: float) -> void:
 	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult()
-	u.hunger -= drain * dt
+	u.hunger -= drain * dt + u.walked * WALK_HUNGER # long walks to work cost food
+	u.walked = 0.0
 	if u.hunger < 40 and stock["food"] >= 1:
 		stock["food"] -= minf(stock["food"], MEAL) # a day's eating is a real cost: winter needs stores
 		evo.drift("ranked", -0.15) # meals from the common store
@@ -1115,6 +1325,10 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 	if warm and night_amt > 0.5: evo.practice(u, "hearth", dt)
 	var cold := hz.cold_rate(u, warm)
 	if u.sick > 0:
+		if knows_find("willow") and time > u.herb_t and stock["herbs"] >= 1:
+			stock["herbs"] -= 1
+			u.herb_t = time + 30.0
+			popup(u.pos + Vector2(0, -30), tr("Willow-bark tea"), Color("#b6f28a"))
 		u.sick -= hz.heal_rate(u, warm) * dt
 		if u.sick <= 0:
 			u.sick = 0.0
@@ -1127,7 +1341,11 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 		if u.hp < u.max_hp * 0.4 and hz.cold_can_kill() and fmod(time, 6.0) < dt:
 			popup(u.pos + Vector2(0, -30), tr("Freezing!"), Color("#a8d8ff"))
 	elif u.hunger > 35 and u.sick <= 0 and time - u.last_hit_t > 5:
-		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * dt)
+		if knows_find("yarrow") and u.hp < u.max_hp * 0.7 and time > u.salve_t and stock["herbs"] >= 1 and u.pos.distance_to(D.VILLAGE) < 350:
+			stock["herbs"] -= 1
+			u.salve_t = time + 30.0
+			popup(u.pos + Vector2(0, -30), tr("Yarrow poultice"), Color("#b6f28a"))
+		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * (2.0 if time < u.salve_t else 1.0) * dt)
 
 func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
 	if u.dead: return
@@ -1143,7 +1361,7 @@ func kill_unit(u: E.Unit, killer) -> void:
 	u.job = {}
 	u.fell_t = time
 	wake(u)
-	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else tr("lost to hunger and cold")
+	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else (cause_hint if cause_hint != "" else tr("lost to hunger and cold"))
 	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
 	for o in units:
@@ -1337,23 +1555,26 @@ func tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	var f := day_frac()
-	var target := 1.0 if (f > 0.72 and f < 0.97) else 0.0
+	var target := maxf(1.0 if (f > 0.72 and f < 0.97) else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
-	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * hz.spoil_mult()
+	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult()
 	if stock["food"] > 30: stock["food"] -= (stock["food"] - 30) * spoil * dt
 	for s in structures:
 		if not s.built or not ours(s): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type)
+		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s)
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += 0.03 * dt
 
 	for n in nodes:
 		match n.kind:
 			"bush":
-				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult())
-			"stump":
+				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult() * nat.grow_mult())
+			"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "salt":
+				var fd: Dictionary = D.FINDS[n.kind]
+				if fd["winter"] or not hz.winter(): n.amount = minf(n.max_amount, n.amount + fd["regrow"] * dt)
+			"stump", "burnt":
 				n.regrow_t -= dt
 				if n.regrow_t <= 0:
 					n.kind = "tree"
@@ -1372,6 +1593,8 @@ func tick(dt: float) -> void:
 	_night_watch()
 	_burials(dt)
 	_herd(dt)
+	_resettle(dt)
+	_finds_tick(dt)
 	for u in units: update_unit(u, dt)
 	fog_t -= dt
 	if fog_t <= 0:
@@ -1383,6 +1606,7 @@ func tick(dt: float) -> void:
 	contracts.update(dt)
 	evo.update(dt)
 	hz.update(dt)
+	nat.update(dt)
 	rivals.update(dt)
 	legacy.update(dt)
 	wear_t -= dt
@@ -1452,7 +1676,7 @@ func _update_vice(dt: float) -> void:
 	vice_timer = 3
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time(): # no work handed out at night
-		var idle := living().filter(func(u): return u.job.is_empty() and u.role != "contract" and u.id != steward.id and D.bank_of(u.pos) == "west")
+		var idle := living().filter(func(u): return u.job.is_empty() and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < 500)
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = null
@@ -1461,6 +1685,8 @@ func _update_vice(dt: float) -> void:
 					unbuilt = s
 					break
 			var choice: String
+			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
+			if settler: unbuilt = null # (the village's building sites are far away)
 			if unbuilt and randf() < 0.5: choice = "build"
 			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
 			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"
@@ -1469,8 +1695,8 @@ func _update_vice(dt: float) -> void:
 			else: choice = "food" if randf() < 0.5 else "wood"
 			match choice:
 				"build": assign_build(u, unbuilt)
-				"lore": assign_ritual(u, D.VILLAGE + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
-				_: assign_gather(u, choice, {"bank": "west"})
+				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
+				_: assign_gather(u, choice, {"bank": D.bank_of(u.home), "area": u.home, "area_r": 900.0})
 			gain_xp(steward, "lore", 0.5)
 			evo.practice(steward, "lead", 2.0)
 		if not idle.is_empty():
@@ -1576,6 +1802,10 @@ func _check_events() -> void:
 	elif not flags.has("chosen") and devotion >= 100:
 		flags["chosen"] = true
 		_fire_event("chosen")
+	elif nat.pending != "":
+		var ne: String = nat.pending
+		nat.pending = ""
+		_fire_event(ne)
 	elif not rivals.pending.is_empty():
 		_fire_event(rivals.pending.pop_front())
 
@@ -1612,6 +1842,7 @@ func best_unit(skill: String, exclude_contract := true) -> E.Unit:
 func event_def(id: String) -> Dictionary:
 	if rivals.owns_event(id): return rivals.event_def(id)
 	if legacy.owns_event(id): return legacy.event_def(id)
+	if nat.owns_event(id): return nat.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1651,6 +1882,7 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		var ow: String = flags.get("open_war", "")
 		flags.erase("open_war")
 		return {"text": txt, "open_contract": false, "open_war": ow}
+	if nat.owns_event(id): return {"text": nat.resolve(id, idx), "open_contract": false}
 	if legacy.owns_event(id):
 		var lr: Dictionary = legacy.resolve(id, idx)
 		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}
@@ -1797,7 +2029,7 @@ func explored_pct() -> float:
 	return 100.0 * explored_cells / maxf(1, land_cells)
 
 func sight(u: E.Unit) -> float:
-	return (D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)) * hz.sight_mult()
+	return (D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)) * hz.sight_mult() * nat.sight_mult()
 
 func reveal(p: Vector2, r: float) -> void:
 	var i0 := clampi(int((p.x - r) / D.FOG_CELL), 0, fog_w - 1)
