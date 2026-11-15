@@ -428,7 +428,7 @@ const SKILL_UNLOCKS := {
 #   regrow   per second (0 = a seam that runs out); winter: still yields in winter
 #   where    world-gen placement; count = clusters
 #   act      activity text; practice = evolution activity it counts as
-const FINDS := {
+const BASE_FINDS := {
 	"mushroom": {"name": "Forest Mushrooms", "group": "food", "res": "food", "amount": 18, "rate": 1.0, "regrow": 0.06, "winter": false,
 		"where": "forest", "count": 6, "act": "Gathering mushrooms", "practice": "berry",
 		"desc": "Food from the forest floor - but a bad one poisons the gatherer until the tribe learns which are safe (or a Lore 2+ gatherer picks)."},
@@ -469,7 +469,8 @@ const FINDS := {
 		"where": "meadow", "count": 2, "act": "Scraping salt", "practice": "hearth",
 		"desc": "Salt to cure meat: once found, the stores spoil half as fast."},
 }
-## Activity text of each find, for translation (kept as literal tr() keys).
+## The finds of this game: BASE_FINDS plus the culture's own (cultures.gd merges them).
+static var FINDS: Dictionary = BASE_FINDS.duplicate(true)
 const FIND_GROUPS := {"food": "Foods", "medicine": "Medicines", "ore": "Ores & earths"}
 
 # wood = material cost, work = build points, cap = population capacity
@@ -511,37 +512,56 @@ const STRUCT_ALIASES := {
 ## of what the tribe does: practice = tribe-wide points per activity (seconds of the work,
 ## counted once its needs are met: techs, finds, other inventions). The one who practised
 ## most is the inventor. kind: medicine | tool | goods. hint: shown while undiscovered.
-const INVENTIONS := [
-	{"id": "moss_dressing", "kind": "medicine", "name": "Moss Dressings", "practice": {"hunt": 80.0}, "needs": {},
+const BASE_INVENTIONS := [
+	{"id": "moss_dressing", "kind": "medicine", "name": "Moss Dressings", "practice": {"hunt": 80.0}, "needs": {}, "effects": [{"stat": "heal", "mul": 1.4}],
 		"desc": "Wounds packed with clean moss: the hurt heal 40% faster.", "hint": "Comes from tending the wounds of many hunts."},
-	{"id": "fever_brew", "kind": "medicine", "name": "Fever Brew", "practice": {"ritual": 150.0}, "needs": {"finds": ["willow"]},
+	{"id": "fever_brew", "kind": "medicine", "name": "Fever Brew", "practice": {"ritual": 150.0}, "needs": {"finds": ["willow"]}, "effects": [{"stat": "sick", "mul": 1.3}],
 		"desc": "A bitter brew of willow bark and roots: the sick recover 30% faster.", "hint": "Needs willow bark, and long rites over the sick."},
-	{"id": "bone_setting", "kind": "medicine", "name": "Bone Setting", "practice": {"hunt": 250.0, "ritual": 120.0}, "needs": {"inventions": ["moss_dressing"]},
+	{"id": "bone_setting", "kind": "medicine", "name": "Bone Setting", "practice": {"hunt": 250.0, "ritual": 120.0}, "needs": {"inventions": ["moss_dressing"]}, "effects": [{"stat": "steady", "add": 1}],
 		"desc": "Splints of wood and hide: the badly hurt are no longer slowed.", "hint": "After moss dressings: many more hunts, and healers' rites."},
-	{"id": "digging_stick", "kind": "tool", "name": "Fire-Hardened Digging Stick", "practice": {"berry": 150.0}, "needs": {},
+	{"id": "digging_stick", "kind": "tool", "name": "Fire-Hardened Digging Stick", "practice": {"berry": 150.0}, "needs": {}, "effects": [{"stat": "gather", "of": "berry", "mul": 1.25}],
 		"desc": "Berries, roots and grain are gathered 25% faster.", "hint": "Comes from long days of foraging."},
-	{"id": "fish_hook", "kind": "tool", "name": "Bone Fishhook", "practice": {"hunt": 60.0}, "needs": {"finds": ["fish"]},
+	{"id": "fish_hook", "kind": "tool", "name": "Bone Fishhook", "practice": {"hunt": 60.0}, "needs": {"finds": ["fish"]}, "effects": [{"stat": "gather", "of": "fish", "mul": 1.4}],
 		"desc": "Fishing yields 40% more.", "hint": "Needs a fishing ground, and a hunter's patience."},
-	{"id": "sling", "kind": "tool", "name": "Hunting Sling", "practice": {"hunt": 200.0, "quarry": 30.0}, "needs": {},
+	{"id": "sling", "kind": "tool", "name": "Hunting Sling", "practice": {"hunt": 200.0, "quarry": 30.0}, "needs": {}, "effects": [{"stat": "atk", "add": 2}],
 		"desc": "Stones hurled from afar: +2 attack for everyone.", "hint": "Comes to hunters who also work stone."},
-	{"id": "carrying_frame", "kind": "tool", "name": "Carrying Frame", "practice": {"chop": 300.0}, "needs": {},
+	{"id": "carrying_frame", "kind": "tool", "name": "Carrying Frame", "practice": {"chop": 300.0}, "needs": {}, "effects": [{"stat": "carry", "add": 3}],
 		"desc": "A frame of bent poles worn on the back: everyone carries 3 more.", "hint": "Comes from hauling a great deal of timber."},
-	{"id": "bone_needle", "kind": "tool", "name": "Bone Needle", "practice": {"hunt": 120.0}, "needs": {"techs": ["hide"]},
+	{"id": "bone_needle", "kind": "tool", "name": "Bone Needle", "practice": {"hunt": 120.0}, "needs": {"techs": ["hide"]}, "effects": [{"stat": "cold", "mul": 0.7}],
 		"desc": "Fitted, stitched clothes: the cold bites 30% less.", "hint": "Needs Hide Tailoring, and many hides."},
-	{"id": "baskets", "kind": "goods", "name": "Woven Baskets", "practice": {"berry": 250.0, "chop": 100.0}, "needs": {},
+	{"id": "baskets", "kind": "goods", "name": "Woven Baskets", "practice": {"berry": 250.0, "chop": 100.0}, "needs": {}, "effects": [{"stat": "store", "add": 30}],
 		"desc": "The stores hold 30 more food.", "hint": "Comes from gathering, and working with wood and reed."},
-	{"id": "smoking_rack", "kind": "goods", "name": "Smoking Rack", "practice": {"hearth": 500.0, "hunt": 80.0}, "needs": {"techs": ["fire"]},
+	{"id": "smoking_rack", "kind": "goods", "name": "Smoking Rack", "practice": {"hearth": 500.0, "hunt": 80.0}, "needs": {"techs": ["fire"]}, "effects": [{"stat": "spoil", "mul": 0.7}],
 		"desc": "Meat smoked over the fire: food spoils 30% slower.", "hint": "Needs fire, and meat brought home to the hearth."},
-	{"id": "salt_curing", "kind": "goods", "name": "Salt-Cured Meat", "practice": {"hunt": 100.0}, "needs": {"finds": ["salt"]},
+	{"id": "salt_curing", "kind": "goods", "name": "Salt-Cured Meat", "practice": {"hunt": 100.0}, "needs": {"finds": ["salt"]}, "effects": [{"stat": "spoil", "mul": 0.8}],
 		"desc": "Food spoils another 20% slower.", "hint": "Needs salt, and plenty of meat."},
-	{"id": "bone_flute", "kind": "goods", "name": "Bone Flute", "practice": {"ritual": 200.0, "hearth": 300.0}, "needs": {},
+	{"id": "bone_flute", "kind": "goods", "name": "Bone Flute", "practice": {"ritual": 200.0, "hearth": 300.0}, "needs": {}, "effects": [{"stat": "mood", "add": 5}],
 		"desc": "Music by the fire: the tribe's mood is 5 higher.", "hint": "Comes from rites, and evenings by the fire."},
-	{"id": "fur_bedding", "kind": "goods", "name": "Fur Bedding", "practice": {"hearth": 800.0}, "needs": {"techs": ["hide"]},
+	{"id": "fur_bedding", "kind": "goods", "name": "Fur Bedding", "practice": {"hearth": 800.0}, "needs": {"techs": ["hide"]}, "effects": [{"stat": "mood", "add": 3}],
 		"desc": "Soft furs to sleep on: the tribe's mood is 3 higher.", "hint": "Needs Hide Tailoring, and many nights by the fire."},
-	{"id": "clay_lamp", "kind": "goods", "name": "Clay Lamp", "practice": {"hearth": 600.0, "ritual": 60.0}, "needs": {"techs": ["pottery"]},
+	{"id": "clay_lamp", "kind": "goods", "name": "Clay Lamp", "practice": {"hearth": 600.0, "ritual": 60.0}, "needs": {"techs": ["pottery"]}, "effects": [{"stat": "lore", "add": 0.02}],
 		"desc": "Light for night-long tales: the tribe gathers a little more lore.", "hint": "Needs Primitive Pottery, and long nights of tales."},
 ]
-const INVENTION_KINDS := {"medicine": "Medicine", "tool": "Tools", "goods": "Daily goods"}
+## The inventions of this game: BASE_INVENTIONS plus the culture's own tools, goods and foods.
+static var INVENTIONS: Array = BASE_INVENTIONS.duplicate(true)
+const INVENTION_KINDS := {"medicine": "Medicine", "tool": "Tools", "goods": "Daily goods", "food": "Foods"}
+
+## What an effect (inventions, culture finds, event boons) may change: stat -> [op, what it
+## means]. "of" narrows gather (an activity or a find id) and yield (a structure type).
+## Each stat is read by one hook in the rules (inventions.gd mul()/add()), so a new stat
+## needs code; culture files may only use these (cultures.gd validates).
+const EFFECT_STATS := {
+	"heal": ["mul", "how fast the hurt heal"], "sick": ["mul", "how fast the sick recover"],
+	"gather": ["mul", "gathering speed (of: chop|hunt|berry|quarry|ritual or a find id)"],
+	"yield": ["mul", "food from farms, docks... (of: a structure type)"],
+	"atk": ["add", "attack"], "def": ["add", "defence"], "carry": ["add", "load each person carries"],
+	"cold": ["mul", "how hard the cold bites"], "store": ["add", "food the stores hold"],
+	"spoil": ["mul", "how fast food spoils"], "mood": ["add", "the tribe's mood"],
+	"lore": ["add", "lore per second"], "hunger": ["mul", "how fast hunger grows"],
+	"build": ["mul", "building speed"], "work": ["mul", "work speed"], "speed": ["mul", "walking speed"],
+	"sight": ["add", "how far people see"], "devotion": ["mul", "devotion gained from rituals"],
+	"steady": ["add", "1: the badly hurt are not slowed"],
+}
 
 const INSIGHT_RATE := 0.06
 const PRACTICE_NAMES := {"chop": "felling trees", "hunt": "hunting & butchering", "berry": "foraging berries", "build": "building",
@@ -608,10 +628,10 @@ const ACTIONS := ["gather_wood", "gather_food", "build", "ritual"]
 
 
 # ---- A random tribe (random maps): names, epithets and memories by temperament ----
-const TRIBE_NAMES := ["Panshi", "Alie", "Linghe", "Tuo", "Mo'er", "Shan", "Yan", "Qiao", "Bai", "Hu", "Lei", "Yun", "Kang", "Mei", "Xi", "Gu", "Duo", "Qing", "Ning", "Hong"]
+const BASE_TRIBE_NAMES := ["Panshi", "Alie", "Linghe", "Tuo", "Mo'er", "Shan", "Yan", "Qiao", "Bai", "Hu", "Lei", "Yun", "Kang", "Mei", "Xi", "Gu", "Duo", "Qing", "Ning", "Hong"]
 const TRIBE_COLORS := ["#c9a36b", "#d0603f", "#8c7bd6", "#9bbf5a", "#b7a58f", "#c27a4e", "#7fa3b8", "#c68fb3", "#a8a8a0", "#b8945a", "#6fa58a", "#c9806b"]
 ## trait -> the skill it leans on, epithets and memories (memory text starts with a past-tense verb).
-const TEMPERAMENTS := {
+const BASE_TEMPERAMENTS := {
 	"cautious": {"skill": "craft", "epithets": ["Master Builder", "Quiet Tracker", "Hut-Raiser", "Keeper of the Walls"],
 		"memories": ["held the roofs down when the great storm came two winters ago", "raised a longhouse without losing a single beam", "spotted the saber-tooth tracks before anyone else", "kept the fire alive through the longest night of winter"]},
 	"belligerent": {"skill": "combat", "epithets": ["Spear of the Tribe", "Young Hunter", "Bear-Slayer", "Swift Spear"],
@@ -625,6 +645,23 @@ const TEMPERAMENTS := {
 }
 
 
-const BIRTH_NAMES := ["Ah-Lu", "Kesh", "Nuo", "Tala", "Rong", "Wei", "Hua", "Dao", "Lin", "Feng", "Ming", "Yu", "Zhen", "Ke", "Su", "Lan", "Bo", "Jin"]
+const BASE_BIRTH_NAMES := ["Ah-Lu", "Kesh", "Nuo", "Tala", "Rong", "Wei", "Hua", "Dao", "Lin", "Feng", "Ming", "Yu", "Zhen", "Ke", "Su", "Lan", "Bo", "Jin"]
+## The random tribe's pools for this game (a culture may replace the names, add epithets).
+static var TRIBE_NAMES: Array = BASE_TRIBE_NAMES.duplicate()
+static var BIRTH_NAMES: Array = BASE_BIRTH_NAMES.duplicate()
+static var TEMPERAMENTS: Dictionary = BASE_TEMPERAMENTS.duplicate(true)
+## The mythic bloodlines offered when the Chosen One is born (a culture may bring its own).
+const BASE_CHOSEN := [
+	{"name": "Hou Yi", "epithet": "the Archer", "traits": ["belligerent"], "color": "#ffd36b", "hp": 70, "atk": 9, "def": 4, "spd": 1.25, "skills": {"forage": 7, "craft": 1, "combat": 6, "lore": 1},
+		"label": "Hou Yi the Archer", "desc": "A peerless hunter. Foraging 7, Combat 6."},
+	{"name": "Yu", "epithet": "the Flood-Tamer", "traits": ["cautious"], "color": "#6bd3ff", "hp": 65, "atk": 6, "def": 5, "spd": 1.05, "skills": {"forage": 2, "craft": 7, "combat": 2, "lore": 5},
+		"label": "Yu the Flood-Tamer", "desc": "A builder of levees and canals. Crafting 7, Lore 5."},
+	{"name": "Chiyou", "epithet": "the Berserker", "traits": ["belligerent"], "color": "#ff6b6b", "hp": 90, "atk": 11, "def": 5, "spd": 1.1, "skills": {"forage": 1, "craft": 1, "combat": 8, "lore": 0},
+		"label": "Chiyou the Berserker", "desc": "A storm of bronze and fury. Combat 8, 90 HP."},
+]
+static var CHOSEN: Array = BASE_CHOSEN.duplicate(true)
+## The culture this game is played in (cultures.gd): its whole definition, {} = none.
+static var CULTURE: Dictionary = {}
+
 const BIRTH_COLORS := ["#c9b07a", "#a6c47e", "#b98da8", "#8fb3c4", "#d69a6b", "#a3a3d1", "#c4a4a4"]
 

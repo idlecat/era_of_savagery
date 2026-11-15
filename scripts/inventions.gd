@@ -99,17 +99,51 @@ func feat(kind: String, text: String, who: E.Unit = null) -> void:
 	feats.append({"day": sim.day(), "kind": kind, "text": text, "who": who.name if who else ""})
 
 # ------------------------------------------------------------ effects
-func heal_mult() -> float: return 1.4 if has("moss_dressing") else 1.0
-func sick_mult() -> float: return 1.3 if has("fever_brew") else 1.0
-func gather_mult(kind: String, activity: String) -> float:
-	var m := 1.0
-	if activity == "berry" and has("digging_stick"): m *= 1.25
-	if kind == "fish" and has("fish_hook"): m *= 1.4
-	return m
-func atk_bonus() -> float: return 2.0 if has("sling") else 0.0
-func carry_bonus() -> int: return 3 if has("carrying_frame") else 0
-func cold_mult() -> float: return 0.7 if has("bone_needle") else 1.0
-func store_bonus() -> int: return 30 if has("baskets") else 0
-func spoil_mult() -> float: return (0.7 if has("smoking_rack") else 1.0) * (0.8 if has("salt_curing") else 1.0)
-func mood_bonus() -> float: return (5.0 if has("bone_flute") else 0.0) + (3.0 if has("fur_bedding") else 0.0)
-func lore_rate() -> float: return 0.02 if has("clay_lamp") else 0.0
+## Effects are data ({"stat", "mul"|"add", "of"}, see D.EFFECT_STATS) on inventions, on
+## culture finds (while known) and on the culture's event/tale boons (sim.cult.boons).
+## mul() multiplies them up and add() sums them; both cache until something is learned.
+var _fx := {}
+var _fx_sig := -1
+
+func _sources() -> Array:
+	var out: Array = []
+	for d in D.INVENTIONS:
+		if has(d["id"]): out.append_array(d.get("effects", []))
+	for f in sim.known_finds:
+		out.append_array(D.FINDS.get(f, {}).get("effects", []))
+	if sim.cult: out.append_array(sim.cult.boons)
+	return out
+
+func _fold(stat: String, of: String) -> Dictionary:
+	var sig: int = known.size() + sim.known_finds.size() * 1000 + (sim.cult.boons.size() * 1000000 if sim.cult else 0)
+	if sig != _fx_sig:
+		_fx = {}
+		_fx_sig = sig
+	var key := stat + "|" + of
+	if not _fx.has(key):
+		var m := 1.0
+		var a := 0.0
+		for e in _sources():
+			if e.get("stat", "") != stat: continue
+			var o: String = e.get("of", "")
+			if o != "" and o != of and not (of.contains("/") and o in of.split("/")): continue
+			if e.has("mul"): m *= float(e["mul"])
+			if e.has("add"): a += float(e["add"])
+		_fx[key] = {"mul": m, "add": a}
+	return _fx[key]
+
+## Product of every known "mul" effect on `stat` (narrowed by `of`, "a/b" matches either).
+func mul(stat: String, of := "") -> float: return _fold(stat, of)["mul"]
+## Sum of every known "add" effect on `stat`.
+func add(stat: String, of := "") -> float: return _fold(stat, of)["add"]
+
+func heal_mult() -> float: return mul("heal")
+func sick_mult() -> float: return mul("sick")
+func gather_mult(kind: String, activity: String) -> float: return mul("gather", activity + "/" + kind)
+func atk_bonus() -> float: return add("atk")
+func carry_bonus() -> int: return roundi(add("carry"))
+func cold_mult() -> float: return mul("cold")
+func store_bonus() -> int: return roundi(add("store"))
+func spoil_mult() -> float: return mul("spoil")
+func mood_bonus() -> float: return add("mood")
+func lore_rate() -> float: return add("lore")

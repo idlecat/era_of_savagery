@@ -80,6 +80,7 @@ var nat: Nature
 var folk: Folk
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
+var cult = null # the culture's events, tales and legendary people (culture.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -261,7 +262,8 @@ func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 	var u := E.Unit.new()
 	u.id = uid()
 	u.name = def["name"]; u.epithet = def.get("epithet", ""); u.traits = def["traits"].duplicate()
-	u.color = def.get("color", Color(0.7, 0.7, 0.7))
+	var col: Variant = def.get("color", Color(0.7, 0.7, 0.7))
+	u.color = Color(col) if col is String else col
 	u.pos = p; u.home = D.VILLAGE
 	u.max_hp = def["hp"]; u.hp = u.max_hp; u.hunger = randf_range(65, 90)
 	u.atk = def["atk"]; u.def = def["def"]; u.spd = def["spd"]
@@ -388,6 +390,7 @@ func unit_atk(u: E.Unit) -> float:
 func unit_def(u: E.Unit) -> float:
 	var d := u.def * (1.0 + 0.15 * u.lv("combat"))
 	if has_tech("hide"): d += 2
+	d += inv.add("def")
 	if has_bronze(): d += 3
 	if _struct_near("palisade", u.pos, 115): d += 3
 	for o in units: # Centurion Aura
@@ -398,14 +401,14 @@ func unit_def(u: E.Unit) -> float:
 
 func unit_speed(u: E.Unit) -> float:
 	var s := 58.0 * u.spd
-	if u.hp < u.max_hp * 0.3 and not inv.has("bone_setting"): s *= 0.7
+	if u.hp < u.max_hp * 0.3 and inv.add("steady") <= 0.0: s *= 0.7 # (bone setting)
 	if u.job.get("type", "") == "explore": s *= 1.15 # scouts travel light
 	if evo.has_trad("wayfinders"): s *= 1.1
-	s *= hz.speed_mult()
+	s *= hz.speed_mult() * inv.mul("speed")
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
 	return s
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult()
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work")
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second.
@@ -629,7 +632,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				u.act = "Waiting for materials"
 				return
 			if approach(u, tgt, near, dt):
-				var speed := dt * (1.0 + 0.12 * u.lv("craft")) * work_mul(u) * (1.2 if evo.has_trad("makers_pride") else 1.0)
+				var speed := dt * (1.0 + 0.12 * u.lv("craft")) * work_mul(u) * (1.2 if evo.has_trad("makers_pride") else 1.0) * inv.mul("build")
 				gain_xp(u, "craft", dt * 0.9)
 				evo.practice(u, "build", dt)
 				evo.drift("spiritual", -0.005 * dt)
@@ -707,7 +710,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				var boost := 1.5 if (_struct_near("totem_shrine", u.pos, 140) or _struct_near("grand_altar", u.pos, 140)) else 1.0
 				if evo.has_trad("ancestor_rites"): boost *= 1.3
 				stock["lore"] += dt * 0.22 * (1.0 + 0.2 * u.lv("lore")) * boost
-				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")) * (1.3 if evo.has_trad("ancestor_rites") else 1.0))
+				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")) * (1.3 if evo.has_trad("ancestor_rites") else 1.0) * inv.mul("devotion"))
 				evo.practice(u, "ritual", dt)
 				evo.drift("spiritual", 0.01 * dt)
 				gain_xp(u, "lore", dt * 0.6)
@@ -1379,7 +1382,7 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 		step_move(u, dt, unit_speed(u) * 0.4)
 
 func unit_needs(u: E.Unit, dt: float) -> void:
-	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult()
+	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult() * inv.mul("hunger")
 	u.hunger -= drain * dt * (0.6 if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
 	u.walked = 0.0
 	if u.hunger < 40 and stock["food"] >= 1:
@@ -1644,7 +1647,7 @@ func tick(dt: float) -> void:
 	for s in structures:
 		if not s.built or not ours(s): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s)
+		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += (0.03 + inv.lore_rate()) * dt
 
@@ -1954,11 +1957,7 @@ func event_def(id: String) -> Dictionary:
 		"chosen":
 			return {"title": tr("Birth of the Chosen One"),
 				"text": tr("Under a sky split by lightning, a child is born bearing the mark of the totem. Which mythic bloodline awakens?"),
-				"options": [
-					{"label": tr("Hou Yi the Archer"), "desc": tr("A peerless hunter. Foraging 7, Combat 6."), "enabled": true},
-					{"label": tr("Yu the Flood-Tamer"), "desc": tr("A builder of levees and canals. Crafting 7, Lore 5."), "enabled": true},
-					{"label": tr("Chiyou the Berserker"), "desc": tr("A storm of bronze and fury. Combat 8, 90 HP."), "enabled": true},
-				]}
+				"options": D.CHOSEN.slice(0, 4).map(func(h): return {"label": tr(h["label"]), "desc": tr(h["desc"]), "enabled": true})}
 	return {}
 
 ## Returns {"text": outcome, "open_contract": bool}
@@ -2022,12 +2021,7 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 						hurt_unit(u, u.max_hp * 0.4, null)
 						remember(u, tr("was beaten back in a failed raid on a rival tribe on Day %d") % day(), 8)
 		"chosen":
-			var heroes := [
-				{"name": "Hou Yi", "epithet": "the Archer", "traits": ["belligerent"], "color": Color("#ffd36b"), "hp": 70, "atk": 9, "def": 4, "spd": 1.25, "skills": {"forage": 7, "craft": 1, "combat": 6, "lore": 1}},
-				{"name": "Yu", "epithet": "the Flood-Tamer", "traits": ["cautious"], "color": Color("#6bd3ff"), "hp": 65, "atk": 6, "def": 5, "spd": 1.05, "skills": {"forage": 2, "craft": 7, "combat": 2, "lore": 5}},
-				{"name": "Chiyou", "epithet": "the Berserker", "traits": ["belligerent"], "color": Color("#ff6b6b"), "hp": 90, "atk": 11, "def": 5, "spd": 1.1, "skills": {"forage": 1, "craft": 1, "combat": 8, "lore": 0}},
-			]
-			var def: Dictionary = heroes[clampi(idx, 0, 2)]
+			var def: Dictionary = D.CHOSEN[clampi(idx, 0, mini(D.CHOSEN.size(), 4) - 1)].duplicate(true)
 			def["hero"] = true
 			var u := make_unit(def, D.VILLAGE + Vector2(0, 40))
 			remember(u, tr("was born under a lightning sky, bearing a mythic bloodline"), 10)
@@ -2117,7 +2111,7 @@ func explored_pct() -> float:
 	return 100.0 * explored_cells / maxf(1, land_cells)
 
 func sight(u: E.Unit) -> float:
-	return (D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0)) * hz.sight_mult() * nat.sight_mult()
+	return (D.SIGHT_UNIT + 12.0 * u.lv("forage") + (D.SIGHT_SCOUT_BONUS if u.job.get("type", "") == "explore" else 0.0) + (40.0 if evo.has_trad("wayfinders") else 0.0) + inv.add("sight")) * hz.sight_mult() * nat.sight_mult()
 
 func reveal(p: Vector2, r: float) -> void:
 	var i0 := clampi(int((p.x - r) / D.FOG_CELL), 0, fog_w - 1)
