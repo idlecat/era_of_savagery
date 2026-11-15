@@ -2,6 +2,20 @@
 
 A Godot 4 game built from the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.5D isometric view (an Age-of-Empires-style diamond map). People, animals, plants and buildings are 3D models built in code and pre-rendered to sprites, so there are no external art assets. The simulation runs in flat world coordinates, and only rendering and mouse picking are projected.
 
+## Download
+
+| Platform | Download |
+|---|---|
+| Windows (64-bit) | [EraOfSavagery-windows.zip](https://github.com/idlecat/era_of_savagery/releases/latest/download/EraOfSavagery-windows.zip) |
+| macOS (Apple Silicon and Intel) | [EraOfSavagery-macos.zip](https://github.com/idlecat/era_of_savagery/releases/latest/download/EraOfSavagery-macos.zip) |
+
+All versions are on the [Releases page](https://github.com/idlecat/era_of_savagery/releases). The game isn't signed by a paid developer account, so the first launch shows a warning. On Windows, click **More info → Run anyway**. On macOS, right-click the app and choose **Open**. The first start takes about a minute while the game builds its art; after that it starts quickly. It plays fully offline; to have the tribespeople speak through a cloud LLM, enter your own API key in **LLM Settings**.
+
+### Building the downloads yourself
+
+Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates, or unpack `Godot_v4.7.2-stable_export_templates.tpz` into `~/Library/Application Support/Godot/export_templates/4.7.2.stable/`). Then run `tools/build.sh`. It writes `export/EraOfSavagery-windows.zip` and `export/EraOfSavagery-macos.zip` using the presets in `export_presets.cfg`. `tools/build.sh --release vX.Y.Z` also publishes them as a GitHub release (needs `gh`), with `tools/release_notes.md` as the notes.
+
+
 ## Run
 
 ```sh
