@@ -13,7 +13,7 @@ All versions are on the [Releases page](https://github.com/idlecat/era_of_savage
 
 ### Building the downloads yourself
 
-Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates, or unpack `Godot_v4.7.2-stable_export_templates.tpz` into `~/Library/Application Support/Godot/export_templates/4.7.2.stable/`). Then run `tools/build.sh`. It writes `export/EraOfSavagery-windows.zip` and `export/EraOfSavagery-macos.zip` using the presets in `export_presets.cfg`. `tools/build.sh --release vX.Y.Z` also publishes them as a GitHub release (needs `gh`), with `tools/release_notes.md` as the notes.
+Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates, or unpack `Godot_v4.7.2-stable_export_templates.tpz` into `~/Library/Application Support/Godot/export_templates/4.7.2.stable/`). Then run `tools/build.sh`. It writes `export/EraOfSavagery-windows.zip` and `export/EraOfSavagery-macos.zip` using the presets in `export_presets.cfg`. To publish a release, run `tools/release.sh vX.Y.Z` (needs `gh` logged in with write access). It sets the version, builds both zips and uploads them with `tools/release_notes.md` as the notes; run again with the same tag to replace the files.
 
 
 ## Run
