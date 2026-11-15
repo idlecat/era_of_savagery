@@ -77,6 +77,24 @@ func _run() -> void:
 	check(rr["source"] != "offline fallback", "research negotiated via cloud LLM")
 	check(rs["ok"], "research blueprint valid")
 	check(not ("bronze" in rr["speech"].to_lower()), "persona does not name unknown bronze")
+	# diplomacy: the Red Ochre chieftain answers our envoy
+	var R = sim.rivals
+	R.clans["ochre"]["met"] = true
+	R.clans["ochre"]["grudges"].append("you killed our hunter by the ford")
+	var env = sim.unit_by_name("Alie")
+	var offer: Dictionary = R.empty_terms()
+	offer["treaty"] = "peace"
+	offer["days"] = 20
+	offer["tribe_gives"]["wood"] = 10
+	var pctx: Dictionary = R.parley_ctx(env, "ochre", offer, "We are strong too. Peace serves both our peoples.", [], 0)
+	var pfb: Dictionary = R.chief_reply(pctx, env)
+	t0 = Time.get_ticks_msec()
+	var pr: Dictionary = await llm.parley(pctx, pfb)
+	var pc: Dictionary = R.check_reply("ochre", pr, offer, env, 0, pfb)
+	print("\n[Gor PARLEY] (%s, %d ms) %s" % [pr["source"], Time.get_ticks_msec() - t0, pr["speech"]])
+	print("   verdict: %s · %s %s" % [pc["verdict"], R.terms_text(pc["terms"]), pc.get("note", "")])
+	check(pr["source"] != "offline fallback", "the rival chieftain answered via cloud LLM")
+	check(pc["verdict"] in ["accept", "counter", "refuse"], "parley reply is a valid verdict")
 	print("\nLLM calls counted: ", sim.llm_calls)
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)

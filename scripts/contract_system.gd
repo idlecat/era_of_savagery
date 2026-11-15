@@ -37,7 +37,7 @@ func is_running(c: E.Contract) -> bool:
 
 # ------------------------------------------------------------ context for the LLM
 func available_helpers(exclude_id := -1) -> Array:
-	return sim.living().filter(func(u): return u.role != "contract" and u.id != exclude_id and D.bank_of(u.pos) == "west")
+	return sim.living().filter(func(u): return u.role == "" and u.id != exclude_id and D.bank_of(u.pos) == "west")
 
 func leader_profile(u: E.Unit) -> Dictionary:
 	var skills := {}

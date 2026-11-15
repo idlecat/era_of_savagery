@@ -207,6 +207,24 @@ func _debug_shot(args: Dictionary) -> void:
 				sim.paused = false
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.0")), float(args.get("zoom", "1.0")))
 			world.focus_on(rc["pos"] + Vector2(float(args.get("fx", "0")), float(args.get("fy", "0"))))
+		"parley": # debug: an envoy reaches a rival village (--clan, --who); --propose makes a first offer
+			hud._close_modal()
+			sim.fog_enabled = false
+			var pid: String = args.get("clan", "heron")
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			var envoy = sim.unit_by_name(args.get("who", "Linghe"))
+			sim.rivals.send_envoy(envoy, pid)
+			var waited := 0.0
+			while envoy.job.get("type", "") == "envoy" and not envoy.job.get("parley", false) and waited < 300.0:
+				sim.tick(STEP)
+				waited += STEP
+				if sim.pending_event != "":
+					sim.resolve_event(sim.pending_event, 2)
+					sim.paused = false
+			world.cam.zoom = Vector2(1.1, 1.1)
+			world.focus_on(sim.rivals.clans[pid]["pos"])
+			if args.has("propose"): hud._par_propose()
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

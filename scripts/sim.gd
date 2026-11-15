@@ -13,6 +13,7 @@ signal event_fired(event_id)
 signal contract_finished(contract)
 signal log_added()
 signal alert_raised(alert)
+signal envoy_arrived(unit, clan_id)
 
 var next_id := 1
 var time := 0.0
@@ -472,7 +473,9 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				u.resume_key = u.job_key
 			set_job(u, {"type": "move", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "flee": true, "warm": true}, u.job_key)
 			popup(u.pos + Vector2(0, -30), tr("Seeking warmth"), Color("#a8d8ff"))
-	# Self-defense or flight when attacked
+	if u.role == "envoy" and u.job.get("type", "") != "envoy" and u.resume_job.get("type", "") != "envoy":
+		u.role = "" # recalled: the mission is off
+		# Self-defense or flight when attacked
 	if time - u.last_hit_t < 2 and u.attacker_id >= 0:
 		var p := pred_by_id(u.attacker_id)
 		if p and not p.dead and not p.fleeing:
@@ -554,6 +557,16 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				var crit := randf() < 0.05 * u.lv("forage")
 				damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 				gain_xp(u, "combat", 1.2)
+		"envoy":
+			if j.get("parley", false):
+				u.act = "Parleying"
+				return
+			if approach(u, rivals.parley_spot(j["clan"]), 10, dt):
+				j["parley"] = true
+				u.act = "Parleying"
+				rivals.envoy_arrived(u, j["clan"])
+			else:
+				u.act = "Travelling as envoy"
 		"experiment":
 			if approach(u, j["at"], 8, dt):
 				u.act = "Experimenting: " + j["label"]
@@ -1076,7 +1089,7 @@ func _update_vice(dt: float) -> void:
 	if chief and not chief.dead:
 		var threats := active_predators_near(D.VILLAGE, 500)
 		if not threats.is_empty():
-			var fighters := living().filter(func(u): return u.role != "contract" and u.job.get("type", "") != "attack")
+			var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack")
 			fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
 			for u in fighters.slice(0, 3): assign_attack(u, threats[0])
 			add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice")
@@ -1170,9 +1183,8 @@ func _check_events() -> void:
 	elif not flags.has("chosen") and devotion >= 100:
 		flags["chosen"] = true
 		_fire_event("chosen")
-	elif rivals.pending_contact != "":
-		_fire_event("contact_" + rivals.pending_contact)
-		rivals.pending_contact = ""
+	elif not rivals.pending.is_empty():
+		_fire_event(rivals.pending.pop_front())
 
 func _fire_event(id: String) -> void:
 	pending_event = id
@@ -1205,7 +1217,7 @@ func best_unit(skill: String, exclude_contract := true) -> E.Unit:
 
 ## Civilization-style dilemmas. Each option: {label, desc, enabled}.
 func event_def(id: String) -> Dictionary:
-	if id.begins_with("contact_"): return rivals.event_def(id.trim_prefix("contact_"))
+	if rivals.owns_event(id): return rivals.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1240,7 +1252,7 @@ func event_def(id: String) -> Dictionary:
 ## Returns {"text": outcome, "open_contract": bool}
 func resolve_event(id: String, idx: int) -> Dictionary:
 	pending_event = ""
-	if id.begins_with("contact_"): return {"text": rivals.resolve(id.trim_prefix("contact_"), idx), "open_contract": false}
+	if rivals.owns_event(id): return {"text": rivals.resolve(id, idx), "open_contract": false}
 	var shaman := best_unit("lore", false)
 	var out := {"text": tr(""), "open_contract": false}
 	match id:

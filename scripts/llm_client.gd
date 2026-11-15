@@ -190,6 +190,48 @@ Order options by what YOU would prefer.""" % "; ".join(fx)
 	fallback["error"] = res.get("error", "invalid JSON shape")
 	return fallback
 
+# ------------------------------------------------------------ diplomacy: a rival chief's node
+## One round of parley. ctx from rivals.parley_ctx(); fallback = the offline chief's reply.
+## Returns {"speech", "verdict", "terms", "source", "error"} (terms still untrusted).
+func parley(ctx: Dictionary, fallback: Dictionary) -> Dictionary:
+	_count_call()
+	if not is_online():
+		await get_tree().create_timer(0.6).timeout
+		var r := fallback.duplicate(true)
+		r["source"] = "offline"
+		r["error"] = ""
+		return r
+	var ch: Dictionary = ctx["chief"]
+	var system := """You are %s, "%s", chieftain of the %s, a prehistoric clan. Your people: %s Your clan's spirit is %s.
+Toward the neighbouring tribe whose envoy now stands at your fire you feel: %s (%d on a scale of -100 to 100).%s%s
+Speak to the envoy in character, 1-3 vivid sentences, as a proud chieftain would. Weigh the offer for your clan's interests and honour.
+Your inclination, judged from your clan's needs: %s. You may be moved a little by the envoy's words and manner, but do not give your clan away.
+Treaty ids: "none" (only an exchange of goods), "peace" (no raids between our peoples while it lasts; "tribute" = food the envoy's tribe pays you each day), "hunting_rights" (their people may hunt and gather on your lands without offence). Resources: food, wood, stone.
+Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept" | "counter" | "refuse", "terms": {"treaty": "<id>", "days": <5-40>, "tribute": <0-10>, "tribe_gives": {"food": n, "wood": n, "stone": n}, "clan_gives": {"food": n, "wood": n, "stone": n}}}
+"tribe_gives" is what the envoy's tribe hands over, "clan_gives" what your clan hands over. For "accept", repeat the offer as terms. For "counter", give the terms you WOULD accept. They cannot give more than they have.""" % [
+		ch["name"], ch["epithet"], ch["clan"], ch["ways"], ch["culture"], ch["stance"].to_lower(), ch["relation"],
+		(" You remember these wrongs: " + "; ".join(ch["wrongs_remembered"]) + ".") if not ch["wrongs_remembered"].is_empty() else "",
+		(" Treaties in force: " + ch["treaties_in_force"] + ".") if ch["treaties_in_force"] != "" else "",
+		ctx["inclination"]]
+	if I.is_zh():
+		system += "\nLANGUAGE: write \"speech\" in Simplified Chinese (简体中文), in a primal, vivid voice. Keep JSON keys and ids in English."
+	var user := {
+		"the_envoy": ctx["envoy"], "envoy_says": ctx["envoy_says"] if ctx["envoy_says"] != "" else "(says nothing more)",
+		"offer": ctx["offer"], "offer_in_words": ctx["offer_text"], "their_tribe": ctx["their_tribe"],
+		"your_clan": {"people": ch["people"], "warriors": ch["warriors"], "season": ch["season"]},
+		"conversation_so_far": ctx["history"],
+	}
+	var res := await chat_json(system, JSON.stringify(user))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("speech") is String:
+		var d: Dictionary = res["data"]
+		d["source"] = label()
+		d["error"] = ""
+		return d
+	var fb := fallback.duplicate(true)
+	fb["source"] = "offline fallback"
+	fb["error"] = res.get("error", "invalid JSON shape")
+	return fb
+
 # ------------------------------------------------------------ transport
 func chat_json(system: String, user: String, json_mode := true) -> Dictionary:
 	if api_key == "" and provider != "ollama":

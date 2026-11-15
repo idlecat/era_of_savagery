@@ -33,6 +33,7 @@ func _initialize() -> void:
 	test_vice_slots()
 	test_hardships()
 	test_rivals()
+	test_diplomacy()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -397,7 +398,7 @@ func test_rivals() -> void:
 	var ochre: Dictionary = sim.rivals.clans["ochre"]
 	sim.reveal(ochre["pos"], 200)
 	sim.rivals.update(0.05)
-	check(ochre["met"] and sim.rivals.pending_contact == "ochre", "seeing their village makes first contact")
+	check(ochre["met"] and "contact_ochre" in sim.rivals.pending, "seeing their village makes first contact")
 	sim._check_events()
 	check(sim.pending_event == "contact_ochre" and sim.paused, "first contact pauses for a choice")
 	var d: Dictionary = sim.event_def("contact_ochre")
@@ -419,6 +420,7 @@ func test_rivals() -> void:
 	ochre["relation"] = -60.0
 	ochre["warriors"] = 4
 	ochre["raid_t"] = 0.0
+	ochre["last_demand"] = sim.time # (no messenger this time)
 	sim.rivals.update(0.05)
 	var band: Array = sim.predators.filter(func(p): return p.kind == "warrior" and p.clan == "ochre")
 	check(band.size() >= 2 and band.all(func(p): return p.raid), "a hostile clan sends a war band of %d" % band.size())
@@ -442,3 +444,99 @@ func test_rivals() -> void:
 	sim2.rivals.clans["ochre"]["raid_t"] = 0.0
 	sim2.rivals.update(0.05)
 	check(not sim2.predators.any(func(p): return p.kind == "warrior"), "with hardships off, neighbours never raid")
+
+func test_diplomacy() -> void:
+	print("\n== Diplomacy: envoys, parley, treaties ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	for id in R.clans: R.clans[id]["met"] = true
+	var heron: Dictionary = R.clans["heron"]
+	var u = sim.unit_by_name("Linghe")
+	var arrived := []
+	sim.envoy_arrived.connect(func(who, cid): arrived.append([who, cid]))
+	check(R.send_envoy(u, "heron") == "" and u.role == "envoy", "an envoy sets out")
+	check(R.envoy_block(sim.unit_by_name("Bai"), "heron") != "", "one envoy per clan at a time")
+	check(not sim.contracts.available_helpers().has(u), "envoys can't be drafted into contracts")
+	var t := 0.0
+	while arrived.is_empty() and t < 240.0:
+		sim.tick(0.05)
+		if sim.paused and arrived.is_empty():
+			sim.pending_event = ""
+			sim.paused = false
+		t += 0.05
+	check(not arrived.is_empty() and arrived[0][1] == "heron" and sim.paused, "the envoy reaches their village and the parley begins (%.0fs)" % t)
+	check(u.pos.distance_to(heron["pos"]) < 160, "the envoy stands at their village")
+	# an offer of bare peace is not enough: the chief counters
+	var offer: Dictionary = R.empty_terms()
+	offer["treaty"] = "peace"
+	var ctx: Dictionary = R.parley_ctx(u, "heron", offer, "Let our peoples live in peace.", [], 0)
+	check(ctx["chief"]["name"] != "" and ctx["inclination"] != "", "the chief's node gets mood, grudges and the offer")
+	var rep: Dictionary = R.chief_reply(ctx, u)
+	print("   [Ama] ", rep["speech"])
+	check(rep["verdict"] == "counter" and rep["terms"]["tribe_gives"]["food"] > 0, "the offline chief counters, asking for food")
+	check(R.deal_value("heron", rep["terms"], u, 0) >= 0, "the counter-offer is one the clan would accept")
+	# untrusted LLM terms
+	var junk: Dictionary = R.sanitize_terms({"treaty": "Eternal Alliance", "days": 999, "tribute": "50", "tribe_gives": {"food": 9999, "gold": 5}, "clan_gives": {"wood": -4}}, offer)
+	check(junk["treaty"] == "none" and junk["days"] == 40 and junk["tribe_gives"]["food"] <= int(sim.stock["food"]) and junk["clan_gives"]["wood"] == 0 and not junk["tribe_gives"].has("gold"), "LLM terms are whitelisted and clamped")
+	var greedy: Dictionary = R.empty_terms()
+	greedy["treaty"] = "peace"
+	greedy["clan_gives"]["food"] = 60
+	var held: Dictionary = R.check_reply("heron", {"verdict": "accept", "speech": "Yes, all of it!", "terms": greedy}, greedy, u, 0, R.chief_reply(R.parley_ctx(u, "heron", greedy, "", [], 0), u))
+	check(held["verdict"] != "accept", "an LLM chief can't give the clan away (%s)" % held["verdict"])
+	# seal the counter-offer
+	var food0: float = sim.stock["food"]
+	var rel0: float = heron["relation"]
+	var what: String = R.seal(u, "heron", rep["terms"], 1)
+	print("   sealed: ", what)
+	check(R.has_treaty("heron", "peace") and heron["relation"] > rel0, "peace is sealed and the Heron warm to us")
+	check(sim.stock["food"] < food0, "the agreed food changes hands")
+	check(u.memory.any(func(m): return "sealed an agreement" in m["text"]), "the envoy remembers the treaty")
+	R.end_parley(u, "heron")
+	check(u.role == "" and u.job.get("type", "") == "move", "after the parley the envoy walks home")
+	# peace stops raids
+	sim.hz.level = "normal"
+	heron["relation"] = -60.0
+	heron["raid_t"] = 0.0
+	heron["warriors"] = 4
+	R.update(0.05)
+	check(not sim.predators.any(func(p): return p.clan == "heron" and p.kind == "warrior"), "no raids while the peace holds")
+	# breaking the peace
+	var hh = sim.predators.filter(func(p): return p.clan == "heron" and p.kind == "hunter")[0]
+	heron["relation"] = 0.0
+	var rel1: float = heron["relation"]
+	sim.damage_pred(hh, 999, sim.unit_by_name("Alie"), false)
+	check(not R.has_treaty("heron", "peace") and heron["relation"] <= rel1 - 55 and heron["grudges"].any(func(g): return "broke the peace" in g), "killing their people breaks the peace")
+	# tribute
+	var ochre: Dictionary = R.clans["ochre"]
+	var trib: Dictionary = R.empty_terms()
+	trib["treaty"] = "peace"
+	trib["tribute"] = 3
+	R.seal(sim.unit_by_name("Alie"), "ochre", trib, 0)
+	sim.stock["food"] = 40.0
+	sim.time += D.DAY_LEN
+	R.update(0.05)
+	check(absf(sim.stock["food"] - 37.0) < 0.01, "tribute is paid each day (%.1f food left)" % sim.stock["food"])
+	sim.stock["food"] = 1.0
+	sim.time += D.DAY_LEN
+	R.update(0.05)
+	check(not R.has_treaty("ochre", "peace"), "an unpaid tribute ends the peace")
+	# demands
+	ochre["demand"] = 20
+	sim.stock["food"] = 50.0
+	var d: Dictionary = sim.event_def("demand_ochre")
+	check(d["options"].size() == 2 and "20" in d["text"], "a messenger demands food")
+	sim.resolve_event("demand_ochre", 0)
+	check(sim.stock["food"] == 30.0 and ochre["raid_t"] > D.DAY_LEN, "paying buys time")
+	ochre["warriors"] = 4
+	ochre["relation"] = -40.0
+	sim.resolve_event("demand_ochre", 1)
+	check(sim.predators.any(func(p): return p.clan == "ochre" and p.kind == "warrior" and p.raid), "refusing brings the war band")
+	# peace expires
+	var hr: Dictionary = R.empty_terms()
+	hr["treaty"] = "hunting_rights"
+	hr["days"] = 5
+	R.seal(u, "ochre", hr, 0)
+	check(R.has_treaty("ochre", "hunting_rights") and R.treaty_text("ochre") != "", "hunting rights are granted")
+	sim.time += D.DAY_LEN * 6
+	R.update(0.05)
+	check(not R.has_treaty("ochre", "hunting_rights"), "treaties expire")

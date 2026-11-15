@@ -41,6 +41,9 @@ const SORT_COLS := [["lv", "Lv", "Overall level"], ["forage", "Fo", "Foraging & 
 const COL_W := 38.0
 var sheet_scout_btn: Button
 var sheet_research_btn: Button
+var sheet_envoy_btn: Button
+var clans_btns: HFlowContainer
+var clans_sig := ""
 var reno_btn: Button
 var lang_btn: Button
 var alert_box: VBoxContainer
@@ -71,6 +74,7 @@ func setup(s, w, l) -> void:
 	sim.log_added.connect(func(): log_dirty = true)
 	sim.contract_interrupted.connect(_on_interrupt)
 	sim.event_fired.connect(_on_event)
+	sim.envoy_arrived.connect(open_parley)
 	sim.contract_finished.connect(func(c): _toast_contract_done(c))
 	sim.alert_raised.connect(_on_alert)
 	world.selection_changed.connect(_refresh_left)
@@ -275,6 +279,10 @@ func _build_left(root: Control) -> void:
 		var sel: Array = world.selected_units()
 		if sel.size() == 1: open_negotiation(sel[0], "research"), "Tier 2: a research Task Contract - the leader proposes which idea to pursue and how")
 	sheet_box.add_child(sheet_research_btn)
+	sheet_envoy_btn = _button("Send as envoy…", func():
+		var sel: Array = world.selected_units()
+		if sel.size() == 1: open_envoy(sel[0], ""), "Diplomacy: walk to a neighbouring clan and parley with its chieftain")
+	sheet_box.add_child(sheet_envoy_btn)
 	var hb := HBoxContainer.new()
 	sheet_box.add_child(hb)
 	sheet_steward_btn = _button("Appoint Steward", func(): _appoint("steward"), "Tier 3: auto-manages idle villagers")
@@ -399,6 +407,8 @@ func _build_right(root: Control) -> void:
 	v.add_child(_header("NEIGHBORING CLANS"))
 	clans_text = _rich(0, true)
 	v.add_child(clans_text)
+	clans_btns = HFlowContainer.new()
+	v.add_child(clans_btns)
 	v.add_child(_header("TASK CONTRACTS"))
 	contracts_text = _rich(150)
 	v.add_child(contracts_text)
@@ -644,6 +654,8 @@ func _refresh_left_content() -> void:
 	sheet_contract_btn.text = tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…")
 	sheet_scout_btn.disabled = on_contract
 	sheet_research_btn.disabled = on_contract or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
+	sheet_envoy_btn.disabled = u.role != ""
+	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
 	sheet_research_btn.text = tr("Seek new wisdom…") if not sim.evo.candidates().is_empty() else tr("No new wisdom within reach")
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
 	_vice_button(sheet_steward_btn, u, "steward")
@@ -676,6 +688,15 @@ func _refresh_right() -> void:
 		for line in c.events.slice(0, 3): s += tr("  [color=#a89878]%s[/color]\n") % line
 	contracts_text.text = s
 	clans_text.text = _clans_bbcode()
+	var met: Array = sim.rivals.clans.keys().filter(func(id): return sim.rivals.clans[id]["met"])
+	var sig := ",".join(met) + I.lang
+	if sig != clans_sig:
+		clans_sig = sig
+		for ch in clans_btns.get_children(): ch.queue_free()
+		for id in met:
+			var b := _button(tr("Envoy to %s…") % tr(sim.rivals.clans[id]["name"]), func(): open_envoy(null, id), "Choose someone to carry our words to their chieftain")
+			b.add_theme_font_size_override("font_size", 13)
+			clans_btns.add_child(b)
 	if log_dirty:
 		log_dirty = false
 		var l := ""
@@ -693,6 +714,10 @@ func _clans_bbcode() -> String:
 		var st: String = sim.rivals.stance(id)
 		var marching: int = sim.predators.filter(func(p): return p.clan == id and p.kind == "warrior" and p.raid and not p.dead and not p.fled).size()
 		out += tr("[color=#%s]■[/color] [b]%s[/b] · %s %s · [color=%s]%s (%+d)[/color]\n") % [c["color"].to_html(false), tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), cols[st], tr(st), roundi(c["relation"])]
+		var tt: String = sim.rivals.treaty_text(id)
+		if tt != "": out += tr("  [color=#8af2d0]☮ %s[/color]\n") % tt
+		var env = sim.unit_by_id(c["envoy"])
+		if env and env.role == "envoy": out += tr("  [color=#9fd0ff]✉ %s is on the way as our envoy[/color]\n") % tr(env.name)
 		if marching > 0: out += tr("  [color=#ff6b6b]⚔ %d warriors marching on us![/color]\n") % marching
 	if out == "": out = tr("[color=#8a7a60]No other clans met yet. Scouts may find them beyond the fog.[/color]")
 	return "[font_size=14]" + out.strip_edges() + "[/font_size]"
@@ -1250,3 +1275,190 @@ func _open_settings() -> void:
 		_close_modal()
 		sim.paused = was_paused))
 	v.add_child(_label("Key is stored only in this machine's Godot user data folder (not in the project).", 12, Color("#8a7a60")))
+
+# ------------------------------------------------------------ diplomacy: envoys and parley
+## Pick who goes and/or to which clan (whichever isn't given).
+func open_envoy(u, clan_id: String) -> void:
+	var v := _open_modal(tr("SEND AN ENVOY"), 720)
+	var R = sim.rivals
+	if u == null:
+		var c: Dictionary = R.clans[clan_id]
+		v.add_child(_label(tr("Who will carry our words to %s %s of the %s? Lore makes a persuasive speaker; martial clans respect warriors; the devout are welcome among the Heron.") % [tr(c["chief"]), tr(c["epithet"]), tr(c["name"])], 15, COL_DIM))
+		var cands: Array = sim.living().filter(func(o): return o.role == "")
+		cands.sort_custom(func(a, b): return R.deal_value(clan_id, R.empty_terms(), a) > R.deal_value(clan_id, R.empty_terms(), b))
+		for o in cands.slice(0, 6):
+			var trs: String = tr(D.TRAITS[o.traits[0]]["name"])
+			var who = o
+			var b := _button(tr("%s \"%s\" — %s · Lore %d · Combat %d") % [tr(o.name), tr(o.epithet), trs, o.lv("lore"), o.lv("combat")], func(): _do_send_envoy(who, clan_id))
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			v.add_child(b)
+	else:
+		v.add_child(_label(tr("Where should %s go?") % tr(u.name), 15, COL_DIM))
+		for id in R.clans:
+			var c: Dictionary = R.clans[id]
+			var why: String = R.envoy_block(u, id)
+			var cid: String = id
+			var b := _button(tr("%s — %s (%d)") % [tr(c["name"]), tr(R.stance(id)), roundi(c["relation"])] if c["met"] else tr("Unknown clan"), func(): _do_send_envoy(u, cid))
+			b.disabled = why != ""
+			if why != "": b.tooltip_text = tr(why)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			v.add_child(b)
+	v.add_child(_label(tr("The envoy walks there; the parley begins when they reach the village. A clan in blood feud may not be gentle with the messenger."), 13, COL_DIM))
+	v.add_child(_button("Cancel", _close_modal))
+
+func _do_send_envoy(u, clan_id: String) -> void:
+	var err: String = sim.rivals.send_envoy(u, clan_id)
+	_close_modal()
+	if err != "": sim.popup(u.pos, tr(err), Color("#ff8080"))
+	else: sim.popup(u.pos + Vector2(0, -30), tr("Envoy to the %s") % tr(sim.rivals.clans[clan_id]["name"]), Color("#9fd0ff"), true)
+
+var par := {}
+
+const PAR_ROUNDS := 5
+
+## The envoy has reached the rival village: a parley with their chieftain's LLM node.
+func open_parley(u, clan_id: String) -> void:
+	var R = sim.rivals
+	var c: Dictionary = R.clans[clan_id]
+	var v := _open_modal(tr("PARLEY · %s %s of the %s") % [tr(c["chief"]), tr(c["epithet"]), tr(c["name"])], 1080)
+	par = {"u": u, "id": clan_id, "history": [], "round": 0, "busy": false, "token": modal_token, "reply": {}, "syncing": false}
+	v.add_child(_label(tr("Our envoy: %s \"%s\" · %s · Lore %d · Combat %d    ·    Their mood: %s (%+d)") % [tr(u.name), tr(u.epithet), tr(D.TRAITS[u.traits[0]]["name"]), u.lv("lore"), u.lv("combat"), tr(R.stance(clan_id)), roundi(c["relation"])], 14, Color("#9fd0ff")))
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 12)
+	v.add_child(cols)
+	var lcol := VBoxContainer.new()
+	lcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lcol.size_flags_stretch_ratio = 1.3
+	cols.add_child(lcol)
+	var rcol := VBoxContainer.new()
+	rcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_child(rcol)
+	lcol.add_child(_header("AT THEIR FIRE"))
+	var chat := _rich(330)
+	chat.scroll_following = true
+	lcol.add_child(chat)
+	par["chat"] = chat
+	chat.append_text(tr("[color=#a89878][i]%s is led to the fire of %s %s. Warriors watch from the huts.[/i][/color]\n") % [tr(u.name), tr(c["chief"]), tr(c["epithet"])])
+	var rh := HBoxContainer.new()
+	lcol.add_child(rh)
+	var words := LineEdit.new()
+	words.placeholder_text = tr("What %s says (e.g. 'our peoples should not bleed for berries')") % tr(u.name)
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rh.add_child(words)
+	par["words"] = words
+	words.text_submitted.connect(func(_t): _par_propose())
+	rcol.add_child(_header("OUR OFFER"))
+	var g := GridContainer.new()
+	g.columns = 2
+	rcol.add_child(g)
+	g.add_child(_label("Treaty", 14, COL_DIM))
+	var treaty := OptionButton.new()
+	for k in R.TREATIES: treaty.add_item(tr({"none": "Exchange of goods only", "peace": "Peace pact (no raids)", "hunting_rights": "Hunting rights on their land"}[k]))
+	treaty.select(1)
+	g.add_child(treaty)
+	par["treaty"] = treaty
+	par["days"] = _par_spin(g, tr("Days"), 5, 40, 15)
+	par["tribute"] = _par_spin(g, tr("Tribute (food/day)"), 0, 10, 0)
+	for r in R.RES: par["give_" + r] = _par_spin(g, tr("We give: %s") % tr(r), 0, mini(80, int(sim.stock[r])), 0)
+	for r in R.RES: par["ask_" + r] = _par_spin(g, tr("We ask: %s") % tr(r), 0, 60, 0)
+	var pb := _button(tr("Propose"), func(): _par_propose())
+	rcol.add_child(pb)
+	par["propose"] = pb
+	var status := _label("", 13, COL_DIM)
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rcol.add_child(status)
+	par["status"] = status
+	var bh := HBoxContainer.new()
+	v.add_child(bh)
+	var seal := _button(tr("Seal the agreement"), func(): _par_seal())
+	seal.disabled = true
+	seal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bh.add_child(seal)
+	par["seal"] = seal
+	bh.add_child(_button(tr("Leave the parley"), func(): _par_end(tr("%s leaves the fire of the %s without an agreement.") % [tr(u.name), tr(c["name"])])))
+	status.text = tr("Make an offer. %d rounds before %s grows impatient.") % [PAR_ROUNDS, tr(c["chief"])]
+
+func _par_spin(g: GridContainer, label: String, lo: int, hi: int, val: int) -> SpinBox:
+	g.add_child(_label(label, 14, COL_DIM))
+	var sp := SpinBox.new()
+	sp.min_value = lo
+	sp.max_value = maxi(lo, hi)
+	sp.value = val
+	g.add_child(sp)
+	sp.value_changed.connect(func(_v): if not par.get("syncing", false): par["seal"].disabled = true)
+	return sp
+
+func _par_offer() -> Dictionary:
+	var R = sim.rivals
+	var raw := {"treaty": R.TREATIES[par["treaty"].selected], "days": int(par["days"].value), "tribute": int(par["tribute"].value),
+		"tribe_gives": {}, "clan_gives": {}}
+	for r in R.RES:
+		raw["tribe_gives"][r] = int(par["give_" + r].value)
+		raw["clan_gives"][r] = int(par["ask_" + r].value)
+	return R.sanitize_terms(raw, R.empty_terms())
+
+func _par_sync(t: Dictionary) -> void:
+	par["syncing"] = true
+	par["treaty"].select(sim.rivals.TREATIES.find(t["treaty"]))
+	par["days"].value = t["days"]
+	par["tribute"].value = t["tribute"]
+	for r in sim.rivals.RES:
+		par["give_" + r].value = t["tribe_gives"][r]
+		par["ask_" + r].value = t["clan_gives"][r]
+	par["syncing"] = false
+
+func _par_propose() -> void:
+	if par.is_empty() or par["busy"]: return
+	var R = sim.rivals
+	var u = par["u"]
+	var id: String = par["id"]
+	var c: Dictionary = R.clans[id]
+	if par["round"] >= PAR_ROUNDS:
+		_par_end(tr("%s has heard enough and turns away. Our envoy heads home.") % tr(c["chief"]))
+		return
+	par["busy"] = true
+	par["propose"].disabled = true
+	par["seal"].disabled = true
+	var token: int = par["token"]
+	var offer := _par_offer()
+	var msg: String = par["words"].text.strip_edges()
+	par["words"].text = ""
+	var chat: RichTextLabel = par["chat"]
+	chat.append_text(tr("[color=#9fd0ff][b]%s:[/b][/color] %s[color=#8a9aa8][i](offers: %s)[/i][/color]\n") % [tr(u.name), (msg + " ") if msg != "" else "", R.terms_text(offer)])
+	par["history"].append({"speaker": tr(u.name), "text": msg, "offer": R.terms_text(offer)})
+	chat.append_text(tr("[color=#8a7a60][i]%s considers…[/i][/color]\n") % tr(c["chief"]))
+	var ctx: Dictionary = R.parley_ctx(u, id, offer, msg, par["history"].slice(-6), par["round"])
+	var fb: Dictionary = R.chief_reply(ctx, u)
+	var r: Dictionary = await llm.parley(ctx, fb)
+	if modal == null or modal_token != token: return
+	chat.remove_paragraph(chat.get_paragraph_count() - 2)
+	var checked: Dictionary = R.check_reply(id, r, offer, u, par["round"], fb)
+	if str(checked.get("speech", "")) == "": checked["speech"] = fb["speech"]
+	par["round"] += 1
+	par["reply"] = checked
+	var vcol: String = {"accept": "#b6f28a", "counter": "#ffd36b", "refuse": "#ff8a7a"}[checked["verdict"]]
+	chat.append_text(tr("[color=#%s][b]%s:[/b][/color] %s\n") % [c["color"].lightened(0.35).to_html(false), tr(c["chief"]), checked["speech"]])
+	chat.append_text(tr("[color=%s]  → %s: %s[/color]\n") % [vcol, tr({"accept": "Accepts", "counter": "Counter-offer", "refuse": "Refuses"}[checked["verdict"]]), R.terms_text(checked["terms"]) if checked["verdict"] != "refuse" else tr("no deal")])
+	par["history"].append({"speaker": tr(c["chief"]), "text": checked["speech"], "verdict": checked["verdict"]})
+	if r.get("error", "") != "": chat.append_text(tr("[color=#ff8a7a][i](cloud LLM failed: %s — used offline chieftain)[/i][/color]\n") % r["error"])
+	if checked["verdict"] != "refuse": _par_sync(checked["terms"])
+	par["seal"].disabled = checked["verdict"] == "refuse"
+	par["seal"].text = tr("Seal: %s") % R.terms_text(checked["terms"]) if checked["verdict"] != "refuse" else tr("Seal the agreement")
+	par["status"].text = tr("LLM node: %s · round %d of %d.%s") % [r.get("source", "?"), par["round"], PAR_ROUNDS, tr(" (Their reply was held to what the clan can bear.)") if checked.get("note", "") == "clamped" else ""]
+	par["propose"].disabled = false
+	par["busy"] = false
+
+func _par_seal() -> void:
+	var rp: Dictionary = par.get("reply", {})
+	if rp.is_empty() or rp["verdict"] == "refuse": return
+	var what: String = sim.rivals.seal(par["u"], par["id"], rp["terms"], par["round"])
+	_par_end(tr("Hands are clasped over the fire. Agreed with the %s: %s.") % [tr(sim.rivals.clans[par["id"]]["name"]), what])
+
+func _par_end(text: String) -> void:
+	sim.rivals.end_parley(par["u"], par["id"])
+	par = {}
+	var v := _open_modal("Outcome", 640)
+	var txt := _rich(0, true)
+	txt.text = text
+	v.add_child(txt)
+	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = false))

@@ -89,7 +89,16 @@ Two neighbouring clans live on the map: the martial **Red Ochre Clan** (east ban
 
 - **First contact.** The first time you see their people or homes, the game pauses for a choice: offer gifts (20 food, +20 relations), show strength (martial clans respect it, others take it as a threat) or keep your distance.
 - **Relations** run from -100 to 100 (Blood feud · Hostile · Wary · Friendly · Allied) and drift back toward each clan's temperament. They drop when you gather or scout on their hunting grounds, build near them, or attack or kill their people. Clans remember grudges.
-- **Raids.** Hostile clans send war bands (bigger and more often the deeper the feud, worse in winter) to the village or a running outpost. Raiders who reach an undefended camp steal food and carry it home over the ford. Defenders, the War Chief and contract `enemy_attack` aborts all treat them like beasts. With Challenges set to Off, there are no raids.
+- **Raids.** Hostile clans send war bands (bigger and more often the deeper the feud, worse in winter) to the village or a running outpost. Raiders who reach an undefended camp steal food and carry it home over the ford. Defenders, the War Chief and contract `enemy_attack` aborts all treat them like beasts. With Challenges set to Off, there are no raids or demands.
+- **Envoys and parley.** Send someone as envoy (person sheet → *Send as envoy…*, or *Envoy to …* in the clans panel). They walk to the clan's village, and when they arrive a parley opens with the rival chieftain's own LLM node.
+  - You offer a treaty (exchange of goods only, a peace pact, or hunting rights on their land), how many days it lasts, a daily food tribute, and what each side hands over. You can also say something in the envoy's voice.
+  - The chieftain accepts, refuses or counters, in character, for up to 5 rounds, and remembers grudges and treaties.
+  - The envoy matters: lore persuades everyone, martial clans respect combat skill, and the Heron welcome the devout.
+  - In a blood feud, the envoy may be beaten and driven off.
+  - The chieftain's reply is untrusted, just like contract blueprints. The treaty type is whitelisted, numbers are clamped, the tribe can't promise more than it has, and a deal that is far too generous for the clan is held to the deterministic engine's counter-offer.
+  - The offline chieftain uses the same valuation, so it plays fine without a cloud LLM.
+- **Treaties.** A peace pact stops raids and demands and halves trespass anger. Hunting rights remove trespass anger entirely. A daily tribute is paid from stores: miss one and the peace ends. Attacking or killing their people during a peace breaks it; they remember you as oath-breakers (-30 on top of the usual penalty).
+- **Demands.** Before a raid, a known clan often sends a runner demanding food. Pay, and they leave you alone for a while; refuse, and the war band comes now.
 - The **NEIGHBORING CLANS** panel shows each clan's stance and any war bands on the march. Personas know the clans you've met (stance, ways and grudges), in both negotiation and emergency prompts.
 
 ## Language
