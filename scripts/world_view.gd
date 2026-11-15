@@ -16,6 +16,9 @@ const GROUND := Transform2D(Vector2(IX, IY), Vector2(-IX, IY), Vector2.ZERO)
 const TEX_SCALE := 4 # terrain texture = world / 4 pixels
 
 var sim
+var art # ArtBaker (pre-rendered 3D sprites); old procedural drawing is the fallback
+var heading := {} # "u12" -> last screen-space movement direction
+var sprite_dirs: Array = [] # screen direction each of the 8 baked facings looks along
 var selected: Array = [] # unit ids
 var build_type := ""
 var drag_start: Variant = null # screen-space
@@ -26,6 +29,7 @@ var lights := {} # structure id -> PointLight2D
 var light_tex: GradientTexture2D
 var font: Font
 var terrain_tex: ImageTexture
+var minimap_tex: ImageTexture
 var fog_tex: ImageTexture
 var fog_img: Image
 var fog_refresh := 0.0
@@ -46,6 +50,8 @@ var ci: CanvasItem # canvas currently being drawn (world, an Item, or the Overla
 var ghost_m := Vector2.ZERO
 var ghost_why := ""
 var decor_root: Node2D
+var ground: Node2D
+var ground_fx: Node2D
 var objects: Node2D # y-sorted container: iso y == depth (x + y)
 var overlay: Node2D
 var items := {} # key -> Item
@@ -69,6 +75,10 @@ static func uniso(s: Vector2) -> Vector2:
 
 func setup(s) -> void:
 	sim = s
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	for d in 8: # a model yawed by d*45 deg faces world (sin, cos)
+		var yaw := deg_to_rad(d * 45.0)
+		sprite_dirs.append(iso(Vector2(sin(yaw), cos(yaw))).normalized())
 	ci = self
 	font = ThemeDB.fallback_font
 	cam = Camera2D.new()
@@ -89,6 +99,18 @@ func setup(s) -> void:
 	light_tex.width = 256
 	light_tex.height = 256
 	_build_terrain()
+	ground = Ground.new()
+	ground.wv = self
+	var gm := ShaderMaterial.new()
+	gm.shader = load("res://shaders/terrain.gdshader")
+	gm.set_shader_parameter("grass_tex", _noise_tex(7, 0.012, FastNoiseLite.TYPE_PERLIN, 5))
+	gm.set_shader_parameter("grain_tex", _noise_tex(19, 0.06, FastNoiseLite.TYPE_CELLULAR, 1))
+	gm.set_shader_parameter("world_size", Vector2(D.W, D.H))
+	ground.material = gm
+	add_child(ground)
+	ground_fx = GroundFX.new()
+	ground_fx.wv = self
+	add_child(ground_fx)
 	decor_root = Node2D.new()
 	add_child(decor_root)
 	objects = Node2D.new()
@@ -114,7 +136,7 @@ func _build_terrain() -> void:
 	fine.frequency = 0.05
 	var w := int(D.W / TEX_SCALE)
 	var h := int(D.H / TEX_SCALE)
-	var img := Image.create(w, h, false, Image.FORMAT_RGB8)
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	var g_west_a := Color("#6f8e3f")
 	var g_west_b := Color("#56763a")
 	var g_east_a := Color("#4d6a34")
@@ -134,9 +156,13 @@ func _build_terrain() -> void:
 			if dx < D.RIVER_HALF:
 				var k := dx / D.RIVER_HALF
 				c = deep.lerp(shallow, k * k)
-				if D.is_ford(p.y): c = ford.lerp(shallow, 0.3 * k).lerp(Color("#9a9682"), 0.35 * f)
+				c.a = 0.08 + 0.3 * k
+				if D.is_ford(p.y):
+					c = ford.lerp(shallow, 0.3 * k).lerp(Color("#9a9682"), 0.35 * f)
+					c.a = 0.4
 			elif dx < D.RIVER_HALF + 12 + 8 * n:
 				c = sand.lerp(Color("#8f8058"), f * 0.6)
+				c.a = 0.56
 			else:
 				var east := p.x > D.river_x(p.y)
 				c = (g_east_a.lerp(g_east_b, n) if east else g_west_a.lerp(g_west_b, n))
@@ -147,6 +173,9 @@ func _build_terrain() -> void:
 				if not east and n > 0.72: c = c.lerp(Color("#879b4a"), (n - 0.72) * 2.0)
 			img.set_pixel(i, j, c)
 	terrain_tex = ImageTexture.create_from_image(img)
+	var mini := img.duplicate() # minimap: same colours without the type data in alpha
+	mini.convert(Image.FORMAT_RGB8)
+	minimap_tex = ImageTexture.create_from_image(mini)
 	fog_img = Image.create(maxi(sim.fog_w, 1), maxi(sim.fog_h, 1), false, Image.FORMAT_LA8)
 	fog_tex = ImageTexture.create_from_image(fog_img)
 	_refresh_fog()
@@ -183,6 +212,7 @@ func _process(delta: float) -> void:
 	var vs := get_viewport_rect().size / cam.zoom.x
 	view = Rect2(cam.get_screen_center_position() - vs / 2, vs).grow(140)
 	_sync_items()
+	ground_fx.queue_redraw()
 	overlay.queue_redraw()
 	for u in sim.units: _track("u%d" % u.id, u.pos)
 	for p in sim.predators: _track("p%d" % p.id, p.pos)
@@ -192,6 +222,18 @@ func _process(delta: float) -> void:
 
 ## Fog of war as a tiny texture (one texel per fog cell), drawn through the iso transform
 ## with linear filtering so the edges are soft: black = unexplored, dim = explored, clear = in sight.
+## Seamless noise used as terrain detail (tiles without seams, mipmapped for distance).
+func _noise_tex(seed_v: int, freq: float, type: int, octaves: int) -> ImageTexture:
+	var n := FastNoiseLite.new()
+	n.seed = seed_v
+	n.noise_type = type
+	n.frequency = freq
+	n.fractal_octaves = octaves
+	var img := n.get_seamless_image(512, 512)
+	img.convert(Image.FORMAT_RGB8)
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
+
 func _refresh_fog() -> void:
 	var n: int = sim.fog_w * sim.fog_h
 	if n == 0: return
@@ -224,17 +266,43 @@ func _track(key: String, p: Vector2) -> void:
 		var dv: Vector2 = s - last_pos[key]
 		moving[key] = dv.length() > 0.05
 		if absf(dv.x) > 0.05: facing[key] = 1 if dv.x > 0 else -1
+		if dv.length() > 0.05: heading[key] = dv.normalized()
 	last_pos[key] = s
+
+## Pan keys we saw pressed *on the map*. Polling Input.is_key_pressed() is not safe: an
+## input method (e.g. Chinese Pinyin on macOS) can swallow the key-up of letters typed
+## into a text box, leaving S/D "held" forever and the camera drifting. A key only
+## counts if its press reached the map (not a text field); any release, a dialog or
+## losing window focus clears it.
+const PAN_KEYS := [KEY_A, KEY_D, KEY_W, KEY_S, KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]
+var pan_held := {}
+
+func _unhandled_key_input(ev: InputEvent) -> void:
+	var k := ev as InputEventKey
+	if k and k.pressed and k.keycode in PAN_KEYS and not k.ctrl_pressed and not k.meta_pressed:
+		pan_held[k.keycode] = true
+
+func _input(ev: InputEvent) -> void:
+	var k := ev as InputEventKey
+	if k and not k.pressed: pan_held.erase(k.keycode)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		pan_held.clear()
 
 func _pan_keys(delta: float) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
-	if focus is LineEdit or focus is TextEdit or focus is SpinBox: return
-	if blocked.is_valid() and blocked.call(): return # map is frozen behind dialogs
+	if focus is LineEdit or focus is TextEdit or focus is SpinBox:
+		pan_held.clear()
+		return
+	if blocked.is_valid() and blocked.call(): # map is frozen behind dialogs
+		pan_held.clear()
+		return
 	var v := Vector2.ZERO
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): v.x -= 1
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): v.x += 1
-	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): v.y -= 1
-	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): v.y += 1
+	if pan_held.has(KEY_A) or pan_held.has(KEY_LEFT): v.x -= 1
+	if pan_held.has(KEY_D) or pan_held.has(KEY_RIGHT): v.x += 1
+	if pan_held.has(KEY_W) or pan_held.has(KEY_UP): v.y -= 1
+	if pan_held.has(KEY_S) or pan_held.has(KEY_DOWN): v.y += 1
 	v += _edge_dir()
 	if v != Vector2.ZERO:
 		cam.position += v.normalized() * 800 * delta / cam.zoom.x
@@ -310,9 +378,16 @@ func _has_torch(u) -> bool:
 func _draw() -> void:
 	ci.draw_rect(Rect2(-3000, -2000, 7000, 5000), Color("#141210"))
 	_draw_slab()
-	# ---- ground pass (flat, through the iso transform, world coordinates)
+
+
+func draw_terrain() -> void:
 	ci.draw_set_transform_matrix(GROUND)
 	ci.draw_texture_rect(terrain_tex, Rect2(0, 0, D.W, D.H), false)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+## Flat things on the ground, above the terrain shader and below everything upright.
+func draw_ground_fx() -> void:
+	ci.draw_set_transform_matrix(GROUND)
 	ci.draw_texture_rect(wear_tex, Rect2(0, 0, sim.wear_w * sim.WEAR_CELL, sim.wear_h * sim.WEAR_CELL), false)
 	_draw_season_ground()
 	_draw_water_fx()
@@ -427,6 +502,11 @@ func _in_view(p: Vector2) -> bool:
 
 func _draw_landmark(lm: Dictionary) -> void:
 	var b := iso(lm["pos"])
+	if lm["kind"] in ["den", "cave", "stones", "peak"] and _sprite(lm["kind"] + _snowy(), b):
+		if lm["kind"] == "den":
+			ci.draw_circle(b + Vector2(-4, -6), 1.6, Color("#ffcf40", 0.6 + 0.4 * sin(t * 3)))
+			ci.draw_circle(b + Vector2(4, -6), 1.6, Color("#ffcf40", 0.6 + 0.4 * sin(t * 3)))
+		return
 	match lm["kind"]:
 		"cave", "den":
 			var den: bool = lm["kind"] == "den"
@@ -642,6 +722,7 @@ func _draw_post(b: Vector2, shown: bool, built: bool, style := 2) -> void:
 	if not shown:
 		ci.draw_circle(b, 2, Color(0.5, 0.4, 0.3, 0.35))
 		return
+	if _sprite("post%d%s" % [clampi(style, 1, 3), _snowy()], b): return
 	var h := 20.0 + 3.0 * style
 	ci.draw_line(b + Vector2(1, 0), b + Vector2(9, 3), Color(0, 0, 0, 0.18), 3)
 	if style >= 3:
@@ -654,8 +735,31 @@ func _draw_post(b: Vector2, shown: bool, built: bool, style := 2) -> void:
 	if style >= 3: ci.draw_line(b + Vector2(-4, -h * 0.75), b + Vector2(4, -h * 0.75), Color("#4a3018"), 1.5)
 
 # ------------------------------------------------------------ objects
+func _snowy() -> String:
+	return "_snow" if sim.hz.snow > 0.5 else ""
+
+## Draw a baked sprite with its ground anchor at screen point b. False if not baked.
+func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
+	if art == null or not art.has(key): return false
+	var sp: Dictionary = art.get_sprite(key)
+	var tex: Texture2D = sp["tex"]
+	var k: float = sc / art.BAKE_SCALE
+	ci.draw_texture_rect(tex, Rect2(b - sp["anchor"] * k, tex.get_size() * k), false, mod)
+	return true
+
 func _draw_node(n) -> void:
 	var b := iso(n.pos)
+	match n.kind:
+		"tree":
+			if _sprite(("pine_%d" if n.id % 3 != 2 else "leaf_%d") % (n.id % 4) + _snowy(), b, n.sz): return
+		"bush":
+			if _sprite(("bush_full" if n.amount >= 5 else "bush_bare") + _snowy(), b): return
+		"stump":
+			if _sprite("stump" + _snowy(), b): return
+		"deer":
+			if _beast_sprite("deer", "n%d" % n.id, b): return
+		"boulder":
+			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, clampf(n.amount / 40.0, 0.45, 1.0)): return
 	match n.kind:
 		"tree":
 			var s: float = n.sz
@@ -753,10 +857,20 @@ func _draw_structure(s) -> void:
 	var b := iso(s.pos)
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
+		if _sprite(s.type + _snowy(), b):
+			match s.type:
+				"smelter": _smoke(b - Vector2(-4, 36), s.id)
+				"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
+			return
 	match s.type:
 		"hut", "large_hut":
 			var big: bool = s.type == "large_hut"
 			var r := 27.0 if big else 20.0
+			if s.built and _sprite("%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()], b):
+				if sim.has_tech("fire"): _smoke(b - Vector2(0, (32 if s.style == 1 else 36) + (6 if big else 0)), s.id)
+				if s.reno: _scaffold(b, r)
+				return
 			if not s.built:
 				_round_house(b, r, 13 if big else 11, 30 if big else 24, Color("#9b7a52"), Color("#c9a24f"), frac, false)
 			elif s.style <= 1:
@@ -785,7 +899,7 @@ func _draw_structure(s) -> void:
 			if not s.built:
 				_logs(b, a)
 				return
-			_logs(b, 1.0)
+			if not _sprite("fire_base" + _snowy(), b): _logs(b, 1.0)
 			var fl := 1.0 + 0.18 * sin(t * 11 + s.id)
 			var fl2 := 1.0 + 0.22 * sin(t * 15 + s.id * 2.0)
 			_flame(b - Vector2(0, 3), 9 * fl, 26 * fl, Color("#e2541b"))
@@ -1008,7 +1122,10 @@ func _draw_unit(u) -> void:
 	if u.hero: _ell(b, 15 + sin(t * 4) * 1.5, 7.5, Color(1, 0.85, 0.3, 0.3))
 	if sel: _ell_line(b, 14, 7, Color("#ffe066"), 2)
 	if u.role == "contract": _ell_line(b, 11, 5.5, Color(0.55, 0.8, 1.0, 0.8), 1.5)
-	var busy: bool = u.act in ["Chopping wood", "Picking berries", "Butchering game", "Building", "Fighting"] or u.act.begins_with("Build")
+	var busy: bool = u.act in ["Chopping wood", "Picking berries", "Butchering game", "Building", "Fighting", "Quarrying stone"] or u.act.begins_with("Build") or u.act.begins_with("Renovating")
+	if art and art.has("man_idle_0_0"):
+		_draw_unit_sprite(u, b, key, walk, busy)
+		return
 	var bob := absf(sin(t * 12 + u.id)) * 1.5 if walk else 0.0
 	var skin := Color("#d9a77c")
 	# legs
@@ -1070,6 +1187,62 @@ func _draw_unit(u) -> void:
 			var k := fmod(t * 0.7 + i / 3.0, 1.0)
 			ci.draw_circle(b + Vector2(sin(t * 2 + i * 2) * 10, -10 - 30 * k), 1.8, Color(0.8, 0.7, 1, 1 - k))
 
+func _dir_index(key: String) -> int:
+	var dir: Vector2 = heading.get(key, Vector2(0.6, 0.8))
+	var di := 0
+	var best := -2.0
+	for i in sprite_dirs.size():
+		var dd: float = sprite_dirs[i].dot(dir)
+		if dd > best:
+			best = dd
+			di = i
+	return di
+
+## Pre-rendered animal: 8 facings, idle / 6-frame walk.
+func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
+	if art == null or not art.has(kind + "_idle_0_0"): return false
+	var di := _dir_index(key)
+	var name := "%s_idle_%d_0" % [kind, di]
+	if moving.get(key, false): name = "%s_walk_%d_%d" % [kind, di, int(t * 10.0 + key.hash() % 7) % 6]
+	return _sprite(name, b, sc)
+
+## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
+func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
+	var di := _dir_index(key)
+	var name := "man_idle_%d_0" % di
+	if busy: name = "man_work_%d_%d" % [di, int(t * 7.0 + u.id) % 4]
+	elif walk: name = "man_walk_%d_%d" % [di, int(t * 11.0 + u.id) % 8]
+	var k := 0.95
+	_sprite(name, b, k)
+	_sprite(name + "_cloth", b, k, u.color)
+	var head := b - Vector2(0, 23.5 * k)
+	var hip := b - Vector2(0, 10.0 * k)
+	var f: float = facing.get(key, 1)
+	if u.sick > 0:
+		ci.draw_circle(head, 3.6, Color(0.55, 0.85, 0.35, 0.4))
+		for i in 2:
+			var kk := fmod(t * 0.8 + i * 0.5, 1.0)
+			ci.draw_circle(head + Vector2(5 - i * 10, -5 - 12 * kk), 1.4, Color(0.6, 0.9, 0.4, 1.0 - kk))
+	if u.title != "":
+		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-3.5, -3), head + Vector2(-1, -9), head + Vector2(0, -3.5), head + Vector2(2, -10), head + Vector2(3.5, -3)]), Color("#e8c25a"))
+	if u.carry_amt > 0:
+		var bk := hip + Vector2(-5 * f, -6)
+		if u.carry_type == "wood":
+			ci.draw_line(bk + Vector2(-3, 3), bk + Vector2(3, -5), Color("#7a4e28"), 3)
+			ci.draw_line(bk + Vector2(-1, 4), bk + Vector2(5, -3), Color("#8a5a32"), 3)
+		elif u.carry_type == "stone":
+			ci.draw_circle(bk, 3.5, Color("#9a968c"))
+		else:
+			ci.draw_circle(bk, 3.5, Color("#b03a2e"))
+	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
+		_pack_ox(b + Vector2(-17 * f, 3), f, walk)
+	if _has_torch(u):
+		var th := hip + Vector2(-6 * f, -4)
+		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
+		_flame(th + Vector2(-2 * f, -14), 3, 9 * (1.0 + 0.2 * sin(t * 14 + u.id)), Color("#f8a531"))
+	if u.job.get("type", "") == "ritual" and u.act == "Performing ritual":
+		_ell_line(b - Vector2(0, 12), 16 + sin(t * 3) * 3, 8, Color(0.75, 0.6, 1.0, 0.6), 1.5)
+
 ## Stone before Polished Stone Tools is crude grey-brown; bronze once a smelter stands.
 func _blade_col() -> Color:
 	if sim.has_bronze(): return Color("#d49a3a")
@@ -1096,10 +1269,11 @@ func _draw_unit_overlay(u) -> void:
 func _draw_pred(p) -> void:
 	var b := iso(p.pos)
 	_scale_about(b, FIG_SCALE)
+	if p.raid: _ell_line(b, 20, 8, Color(1, 0.3, 0.2, 0.7), 2)
+	if _beast_sprite(p.kind, "p%d" % p.id, b, 1.15 / FIG_SCALE): return
 	if p.kind == "wolf":
 		_draw_wolf(p)
 		return
-	if p.raid: _ell_line(b, 20, 8, Color(1, 0.3, 0.2, 0.7), 2)
 	var key := "p%d" % p.id
 	var f: float = facing.get(key, 1)
 	var walk: bool = moving.get(key, false)
@@ -1306,6 +1480,20 @@ class Item extends Node2D:
 		wv.ci = self
 		draw_set_transform(-position)
 		wv.draw_item(kind, obj)
+		wv.ci = wv
+
+class Ground extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_terrain()
+		wv.ci = wv
+
+class GroundFX extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_ground_fx()
 		wv.ci = wv
 
 class Overlay extends Node2D:

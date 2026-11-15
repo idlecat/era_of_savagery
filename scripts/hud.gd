@@ -316,7 +316,7 @@ func _draw_minimap() -> void:
 	mm.draw_rect(Rect2(Vector2.ZERO, mm.size), Color("#141210"))
 	var xf := Transform2D(0.0, Vector2(k, k), 0.0, Vector2(D.H * WV.IX * k, 0)) * WV.GROUND
 	mm.draw_set_transform_matrix(xf)
-	mm.draw_texture_rect(world.terrain_tex, Rect2(0, 0, D.W, D.H), false)
+	mm.draw_texture_rect(world.minimap_tex, Rect2(0, 0, D.W, D.H), false)
 	if sim.fog_enabled: mm.draw_texture_rect(world.fog_tex, Rect2(0, 0, sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL), false)
 	mm.draw_set_transform_matrix(Transform2D.IDENTITY)
 	for st in sim.structures:

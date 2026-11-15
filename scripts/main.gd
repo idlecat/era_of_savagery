@@ -7,6 +7,7 @@ const WorldView = preload("res://scripts/world_view.gd")
 const HUD = preload("res://scripts/hud.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const I = preload("res://scripts/i18n.gd")
+const ArtBaker = preload("res://scripts/art_baker.gd")
 
 const STEP := 0.05
 
@@ -14,6 +15,8 @@ var sim
 var world
 var hud
 var llm
+var art
+var ready_done := false
 
 func _ready() -> void:
 	randomize()
@@ -21,6 +24,12 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--lang="): lang = arg.trim_prefix("--lang=")
 	I.setup(lang)
+	art = ArtBaker.new()
+	add_child(art)
+	var loading := _loading_screen()
+	art.progress.connect(func(d, n): loading.get_child(0).text = tr("Forging the world… %d%%  (first launch only)") % (100 * d / n))
+	await art.prepare()
+	loading.queue_free()
 	sim = Sim.new()
 	sim.new_game()
 	llm = LLM.new()
@@ -28,14 +37,26 @@ func _ready() -> void:
 	add_child(llm)
 	world = WorldView.new()
 	add_child(world)
+	world.art = art
 	world.setup(sim)
 	hud = HUD.new()
 	add_child(hud)
 	hud.setup(sim, world, llm)
 	world.blocked = hud.modal_open
+	ready_done = true
+
+func _loading_screen() -> CanvasLayer:
+	var cl := CanvasLayer.new()
+	var l := Label.new()
+	l.text = tr("Forging the world…")
+	l.set_anchors_preset(Control.PRESET_CENTER)
+	l.add_theme_font_size_override("font_size", 26)
+	cl.add_child(l)
+	add_child(cl)
+	return cl
 
 func _process(delta: float) -> void:
-	if sim.paused or hud.modal_open(): return
+	if not ready_done or sim.paused or hud.modal_open(): return
 	var dt: float = minf(delta, 0.1) * sim.speed
 	var n := ceili(dt / STEP)
 	for i in n:
@@ -44,7 +65,7 @@ func _process(delta: float) -> void:
 
 func _unhandled_key_input(ev: InputEvent) -> void:
 	var k := ev as InputEventKey
-	if k == null or not k.pressed or k.echo: return
+	if k == null or not k.pressed or k.echo or not ready_done: return
 	# Fullscreen toggle: F11, Alt+Enter, or the macOS standard Cmd+Ctrl+F
 	if k.keycode == KEY_F11 or (k.keycode == KEY_ENTER and k.alt_pressed) or (k.keycode == KEY_F and k.meta_pressed and k.ctrl_pressed):
 		toggle_fullscreen()
@@ -81,6 +102,7 @@ func _enter_tree() -> void:
 
 func _debug_shot(args: Dictionary) -> void:
 	await get_tree().process_frame
+	while not ready_done: await get_tree().process_frame
 	var fast := float(args.get("fast", "0"))
 	if fast > 0:
 		hud._close_modal()

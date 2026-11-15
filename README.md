@@ -56,6 +56,19 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
 
+## Graphics pipeline (pre-rendered 3D sprites)
+
+Like Age of Empires II, objects are modelled in 3D and rendered to sprites. On first launch, `scripts/art_baker.gd` builds low-poly models in code and renders them through an orthographic camera that exactly matches the map's 2:1 isometric projection. Each render gets:
+- a sun with soft shadows caught on an invisible ground plane;
+- ambient occlusion;
+- textured materials (`shaders/bake.gdshader`): triplanar noise for bark, thatch, hide and stone, plus snow on upward-facing surfaces.
+
+About 500 sprites take a few seconds to bake and are cached in `user://art_cache_v<N>`. Bump `ART_VERSION` after changing a model.
+- **Baked so far:** trees (pine and broadleaf, each with a snowy version), bushes, stumps, rocks; homes for all three eras in two sizes; palisade posts; bonfire, granary, smelter, council ring, totem shrine, Grand Altar, weapon rack, aurochs pen; cave, den, standing stones and Eagle Peak landmarks.
+- **Animated in 8 directions:** villagers (idle, walk, work; clothing tinted per person) and animals (deer, tiger, wolf).
+- **Terrain:** drawn by `shaders/terrain.gdshader` (grass detail, sand grain, rippling water, shoreline foam).
+- **Fallback:** anything not yet baked falls back to the old drawn art, which is also used when running headless.
+
 ## Hardships (Challenges: Off / Normal / Harsh in LLM Settings)
 
 - **Seasons:** each lasts 2 days. Spring has fast berries, summer spoils food faster, autumn brings the harvest and a warning. In winter there are no berries or crops, half the herds migrate, people eat 25% more and the cold can kill. You need stores, fires and Hide Tailoring.
@@ -134,6 +147,8 @@ scripts/evolution.gd        knowledge (practice, inventors, oral tradition), cul
 scripts/i18n.gd             language switching, CJK font fallback, activity text
 scripts/lang_zh.gd          Simplified Chinese strings (keys = English text)
 scripts/hazards.gd          seasons, weather, wolves & raids, sickness, famine, alerts
+scripts/art_baker.gd        3D models -> cached isometric sprites (lighting, shadows, AO)
+shaders/                    terrain, bake material, shadow catcher
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
 scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)
