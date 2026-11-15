@@ -1135,7 +1135,8 @@ func _draw_unit(u) -> void:
 	# torso (fur tunic)
 	var hip := b + Vector2(0, -8 - bob)
 	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
-		_pack_ox(b + Vector2(-17 * f, 3), f, walk)
+		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 18.0
+		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * f, 3), f, walk)
 	if sim.has_tech("hide"): # fur cloak behind the body
 		ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(-6, -12), hip + Vector2(6, -12), hip + Vector2(-4 * f + 5 * f, 2), hip + Vector2(-8 * f, 1)]), Color("#7a5a3a"))
 	ci.draw_colored_polygon(PackedVector2Array([hip + Vector2(-5, 1), hip + Vector2(5, 1), hip + Vector2(4, -12), hip + Vector2(-4, -12)]), u.color)
@@ -1235,7 +1236,8 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 		else:
 			ci.draw_circle(bk, 3.5, Color("#b03a2e"))
 	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
-		_pack_ox(b + Vector2(-17 * f, 3), f, walk)
+		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 18.0
+		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * f, 3), f, walk)
 	if _has_torch(u):
 		var th := hip + Vector2(-6 * f, -4)
 		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)

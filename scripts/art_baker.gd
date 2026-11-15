@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 5
+const ART_VERSION := 7
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -201,6 +201,15 @@ func mi(parent: Node3D, mesh: Mesh, m: Material, pos: Vector3, rot := Vector3.ZE
 	parent.add_child(n)
 	return n
 
+## A round stick from a to b (branches, seams, poles).
+func segment(parent: Node3D, a: Vector3, b: Vector3, r: float, m: Material) -> MeshInstance3D:
+	var d := b - a
+	var n := mi(parent, cyl(r * 0.8, r, d.length(), 6), m, (a + b) / 2)
+	var up := d.normalized()
+	var axis := Vector3.UP.cross(up)
+	if axis.length() > 0.001: n.basis = Basis(axis.normalized(), Vector3.UP.angle_to(up))
+	return n
+
 func cyl(r_top: float, r_bot: float, h: float, seg := 12) -> CylinderMesh:
 	var c := CylinderMesh.new()
 	c.top_radius = r_top
@@ -266,7 +275,7 @@ func _jobs() -> Array:
 		jobs.append({"key": "stones" + sfx, "size": 224, "lift": 12.0, "build": _stones.bind(snowy)})
 		jobs.append({"key": "peak" + sfx, "size": 320, "lift": 45.0, "build": _peak.bind(snowy)})
 	# animals: 8 directions x (idle + walk)
-	for kind in ["deer", "tiger", "wolf"]:
+	for kind in ["deer", "tiger", "wolf", "packox"]:
 		for d in DIRS:
 			jobs.append({"key": "%s_idle_%d_0" % [kind, d], "size": 128, "lift": 10.0, "build": _beast.bind(kind, d * 360.0 / DIRS, 0.0, false)})
 			for f in 6:
@@ -288,83 +297,196 @@ func _pine(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 100 + v
-	var bark := mat(Color("#5e3d22"), "streak", 0.12, Vector3(1, 5, 1))
-	var leaf := mat(Color("#2f5a2e") if v % 2 == 0 else Color("#2a5232"), "fine", 0.18, Vector3.ONE, 0.5, 0.85 if snowy else 0.0)
-	mi(root, cyl(1.6, 2.6, 18, 8), bark, Vector3(0, 9, 0))
-	var h := 12.0
-	for i in 4:
-		var r := 15.0 - i * 3.2 + rng.randf_range(-1, 1)
-		var ch := 15.0 - i * 1.5
-		mi(root, cyl(0.0, r, ch, 9), leaf, Vector3(rng.randf_range(-0.8, 0.8), h + ch / 2, rng.randf_range(-0.8, 0.8)), Vector3(rng.randf_range(-4, 4), rng.randf_range(0, 40), rng.randf_range(-4, 4)))
-		h += 8.5
+	var bark := mat(Color("#5a3a20"), "streak", 0.14, Vector3(1, 5, 1), 0.55)
+	root.rotation_degrees = Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)) # trees lean a little
+	mi(root, cyl(1.5, 2.4, 20, 8), bark, Vector3(0, 10, 0))
+	mi(root, cyl(2.4, 4.2, 3, 8), bark, Vector3(0, 1.5, 0)) # root flare
+	var dark := Color("#24472a") if v % 2 == 0 else Color("#203f2c")
+	var lite := Color("#3d6e3a") if v % 2 == 0 else Color("#3a6a40")
+	var tiers := 6
+	var h := 9.0
+	for i in tiers:
+		var k := float(i) / (tiers - 1)
+		var r := lerpf(15.5, 4.0, k) + rng.randf_range(-1.2, 1.2)
+		var ch := lerpf(11.0, 9.0, k)
+		var leaf := mat(dark.lerp(lite, k * 0.8), "fine", 0.2, Vector3.ONE, 0.6, 0.85 if snowy else 0.0)
+		mi(root, cyl(0.0, r, ch, 7 + (i % 2)), leaf, Vector3(rng.randf_range(-0.9, 0.9), h + ch / 2, rng.randf_range(-0.9, 0.9)),
+			Vector3(rng.randf_range(-6, 6), rng.randf_range(0, 50), rng.randf_range(-6, 6)), Vector3(1, 1, rng.randf_range(0.85, 1.1)))
+		h += lerpf(6.0, 4.5, k)
+	mi(root, cyl(0.0, 1.6, 6, 6), mat(lite, "fine", 0.2, Vector3.ONE, 0.5, 0.85 if snowy else 0.0), Vector3(0, h + 5, 0))
 	return root
 
+## Broadleaf: a gnarled, forked trunk with branches and many leaf clusters.
 func _leafy(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 200 + v
-	var bark := mat(Color("#6b4a2c"), "streak", 0.12, Vector3(1, 5, 1))
-	var leaf := mat(Color("#3e7a35") if v % 2 == 0 else Color("#4a8038"), "fine", 0.16, Vector3.ONE, 0.55, 0.8 if snowy else 0.0)
-	mi(root, cyl(1.8, 2.8, 22, 8), bark, Vector3(0, 11, 0))
-	mi(root, cyl(0.8, 1.2, 10, 6), bark, Vector3(3, 19, 1), Vector3(0, 0, -35))
-	for i in 7:
-		var a := i * TAU / 7.0 + rng.randf()
-		var r := rng.randf_range(7.5, 10.5)
-		mi(root, sph(r, 10, 6), leaf, Vector3(cos(a) * 7.0, 27 + rng.randf_range(-3, 5), sin(a) * 7.0))
-	mi(root, sph(11, 10, 6), leaf, Vector3(0, 33, 0))
+	var bark := mat(Color("#654429"), "streak", 0.14, Vector3(1, 5, 1), 0.6)
+	mi(root, cyl(2.4, 4.4, 3, 8), bark, Vector3(0, 1.5, 0))
+	mi(root, cyl(1.9, 2.6, 12, 8), bark, Vector3(0, 7.5, 0), Vector3(0, 0, rng.randf_range(-6, 6)))
+	var tips: Array = []
+	for i in 3: # main forks
+		var a := i * TAU / 3 + rng.randf()
+		var tilt := rng.randf_range(22, 38)
+		var lenb := rng.randf_range(11, 15)
+		var dir := Vector3(cos(a) * sin(deg_to_rad(tilt)), cos(deg_to_rad(tilt)), sin(a) * sin(deg_to_rad(tilt)))
+		var tip := Vector3(0, 13, 0) + dir * lenb
+		segment(root, Vector3(0, 12.5, 0), tip, 1.2, bark)
+		segment(root, tip - dir * 4.0, tip + Vector3(-dir.z, 0.6, dir.x) * 5.0, 0.6, bark) # a side branch
+		tips.append(tip)
+	var greens := [Color("#3a7333"), Color("#4a8238"), Color("#356a30"), Color("#55893c")]
+	for t in tips:
+		for j in 5:
+			var r := rng.randf_range(4.5, 7.0)
+			var off := Vector3(rng.randf_range(-6, 6), rng.randf_range(-2, 5), rng.randf_range(-6, 6))
+			var leaf := mat(greens[(j + v) % 4], "fine", 0.2, Vector3.ONE, 0.6, 0.8 if snowy else 0.0)
+			mi(root, sph(r, 9, 6), leaf, t + off, Vector3(rng.randf_range(0, 40), rng.randf_range(0, 360), 0), Vector3(1, rng.randf_range(0.75, 1.0), 1))
+	mi(root, sph(8, 10, 6), mat(greens[v % 4], "fine", 0.2, Vector3.ONE, 0.6, 0.8 if snowy else 0.0), Vector3(0, 30, 0), Vector3.ZERO, Vector3(1, 0.8, 1))
 	return root
 
 func _bush(full: bool, snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	var leaf := mat(Color("#3b6a2e"), "fine", 0.2, Vector3.ONE, 0.5, 0.8 if snowy else 0.0)
-	for p in [Vector3(-4, 5, 2), Vector3(4, 5, -1), Vector3(0, 8, 0), Vector3(1, 5, 4)]:
-		mi(root, sph(6.5, 9, 6), leaf, p)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 400
+	for i in 7:
+		var a := i * TAU / 7
+		var leaf := mat([Color("#3b6a2e"), Color("#46763a"), Color("#33602a")][i % 3], "fine", 0.22, Vector3.ONE, 0.55, 0.8 if snowy else 0.0)
+		mi(root, sph(rng.randf_range(3.5, 5.0), 8, 5), leaf, Vector3(cos(a) * 5, rng.randf_range(3.5, 6.5), sin(a) * 5))
+	mi(root, sph(5.5, 9, 6), mat(Color("#41702f"), "fine", 0.22, Vector3.ONE, 0.55, 0.8 if snowy else 0.0), Vector3(0, 7, 0))
 	if full:
 		var berry := mat(Color("#c8283a"), "fine", 0.3, Vector3.ONE, 0.2)
-		for i in 12:
+		for i in 16:
 			var a := i * 2.4
-			mi(root, sph(1.2, 6, 4), berry, Vector3(cos(a) * 6.5, 5 + (i % 3) * 2.5, sin(a) * 6.5))
+			mi(root, sph(1.1, 6, 4), berry, Vector3(cos(a) * rng.randf_range(5.5, 7.5), rng.randf_range(3.5, 10), sin(a) * rng.randf_range(5.5, 7.5)))
 	return root
 
 func _stump(snowy: bool) -> Node3D:
 	var root := Node3D.new()
-	mi(root, cyl(3.4, 4.0, 5, 9), mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1)), Vector3(0, 2.5, 0))
-	mi(root, cyl(3.4, 3.4, 0.4, 9), mat(Color("#c09060") if not snowy else Color("#eef2f8"), "fine", 0.4), Vector3(0, 5.1, 0))
+	var bark := mat(Color("#6b4a2a"), "streak", 0.2, Vector3(1, 4, 1))
+	mi(root, cyl(3.4, 4.0, 5, 9), bark, Vector3(0, 2.5, 0))
+	mi(root, cyl(4.0, 5.2, 1.6, 9), bark, Vector3(0, 0.8, 0))
+	mi(root, cyl(3.3, 3.3, 0.4, 9), mat(Color("#c09060") if not snowy else Color("#eef2f8"), "fine", 0.5), Vector3(0, 5.1, 0))
+	mi(root, cyl(0.25, 0.25, 6, 4), mat(Color("#cfc0a0"), "fine"), Vector3(4, 0.6, 2), Vector3(0, 30, 85)) # a chip of wood
 	return root
 
 func _rocks(v: int, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 300 + v
-	var stone: Material = mat(Color("#8b877d"), "coarse", 0.15, Vector3.ONE, 0.6, 0.7 if snowy else 0.0)
+	var stone := mat(Color("#8b877d"), "coarse", 0.15, Vector3.ONE, 0.6, 0.7 if snowy else 0.0)
+	var dark := mat(Color("#6f6b62"), "coarse", 0.15, Vector3.ONE, 0.6, 0.7 if snowy else 0.0)
+	var moss := mat(Color("#5d7a3a"), "fine", 0.3, Vector3.ONE, 0.5, 0.7 if snowy else 0.0)
 	for i in 3 + v:
-		var s := rng.randf_range(4, 8.5)
-		mi(root, sph(s, 7, 5), stone, Vector3(rng.randf_range(-9, 9), s * 0.45, rng.randf_range(-7, 7)), Vector3(rng.randf_range(0, 60), rng.randf_range(0, 360), 0), Vector3(1.0, rng.randf_range(0.6, 1.0), rng.randf_range(0.7, 1.2)))
+		var sc := rng.randf_range(4, 8.5)
+		var pos := Vector3(rng.randf_range(-9, 9), sc * 0.45, rng.randf_range(-7, 7))
+		mi(root, sph(sc, 6, 4), stone if i % 2 == 0 else dark, pos, Vector3(rng.randf_range(0, 60), rng.randf_range(0, 360), 0), Vector3(1.0, rng.randf_range(0.6, 1.0), rng.randf_range(0.7, 1.2)))
+		if i % 2 == 1: mi(root, sph(sc * 0.55, 6, 3), moss, pos + Vector3(0, sc * 0.45, 0), Vector3.ZERO, Vector3(1, 0.3, 1))
+	for i in 5: # pebbles
+		mi(root, sph(rng.randf_range(0.8, 1.6), 5, 3), stone, Vector3(rng.randf_range(-13, 13), 0.4, rng.randf_range(-10, 10)))
 	return root
+
+# ---- village props (placed beside homes)
+func _woodpile(parent: Node3D, pos: Vector3, yaw := 0.0) -> void:
+	var pile := Node3D.new()
+	pile.position = pos
+	pile.rotation_degrees.y = yaw
+	parent.add_child(pile)
+	var lg := mat(Color("#6e4b2a"), "streak", 0.25, Vector3(4, 1, 1), 0.5)
+	var end := mat(Color("#c8a070"), "fine", 0.4, Vector3.ONE, 0.3)
+	for row in 3:
+		for i in 4 - row:
+			var p := Vector3(-3.6 + i * 2.4 + row * 1.2, 1.1 + row * 2.0, 0)
+			mi(pile, cyl(1.1, 1.1, 9, 7), lg, p, Vector3(90, 0, 0))
+			mi(pile, cyl(1.0, 1.0, 0.2, 7), end, p + Vector3(0, 0, 4.55), Vector3(90, 0, 0))
+
+func _pot(parent: Node3D, pos: Vector3, sc := 1.0) -> void:
+	var clay := mat(Color("#a8623a"), "fine", 0.3, Vector3.ONE, 0.35)
+	mi(parent, sph(2.2 * sc, 9, 6), clay, pos + Vector3(0, 2.0 * sc, 0), Vector3.ZERO, Vector3(1, 0.95, 1))
+	mi(parent, cyl(1.1 * sc, 1.3 * sc, 1.4 * sc, 9), clay, pos + Vector3(0, 4.2 * sc, 0))
+	mi(parent, cyl(1.5 * sc, 1.2 * sc, 0.5 * sc, 9), mat(Color("#8a4a2a"), "fine", 0.3), pos + Vector3(0, 5.0 * sc, 0))
+
+func _drying_rack(parent: Node3D, pos: Vector3, yaw: float) -> void:
+	var rack := Node3D.new()
+	rack.position = pos
+	rack.rotation_degrees.y = yaw
+	parent.add_child(rack)
+	var wood := mat(Color("#6b4524"), "streak", 0.25, Vector3(1, 4, 1))
+	for side in [-1, 1]: mi(rack, cyl(0.45, 0.5, 11, 5), wood, Vector3(side * 5, 5.5, 0))
+	mi(rack, cyl(0.4, 0.4, 11, 5), wood, Vector3(0, 10.5, 0), Vector3(0, 0, 90))
+	mi(rack, box(Vector3(8, 7, 0.4)), mat(Color("#c09a6a"), "coarse", 0.3, Vector3.ONE, 0.5), Vector3(0, 6.8, 0), Vector3(0, 0, 4)) # a stretched hide
+
+## Thatch tufts hanging round an eave (small downward cones).
+func _fringe(parent: Node3D, y: float, r: float, n: int, col: Color, snowy: bool) -> void:
+	var m := mat(col.darkened(0.12), "streak", 0.3, Vector3(1, 4, 1), 0.5, 0.4 if snowy else 0.0)
+	for i in n:
+		var a := (i + 0.5) * TAU / n
+		mi(parent, cyl(1.5, 0.0, 4.0, 5), m, Vector3(cos(a) * r, y - 1.5, sin(a) * r), Vector3(0, -rad_to_deg(a), 0))
 
 # ---- homes
 func _tent(big: bool, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var r := 22.0 if big else 17.0
 	var h := 36.0 if big else 30.0
-	var hide := mat(Color("#b48a5c"), "coarse", 0.1, Vector3(1, 3, 1), 0.4, 0.6 if snowy else 0.0)
+	var hide := mat(Color("#b48a5c"), "coarse", 0.1, Vector3(1, 3, 1), 0.45, 0.6 if snowy else 0.0)
+	var seam := mat(Color("#7a5a38"), "fine", 0.3)
 	mi(root, cyl(0.6, r, h, 10), hide, Vector3(0, h / 2, 0))
+	for i in 5: # sewn seams running up the hide panels
+		var a := (i + 0.5) * TAU / 5
+		segment(root, Vector3(cos(a) * (r + 0.3), 0.2, sin(a) * (r + 0.3)), Vector3(0, h - 0.5, 0), 0.35, seam)
 	var pole := mat(Color("#5e3d22"), "streak", 0.2, Vector3(1, 4, 1))
-	for i in 5:
-		var a := i * TAU / 5
-		mi(root, cyl(0.5, 0.6, 12, 5), pole, Vector3(cos(a) * 1.5, h + 3, sin(a) * 1.5), Vector3(rad_to_deg(sin(a)) * 0.35, 0, -rad_to_deg(cos(a)) * 0.35))
-	mi(root, box(Vector3(7, h * 0.5, 1.0)), mat(Color("#3a2414"), "fine"), Vector3(0, h * 0.24, r * 0.72), Vector3(-28, 0, 0))
+	for i in 6:
+		var a := i * TAU / 6
+		mi(root, cyl(0.5, 0.6, 13, 5), pole, Vector3(cos(a) * 1.6, h + 3.5, sin(a) * 1.6), Vector3(rad_to_deg(sin(a)) * 0.4, 0, -rad_to_deg(cos(a)) * 0.4))
+	# open door flap and stones weighing down the hem
+	mi(root, box(Vector3(8, h * 0.45, 1.0)), mat(Color("#2a1a0e"), "fine"), Vector3(0, h * 0.22, r * 0.74), Vector3(-30, 0, 0))
+	mi(root, box(Vector3(5, h * 0.4, 0.6)), hide, Vector3(5, h * 0.2, r * 0.8), Vector3(-30, 25, -10))
+	var stone := mat(Color("#8b877d"), "coarse", 0.25, Vector3.ONE, 0.5, 0.6 if snowy else 0.0)
+	for i in 12:
+		var a := i * TAU / 12 + 0.2
+		if absf(a - PI / 2) < 0.4: continue
+		mi(root, sph(1.6, 6, 4), stone, Vector3(cos(a) * (r + 0.6), 0.8, sin(a) * (r + 0.6)), Vector3.ZERO, Vector3(1, 0.7, 1))
+	_drying_rack(root, Vector3(-r - 6, 0, 4), 70)
+	_woodpile(root, Vector3(r + 2, 0, -8), 20)
 	return root
 
 func _round_hut(big: bool, snowy: bool) -> Node3D:
 	var root := Node3D.new()
 	var r := 25.0 if big else 19.0
-	var wall := mat(Color("#9b7a52"), "coarse", 0.12, Vector3.ONE, 0.5)
-	var thatch := mat(Color("#c9a24f"), "streak", 0.18, Vector3(1, 6, 1), 0.6, 0.85 if snowy else 0.0)
+	var wall := mat(Color("#9b7a52"), "coarse", 0.12, Vector3.ONE, 0.55)
+	var post := mat(Color("#6b4524"), "streak", 0.2, Vector3(1, 4, 1), 0.5)
+	var thatch_col := Color("#b8944c")
+	var thatch := mat(thatch_col, "streak", 0.2, Vector3(1, 6, 1), 0.65, 0.85 if snowy else 0.0)
 	var wh := 13.0 if big else 11.0
-	mi(root, cyl(r, r, wh, 16), wall, Vector3(0, wh / 2, 0))
-	mi(root, cyl(0.5, r * 1.22, (31.0 if big else 25.0), 16), thatch, Vector3(0, wh + (15.5 if big else 12.5), 0))
-	mi(root, box(Vector3(7, 9, 2)), mat(Color("#2a1a0e"), "fine"), Vector3(-r * 0.2, 4.5, r * 0.95), Vector3(0, -12, 0))
+	var rh := 31.0 if big else 25.0
+	mi(root, cyl(r, r + 0.6, wh, 18), wall, Vector3(0, wh / 2, 0))
+	mi(root, cyl(r + 0.8, r + 1.0, 1.4, 18), mat(Color("#7a6040"), "coarse", 0.2), Vector3(0, 0.7, 0)) # plinth
+	for i in 10: # wall posts
+		var a := i * TAU / 10 + 0.15
+		mi(root, cyl(0.8, 0.9, wh + 1, 5), post, Vector3(cos(a) * (r + 0.3), wh / 2, sin(a) * (r + 0.3)))
+	# two-layer thatch with a fringe at the eave and a bound knot over the smoke hole
+	mi(root, cyl(r * 0.55, r * 1.24, rh * 0.6, 18), thatch, Vector3(0, wh + rh * 0.3, 0))
+	mi(root, cyl(0.6, r * 0.62, rh * 0.5, 16), mat(thatch_col.lightened(0.06), "streak", 0.2, Vector3(1, 6, 1), 0.65, 0.85 if snowy else 0.0), Vector3(0, wh + rh * 0.6 + rh * 0.23, 0))
+	_fringe(root, wh + 0.2, r * 1.22, 26, thatch_col, snowy)
+	var rib := mat(thatch_col.darkened(0.3), "streak", 0.3, Vector3(1, 4, 1), 0.4, 0.5 if snowy else 0.0)
+	for i in 16: # bundle ribs down the roof
+		var a := (i + 0.5) * TAU / 16
+		segment(root, Vector3(cos(a) * r * 1.2, wh + 0.8, sin(a) * r * 1.2), Vector3(cos(a) * 1.0, wh + rh * 0.98, sin(a) * 1.0), 0.45, rib)
+	mi(root, cyl(1.2, 1.8, 3.5, 7), mat(Color("#8a6a30"), "streak", 0.3, Vector3(1, 3, 1)), Vector3(0, wh + rh * 1.06, 0))
+	mi(root, cyl(1.9, 1.9, 0.8, 7), post, Vector3(0, wh + rh * 1.0, 0))
+	# door: posts, lintel and a hide curtain
+	var door_a := deg_to_rad(45.0) # faces the camera
+	var dpos := Vector3(cos(door_a) * (r + 0.4), 0, sin(door_a) * (r + 0.4))
+	var door := Node3D.new()
+	door.position = dpos
+	door.rotation_degrees.y = -rad_to_deg(door_a) + 90
+	root.add_child(door)
+	mi(door, box(Vector3(6.5, 9.5, 2.0)), mat(Color("#1e140a"), "fine"), Vector3(0, 4.75, 0.2))
+	for side in [-1, 1]: mi(door, cyl(0.6, 0.6, 10, 5), post, Vector3(side * 3.8, 5, 0.6))
+	mi(door, cyl(0.55, 0.55, 9, 5), post, Vector3(0, 10, 0.6), Vector3(0, 0, 90))
+	mi(door, box(Vector3(3.2, 7.5, 0.3)), mat(Color("#a07a50"), "coarse", 0.3, Vector3.ONE, 0.4), Vector3(-1.4, 5.2, 0.9), Vector3(0, 0, -6))
+	_woodpile(root, Vector3(r * 0.85, 0, -r * 0.6), 40)
+	_pot(root, Vector3(-r * 0.2, 0, r + 4))
+	_pot(root, Vector3(-r * 0.2 - 4.5, 0, r + 2.5), 0.8)
 	return root
 
 func _longhouse(big: bool, snowy: bool) -> Node3D:
@@ -372,19 +494,54 @@ func _longhouse(big: bool, snowy: bool) -> Node3D:
 	var r := 26.0 if big else 20.0
 	var length := r * 2.5
 	var depth := r * 1.4
-	var stone := mat(Color("#8f8b82"), "coarse", 0.18, Vector3.ONE, 0.6)
-	var timber := mat(Color("#8a5f3a"), "streak", 0.14, Vector3(6, 1, 1), 0.5)
-	var roof := mat(Color("#a8823e"), "streak", 0.16, Vector3(1, 1, 6), 0.55, 0.9 if snowy else 0.0)
-	mi(root, box(Vector3(length + 6, 5, depth + 6)), stone, Vector3(0, 2.5, 0))
-	mi(root, box(Vector3(length, 14, depth)), timber, Vector3(0, 12, 0))
+	var stone := mat(Color("#8f8b82"), "coarse", 0.2, Vector3.ONE, 0.6, 0.5 if snowy else 0.0)
+	var stone2 := mat(Color("#7a766e"), "coarse", 0.2, Vector3.ONE, 0.6, 0.5 if snowy else 0.0)
+	var plank_a := mat(Color("#8a5f3a"), "streak", 0.16, Vector3(1, 6, 1), 0.55)
+	var plank_b := mat(Color("#7a5232"), "streak", 0.16, Vector3(1, 6, 1), 0.55)
+	var beam := mat(Color("#5a3a20"), "streak", 0.16, Vector3(6, 1, 1), 0.5)
+	var roof_col := Color("#9c7a3e")
+	var roof := mat(roof_col, "streak", 0.18, Vector3(1, 1, 6), 0.6, 0.9 if snowy else 0.0)
+	# footing of individual stones
+	mi(root, box(Vector3(length + 4, 3, depth + 4)), stone2, Vector3(0, 1.5, 0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 55
+	for side in [-1, 1]:
+		for i in int(length / 5.5):
+			var x := -length / 2 + 2.5 + i * 5.5
+			mi(root, sph(2.8, 6, 4), stone if i % 2 == 0 else stone2, Vector3(x, 3.4, side * (depth / 2 + 2.2)), Vector3(0, rng.randf_range(0, 90), 0), Vector3(1.1, 0.7, 0.9))
+	# vertical plank walls with corner posts and a sill beam
+	mi(root, box(Vector3(length - 1, 14, depth - 1)), plank_b, Vector3(0, 11.5, 0))
+	var n := int(length / 3.4)
+	for side in [-1, 1]:
+		for i in n:
+			var x := -length / 2 + 1.7 + i * 3.4
+			mi(root, box(Vector3(3.1, 14, 0.9)), plank_a if i % 2 == 0 else plank_b, Vector3(x, 11.5, side * depth / 2), Vector3(0, 0, rng.randf_range(-0.8, 0.8)))
+		mi(root, box(Vector3(length + 1, 1.4, 1.6)), beam, Vector3(0, 5, side * (depth / 2 + 0.3)))
+	for sx in [-1, 1]:
+		for sz in [-1, 1]: mi(root, box(Vector3(2.4, 16, 2.4)), beam, Vector3(sx * length / 2, 12.5, sz * depth / 2))
+	# roof: thatch prism with overhang, ridge beam, fringes along both eaves, crossed gable horns
 	var pr := PrismMesh.new()
-	pr.size = Vector3(depth + 8, 20, length + 8)
+	pr.size = Vector3(depth + 10, 21, length + 9)
 	mi(root, pr, roof, Vector3(0, 29, 0), Vector3(0, 90, 0))
+	mi(root, cyl(1.0, 1.0, length + 10, 6), beam, Vector3(0, 39.6, 0), Vector3(0, 0, 90))
+	var fringe := mat(roof_col.darkened(0.12), "streak", 0.3, Vector3(1, 4, 1), 0.5, 0.4 if snowy else 0.0)
+	for side in [-1, 1]:
+		for i in int((length + 8) / 3.0):
+			mi(root, cyl(1.4, 0.0, 3.5, 5), fringe, Vector3(-length / 2 - 4 + i * 3.0, 17.5, side * (depth / 2 + 5)))
 	var red := mat(Color("#b03a2b"), "fine", 0.2)
 	for side in [-1, 1]:
-		mi(root, box(Vector3(1.6, 12, 1.6)), red, Vector3(side * (length / 2 + 4), 40, 3), Vector3(30, 0, 0))
-		mi(root, box(Vector3(1.6, 12, 1.6)), red, Vector3(side * (length / 2 + 4), 40, -3), Vector3(-30, 0, 0))
-	mi(root, box(Vector3(9, 11, 1.5)), mat(Color("#2a1a0e"), "fine"), Vector3(0, 10, depth / 2 + 0.6))
+		mi(root, box(Vector3(1.6, 12, 1.6)), red, Vector3(side * (length / 2 + 4), 41, 3), Vector3(30, 0, 0))
+		mi(root, box(Vector3(1.6, 12, 1.6)), red, Vector3(side * (length / 2 + 4), 41, -3), Vector3(-30, 0, 0))
+	# door with frame, shuttered windows, props
+	mi(root, box(Vector3(8, 11, 1.2)), mat(Color("#2a1a0e"), "fine"), Vector3(0, 10, depth / 2 + 0.7))
+	for side in [-1, 1]: mi(root, box(Vector3(1.2, 12, 1.4)), beam, Vector3(side * 4.6, 10.5, depth / 2 + 0.9))
+	mi(root, box(Vector3(10.4, 1.4, 1.6)), beam, Vector3(0, 16.2, depth / 2 + 0.9))
+	for wx in [-length * 0.3, length * 0.3]:
+		mi(root, box(Vector3(5, 4, 0.8)), mat(Color("#1e140a"), "fine"), Vector3(wx, 13, depth / 2 + 0.6))
+		mi(root, box(Vector3(2.5, 4.2, 0.4)), plank_a, Vector3(wx - 3.6, 13, depth / 2 + 1.1), Vector3(0, 35, 0))
+	_woodpile(root, Vector3(length / 2 + 7, 0, 4), 90)
+	_pot(root, Vector3(-length * 0.35, 0, depth / 2 + 5), 1.1)
+	_pot(root, Vector3(-length * 0.35 + 5, 0, depth / 2 + 6), 0.85)
 	return root
 
 func _post(style: int, snowy: bool) -> Node3D:
@@ -421,6 +578,14 @@ func _granary(snowy: bool) -> Node3D:
 	mi(root, cyl(14.5, 15, 15, 16), mat(Color("#c08a58"), "coarse", 0.14, Vector3.ONE, 0.5), Vector3(0, 18, 0))
 	mi(root, sph(17, 16, 8), mat(Color("#a7703f"), "streak", 0.16, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0), Vector3(0, 25.5, 0), Vector3.ZERO, Vector3(1, 0.65, 1))
 	mi(root, box(Vector3(5, 7, 1.4)), mat(Color("#2a1a0e"), "fine"), Vector3(0, 17, 14.5))
+	var band := mat(Color("#5a3a20"), "streak", 0.3, Vector3(1, 4, 1))
+	for y in [12.5, 23.5]: mi(root, cyl(15.3, 15.3, 1.0, 16), band, Vector3(0, y, 0))
+	_fringe(root, 25.5, 16.5, 22, Color("#a7703f"), snowy)
+	segment(root, Vector3(3, 0, 22), Vector3(1, 12, 16), 0.5, wood) # ladder rails
+	segment(root, Vector3(-2, 0, 22), Vector3(-4, 12, 16), 0.5, wood)
+	for i in 4: segment(root, Vector3(2.6 - i * 0.5, 2 + i * 2.8, 21.4 - i * 1.4), Vector3(-2.4 - i * 0.5, 2 + i * 2.8, 21.4 - i * 1.4), 0.35, wood)
+	_pot(root, Vector3(-16, 0, 8), 1.0)
+	_pot(root, Vector3(-19, 0, 3), 0.8)
 	return root
 
 func _smelter(snowy: bool) -> Node3D:
@@ -533,6 +698,7 @@ func _beast(kind: String, yaw: float, phase: float, walking: bool) -> Node3D:
 		"tiger": {"col": Color("#d98a2b"), "belly": Color("#f2d6a8"), "blen": 22.0, "r": 6.0, "leg": 9.0, "neck": 3.0, "head": 5.0},
 		"wolf": {"col": Color("#7a7a80"), "belly": Color("#b4b4ba"), "blen": 16.0, "r": 4.2, "leg": 8.5, "neck": 3.0, "head": 3.6},
 		"aurochs": {"col": Color("#3d2a1c"), "belly": Color("#5a4232"), "blen": 20.0, "r": 6.5, "leg": 8.0, "neck": 2.0, "head": 4.6},
+		"packox": {"col": Color("#4a3322"), "belly": Color("#6a5240"), "blen": 16.0, "r": 5.2, "leg": 6.5, "neck": 2.0, "head": 3.8},
 	}[kind]
 	var hide := mat(spec["col"], "fine", 0.25, Vector3.ONE, 0.35)
 	var blen: float = spec["blen"]
@@ -570,9 +736,13 @@ func _beast(kind: String, yaw: float, phase: float, walking: bool) -> Node3D:
 		"wolf":
 			mi(neck, cyl(0.6, 1.6, 4, 6), hide, head_pos + Vector3(0, -0.6, 4.2), Vector3(90, 0, 0))
 			for side in [-1, 1]: mi(neck, cyl(0.0, 1.1, 3, 4), hide, head_pos + Vector3(side * 1.6, 3.4, -0.5))
-		"aurochs":
+		"aurochs", "packox":
 			var horn := mat(Color("#e8dcc0"), "fine", 0.3)
 			for side in [-1, 1]: mi(neck, cyl(0.3, 0.8, 6, 5), horn, head_pos + Vector3(side * 3.5, 2.5, 0), Vector3(0, 0, side * -70))
+	if kind == "packox": # bundles slung over its back
+		var hide2 := mat(Color("#a0784a"), "coarse", 0.3, Vector3.ONE, 0.5)
+		mi(root, box(Vector3(spec["r"] * 2.6, 4.5, blen * 0.45)), hide2, Vector3(0, body_y + spec["r"] * 0.8, -1))
+		for side in [-1, 1]: mi(root, cyl(1.6, 1.6, blen * 0.4, 7), mat(Color("#6e4b2a"), "streak", 0.3, Vector3(4, 1, 1)), Vector3(side * spec["r"] * 1.2, body_y + 1, -1), Vector3(90, 0, 0))
 	var tail_len := 10.0 if kind == "tiger" else (3.0 if kind == "deer" else 7.0)
 	mi(root, cyl(0.5, 1.0, tail_len, 5), hide, Vector3(0, body_y + 1, -blen * 0.5 - tail_len * 0.4), Vector3(-60 + (sin(phase * TAU) * 10.0 if walking else 0.0), 0, 0))
 	return root
