@@ -82,6 +82,30 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Alarms:** beasts or raiders at the village (within the War Chief's 500-unit range), someone being hit, or a flood rouse the camp ("Danger in the night! The camp is roused."). Fighters answer the War Chief or defend themselves. Everyone in a hut stays inside ("Sheltering in a hut"), and outdoor sleepers get up and keep watch. Nobody goes back to the day's work, and once the danger is gone they sleep on. A wolf pack prowling the woods doesn't wake the village: hut sleepers are safe from it, and someone sleeping in the open keeps watch only if a beast comes within 300 units.
 - **The Steward** hands out no work during sleeping hours.
 
+## Village life (`folk.gd`)
+
+- **Children:** newborns are children for 3 days, and the tribe starts with two.
+  - They do no work, take no orders and are never picked for a crew. They play around the camp: chasing each other round the fire, playing at hunters with stick spears, or watching a grown-up at work, which slowly teaches them that skill.
+  - They're drawn smaller, eat less, sleep in the huts, and run from danger instead of fighting.
+  - Then they **come of age** before the whole tribe: a chronicle line, a memory, and +1 Combat with the warrior-initiation tradition. The roster lists them under **CHILDREN**.
+  - Births now come every 45 s while there is room and food.
+- **Mood** (top bar) runs from 0 to 100, and work speed is 0.9× at 0 and 1.1× at 100.
+  - It drifts toward a target: about 55, plus painted homes (up to +15), treasures (up to +15) and a recent festival (+15); minus hunger, sickness, recent deaths and panic.
+  - Births, comings of age, art, trade and festivals also lift it directly. Under 25 the people grumble.
+- **Arts:** idle adults (when the stores hold at least 2 food a head), and the Steward when stores are healthy, take up crafts.
+  - **Carving figurines** and **stringing beads** make **goods**, a trade stock.
+  - **Painting the huts** decorates a building up to three levels (zigzags, then handprints, then strings of beads), in red once ochre is known.
+  - Rarely a piece becomes a named **treasure** (an Owl Figurine, a Red Hand Wall…). Treasures lift mood for good, appear in Wisdom & Culture, and are told in the saga.
+- **Festivals:** at the start of spring (Festival of Renewal), autumn (Harvest Festival) and winter (Long Night Fire) the chieftain chooses:
+  - **a great festival** (2 food a head; mood +25 and +15 for 2 days, devotion +8, more communal, births come sooner, friendly clans join in for +4 relations);
+  - **a small gathering** (1 food a head);
+  - **none** (mood −10).
+  - During a festival everyone at the village dances in a ring around the bonfire.
+- **Trade trips:** "Trade with <clan>…" sends someone with 5–10 goods, 20 food, 20 wood, 15 stone or 5 herbs to that clan's village.
+  - They come back with the clan's own produce. Goods are worth 6 food each, the clan pays 1.5× for what it wants, and friendlier clans pay more (×0.85 Wary up to ×1.3 for vassals).
+  - Each trip improves relations and sometimes teaches a little of their wisdom. Hostile clans won't trade, and a clan that turns hostile mid-trip robs the trader.
+  - Visiting clan traders now also offer to buy 3 goods.
+
 ## Distance and settlements
 
 - **Distance costs:** every step burns food, half again while carrying a load (`WALK_HUNGER`): a villager walking all day gets about 70% hungrier. Loads also slow the walk home (−15%, or −5% with a pack ox). Gatherers weigh distance more heavily when choosing a tree, bush or seam.

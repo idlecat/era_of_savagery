@@ -322,6 +322,34 @@ func _debug_shot(args: Dictionary) -> void:
 			if what != "eclipse": hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.2")), float(args.get("zoom", "1.2")))
 			world.focus_on(focus)
+		"folk": # debug: village life, --what=festival|kids|trade
+			hud._close_modal()
+			sim.fog_enabled = false
+			for p in sim.predators: p.fled = true
+			for id in sim.rivals.clans:
+				sim.rivals.clans[id]["met"] = true
+				sim.rivals.clans[id]["relation"] = 25.0
+			sim.rivals.pending.clear()
+			sim.known_finds["ochre"] = 1
+			for st in sim.structures:
+				if st.type == "hut": st.decor = 1 + st.id % 3
+			sim.stock["goods"] = 8
+			sim.folk.treasures.append({"name": "Owl Figurine", "maker": "Panshi", "day": 1})
+			var fw: String = args.get("what", "festival")
+			if fw == "festival":
+				sim.folk.season_seen = 999
+				sim.folk.festivals = true
+				for i in 4: sim.tick(STEP)
+				sim.resolve_event("festival", 0)
+				sim.paused = false
+				hud._close_modal()
+			for i in int(float(args.get("secs", "6")) / STEP): sim.tick(STEP)
+			sim.pending_event = ""
+			sim.paused = false
+			hud._close_modal()
+			world.cam.zoom = Vector2(float(args.get("zoom", "2.0")), float(args.get("zoom", "2.0")))
+			world.focus_on(Vector2(1300, 1200))
+			if fw == "trade": hud.open_trade("heron")
 		"finds": # debug: look at the natural finds (all known, fog off), --kind=mushroom to centre on one
 			hud._close_modal()
 			sim.fog_enabled = false

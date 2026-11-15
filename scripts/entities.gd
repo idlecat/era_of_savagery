@@ -49,6 +49,9 @@ class Unit:
 	var herb_t: float = -1.0 # willow-bark tea working until
 	var salve_t: float = -1.0 # yarrow poultice working until
 	var walked: float = 0.0 # distance walked since the last meal tick (walking makes people hungry)
+	var born_t: float = -9999.0 # (children)
+	var parent_id: int = -1
+	var watch_id: int = -1 # the grown-up a child is watching
 	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load) # who is carrying the body to the burial ground
 	var kills: int = 0
 	var unlocked: Dictionary = {}
@@ -118,6 +121,7 @@ class Structure:
 	var style: int = 1 # era look (1 hide & branch, 2 mud & thatch, 3 timber & stone)
 	var reno: bool = false # being renovated to the current era's style
 	var reno_progress: float = 0.0
+	var decor: int = 0 # painted decorations, 0..3
 	var graves: Array = [] # burial ground: [{name, day, lost, pos}]
 
 class Guardian:

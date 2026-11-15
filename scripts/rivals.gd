@@ -676,6 +676,8 @@ func trader_arrived(p: E.Predator) -> void:
 		{"give": {wants: 15}, "get": {sells: roundi(12 * rate)}},
 		{"give": {wants: 30}, "get": {sells: roundi(26 * rate)}},
 	]
+	if sim.stock["goods"] >= 3: # they prize our crafts
+		offers.append({"give": {"goods": 3}, "get": {sells: roundi(3 * 6.0 * 1.2 * rate / (1.5 if sells == "stone" else 1.0))}})
 	var tl := teachable(p.clan)
 	if not tl.is_empty(): offers.append({"give": {wants: 20}, "teach": tl[0]})
 	c["trade_offers"] = offers

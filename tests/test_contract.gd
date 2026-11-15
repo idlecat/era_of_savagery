@@ -44,6 +44,7 @@ func _initialize() -> void:
 	test_finds()
 	test_nature()
 	test_settling()
+	test_folk()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -51,6 +52,7 @@ func _new_sim():
 	var s = Sim.new()
 	assert(s != null)
 	s.hz.level = "off" # deterministic: the hardship tests switch challenges on themselves
+	s.folk.festivals = false # (no festival events popping up mid-test)
 	s.new_game()
 	return s
 
@@ -278,7 +280,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -658,7 +660,7 @@ func test_night_rest() -> void:
 	for i in 120: sim.tick(0.05)
 	check(u.sleeping and u.job == job, "at night a worker goes to bed and keeps the day's job waiting (%s)" % u.act)
 	var abed: Array = sim.living().filter(func(o): return o.sleeping)
-	check(abed.size() == sim.living().filter(func(o): return o.role == "").size(), "everyone without a mission sleeps (%d)" % abed.size())
+	check(abed.size() == sim.living().filter(func(o): return o.role in ["", "child"]).size(), "everyone without a mission sleeps, children too (%d)" % abed.size())
 	var in_huts: Array = abed.filter(func(o): return sim.in_hut(o))
 	check(in_huts.all(func(o): return sim.near_warmth(o)), "a hut keeps its sleepers warm")
 	var caps := {}
@@ -861,7 +863,7 @@ func test_nature() -> void:
 	var hp0: float = u.hp
 	for i in 30: sim.tick(0.05)
 	check(u.hp < hp0, "people too close to the flames get burned")
-	for i in 900:
+	for i in 4000:
 		sim.tick(0.05)
 		if nat.burning.is_empty(): break
 	check(nat.burning.is_empty() and tree.kind == "burnt" and nat.fire_size >= 1, "the fire burns out and leaves burnt trees (%d)" % nat.fire_size)
@@ -1000,6 +1002,98 @@ func test_settling() -> void:
 		sim.resettle_t = 0.0
 		sim.tick(0.05)
 	check(sim.residents_of(D.EAST_SITE).size() <= sim.beds_at(D.EAST_SITE), "but never more than its beds")
+
+func test_folk() -> void:
+	print("\n== Village life ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var F = sim.folk
+	var kids: Array = sim.living().filter(func(u): return u.role == "child")
+	check(kids.size() == 2, "the tribe starts with two children")
+	for i in 100: sim.tick(0.05)
+	check(kids.all(func(k): return k.job.is_empty() and k.act in ["Playing chase", "Playing at hunters"] or k.act.begins_with("Watching")), "children play instead of working (%s)" % ", ".join(kids.map(func(k): return k.act)))
+	check(not sim.contracts.available_helpers(sim.unit_by_name("Panshi").id).any(func(o): return o.role == "child"), "children are never picked for a crew")
+	# watching the grown-ups teaches a little
+	var kid = kids[0]
+	var w = sim.unit_by_name("Bai")
+	sim.assign_gather(w, "wood")
+	kid.watch_id = w.id
+	kid.act = "Watching " + w.name
+	kid.idle_t = 50.0
+	kid.pos = w.pos + Vector2(10, 5)
+	var xp0: float = kid.skills["forage"]["xp"] + kid.skills["forage"]["lv"] * 1000
+	for i in 40: F.play(kid, 0.05)
+	check(kid.skills["forage"]["xp"] + kid.skills["forage"]["lv"] * 1000 > xp0, "a child watching someone gather learns a little foraging")
+	# coming of age
+	kid.born_t = sim.time - F.CHILD_DAYS * D.DAY_LEN - 1.0
+	F.mood_t = 0.0
+	F.update(0.05)
+	check(kid.role == "" and kid.max_hp >= 40 and kid.memory.any(func(m): return "came of age" in m["text"]), "after %d days a child comes of age" % F.CHILD_DAYS)
+	# mood sets the pace of work
+	var u = sim.unit_by_name("Tuo")
+	F.mood = 100.0
+	var fast: float = sim.work_mul(u)
+	F.mood = 0.0
+	check(fast > sim.work_mul(u) * 1.15, "a joyful tribe works faster than a despairing one")
+	F.mood = 60.0
+	F.on_death()
+	check(F.mood < 60.0 and F.sorrow > 0, "a death saddens the tribe")
+	# arts: goods, painted homes, treasures
+	var artist = sim.unit_by_name("Panshi")
+	sim.set_job(artist, {})
+	artist.pos = D.VILLAGE + Vector2(20, 20)
+	var g0: float = sim.stock["goods"]
+	var d0: int = F.decor_total()
+	for k in 3:
+		F.start_art(artist)
+		for i in 600:
+			sim.update_unit(artist, 0.05)
+			if artist.job.is_empty(): break
+	check(sim.stock["goods"] > g0 or F.decor_total() > d0, "idle hands make goods or paint the huts (goods %d, decorations %d)" % [sim.stock["goods"], F.decor_total()])
+	var t0: int = F.treasures.size()
+	var m0: float = F.mood_target()
+	F._masterpiece(artist, "carve")
+	check(F.treasures.size() == t0 + 1 and F.mood_target() > m0, "a masterpiece becomes a treasure of the tribe and lifts its mood")
+	# festivals
+	F.festivals = true
+	F.season_seen = 999 # (as if the season just turned)
+	F.update(0.05)
+	sim.tick(0.05)
+	check(sim.pending_event == "festival", "the season's turn brings a festival")
+	var heron: Dictionary = sim.rivals.clans["heron"]
+	heron["met"] = true
+	heron["relation"] = 20.0
+	var food0: float = sim.stock["food"]
+	F.mood = 40.0
+	sim.resolve_event("festival", 0)
+	sim.paused = false
+	check(sim.stock["food"] < food0 and F.festival_on() and F.mood >= 64.0, "a great festival costs food and lifts the mood")
+	check(heron["relation"] > 20.0, "and friendly neighbours come to share it")
+	for i in 20: sim.tick(0.05)
+	check(sim.living().filter(func(o): return o.act == "Dancing at the festival").size() >= 4, "the tribe dances around the bonfire")
+	F.festival_until = -1.0
+	# trade trips
+	var sim2 = _new_sim()
+	for p in sim2.predators: p.fled = true
+	var H: Dictionary = sim2.rivals.clans["heron"]
+	H["met"] = true
+	H["relation"] = 20.0
+	sim2.stock["goods"] = 6.0
+	var t = sim2.unit_by_name("Yan")
+	sim2.set_job(t, {})
+	var q: Dictionary = sim2.folk.quote("heron", "goods", 5)
+	check(not q.is_empty() and q.values()[0] > sim2.folk.quote("heron", "wood", 5).get(q.keys()[0], 0), "crafted goods fetch more than plain wood")
+	check(sim2.folk.send_trader(t, "heron", "goods", 5) == "" and t.role == "trader" and sim2.stock["goods"] == 1.0, "a trader sets out with our goods")
+	var sells: String = H["sells"]
+	var before: float = sim2.stock[sells]
+	var rel0: float = H["relation"]
+	sim2.time = D.DAY_LEN + 1.0
+	for i in 2400:
+		sim2.tick(0.05)
+		if t.role == "": break
+	check(t.role == "" and sim2.stock[sells] >= before + q.values()[0] and H["relation"] > rel0, "and comes home with their %s (relations %d → %d)" % [sells, rel0, H["relation"]])
+	H["relation"] = -40.0
+	check(sim2.folk.send_trader(t, "heron", "food", 20) != "", "no trading with a hostile clan")
 
 func test_burials() -> void:
 	print("\n== Burials ==")

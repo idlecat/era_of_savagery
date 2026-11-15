@@ -218,9 +218,10 @@ func _build_top(root: Control) -> void:
 	h.add_child(title)
 	top_stats = _rich(0, false)
 	top_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_stats.custom_minimum_size = Vector2(0, 28)
-	top_stats.add_theme_font_size_override("normal_font_size", 14)
-	top_stats.add_theme_font_size_override("bold_font_size", 14)
+	top_stats.custom_minimum_size = Vector2(0, 38)
+	top_stats.add_theme_font_size_override("normal_font_size", 13)
+	top_stats.add_theme_font_size_override("bold_font_size", 13)
+	top_stats.add_theme_constant_override("line_separation", -2)
 	top_stats.scroll_active = false
 	h.add_child(top_stats)
 	pause_btn = _button("Pause", func(): sim.paused = not sim.paused, "Space")
@@ -485,11 +486,14 @@ func _refresh_top() -> void:
 		if sim.hz.weather != "clear" or sim.hz.winter(): phase += " · [color=#cfe8ff]%s[/color]" % tr(sim.hz.weather_name())
 		for omen in sim.nat.status(): phase += " · [color=#ffb07a]%s[/color]" % omen
 	var since: String = tr("%.0fs") % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
-	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=%s]Food %d/%d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
+	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]\n[color=%s]Food %d/%d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
 		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), "#ff6b6b" if sim.stock["food"] > sim.food_cap() else "#f0a07a", sim.stock["food"], sim.food_cap(), sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
 		sim.devotion, sim.explored_pct(), sim.llm_calls]
-	top_stats.tooltip_text = tr("LLM node: %s") % llm.label() + "\n" + tr("Food %d of %d storage: the village holds %d, each Granary %d more. Food over the limit rots fast.") % [sim.stock["food"], sim.food_cap(), sim.FOOD_STORE_BASE, sim.FOOD_STORE_GRANARY]
+	top_stats.tooltip_text = tr("LLM node: %s") % llm.label() + "\n" + tr("Mood: %s (%d). Work goes %d%% faster or slower with it. Festivals, art, painted homes and treasures lift it; hunger, sickness and deaths lower it.") % [sim.folk.mood_word(), roundi(sim.folk.mood), roundi(absf(sim.folk.work_mult() - 1.0) * 100)] + "\n" + tr("Food %d of %d storage: the village holds %d, each Granary %d more. Food over the limit rots fast.") % [sim.stock["food"], sim.food_cap(), sim.FOOD_STORE_BASE, sim.FOOD_STORE_GRANARY]
 	var extra: Array = [] # stocks that exist once their find is known
+	var mc: String = "#b6f28a" if sim.folk.mood >= 60 else ("#ffd36b" if sim.folk.mood >= 40 else "#ff8a7a")
+	extra.append("[color=%s]%s[/color]" % [mc, tr("Mood %d") % roundi(sim.folk.mood)])
+	if sim.stock["goods"] > 0 or not sim.folk.treasures.is_empty(): extra.append("[color=#e6c46a]%s[/color]" % (tr("Goods %d") % sim.stock["goods"]))
 	if sim.knows_find("willow") or sim.knows_find("yarrow"): extra.append("[color=#9ad88a]%s[/color]" % (tr("Herbs %d") % sim.stock["herbs"]))
 	if sim.knows_find("copper"): extra.append("[color=#d9965a]%s[/color]" % (tr("Copper %d") % sim.stock["copper"]))
 	if sim.knows_find("tin"): extra.append("[color=#a8b0b8]%s[/color]" % (tr("Tin %d") % sim.stock["tin"]))
@@ -556,9 +560,13 @@ func _roster_groups() -> Array:
 	for u in scouts: placed[u.id] = true
 	if not scouts.is_empty():
 		groups.append({"key": "scouts", "units": scouts, "focus": scouts[0].pos, "color": Color("#b6f28a")})
+	var kids: Array = sim.living().filter(func(u): return not placed.has(u.id) and u.role == "child")
+	for u in kids: placed[u.id] = true
 	var rest: Array = sim.living().filter(func(u): return not placed.has(u.id))
 	if not rest.is_empty():
 		groups.append({"key": "village", "units": rest, "focus": D.VILLAGE, "color": COL_ACCENT})
+	if not kids.is_empty():
+		groups.append({"key": "children", "units": kids, "focus": D.VILLAGE, "color": Color("#ffd6f0")})
 	return groups
 
 ## Click selects one person and looks at them; Shift-click adds or removes them from the selection.
@@ -646,13 +654,14 @@ func _roster_signature() -> String:
 		return ",".join(parts2)
 	var parts: Array = []
 	for u in sim.living():
-		parts.append(tr("%d:%d:%s") % [u.id, u.contract_id if u.role == "contract" else -1, "x" if u.job.get("type", "") == "explore" else ""])
+		parts.append(tr("%d:%d:%s") % [u.id, u.contract_id if u.role == "contract" else -1, ("x" if u.job.get("type", "") == "explore" else "") + ("k" if u.role == "child" else "")])
 	for c in sim.contracts.list: parts.append(tr("c%d%s") % [c.id, c.status])
 	return ",".join(parts)
 
 func _group_title(key: String, units: Array) -> String:
 	if key == "scouts": return tr("▸ SCOUTING THE UNKNOWN (%d)") % units.size()
 	if key == "village": return tr("▸ VILLAGE (%d)") % units.size()
+	if key == "children": return tr("▸ CHILDREN (%d)") % units.size()
 	var c = sim.contracts.by_id(int(key.substr(1)))
 	if c == null: return key
 	var ld = sim.unit_by_id(c.leader_id)
@@ -708,10 +717,12 @@ func _refresh_left_content() -> void:
 		s += tr("[color=#8a7a60]%s ·%s[/color] %s\n") % [when, "◆".repeat(clampi(int(m["impact"] / 3), 1, 3)), _cap(tr(m["text"]))]
 	sheet_text.text = s
 	var on_contract: bool = u.role == "contract"
-	sheet_contract_btn.disabled = on_contract or D.bank_of(u.pos) != "west"
+	var child: bool = u.role == "child"
+	if child: sheet_text.text = (tr("[color=#ffd6f0]A child of the tribe: plays, watches and learns. Comes of age in %d days.[/color]\n") % sim.folk.days_to_grow(u)) + sheet_text.text
+	sheet_contract_btn.disabled = on_contract or child or D.bank_of(u.pos) != "west"
 	sheet_contract_btn.text = tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…")
-	sheet_scout_btn.disabled = on_contract
-	sheet_research_btn.disabled = on_contract or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
+	sheet_scout_btn.disabled = on_contract or child
+	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or D.bank_of(u.pos) != "west"
 	sheet_envoy_btn.disabled = u.role != ""
 	sheet_war_btn.disabled = u.role != "" or D.bank_of(u.pos) != "west" or not sim.rivals.clans.values().any(func(c): return c["met"])
 	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
@@ -766,6 +777,9 @@ func _refresh_right() -> void:
 			var b := _button(tr("Envoy to %s…") % tr(sim.rivals.clans[id]["name"]), func(): open_envoy(null, id), "Choose someone to carry our words to their chieftain")
 			b.add_theme_font_size_override("font_size", 13)
 			clans_btns.add_child(b)
+			var tb := _button(tr("Trade with %s…") % tr(sim.rivals.clans[id]["name"]), func(): open_trade(id), "Send someone with goods to trade at their village")
+			tb.add_theme_font_size_override("font_size", 13)
+			clans_btns.add_child(tb)
 	if log_dirty:
 		log_dirty = false
 		var l := ""
@@ -849,6 +863,9 @@ func _vice_button(b: Button, u, role: String) -> void:
 		"already":
 			b.text = tr("★ Steward") if steward else tr("★ War Chief")
 			b.tooltip_text = tr("%s already holds this office") % tr(u.name)
+		"child":
+			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
+			b.tooltip_text = tr("Too young to lead")
 		"no_slot":
 			b.text = tr("Steward (no slot)") if steward else tr("War Chief (no slot)")
 			b.tooltip_text = tr("All %d Vice-Chieftain slots are taken. Tribal Code and the Council of Elders tradition each add one.") % sim.vice_slots()
@@ -1302,6 +1319,11 @@ func _open_tech() -> void:
 			tt += tr("[color=#6a5a48]○ %s - needs %s[/color]\n") % [tr(t["name"]), pole]
 	trads.text = tt
 	cg.add_child(trads)
+	if not sim.folk.treasures.is_empty():
+		v.add_child(_header(tr("TREASURES OF THE TRIBE · %d") % sim.folk.treasures.size()))
+		var tt2 := _rich(0, true)
+		tt2.text = "\n".join(sim.folk.treasures.map(func(t): return tr("[color=#e6c46a]✦ The %s[/color], made by %s on Day %d") % [tr(t["name"]), tr(t["maker"]), t["day"]]))
+		v.add_child(tt2)
 	v.add_child(_header(tr("DISCOVERIES · %d / %d") % [sim.known_finds.size(), D.FINDS.size()]))
 	var fg := HBoxContainer.new()
 	fg.add_theme_constant_override("separation", 16)
@@ -1508,6 +1530,38 @@ func open_envoy(u, clan_id: String) -> void:
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			v.add_child(b)
 	v.add_child(_label(tr("The envoy walks there; the parley begins when they reach the village. A clan in blood feud may not be gentle with the messenger."), 13, COL_DIM))
+	v.add_child(_button("Cancel", _close_modal))
+
+## Send a trader to a clan: pick what to carry, then who carries it.
+func open_trade(clan_id: String, res := "", amt := 0) -> void:
+	var F = sim.folk
+	var c: Dictionary = sim.rivals.clans[clan_id]
+	var v := _open_modal(tr("TRADE WITH THE %s") % tr(c["name"]).to_upper(), 720)
+	if res == "":
+		v.add_child(_label(tr("The %s sell %s and want %s. They are %s toward us. What shall our trader carry?") % [tr(c["name"]), tr(c["sells"]), tr(c["wants"]), tr(sim.rivals.stance(clan_id)).to_lower()], 15, COL_DIM))
+		for bundle in [["goods", 5], ["goods", 10], ["food", 20], ["wood", 20], ["stone", 15], ["herbs", 5]]:
+			var r: String = bundle[0]
+			var n: int = bundle[1]
+			if r == c["sells"] or (r in ["herbs", "goods"] and sim.stock[r] <= 0): continue
+			var q: Dictionary = F.quote(clan_id, r, n)
+			var get_txt: String = "%d %s" % [q.values()[0], tr(q.keys()[0])] if not q.is_empty() else "-"
+			var b := _button(tr("Carry %d %s (we have %d) → about %s") % [n, tr(r), sim.stock[r], get_txt], func(): open_trade(clan_id, r, n))
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.disabled = sim.stock[r] < n or q.is_empty()
+			v.add_child(b)
+		v.add_child(_label(tr("Our crafted goods fetch the best price, and they pay more for what they want. Friends pay better than strangers."), 13, COL_DIM))
+	else:
+		v.add_child(_label(tr("Who will carry %d %s to the %s?") % [amt, tr(res), tr(c["name"])], 15, COL_DIM))
+		var cands: Array = sim.living().filter(func(o): return o.role == "")
+		cands.sort_custom(func(a, b): return a.pos.distance_to(c["pos"]) < b.pos.distance_to(c["pos"]))
+		for o in cands.slice(0, 6):
+			var who = o
+			var b := _button(tr("%s \"%s\" — %s") % [tr(o.name), tr(o.epithet), I.act(o.act)], func():
+				var err: String = F.send_trader(who, clan_id, res, amt)
+				_close_modal()
+				if err != "": sim.popup(who.pos, tr(err), Color("#ff8080")))
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			v.add_child(b)
 	v.add_child(_button("Cancel", _close_modal))
 
 func _do_send_envoy(u, clan_id: String) -> void:

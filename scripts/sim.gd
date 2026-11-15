@@ -9,6 +9,7 @@ const Hazards = preload("res://scripts/hazards.gd")
 const Rivals = preload("res://scripts/rivals.gd")
 const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
+const Folk = preload("res://scripts/folk.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -21,7 +22,7 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0}
 var known_finds := {} # find id -> day discovered
 var mushroom_loads := 0 # the tribe learns which mushrooms are safe
 var find_t := 0.0
@@ -73,6 +74,7 @@ const MEAL := 3.0 # food per meal
 var evo: Evolution
 var hz: Hazards
 var nat: Nature
+var folk: Folk
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -89,6 +91,7 @@ func _init() -> void:
 	evo = Evolution.new(self)
 	hz = Hazards.new(self)
 	nat = Nature.new(self)
+	folk = Folk.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -131,6 +134,10 @@ func new_game() -> void:
 	for i in count:
 		var a := float(i) / count * TAU
 		units.append(make_unit(D.CHARACTERS[i], D.VILLAGE + Vector2(cos(a) * 70, sin(a) * 55)))
+	for nm in ["Ah-Lu", "Tala"]: # the tribe's youngest
+		var kid: E.Unit = folk.make_child(nm, null)
+		kid.born_t = -D.DAY_LEN * randf_range(0.5, 1.5)
+		units.append(kid)
 	assign_ritual(unit_by_name("Linghe"), D.VILLAGE + Vector2(30, -20))
 	assign_gather(unit_by_name("Tuo"), "food")
 	assign_gather(unit_by_name("Shan"), "food")
@@ -365,7 +372,7 @@ func unit_speed(u: E.Unit) -> float:
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
 	return s
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult()
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult()
 func carry_cap(u: E.Unit) -> int: return 15 if u.ox else 10
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second.
@@ -534,7 +541,9 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		if p and not p.dead and not p.fleeing:
 			var low := u.hp < u.max_hp * 0.22
 			var jt: String = u.job.get("type", "")
-			if jt == "explore":
+			if u.role == "child":
+				if not u.job.get("flee", false): assign_flee(u)
+			elif jt == "explore":
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), tr("Scout retreats!"), Color("#ff9b7a"))
 			elif low and not u.has_trait("belligerent") and not u.job.get("flee", false):
@@ -548,6 +557,13 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				assign_attack(u, p, u.job_key)
 
 	if _night_rest(u, dt): return
+	var jt0: String = u.job.get("type", "")
+	if folk.festival_on() and u.role in ["", "child"] and u.home.distance_to(D.VILLAGE) < 60 and jt0 != "attack" and not u.job.get("flee", false) and jt0 != "bury":
+		folk.dance(u, dt)
+		return
+	if u.role == "child" and u.job.is_empty():
+		folk.play(u, dt)
+		return
 	if u.job.is_empty():
 		unit_idle(u, dt)
 		return
@@ -576,6 +592,10 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			_do_bury(u, j, dt)
 		"tend":
 			_do_tend(u, j, dt)
+		"art":
+			folk.do_art(u, j, dt)
+		"trade_trip":
+			folk.do_trade(u, j, dt)
 		"build":
 			var s := struct_by_id(j["struct_id"])
 			if s == null or (s.built and not s.reno):
@@ -1311,6 +1331,12 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 			u.idle_t = 0
 			assign_ritual(u, u.home + Vector2(randf_range(-40, 40), randf_range(-50, -20)))
 		return
+	u.idle_t += dt
+	if u.idle_t > 5.0:
+		u.idle_t = 0.0
+		if folk.can_art(u):
+			folk.start_art(u)
+			return
 	u.wander_t -= dt
 	if u.wander_t <= 0:
 		u.wander_t = randf_range(3, 7)
@@ -1323,7 +1349,7 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 
 func unit_needs(u: E.Unit, dt: float) -> void:
 	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult()
-	u.hunger -= drain * dt + u.walked * WALK_HUNGER # long walks to work cost food
+	u.hunger -= drain * dt * (0.6 if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
 	u.walked = 0.0
 	if u.hunger < 40 and stock["food"] >= 1:
 		stock["food"] -= minf(stock["food"], MEAL) # a day's eating is a real cost: winter needs stores
@@ -1374,6 +1400,7 @@ func kill_unit(u: E.Unit, killer) -> void:
 	wake(u)
 	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else (cause_hint if cause_hint != "" else tr("lost to hunger and cold"))
 	u.death_cause = cause
+	folk.on_death()
 	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
 	for o in units:
@@ -1625,6 +1652,7 @@ func tick(dt: float) -> void:
 	evo.update(dt)
 	hz.update(dt)
 	nat.update(dt)
+	folk.update(dt)
 	rivals.update(dt)
 	legacy.update(dt)
 	wear_t -= dt
@@ -1646,17 +1674,15 @@ func _update_births(dt: float) -> void:
 	var pop := living().size()
 	if pop < pop_cap() and stock["food"] >= 30:
 		birth_timer += dt
-		if birth_timer > 32:
+		if birth_timer > 45:
 			birth_timer = 0
 			stock["food"] -= 15
 			var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
 			var nm: String = free.pick_random() if not free.is_empty() else "Nameless"
-			var u := make_unit({"name": nm, "epithet": "Newcomer", "traits": [evo.birth_trait()],
-				"color": Color(D.BIRTH_COLORS.pick_random()), "hp": randi_range(40, 52), "atk": randi_range(3, 6),
-				"def": 2, "spd": randf_range(0.9, 1.1),
-				"skills": {"forage": randi_range(0, 2), "craft": randi_range(0, 2), "combat": randi_range(0, 1), "lore": randi_range(0, 1)}},
-				D.VILLAGE + Vector2(randf_range(-30, 30), randf_range(20, 50)))
+			var parents: Array = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
+			var u: E.Unit = folk.make_child(nm, parents.pick_random() if not parents.is_empty() else null)
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)
+			folk.lift(5.0)
 			units.append(u)
 			evo.on_birth(u)
 			add_log(tr("%s (%s) was born into the tribe.") % [tr(nm), tr(D.TRAITS[u.traits[0]]["name"])], "story", [u])
@@ -1670,6 +1696,7 @@ func vice_slots() -> int: return 1 + (1 if has_tech("code") else 0) + (1 if evo.
 ## Why u can't take this Vice-Chieftain role right now ("" = they can). Any free slot
 ## works for either role; a person moving between roles frees their old slot.
 func appoint_block(u: E.Unit, role: String) -> String:
+	if u.role == "child": return "child"
 	if vice[role] == u.id: return "already"
 	var used := 0
 	for k in vice:
@@ -1706,6 +1733,7 @@ func _update_vice(dt: float) -> void:
 			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
 			if settler: unbuilt = null # (the village's building sites are far away)
 			if unbuilt and randf() < 0.5: choice = "build"
+			elif stock["food"] >= pop * 6 and stock["wood"] >= 40 and randf() < 0.25: choice = "art" # (stores are healthy: time for crafts)
 			elif stock["food"] >= food_cap() * 0.95 and steward_policy != "lore": choice = "wood" # the stores are full
 			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
 			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"
@@ -1715,6 +1743,7 @@ func _update_vice(dt: float) -> void:
 			match choice:
 				"build": assign_build(u, unbuilt)
 				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
+				"art": folk.start_art(u)
 				_: assign_gather(u, choice, {"bank": D.bank_of(u.home), "area": u.home, "area_r": 900.0})
 			gain_xp(steward, "lore", 0.5)
 			evo.practice(steward, "lead", 2.0)
@@ -1821,6 +1850,9 @@ func _check_events() -> void:
 	elif not flags.has("chosen") and devotion >= 100:
 		flags["chosen"] = true
 		_fire_event("chosen")
+	elif folk.pending != "":
+		folk.pending = ""
+		_fire_event("festival")
 	elif nat.pending != "":
 		var ne: String = nat.pending
 		nat.pending = ""
@@ -1862,6 +1894,7 @@ func event_def(id: String) -> Dictionary:
 	if rivals.owns_event(id): return rivals.event_def(id)
 	if legacy.owns_event(id): return legacy.event_def(id)
 	if nat.owns_event(id): return nat.event_def(id)
+	if folk.owns_event(id): return folk.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1902,6 +1935,7 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		flags.erase("open_war")
 		return {"text": txt, "open_contract": false, "open_war": ow}
 	if nat.owns_event(id): return {"text": nat.resolve(id, idx), "open_contract": false}
+	if folk.owns_event(id): return {"text": folk.resolve(id, idx), "open_contract": false}
 	if legacy.owns_event(id):
 		var lr: Dictionary = legacy.resolve(id, idx)
 		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}

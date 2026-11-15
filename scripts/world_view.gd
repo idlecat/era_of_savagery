@@ -1104,6 +1104,7 @@ func _draw_structure(s) -> void:
 		return
 	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
 		if _sprite(s.type + _snowy(), b):
+			if s.decor > 0: _decor(s, b, 18.0)
 			match s.type:
 				"smelter": _smoke(b - Vector2(-4, 36), s.id)
 				"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
@@ -1114,6 +1115,7 @@ func _draw_structure(s) -> void:
 			var big: bool = s.type == "large_hut"
 			var r := 27.0 if big else 20.0
 			if s.built and _sprite("%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()], b):
+				if s.decor > 0: _decor(s, b, r)
 				if sim.has_tech("fire"): _smoke(b - Vector2(0, (32 if s.style == 1 else 36) + (6 if big else 0)), s.id)
 				if s.reno: _scaffold(b, r)
 				return
@@ -1184,6 +1186,27 @@ func _draw_structure(s) -> void:
 			_box(s.pos, 30, 30, 8, Color(0.62, 0.6, 0.56, a))
 			_box(s.pos, 20, 20, 16, Color(0.66, 0.64, 0.6, a))
 			_totem(b - Vector2(0, 16), 54, 1.3, a)
+
+## Painted decorations on a home: a zigzag band, then handprints, then strings of beads
+## and feathers by the door. Red once the tribe knows ochre, white clay before.
+func _decor(s, b: Vector2, r: float) -> void:
+	var paint := Color("#c0402a") if sim.knows_find("ochre") else Color("#ece4d2")
+	var y := b.y - 8.0
+	var pts := PackedVector2Array()
+	for i in 9:
+		pts.append(Vector2(b.x - r * 0.7 + i * r * 0.175, y - (4.0 if i % 2 == 0 else 0.0)))
+	ci.draw_polyline(pts, paint, 2.0)
+	if s.decor >= 2:
+		for k in 2:
+			var h := b + Vector2(-r * 0.35 + k * r * 0.5, -17)
+			ci.draw_circle(h, 2.4, paint)
+			for f in 4: ci.draw_line(h, h + Vector2(-2.4 + f * 1.6, -4.2), paint, 1.0)
+	if s.decor >= 3:
+		for k in 3:
+			var top := b + Vector2(r * 0.55 + k * 4.0, -24 + k * 2.0)
+			ci.draw_line(top, top + Vector2(0, 10), Color("#7a5a3a"), 1.0)
+			ci.draw_circle(top + Vector2(0, 4), 1.5, Color("#e6c46a"))
+			ci.draw_circle(top + Vector2(0, 8), 1.5, Color("#4fb0b8"))
 
 ## Earth mounds in rows, each with a marker stone; a tall standing stone watches over them.
 ## A name-stone alone (no mound) for those whose bodies were never found.
@@ -1405,6 +1428,7 @@ func _draw_unit(u) -> void:
 	var f: float = facing.get(key, 1)
 	var walk: bool = moving.get(key, false)
 	var sel: bool = u.id in selected
+	if u.role == "child": _scale_about(b, FIG_SCALE * 0.68) # children are small
 	_ell(b + Vector2(2, 0), 9, 4, SHADOW)
 	if u.hero: _ell(b, 15 + sin(t * 4) * 1.5, 7.5, Color(1, 0.85, 0.3, 0.3))
 	if sel: _ell_line(b, 14, 7, Color("#ffe066"), 2)
@@ -1522,9 +1546,9 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 	var anim := "idle"
 	var act: String = u.act
 	if u.job.get("type", "") == "attack" and act == "Fighting": anim = "attack"
-	elif act == "Performing ritual": anim = "ritual"
-	elif act == "Picking berries": anim = "gather"
-	elif act.begins_with("Building") or act.begins_with("Renovating") or act.begins_with("Experimenting"): anim = "build"
+	elif act == "Performing ritual" or act.begins_with("Dancing") or act == "Playing at the festival": anim = "ritual"
+	elif act in ["Picking berries", "Carving a figurine", "Stringing beads"] or act.begins_with("Watching"): anim = "gather" if not walk else "walk"
+	elif act.begins_with("Building") or act.begins_with("Renovating") or act.begins_with("Experimenting") or act == "Painting the huts": anim = "build"
 	elif busy: anim = "chop"
 	elif walk: anim = "walk"
 	if anim in ["chop", "build", "attack"] and (walk and anim != "attack"): anim = "walk"
@@ -1702,6 +1726,7 @@ func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
 func _draw_unit_overlay(u) -> void:
 	if u.dead or sim.in_hut(u): return
 	var b := iso(u.pos) * 1.0
+	if u.role == "child": b += Vector2(0, 14) # (smaller figure, lower label)
 	var sel: bool = u.id in selected
 	var title: String = ("★ " if u.title != "" else "") + tr(u.name)
 	_draw_label(b + Vector2(0, -46), title, 14, Color("#fff4d6") if not sel else Color("#ffe066"), true)
@@ -2158,7 +2183,7 @@ func _sync_items() -> void:
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
-			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
+			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true

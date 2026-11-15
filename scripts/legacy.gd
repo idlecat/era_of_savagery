@@ -92,6 +92,8 @@ func saga_ctx(path: String) -> Dictionary:
 		"wisdom": D.TECHS.filter(func(t): return sim.has_tech(t["id"])).map(func(t): return tr(t["name"])),
 		"traditions": sim.evo.world_ctx()["traditions"], "culture": sim.evo.culture_summary(),
 		"neighbours": clans, "great_deeds": deeds,
+		"treasures": sim.folk.treasures.map(func(t): return tr(t["name"]) + " (" + tr(t["maker"]) + ")"),
+		"mood_of_the_tribe": sim.folk.mood_word(),
 		"storyteller": {"name": tr(teller.name), "epithet": tr(teller.epithet), "fallen": teller.dead} if teller else {},
 	}
 
