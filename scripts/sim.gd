@@ -49,6 +49,7 @@ var alarm_until := -1.0
 var was_rest_time := false
 var bury_t := 0.0
 var resettle_t := 4.0
+var rot_warn_day := 0
 var oxen := 0 # the tribe's pack oxen, kept in Aurochs Pens
 var ox_care := 100.0 # 0 = neglected: they won't carry, and wander off
 var ox_hunger := 0.0 # seconds the herd has gone without food
@@ -366,6 +367,16 @@ func unit_speed(u: E.Unit) -> float:
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult()
 func carry_cap(u: E.Unit) -> int: return 15 if u.ox else 10
+## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
+## anything over that rots at FOOD_ROT per second.
+const FOOD_STORE_BASE := 80
+const FOOD_STORE_GRANARY := 100
+const FOOD_ROT := 0.03
+func food_cap() -> int:
+	var c := FOOD_STORE_BASE
+	for s in structures:
+		if s.built and ours(s) and s.type == "granary": c += FOOD_STORE_GRANARY
+	return c
 ## Hunger per unit of distance walked: a villager walking all day gets ~70% hungrier.
 const WALK_HUNGER := 0.004
 
@@ -1098,7 +1109,7 @@ func _burials(dt: float) -> void:
 		if b.pos.distance_to(bg.pos) > BURY_RANGE:
 			if time - b.fell_t > D.DAY_LEN:
 				b.buried = true
-				bg.graves.append({"name": b.name, "day": day(), "lost": true, "pos": grave_slot(bg, bg.graves.size())})
+				bg.graves.append({"id": b.id, "name": b.name, "day": day(), "lost": true, "pos": grave_slot(bg, bg.graves.size())})
 				add_log(tr("%s's body was never found. A stone at the burial ground keeps their name.") % tr(b.name), "story", [b])
 			continue
 		if rest_time() or not active_predators_near(b.pos, 400).is_empty(): continue
@@ -1150,7 +1161,7 @@ func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
 				b.buried = true
 				b.carrier_id = -1
 				b.pos = j["slot"]
-				bg.graves.append({"name": b.name, "day": day(), "lost": false, "pos": j["slot"]})
+				bg.graves.append({"id": b.id, "name": b.name, "day": day(), "lost": false, "pos": j["slot"]})
 				remember(u, tr("buried %s on Day %d") % [tr(b.name), day()], 6)
 				add_log(tr("%s is laid to rest in the burial ground.") % tr(b.name), "story", [b])
 				popup(bg.pos + Vector2(0, -40), tr("%s is laid to rest") % tr(b.name), Color("#d8d0e8"), true)
@@ -1362,6 +1373,7 @@ func kill_unit(u: E.Unit, killer) -> void:
 	u.fell_t = time
 	wake(u)
 	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else (cause_hint if cause_hint != "" else tr("lost to hunger and cold"))
+	u.death_cause = cause
 	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
 	for o in units:
@@ -1559,7 +1571,13 @@ func tick(dt: float) -> void:
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
 	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult()
-	if stock["food"] > 30: stock["food"] -= (stock["food"] - 30) * spoil * dt
+	var cap := food_cap()
+	if stock["food"] > 30: stock["food"] -= (minf(stock["food"], cap) - 30) * spoil * dt
+	if stock["food"] > cap: # nowhere to keep it: it rots fast
+		stock["food"] -= (stock["food"] - cap) * FOOD_ROT * dt
+		if day() != rot_warn_day:
+			rot_warn_day = day()
+			alert(tr("The stores are full and food is rotting on the ground. Build a Granary to keep more."), D.VILLAGE, "warn")
 	for s in structures:
 		if not s.built or not ours(s): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
@@ -1688,6 +1706,7 @@ func _update_vice(dt: float) -> void:
 			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
 			if settler: unbuilt = null # (the village's building sites are far away)
 			if unbuilt and randf() < 0.5: choice = "build"
+			elif stock["food"] >= food_cap() * 0.95 and steward_policy != "lore": choice = "wood" # the stores are full
 			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
 			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"
 			elif steward_policy == "lore": choice = "lore"

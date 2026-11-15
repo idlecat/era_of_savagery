@@ -304,4 +304,5 @@ func _famine(dt: float) -> void:
 ## For LLM personas and the HUD.
 func summary() -> Dictionary:
 	return {"season": tr(season()), "year": year(), "weather": tr(weather_name()), "omens": sim.nat.status(),
-		"days_of_food": snappedf(sim.stock["food"] / maxf(1.0, sim.living().size() * 0.9), 0.1)}
+		"days_of_food": snappedf(sim.stock["food"] / maxf(1.0, sim.living().size() * 0.9), 0.1),
+		"food_storage": "%d/%d" % [sim.stock["food"], sim.food_cap()]}

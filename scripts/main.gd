@@ -374,6 +374,7 @@ func _debug_shot(args: Dictionary) -> void:
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.1")), float(args.get("zoom", "1.1")))
 			var bg = sim.burial_ground()
 			world.focus_on(bg.pos.lerp(Vector2(1300, 1200), 0.5) if bg and args.has("burial") else Vector2(1300, 1200))
+			if args.has("graves") and bg: hud.open_graves(bg)
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

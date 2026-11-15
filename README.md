@@ -23,6 +23,7 @@ A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.
   - *By ability*: a table of level and the four skills. Click a column to sort by it; click it again to reverse. Hover a row to see HP, ATK, DEF and what the person is doing.
   - In both views, Shift-click adds a person to the selection or removes them.
 - **Hover the map:** point at a building, plant, ore, animal, landmark or the ford to see what it is and what it does (and, for huts and the burial ground, who is inside).
+- **Burial Ground:** click it to see everyone laid to rest there, how and when they fell, and the deed they are remembered for.
 - **Chronicle:** names of our people are links. Click one to select that person and centre the view on them (for the dead, the view goes to where they lie).
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 
@@ -103,6 +104,7 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
   - Saber-tooths leave their dens every few days to raid the village; a raider leaves with one victim.
   - The War Chief rallies fighters against both.
 - **Sickness:** a coughing fever breaks out in hard times (winter, hunger, crowding) and spreads between people close together. Fire, shrines, a nearby shaman (Lore 3+) and the discovered Hot Spring speed recovery, and survivors are immune for a while.
+- **Food storage:** the village keeps 80 food, and each Granary 100 more. The top bar shows `Food 44/80`, red when over. Food over the limit rots fast (3% of the excess a second), with a daily "build a Granary" warning, and the Steward switches to wood when the stores are full. Within the limit, food above 30 still spoils slowly (Primitive Pottery and salt each halve that).
 - **Famine:** you're warned when the stores drop below about a day's food, then again when people are starving. A meal costs 3 food and stores spoil, so you can't hoard forever.
 - **Alerts:** dangers appear as AoE-style banners at the top of the screen; click one to look. Season and weather show in the top bar. LLM personas are told the season, the weather and how many days of food remain.
 

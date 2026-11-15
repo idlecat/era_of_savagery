@@ -962,7 +962,20 @@ func test_settling() -> void:
 	var dp: Vector2 = sim._dropoff_point({"dropoff": -1, "res": "food"}, a)
 	check(dp == gran.pos, "food is dropped at the nearest Granary")
 	check(sim._dropoff_point({"dropoff": -1, "res": "wood"}, a) == D.VILLAGE, "wood still goes to the village")
+	# food storage: the village keeps 80, each Granary 100 more; the rest rots fast
 	gran.built = false
+	check(sim.food_cap() == 80, "the village alone stores 80 food")
+	gran.built = true
+	check(sim.food_cap() == 180, "a Granary stores 100 more")
+	gran.built = false
+	sim.stock["food"] = 200.0
+	sim.tick(1.0)
+	var lost_over: float = 200.0 - sim.stock["food"]
+	sim.stock["food"] = 80.0
+	sim.tick(1.0)
+	var lost_in: float = 80.0 - sim.stock["food"]
+	check(lost_over > lost_in * 5.0, "food over the limit rots fast (%.1f vs %.2f a second)" % [lost_over, lost_in])
+	check(sim.alerts.any(func(a): return "Granary" in a["text"]), "and the tribe is told to build a Granary")
 	# a crowded village sends people to a settlement with empty beds
 	var c = E.Contract.new()
 	c.id = sim.uid()

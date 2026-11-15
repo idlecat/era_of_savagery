@@ -43,6 +43,7 @@ class Unit:
 	var bed_pos: Variant = null
 	var fell_t: float = 0.0 # when they died
 	var buried: bool = false
+	var death_cause: String = "" # how they fell (already translated)
 	var carrier_id: int = -1
 	var carry_kind: String = "" # node kind of the load being carried (mushroom, honey...)
 	var herb_t: float = -1.0 # willow-bark tea working until

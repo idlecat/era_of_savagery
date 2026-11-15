@@ -83,6 +83,7 @@ func setup(s, w, l) -> void:
 	sim.contract_finished.connect(func(c): _toast_contract_done(c))
 	sim.alert_raised.connect(_on_alert)
 	world.selection_changed.connect(_refresh_left)
+	world.structure_clicked.connect(func(s): if s.type == "burial_ground": open_graves(s))
 	_refresh_left()
 	_show_intro()
 
@@ -484,10 +485,10 @@ func _refresh_top() -> void:
 		if sim.hz.weather != "clear" or sim.hz.winter(): phase += " · [color=#cfe8ff]%s[/color]" % tr(sim.hz.weather_name())
 		for omen in sim.nat.status(): phase += " · [color=#ffb07a]%s[/color]" % omen
 	var since: String = tr("%.0fs") % (sim.ticks_since_llm * 0.05) if sim.llm_calls > 0 else "-"
-	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=#f0a07a]Food %d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
-		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), sim.stock["food"], sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
+	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]   [color=%s]Food %d/%d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
+		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), "#ff6b6b" if sim.stock["food"] > sim.food_cap() else "#f0a07a", sim.stock["food"], sim.food_cap(), sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
 		sim.devotion, sim.explored_pct(), sim.llm_calls]
-	top_stats.tooltip_text = tr("LLM node: %s") % llm.label()
+	top_stats.tooltip_text = tr("LLM node: %s") % llm.label() + "\n" + tr("Food %d of %d storage: the village holds %d, each Granary %d more. Food over the limit rots fast.") % [sim.stock["food"], sim.food_cap(), sim.FOOD_STORE_BASE, sim.FOOD_STORE_GRANARY]
 	var extra: Array = [] # stocks that exist once their find is known
 	if sim.knows_find("willow") or sim.knows_find("yarrow"): extra.append("[color=#9ad88a]%s[/color]" % (tr("Herbs %d") % sim.stock["herbs"]))
 	if sim.knows_find("copper"): extra.append("[color=#d9965a]%s[/color]" % (tr("Copper %d") % sim.stock["copper"]))
@@ -1318,6 +1319,35 @@ func _open_tech() -> void:
 				ft += "[color=#6a5a48]○ ???[/color]\n"
 		col.text = ft
 		fg.add_child(col)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+## The burial ground: everyone laid to rest there, how they fell, and what they are remembered for.
+func open_graves(s) -> void:
+	var v := _open_modal(tr("BURIAL GROUND · %d laid to rest") % s.graves.size(), 760)
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var body := _rich(0, true)
+	var t := ""
+	if s.graves.is_empty(): t = tr("[color=#8a7a60]No one rests here yet.[/color]")
+	var graves: Array = s.graves.duplicate()
+	graves.reverse() # the most recent first
+	for g in graves:
+		var u = sim.unit_by_id(g.get("id", -1))
+		var nm: String = tr(g["name"])
+		if u and u.epithet != "": nm += " [color=#a89878]\"%s\"[/color]" % tr(u.epithet)
+		t += "[color=#ffd36b]✝ %s[/color]\n" % nm
+		if u:
+			t += tr("Fell on Day %d: %s.") % [int(u.fell_t / D.DAY_LEN) + 1, u.death_cause if u.death_cause != "" else tr("lost to hunger and cold")] + " "
+		t += (tr("The body was never found; a stone keeps the name (Day %d).") % g["day"]) if g["lost"] else (tr("Laid to rest on Day %d.") % g["day"])
+		if u:
+			var best: Dictionary = {}
+			var witnessed: String = tr("witnessed %s %s on Day %d").split("%s")[0] # someone else's death is no epitaph
+			for m in u.memory:
+				if m["day"] > 0 and not m["text"].begins_with(witnessed) and (best.is_empty() or m["impact"] > best["impact"]): best = m
+			if not best.is_empty(): t += "\n[color=#a89878][i]" + tr("Remembered: %s") % tr(best["text"]) + "[/i][/color]"
+		t += "\n\n"
+	body.text = t
+	v.add_child(body)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
 
 func _abort_text(a: String) -> String:

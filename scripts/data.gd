@@ -156,7 +156,7 @@ const STRUCTURES := {
 	"weapon_rack":  {"name": "Weapon Rack", "desc": "People near it fight with +20% ATK.", "wood": 10, "work": 16.0, "r": 12.0},
 	"totem_shrine": {"name": "Totem Shrine", "desc": "A trickle of lore. Rituals near it give 50% more lore, and the sick nearby heal faster.", "wood": 18, "work": 30.0, "r": 14.0, "lore": 0.06},
 	"farm_plot":    {"name": "Farm Plot", "desc": "Steady food from the field (none in winter, less in drought).", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
-	"granary":      {"name": "Granary", "desc": "Houses 4 people (and they sleep here). Gatherers drop food here, so build it near the fields.", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
+	"granary":      {"name": "Granary", "desc": "Stores 100 more food (food over the stores' limit rots fast). Houses 4 people, and gatherers drop food here, so build it near the fields.", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
 	"grand_altar":  {"name": "Grand Altar", "desc": "Summons Yinglong the winged dragon to guard the village. Rituals and healing as a shrine. Needed for Victory by Wisdom.", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
 	"aurochs_pen":  {"name": "Aurochs Pen", "desc": "Home to up to 2 pack oxen. Each ox eats food and needs tending, and lets one gatherer carry 50% more.", "wood": 25, "work": 30.0, "r": 30.0, "tech": "domestication"}, # keeps the herd (sim.oxen)
 	"smelter":      {"name": "Bronze Smelter", "desc": "Arms the tribe in bronze (+60% ATK, +3 DEF) while it has copper and tin; it uses one of each per day.", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
@@ -192,7 +192,7 @@ const TECHS := [
 	{"id": "hide", "era": 1, "name": "Hide Tailoring", "cost": 20, "req": [], "practice": {"hunt": 1.0},
 		"desc": "Fur cloaks: immune to night cold, +2 DEF.", "words": ["sewn furs", "needles"]},
 	{"id": "pottery", "era": 2, "name": "Primitive Pottery", "cost": 35, "req": ["fire"], "practice": {"hearth": 0.6, "berry": 0.6},
-		"desc": "Unlocks the Granary (+4 pop cap). Food spoilage -50%.", "words": ["pots", "pottery", "clay jars", "granaries"]},
+		"desc": "Unlocks the Granary (+100 food storage, +4 pop cap). Food spoilage -50%.", "words": ["pots", "pottery", "clay jars", "granaries"]},
 	{"id": "domestication", "era": 2, "name": "Beast Domestication", "cost": 40, "req": ["tools"], "practice": {"hunt": 0.8, "explore": 0.6},
 		"desc": "Unlocks the Aurochs Pen, home to up to 2 pack oxen. Each ox lets one gatherer carry 50% more, but oxen eat food and must be tended.", "words": ["tamed beasts", "oxen", "pens", "riding"]},
 	{"id": "farming", "era": 2, "name": "Slash-and-Burn Farming", "cost": 35, "req": ["fire"], "practice": {"berry": 1.0},

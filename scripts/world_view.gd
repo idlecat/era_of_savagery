@@ -9,6 +9,7 @@ const D = preload("res://scripts/data.gd")
 const I = preload("res://scripts/i18n.gd")
 
 signal selection_changed()
+signal structure_clicked(s) # a click on a building with something to show (the burial ground)
 
 const IX := 0.75   # iso projection: screen = ((x-y)*IX, (x+y)*IY), 2:1 diamond
 const IY := 0.375
@@ -1881,6 +1882,12 @@ func _click_select(sm: Vector2, add: bool) -> void:
 		if d < bd:
 			bd = d
 			best = u
+	if best == null:
+		var m := uniso(sm)
+		for s in sim.structures:
+			if s.type == "burial_ground" and s.built and s.pos.distance_to(m) < D.STRUCTURES[s.type]["r"] + 10:
+				structure_clicked.emit(s)
+				return
 	if not add: selected = []
 	if best:
 		if best.id in selected: selected.erase(best.id)
