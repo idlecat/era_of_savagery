@@ -51,7 +51,7 @@ if gh release view "$tag" >/dev/null 2>&1; then
 	echo "Release $tag exists; replacing its files"
 	gh release upload "$tag" "${files[@]}" --clobber
 else
-	gh release create "$tag" "${files[@]}" --target "$sha" "${draft[@]}" \
+	gh release create "$tag" "${files[@]}" --target "$sha" ${draft[@]+"${draft[@]}"} \
 		--title "Era of Savagery $tag" --notes-file tools/release_notes.md
 fi
 gh release view "$tag" --json url --jq .url
