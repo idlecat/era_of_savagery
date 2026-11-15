@@ -1,4 +1,4 @@
-## Offline persona engine: a deterministic stand-in for the LLM node, so the POC
+## Offline persona engine: a deterministic stand-in for the LLM node, so the game
 ## runs with no API key. Produces the same JSON shape a cloud model is asked for.
 extends RefCounted
 

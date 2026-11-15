@@ -853,6 +853,7 @@ func _toggle_lang() -> void:
 	var l := "en" if I.is_zh() else "zh"
 	I.setup(l)
 	I.save_pref(l)
+	get_window().title = tr("Era of Savagery · Clan Chronicles")
 	lang_btn.text = I.LANGS["en" if I.is_zh() else "zh"]
 	roster_sig = ""
 	_refresh_left()
@@ -944,9 +945,9 @@ func _close_modal() -> void:
 		modal = null
 
 func _show_intro() -> void:
-	var v := _open_modal("Era of Savagery — POC")
+	var v := _open_modal(tr("Era of Savagery · Clan Chronicles"))
 	var r := _rich(0, true)
-	r.text = tr("""You are the [color=#ffd36b]Great Chieftain[/color]. This prototype demonstrates the three-tier control hierarchy:
+	r.text = tr("""You are the [color=#ffd36b]Great Chieftain[/color]. You lead your tribe on three levels of command:
 
 [color=#ffd36b]Tier 1 · Direct micro[/color] — select tribespeople (click / drag) and right-click trees, bushes, deer, tigers, construction sites or ground.
 [color=#ffd36b]Tier 2 · Task Contracts[/color] — select one person (try [b]%s[/b], [b]%s[/b] or [b]%s[/b]) and press [i]Assign Task Contract[/i]. Their LLM persona negotiates a blueprint for a settlement on the frontier. Once sealed, a deterministic state machine executes it with [b]zero LLM calls[/b] (watch the counter in the top bar) — until an ambush re-awakens the leader.

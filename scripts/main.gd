@@ -29,6 +29,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--lang="): lang = arg.trim_prefix("--lang=")
 	I.setup(lang)
+	get_window().title = tr("Era of Savagery · Clan Chronicles") # (the project name keeps "(POC)": it names the user-data folder)
 	art = ArtBaker.new()
 	add_child(art)
 	var loading := _loading_screen()

@@ -54,7 +54,7 @@ static func has_volcano() -> bool: return VOLCANO != Vector2.INF
 static func area_k() -> float:
 	return W * H / STD_AREA
 
-const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short POC session
+const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short session
 
 # ---- Water: rivers, fords and the land regions between them ----
 const RIVER_HALF := 46.0

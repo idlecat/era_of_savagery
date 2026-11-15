@@ -1,6 +1,6 @@
-# Era of Savagery: Clan Chronicles — POC
+# Era of Savagery: Clan Chronicles
 
-A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.5D isometric view (an Age-of-Empires-style diamond map), drawn procedurally with no art assets. The simulation runs in flat world coordinates, and only rendering and mouse picking are projected.
+A Godot 4 game built from the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.5D isometric view (an Age-of-Empires-style diamond map). People, animals, plants and buildings are 3D models built in code and pre-rendered to sprites, so there are no external art assets. The simulation runs in flat world coordinates, and only rendering and mouse picking are projected.
 
 ## Run
 
@@ -265,9 +265,9 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 
 **LLM.** Persona prompts include the current age, culture, traditions and known wisdom, plus a list of words for undiscovered things the tribe doesn't have. A Bronze-age word won't come out of a Stone-age mouth. See *Wisdom & Culture* (T).
 
-## POC simplifications
-- Overpopulation fires at 12 people instead of PRD's 20, and the flood comes on Day 4, so both show up in a short session.
-- The mid-contract ambush is scripted at ~45% progress (toggle it in LLM Settings).
+## Known simplifications
+- Overpopulation fires at 12 people instead of PRD's 20, so it shows up in a short session. In The River Ford scenario the Great Flood is foretold for Day 4 for the same reason.
+- The River Ford scenario scripts an ambush on frontier camps at ~45% progress (toggle it in LLM Settings). Random maps have no scripted ambush.
 - Pathfinding is waypoint-based (it routes over the fords between land regions) rather than a navmesh.
 
 ## Layout
