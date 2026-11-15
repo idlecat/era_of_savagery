@@ -69,8 +69,13 @@ func env_data(site: Vector2) -> Dictionary:
 		elif n.res == "food" and n.amount >= 1:
 			food_nodes += 1
 	var threats: Array = [tr("fresh saber-tooth tracks in the tall grass east of the ford")]
-	var visible: int = sim.active_predators_near(site, 700).size()
-	if visible > 0: threats.append(tr("%d saber-toothed tigers seen prowling") % visible)
+	var near: Array = sim.active_predators_near(site, 700)
+	var beasts: int = near.filter(func(p): return p.clan == "").size()
+	if beasts > 0: threats.append(tr("%d saber-toothed tigers seen prowling") % beasts)
+	if near.size() > beasts: threats.append(tr("%d rival warriors seen nearby") % (near.size() - beasts))
+	for id in sim.rivals.clans:
+		var rc: Dictionary = sim.rivals.clans[id]
+		if rc["met"] and rc["relation"] <= -15: threats.append(tr("the %s is hostile and raids for food") % tr(rc["name"]))
 	var structs := {}
 	for k in D.CONTRACT_STRUCTURES:
 		var sd: Dictionary = D.STRUCTURES[k]
@@ -84,6 +89,7 @@ func env_data(site: Vector2) -> Dictionary:
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"buildable_structures": structs,
 		"season_and_weather": sim.hz.summary(),
+		"neighbors": sim.rivals.summary(),
 		"day": sim.day(),
 	}
 
@@ -119,6 +125,7 @@ func research_env() -> Dictionary:
 		"population": sim.living().size(), "idle_helpers_available": available_helpers().size(),
 		"stone_quarrying_possible": sim.has_tech("tools"), "day": sim.day(),
 		"season_and_weather": sim.hz.summary(),
+		"neighbors": sim.rivals.summary(),
 	}
 
 ## Context for Phase 4 emergency awakening.
@@ -577,17 +584,26 @@ func summary(c: E.Contract) -> Dictionary:
 		var n: String = tr(D.STRUCTURES[s.type]["name"])
 		if s.built: built.append(n)
 		elif s.progress > 0: partial.append("%s (%d%%)" % [n, roundi(s.progress / s.work * 100)])
-	var preds: int = sim.active_predators_near(c.site, 500).size()
 	var ld := leader(c)
 	var crew_state: Array = crew(c, true).map(func(u): return "%s %d/%d HP" % [tr(u.name), roundi(u.hp), roundi(u.max_hp)])
 	return {
 		"plan_id": c.plan["plan_id"], "progress_pct": roundi(c.progress * 100),
 		"current_step": c.substate, "built": built, "half_built": partial,
-		"threat": tr("%d saber-toothed tigers") % preds if preds > 0 else tr("none visible"),
+		"threat": _threat_text(c.site),
 		"reason": c.abort_reason, "disaster": "blizzard" if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
 		"crew": crew_state, "tribe_lore": roundi(sim.stock["lore"]),
 		"idle_warriors_in_village": available_helpers().size(),
 	}
+
+func _threat_text(site: Vector2) -> String:
+	var near: Array = sim.active_predators_near(site, 500)
+	var parts: Array = []
+	var beasts: int = near.filter(func(p): return p.clan == "").size()
+	if beasts > 0: parts.append(tr("%d saber-toothed tigers") % beasts)
+	for id in sim.rivals.clans:
+		var n: int = near.filter(func(p): return p.clan == id).size()
+		if n > 0: parts.append(tr("%d warriors of the %s") % [n, tr(sim.rivals.clans[id]["name"])])
+	return ", ".join(parts) if not parts.is_empty() else tr("none visible")
 
 # ------------------------------------------------------------ resolution
 func resolve(c: E.Contract, effect: String, label := "") -> void:

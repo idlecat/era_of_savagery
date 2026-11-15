@@ -254,4 +254,5 @@ func world_ctx() -> Dictionary:
 	return {
 		"age": tr(D.ERA_NAMES[era]), "known_wisdom": known, "traditions": trads,
 		"tribe_culture": culture_summary(), "unknown_things_you_have_no_words_for": unknown_words,
+		"neighbors": sim.rivals.summary() if sim.rivals else [],
 	}

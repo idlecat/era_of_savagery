@@ -23,6 +23,7 @@ var sheet_contract_btn: Button
 var sheet_steward_btn: Button
 var sheet_chief_btn: Button
 var contracts_text: RichTextLabel
+var clans_text: RichTextLabel
 var log_text: RichTextLabel
 var policy_opt: OptionButton
 var build_btns := {}
@@ -320,13 +321,16 @@ func _draw_minimap() -> void:
 	if sim.fog_enabled: mm.draw_texture_rect(world.fog_tex, Rect2(0, 0, sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL), false)
 	mm.draw_set_transform_matrix(Transform2D.IDENTITY)
 	for st in sim.structures:
-		if sim.is_explored(st.pos): mm.draw_rect(Rect2(_mm_pt(WV.iso(st.pos)) - Vector2(2, 2), Vector2(4, 4)), Color("#c9a24f"))
+		if not sim.is_explored(st.pos): continue
+		var rc: String = sim.rivals.owner_clan(st.owner)
+		mm.draw_rect(Rect2(_mm_pt(WV.iso(st.pos)) - Vector2(2, 2), Vector2(4, 4)), Color("#c9a24f") if rc == "" else sim.rivals.clans[rc]["color"])
 	for lm in sim.landmarks:
 		if lm["found"]:
 			var q := _mm_pt(WV.iso(lm["pos"]))
 			mm.draw_colored_polygon(PackedVector2Array([q + Vector2(0, -4), q + Vector2(4, 0), q + Vector2(0, 4), q + Vector2(-4, 0)]), Color("#ff6b5a") if lm["kind"] == "den" else Color("#ffe066"))
 	for pr in sim.predators:
-		if not pr.dead and not pr.fled and sim.is_visible(pr.pos): mm.draw_circle(_mm_pt(WV.iso(pr.pos)), 2.5, Color("#ff4a3a"))
+		if not pr.dead and not pr.fled and sim.is_visible(pr.pos):
+			mm.draw_circle(_mm_pt(WV.iso(pr.pos)), 2.5, Color("#ff4a3a") if pr.kind != "hunter" else sim.rivals.clans[pr.clan]["color"].lightened(0.3))
 	for u in sim.units:
 		if u.dead: continue
 		var sel: bool = u.id in world.selected
@@ -392,8 +396,11 @@ func _build_right(root: Control) -> void:
 	policy_opt.item_selected.connect(func(i): sim.steward_policy = policy_opt.get_item_text(i))
 	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ph.add_child(policy_opt)
+	v.add_child(_header("NEIGHBORING CLANS"))
+	clans_text = _rich(0, true)
+	v.add_child(clans_text)
 	v.add_child(_header("TASK CONTRACTS"))
-	contracts_text = _rich(170)
+	contracts_text = _rich(150)
 	v.add_child(contracts_text)
 	v.add_child(_header("CHRONICLE"))
 	log_text = _rich(0)
@@ -668,6 +675,7 @@ func _refresh_right() -> void:
 		s += tr("  [color=#8a9aa8]LLM calls: 1 negotiation + %d awakenings[/color]\n") % c.interruptions
 		for line in c.events.slice(0, 3): s += tr("  [color=#a89878]%s[/color]\n") % line
 	contracts_text.text = s
+	clans_text.text = _clans_bbcode()
 	if log_dirty:
 		log_dirty = false
 		var l := ""
@@ -675,6 +683,19 @@ func _refresh_right() -> void:
 		for e in sim.log_lines.slice(0, 40):
 			l += tr("[color=#7a6a50]D%d[/color] [color=%s]%s[/color]\n") % [e["day"], colors.get(e["kind"], "#d8ccb0"), e["text"]]
 		log_text.text = l
+
+func _clans_bbcode() -> String:
+	var out := ""
+	var cols := {"Blood feud": "#ff5a4a", "Hostile": "#ff8a6a", "Wary": "#ffe08a", "Friendly": "#b6f28a", "Allied": "#8af2d0"}
+	for id in sim.rivals.clans:
+		var c: Dictionary = sim.rivals.clans[id]
+		if not c["met"]: continue
+		var st: String = sim.rivals.stance(id)
+		var marching: int = sim.predators.filter(func(p): return p.clan == id and p.kind == "warrior" and p.raid and not p.dead and not p.fled).size()
+		out += tr("[color=#%s]■[/color] [b]%s[/b] · %s %s · [color=%s]%s (%+d)[/color]\n") % [c["color"].to_html(false), tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), cols[st], tr(st), roundi(c["relation"])]
+		if marching > 0: out += tr("  [color=#ff6b6b]⚔ %d warriors marching on us![/color]\n") % marching
+	if out == "": out = tr("[color=#8a7a60]No other clans met yet. Scouts may find them beyond the fog.[/color]")
+	return "[font_size=14]" + out.strip_edges() + "[/font_size]"
 
 ## Switch English <-> Chinese live. Static labels re-translate themselves; dynamic text
 ## is rebuilt on the next refresh. Old chronicle lines keep the language they were written in.

@@ -116,6 +116,9 @@ func _persona_header(leader: Dictionary, world: Dictionary = {}) -> String:
 		h += "Your tribe lives in the %s. Its culture is %s%s. It knows: %s.\n" % [world["age"], world["tribe_culture"],
 			("; its traditions: " + ", ".join(world["traditions"])) if not world["traditions"].is_empty() else "",
 			", ".join(world["known_wisdom"]) if not world["known_wisdom"].is_empty() else "nothing beyond stone, wood and fire"]
+		for nb in world.get("neighbors", []):
+			h += "A neighbouring clan, the %s (led by %s), is %s toward your tribe. Their ways: %s%s\n" % [nb["clan"], nb["chieftain"], nb["stance"].to_lower(), nb["their_ways"],
+				(" They hold these wrongs against you: " + "; ".join(nb["wrongs_remembered"]) + ".") if not nb["wrongs_remembered"].is_empty() else ""]
 		h += "Speak only of what your tribe knows. You have NO words for: %s - never mention them.\n" % ", ".join(world["unknown_things_you_have_no_words_for"])
 	if I.is_zh():
 		h += "LANGUAGE: write \"speech\" and every option \"label\" in Simplified Chinese (简体中文), in a primal, vivid voice. Keep all JSON keys, action names, structure ids, effect ids and tech ids exactly as specified, in English.\n"

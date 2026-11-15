@@ -188,6 +188,25 @@ func _debug_shot(args: Dictionary) -> void:
 			for i in int(3 / STEP): sim.tick(STEP)
 			world.cam.zoom = Vector2(1.2, 1.2)
 			world.focus_on(Vector2(1240, 1260))
+		"clans": # debug: a rival village, met, with a war band setting out (--clan=ochre|heron, --event shows first contact)
+			hud._close_modal()
+			var cid: String = args.get("clan", "ochre")
+			var rc: Dictionary = sim.rivals.clans[cid]
+			sim.hz.level = "normal"
+			sim.fog_enabled = false
+			for i in int(2 / STEP): sim.tick(STEP)
+			if not args.has("event"):
+				for k in 3:
+					if sim.pending_event != "": sim.resolve_event(sim.pending_event, 2)
+					sim._check_events()
+				hud._close_modal()
+				rc["relation"] = -55.0
+				rc["raid_t"] = 0.0
+				for i in int(float(args.get("secs", "6")) / STEP):
+					sim.tick(STEP)
+				sim.paused = false
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.0")), float(args.get("zoom", "1.0")))
+			world.focus_on(rc["pos"] + Vector2(float(args.get("fx", "0")), float(args.get("fy", "0"))))
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

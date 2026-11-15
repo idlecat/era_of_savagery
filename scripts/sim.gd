@@ -6,6 +6,7 @@ const E = preload("res://scripts/entities.gd")
 const ContractSystem = preload("res://scripts/contract_system.gd")
 const Evolution = preload("res://scripts/evolution.gd")
 const Hazards = preload("res://scripts/hazards.gd")
+const Rivals = preload("res://scripts/rivals.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -52,6 +53,7 @@ var contracts: ContractSystem
 const MEAL := 3.0 # food per meal
 var evo: Evolution
 var hz: Hazards
+var rivals: Rivals
 var alerts: Array = [] # {text, pos, level, t}
 # ---- worn paths: foot traffic slowly wears trails into the grass ----
 const WEAR_CELL := 30.0
@@ -64,6 +66,7 @@ func _init() -> void:
 	contracts = ContractSystem.new(self)
 	evo = Evolution.new(self)
 	hz = Hazards.new(self)
+	rivals = Rivals.new(self)
 
 func uid() -> int:
 	next_id += 1
@@ -89,6 +92,9 @@ func new_game() -> void:
 		n.regrow = 0.1
 	_wilds()
 	_boulders()
+	for def in D.RIVALS: # clear the rival villages' grounds
+		nodes = nodes.filter(func(n): return n.pos.distance_to(def["pos"]) > 230)
+	rivals.setup()
 	wear_w = ceili(D.W / WEAR_CELL)
 	wear_h = ceili(D.H / WEAR_CELL)
 	wear.resize(wear_w * wear_h)
@@ -235,7 +241,7 @@ func has_tech(t: String) -> bool: return techs.has(t)
 func has_bronze() -> bool: return has_tech("bronze") and _struct_exists("smelter")
 func _struct_exists(type: String) -> bool:
 	for s in structures:
-		if s.built and s.type == type: return true
+		if s.built and ours(s) and s.type == type: return true
 	return false
 func living() -> Array: return units.filter(func(u): return not u.dead)
 
@@ -268,27 +274,30 @@ func unit_level(u: E.Unit) -> int:
 	for k in D.SKILLS: s += u.lv(k)
 	return 1 + s / 2
 
+## False for buildings of the rival clans' villages.
+func ours(s: E.Structure) -> bool: return not s.owner.begins_with("rival:")
+
 func pop_cap() -> int:
 	var c := 0
 	for s in structures:
-		if s.built: c += int(D.STRUCTURES[s.type].get("cap", 0))
+		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("cap", 0))
 	return c
 
 func _nearest_fire(p: Vector2) -> E.Structure:
 	var best: E.Structure = null
 	for s in structures:
-		if s.built and s.type == "bonfire" and (best == null or s.pos.distance_to(p) < best.pos.distance_to(p)): best = s
+		if s.built and ours(s) and s.type == "bonfire" and (best == null or s.pos.distance_to(p) < best.pos.distance_to(p)): best = s
 	return best
 
 func near_warmth(u: E.Unit) -> bool:
 	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
 	for s in structures:
-		if s.built and s.type == "bonfire" and s.pos.distance_to(u.pos) < r: return true
+		if s.built and ours(s) and s.type == "bonfire" and s.pos.distance_to(u.pos) < r: return true
 	return false
 
 func _struct_near(type: String, p: Vector2, r: float) -> bool:
 	for s in structures:
-		if s.built and s.type == type and s.pos.distance_to(p) < r: return true
+		if s.built and ours(s) and s.type == type and s.pos.distance_to(p) < r: return true
 	return false
 
 # ------------------------------------------------------------------ stats
@@ -750,12 +759,13 @@ func kill_unit(u: E.Unit, killer) -> void:
 		if not o.dead and o != u and o.pos.distance_to(u.pos) < 300:
 			remember(o, tr("witnessed %s %s on Day %d") % [tr(u.name), cause, day()], 8)
 	evo.on_death(u)
+	rivals.on_villager_killed(u, killer)
 	if killer: evo.drift("martial", 1.5)
 	if killer is E.Predator: # a predator that made its kill drags it away
 		if killer.kind == "wolf":
 			for w in predators:
 				if w.kind == "wolf" and w.pos.distance_to(killer.pos) < 300: w.fleeing = true
-		elif killer.raid:
+		elif killer.raid and killer.clan == "": # (war bands fight on)
 			killer.raid = false
 			killer.goal = killer.den
 			killer.path = []
@@ -780,7 +790,11 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 			remember(u, tr("slew a %s on the %s bank on Day %d") % [tr(p.name), tr(D.bank_of(p.pos)), day()], 8)
 			evo.drift("martial", 4.0)
 			add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat")
-		_node("carcass", "food", p.pos, 35)
+		if p.clan != "": rivals.on_rival_killed(p, u)
+		else: _node("carcass", "food", p.pos, 35)
+	elif p.kind == "hunter" and not p.fleeing: # attacked hunters run home and tell their clan
+		p.fleeing = true
+		rivals.on_hunter_attacked(p)
 	elif p.hp < p.max_hp * 0.2 and not p.fleeing:
 		p.fleeing = true
 		popup(p.pos + Vector2(0, -30), tr("retreats!"), Color("#ffd0d0"))
@@ -788,6 +802,15 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 func update_predator(p: E.Predator, dt: float) -> void:
 	if p.dead or p.fled: return
 	p.cd -= dt
+	if p.fleeing and p.clan != "": # clan people retreat to their own village
+		if not p.homeward:
+			p.homeward = true
+			p.raid = false
+			set_dest(p, p.den)
+		if step_move(p, dt, p.spd * 1.05) or p.pos.distance_to(p.den) < 30:
+			p.fled = true
+			rivals.on_return(p)
+		return
 	if p.fleeing:
 		var out := Vector2(D.W + 40, p.pos.y)
 		if p.kind == "wolf": out = Vector2(-40, p.pos.y) if D.bank_of(p.pos) == "west" else out
@@ -800,14 +823,20 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		if p.raid_t <= 0: p.fleeing = true
 	if p.raid:
 		p.raid_t -= dt
+		if p.raid_t <= 0 and p.clan != "":
+			p.fleeing = true # the war band gives up and goes home
+			return
 		if p.raid_t <= 0:
 			p.raid = false
 			p.goal = null
 			p.path = []
+	if p.kind == "warrior" and not p.raid and p.goal == null: # a war band done with its raid
+		p.fleeing = true
+		return
 	var prey = null
 	var best := 280.0
 	for u in units:
-		if u.dead: continue
+		if u.dead or p.kind == "hunter": continue
 		var d: float = u.pos.distance_to(p.pos)
 		if p.kind == "wolf" and not _wolf_target(u): continue
 		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
@@ -829,7 +858,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 				popup(prey.pos + Vector2(0, -20), tr("-%d") % roundi(dmg), Color("#ff8080"))
 	elif p.goal != null:
 		if p.pos.distance_to(p.goal) > 30:
-			if p.raid or p.kind == "wolf": # long trips: route over the ford
+			if p.raid or p.kind == "wolf" or p.kind == "warrior": # long trips: route over the ford
 				if p.path.is_empty(): set_dest(p, p.goal)
 			else:
 				p.path = [p.goal]
@@ -837,13 +866,17 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		elif p.kind == "wolf":
 			p.goal = D.VILLAGE + Vector2(randf_range(-260, 260), randf_range(-200, 200))
 			p.path = []
+		elif p.kind == "warrior" and p.raid: # in the camp and nobody to stop them
+			rivals.steal(p)
 	else:
 		p.prowl_t -= dt
 		if p.prowl_t <= 0:
 			p.prowl_t = randf_range(3, 6)
 			var c: Vector2 = p.den if p.den != null else p.pos
 			var r := 220.0 if p.den != null else 120.0
-			var np := Vector2(clampf(c.x + randf_range(-r, r), D.river_x(p.pos.y) + D.RIVER_HALF + 80, D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
+			var west: bool = D.bank_of(c) == "west"
+			var rx := D.river_x(c.y)
+			var np := Vector2(clampf(c.x + randf_range(-r, r), 30.0 if west else rx + D.RIVER_HALF + 80, rx - D.RIVER_HALF - 80 if west else D.W - 30), clampf(c.y + randf_range(-r, r), 40, D.H - 40))
 			p.path = [np]
 		step_move(p, dt, p.spd * 0.35)
 
@@ -856,7 +889,7 @@ func _wolf_target(u: E.Unit) -> bool:
 	return near < 2
 
 func active_predators_near(center: Vector2, r: float) -> Array:
-	return predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.pos.distance_to(center) < r)
+	return predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.kind != "hunter" and p.pos.distance_to(center) < r)
 
 func scare_predators(center: Vector2, r: float) -> int:
 	var n := 0
@@ -911,7 +944,7 @@ func tick(dt: float) -> void:
 	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * hz.spoil_mult()
 	if stock["food"] > 30: stock["food"] -= (stock["food"] - 30) * spoil * dt
 	for s in structures:
-		if not s.built: continue
+		if not s.built or not ours(s): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
 		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type)
 		stock["lore"] += sd.get("lore", 0.0) * dt
@@ -948,6 +981,7 @@ func tick(dt: float) -> void:
 	contracts.update(dt)
 	evo.update(dt)
 	hz.update(dt)
+	rivals.update(dt)
 	wear_t -= dt
 	if wear_t <= 0:
 		wear_t = 1.0
@@ -1061,6 +1095,7 @@ func place_structure(type: String, p: Vector2) -> E.Structure:
 	stock["wood"] -= D.STRUCTURES[type]["wood"]
 	stock["stone"] -= D.STRUCTURES[type].get("stone", 0)
 	var s := add_structure(type, p, false, "village", true)
+	rivals.on_structure_placed(s)
 	add_log(tr("Construction site laid out: %s.") % tr(D.STRUCTURES[type]["name"]), "build")
 	return s
 
@@ -1135,6 +1170,9 @@ func _check_events() -> void:
 	elif not flags.has("chosen") and devotion >= 100:
 		flags["chosen"] = true
 		_fire_event("chosen")
+	elif rivals.pending_contact != "":
+		_fire_event("contact_" + rivals.pending_contact)
+		rivals.pending_contact = ""
 
 func _fire_event(id: String) -> void:
 	pending_event = id
@@ -1167,6 +1205,7 @@ func best_unit(skill: String, exclude_contract := true) -> E.Unit:
 
 ## Civilization-style dilemmas. Each option: {label, desc, enabled}.
 func event_def(id: String) -> Dictionary:
+	if id.begins_with("contact_"): return rivals.event_def(id.trim_prefix("contact_"))
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1201,6 +1240,7 @@ func event_def(id: String) -> Dictionary:
 ## Returns {"text": outcome, "open_contract": bool}
 func resolve_event(id: String, idx: int) -> Dictionary:
 	pending_event = ""
+	if id.begins_with("contact_"): return {"text": rivals.resolve(id.trim_prefix("contact_"), idx), "open_contract": false}
 	var shaman := best_unit("lore", false)
 	var out := {"text": tr(""), "open_contract": false}
 	match id:
@@ -1367,7 +1407,7 @@ func fog_update() -> void:
 	for u in units:
 		if not u.dead: reveal(u.pos, sight(u))
 	for s in structures:
-		if s.built: reveal(s.pos, D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)
+		if s.built and ours(s): reveal(s.pos, D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)
 	if guardian and not guardian.dead: reveal(guardian.pos, 260)
 	for lm in landmarks:
 		if not lm["found"] and visible[_cell_idx(lm["pos"])] == 1: _discover(lm)

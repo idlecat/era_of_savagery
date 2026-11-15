@@ -32,6 +32,7 @@ func _initialize() -> void:
 	test_translations()
 	test_vice_slots()
 	test_hardships()
+	test_rivals()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -266,7 +267,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "rivals", "hud", "world_view", "persona_engine", "llm_client"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -342,12 +343,21 @@ func test_hardships() -> void:
 	a.sick = 1.0
 	var t := 0.0
 	var spread := false
-	while t < 120.0:
+	var b2 = sim2.unit_by_name("Tuo")
+	b2.pos = a.pos + Vector2(18, 0)
+	for k in 200: # each 2 s check is a small chance; give it plenty of contact
+		a.sick = 1.0
+		sim2.hz.spread_t = 0.0
+		sim2.hz._sickness(0.05)
+		if b2.sick > 0:
+			spread = true
+			break
+	b2.sick = 0.0
+	while t < 120.0: # and the fever runs its course
 		sim2.tick(0.05)
 		if sim2.paused:
 			sim2.pending_event = ""
 			sim2.paused = false
-		if sim2.living().filter(func(o): return o.sick > 0 and o != a).size() > 0: spread = true
 		t += 0.05
 	check(spread, "sickness spreads between people living close together")
 	check(a.sick == 0.0 and a.immune_t > sim2.time, "the sick recover and are immune for a while")
@@ -359,3 +369,76 @@ func test_hardships() -> void:
 	sim3.stock["food"] = 3
 	sim3.hz._famine(11.0)
 	check(msgs.any(func(m2): return "running low" in m2), "low food stores raise a warning")
+
+func test_rivals() -> void:
+	print("\n== Rival clans ==")
+	var sim = _new_sim()
+	var ours_cap := 0
+	for st in sim.structures:
+		if st.owner == "village" and st.built: ours_cap += int(D.STRUCTURES[st.type].get("cap", 0))
+	check(sim.structures.any(func(st): return st.owner == "rival:ochre") and sim.structures.any(func(st): return st.owner == "rival:heron"), "both rival villages stand on the map")
+	check(sim.pop_cap() == ours_cap, "rival huts don't house our people (cap %d)" % sim.pop_cap())
+	check(not sim.is_explored(D.RIVALS[0]["pos"]), "rival villages start hidden in the fog")
+	var hunters: Array = sim.predators.filter(func(p): return p.kind == "hunter")
+	check(hunters.size() == 4, "each clan sends out two peaceful hunters")
+	# hunters leave villagers alone
+	var u = sim.unit_by_name("Tuo")
+	var h = hunters.filter(func(p): return p.clan == "heron")[0]
+	sim.set_job(u, {})
+	u.pos = h.pos + Vector2(12, 0)
+	for i in 100: sim.tick(0.05)
+	check(u.hp == u.max_hp, "a hunter beside a villager does not attack")
+	check(sim.active_predators_near(h.pos, 200).filter(func(p): return p.kind == "hunter").is_empty(), "hunters don't count as threats")
+	check(sim.rivals.clans["heron"]["met"] and sim.pending_event == "contact_heron", "meeting their hunter is first contact too")
+	var keep: Dictionary = sim.resolve_event("contact_heron", 2)
+	check(keep["text"] != "" and sim.pending_event == "", "keeping our distance resolves the meeting")
+	sim.paused = false
+	# first contact
+	var ochre: Dictionary = sim.rivals.clans["ochre"]
+	sim.reveal(ochre["pos"], 200)
+	sim.rivals.update(0.05)
+	check(ochre["met"] and sim.rivals.pending_contact == "ochre", "seeing their village makes first contact")
+	sim._check_events()
+	check(sim.pending_event == "contact_ochre" and sim.paused, "first contact pauses for a choice")
+	var d: Dictionary = sim.event_def("contact_ochre")
+	check(d["options"].size() == 3, "three ways to greet them")
+	var rel0: float = ochre["relation"]
+	var food0: float = sim.stock["food"]
+	var r: Dictionary = sim.resolve_event("contact_ochre", 0)
+	print("   ", r["text"])
+	check(ochre["relation"] > rel0 + 15 and sim.stock["food"] == food0 - 20, "gifts cost food and win favour")
+	check(sim.rivals.summary().size() == 2 and sim.contracts.env_data(D.EAST_SITE)["neighbors"].size() == 2 and sim.evo.world_ctx()["neighbors"].size() == 2, "met clans enter the personas' context")
+	# killing a hunter angers the clan
+	var rel1: float = ochre["relation"]
+	var oh = sim.predators.filter(func(p): return p.clan == "ochre" and p.kind == "hunter")[0]
+	sim.damage_pred(oh, 999, u, false)
+	check(ochre["relation"] < rel1 - 25 and not ochre["grudges"].is_empty(), "killing their hunter brings a grudge")
+	check(not sim.nodes.any(func(n): return n.kind == "carcass" and n.pos == oh.pos), "slain people leave no carcass")
+	# raids
+	sim.hz.level = "normal"
+	ochre["relation"] = -60.0
+	ochre["warriors"] = 4
+	ochre["raid_t"] = 0.0
+	sim.rivals.update(0.05)
+	var band: Array = sim.predators.filter(func(p): return p.kind == "warrior" and p.clan == "ochre")
+	check(band.size() >= 2 and band.all(func(p): return p.raid), "a hostile clan sends a war band of %d" % band.size())
+	check(sim.active_predators_near(band[0].pos, 100).size() >= 1, "raiders are threats")
+	for o in sim.living(): o.pos = D.VILLAGE + Vector2(-900, 600) # nobody home
+	var w = band[0]
+	w.pos = D.VILLAGE + Vector2(5, 5)
+	w.goal = D.VILLAGE
+	w.path = []
+	sim.stock["food"] = 50.0
+	for i in 20: sim.update_predator(w, 0.05)
+	check(sim.stock["food"] < 50.0 and w.loot and w.fleeing, "raiders in an empty camp steal food and run")
+	var steps := 0
+	while not w.fled and steps < 4000:
+		sim.update_predator(w, 0.05)
+		steps += 1
+	check(w.fled and w.pos.distance_to(ochre["pos"]) < 40, "the raider carries the loot home over the ford")
+	# peaceful setting: no raids
+	var sim2 = _new_sim()
+	sim2.rivals.clans["ochre"]["relation"] = -80.0
+	sim2.rivals.clans["ochre"]["raid_t"] = 0.0
+	sim2.rivals.update(0.05)
+	check(not sim2.predators.any(func(p): return p.kind == "warrior"), "with hardships off, neighbours never raid")

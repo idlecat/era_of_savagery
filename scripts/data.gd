@@ -29,6 +29,18 @@ const SIGHT_SCOUT_BONUS := 30.0 # extra sight while auto-scouting
 const SIGHT_STRUCT := 200.0
 const SIGHT_BONFIRE := 300.0
 
+# ---- Rival clans: their own villages, people and moods (see rivals.gd) ----
+## relation -100 (blood feud) .. +100 (allies); "base" is where it drifts back to.
+const RIVALS := [
+	{"id": "ochre", "name": "Red Ochre Clan", "chief": "Gor", "epithet": "the Scarred", "culture": "martial",
+		"color": Color("#c8452e"), "pos": Vector2(3180, 1300), "base": -25.0, "start": -20.0, "pop": 11, "era": 2,
+		"strength": 1.2, "hunter_name": "Red Ochre hunter", "warrior_name": "Red Ochre warrior", "desc": "Hunters who paint themselves in red earth. They prize strength and take what they need."},
+	{"id": "heron", "name": "Heron Clan", "chief": "Ama", "epithet": "Who Listens to Water", "culture": "spiritual",
+		"color": Color("#3e8fc0"), "pos": Vector2(360, 2180), "base": 10.0, "start": 5.0, "pop": 9, "era": 1,
+		"strength": 0.85, "hunter_name": "Heron hunter", "warrior_name": "Heron warrior", "desc": "River folk led by a seer. Slow to anger, but they never forget a wrong."},
+]
+const RIVAL_TERRITORY := 520.0 # gathering or building this close to a clan's village angers them
+
 ## Points of interest hidden in the fog. Found when first seen by a tribesperson.
 ## reward: stock deltas; reveal: extra radius revealed on discovery; den: spawns prowling tigers.
 const LANDMARKS := [

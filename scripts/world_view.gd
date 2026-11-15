@@ -252,7 +252,7 @@ func _process(delta: float) -> void:
 	attacking.clear()
 	for p in sim.predators:
 		_track("p%d" % p.id, p.pos)
-		if p.dead or p.fled or p.fleeing: continue
+		if p.dead or p.fled or p.fleeing or p.kind == "hunter": continue
 		for u in sim.units:
 			if not u.dead and u.pos.distance_to(p.pos) < 26.0:
 				attacking["p%d" % p.id] = true
@@ -561,13 +561,20 @@ func draw_overlay() -> void:
 	for lm in sim.landmarks:
 		if lm["found"] and _in_view(lm["pos"]):
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
+	for id in sim.rivals.clans: _draw_clan_banner(sim.rivals.clans[id])
 	for c in sim.contracts.list: _draw_site_flag(c)
 	for s in sim.structures:
 		if _in_view(s.pos): _draw_structure_overlay(s)
 	for u in sim.units:
 		if _in_view(u.pos): _draw_unit_overlay(u)
 	for p in sim.predators:
-		if not p.dead and not p.fled and sim.is_visible(p.pos): _bar(iso(p.pos) + Vector2(0, 8), 32, p.hp / p.max_hp, Color("#ff9b3a"))
+		if p.dead or p.fled or not sim.is_visible(p.pos): continue
+		if p.clan != "":
+			var cc: Color = sim.rivals.clans[p.clan]["color"]
+			_draw_label(iso(p.pos) + Vector2(0, -46), tr(p.name), 12, cc.lightened(0.45), true)
+			if p.hp < p.max_hp - 0.5: _bar(iso(p.pos) + Vector2(0, 6), 24, p.hp / p.max_hp, cc.lightened(0.2))
+		else:
+			_bar(iso(p.pos) + Vector2(0, 8), 32, p.hp / p.max_hp, Color("#ff9b3a"))
 	for p in sim.popups:
 		if not sim.is_explored(p["pos"]): continue
 		var a: float = 1.0 - pow(p["t"] / p["life"], 2)
@@ -1273,6 +1280,26 @@ func _site_col(c) -> Color:
 		"abandoned", "failed": return Color(0.6, 0.6, 0.6)
 	return Color("#ffd36b")
 
+## A rival village's totem banner with the clan's name and how they feel about us.
+func _draw_clan_banner(c: Dictionary) -> void:
+	var pos: Vector2 = c["pos"]
+	if not sim.is_explored(pos) or not _in_view(pos): return
+	var col: Color = c["color"]
+	var fp := iso(pos + Vector2(-70, -70))
+	ci.draw_line(fp + Vector2(1, 0), fp + Vector2(1, -58), Color(0, 0, 0, 0.4), 4)
+	ci.draw_line(fp, fp + Vector2(0, -58), Color("#4a3220"), 3)
+	ci.draw_circle(fp + Vector2(0, -60), 3, Color("#e8dcc0"))
+	var wv := sin(t * 3.5 + pos.x) * 3
+	var top := fp + Vector2(0, -56)
+	ci.draw_colored_polygon(PackedVector2Array([top, top + Vector2(26, 2 + wv), top + Vector2(24, 18 + wv), top + Vector2(0, 16)]), col)
+	ci.draw_polyline(PackedVector2Array([top + Vector2(0, 16), top + Vector2(24, 18 + wv), top + Vector2(26, 2 + wv)]), col.darkened(0.4), 1.5)
+	for i in 3: # feather tassels
+		ci.draw_line(top + Vector2(6 + i * 8, 17 + wv * 0.6), top + Vector2(5 + i * 8, 25 + wv * 0.6), Color("#e8dcc0"), 1.2)
+	var st: String = sim.rivals.stance(c["id"])
+	var scol: Color = {"Blood feud": Color("#ff5a4a"), "Hostile": Color("#ff8a6a"), "Wary": Color("#ffe08a"), "Friendly": Color("#b6f28a"), "Allied": Color("#8af2d0")}[st]
+	_draw_label(fp + Vector2(12, -72), tr(c["name"]).to_upper(), 15, col.lightened(0.5), true)
+	if c["met"]: _draw_label(fp + Vector2(12, -88), tr(st), 12, scol, true)
+
 func _draw_site_flag(c) -> void:
 	var col := _site_col(c)
 	var fp := iso(c.site + Vector2(-100, -100))
@@ -1470,6 +1497,9 @@ func _draw_pred(p) -> void:
 	var b := iso(p.pos)
 	_scale_about(b, FIG_SCALE)
 	if p.raid: _ell_line(b, 20, 8, Color(1, 0.3, 0.2, 0.7), 2)
+	if p.clan != "":
+		_draw_clansman(p, b)
+		return
 	if _beast_sprite(p.kind, "p%d" % p.id, b, 1.15 / FIG_SCALE): return
 	if p.kind == "wolf":
 		_draw_wolf(p)
@@ -1498,6 +1528,43 @@ func _draw_pred(p) -> void:
 	ci.draw_circle(head + Vector2(2 * f, -2), 1.2, Color("#1a0f08"))
 	ci.draw_line(head + Vector2(2 * f, 5), head + Vector2(3 * f, 13), Color.WHITE, 2)
 	ci.draw_line(head + Vector2(5 * f, 5), head + Vector2(6 * f, 12), Color.WHITE, 2)
+
+## A person of a rival clan: the villager sprites, clothes in the clan's colour,
+## warriors with spears and red war paint, raiders carrying off a bundle of food.
+func _draw_clansman(p, b: Vector2) -> void:
+	var key := "p%d" % p.id
+	var col: Color = sim.rivals.clans[p.clan]["color"]
+	var walk: bool = moving.get(key, false)
+	var war: bool = p.kind == "warrior"
+	_ell(b + Vector2(2, 0), 9, 4, SHADOW)
+	if art and art.has("man_idle_0_0"):
+		var di := _dir_index(key)
+		var anim := "idle"
+		if attacking.has(key): anim = "attack"
+		elif walk: anim = "walk"
+		var frames: int = {"idle": 1, "walk": 8}.get(anim, 4)
+		var name := "man_%s_%d_%d" % [anim, di, int(t * (11.0 if anim == "walk" else 7.0) + p.id) % frames]
+		_sprite(name, b, 0.95, Color(0.86, 0.8, 0.76) if war else Color.WHITE)
+		_sprite(name + "_cloth", b, 0.95, col.darkened(0.15) if war else col)
+	else:
+		ci.draw_line(b + Vector2(-2, -9), b + Vector2(-2, 0), Color("#a87a56"), 2.5)
+		ci.draw_line(b + Vector2(2, -9), b + Vector2(2, 0), Color("#a87a56"), 2.5)
+		ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-5, -7), b + Vector2(5, -7), b + Vector2(4, -20), b + Vector2(-4, -20)]), col)
+		ci.draw_circle(b + Vector2(0, -24), 4.5, Color("#c99a70"))
+	var head := b - Vector2(0, 23.5 * 0.95)
+	var f: float = facing.get(key, 1)
+	if war: # feathered war crest in the clan colour
+		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-2, -3), head + Vector2(0, -12), head + Vector2(2, -3)]), col.lightened(0.25))
+		if not attacking.has(key): # spear held upright on the march
+			var hand := b + Vector2(6 * f, -14)
+			ci.draw_line(hand + Vector2(0, 10), hand + Vector2(0, -22), Color("#8a6a42"), 1.6)
+			ci.draw_colored_polygon(PackedVector2Array([hand + Vector2(-2, -22), hand + Vector2(2, -22), hand + Vector2(0, -29)]), Color("#8d8d93"))
+	else: # hunter: bow over the shoulder
+		ci.draw_arc(b + Vector2(-4 * f, -16), 8, -PI * 0.5 - 0.9, -PI * 0.5 + 0.9, 8, Color("#6b4524"), 1.4)
+	if p.loot:
+		var bk := b + Vector2(-5 * f, -16)
+		ci.draw_circle(bk, 4.5, Color("#8a5a32"))
+		ci.draw_circle(bk + Vector2(1, -1), 2.5, Color("#b03a2e"))
 
 func _draw_guardian(g) -> void:
 	var lift := 52.0 + sin(t * 2) * 6

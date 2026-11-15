@@ -68,7 +68,10 @@ class Predator:
 	var fleeing: bool = false
 	var prowl_t: float = 0.0
 	var den: Variant = null # home lair (prowls around it)
-	var kind: String = "tiger" # "tiger" or "wolf"
+	var kind: String = "tiger" # "tiger", "wolf", "warrior" (rival war band) or "hunter" (rival, peaceful)
+	var clan: String = "" # rival clan id for warriors and hunters
+	var loot: bool = false # a raider carrying stolen food home
+	var homeward: bool = false # a clan member routing back to its village
 	var raid: bool = false # a den tiger out hunting in the village
 	var raid_t: float = 0.0
 

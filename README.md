@@ -83,6 +83,15 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Famine:** you're warned when the stores drop below about a day's food, then again when people are starving. A meal costs 3 food and stores spoil, so you can't hoard forever.
 - **Alerts:** dangers appear as AoE-style banners at the top of the screen; click one to look. Season and weather show in the top bar. LLM personas are told the season, the weather and how many days of food remain.
 
+## Rival clans
+
+Two neighbouring clans live on the map: the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (far south-west). Their villages and peaceful hunters start hidden in the fog.
+
+- **First contact.** The first time you see their people or homes, the game pauses for a choice: offer gifts (20 food, +20 relations), show strength (martial clans respect it, others take it as a threat) or keep your distance.
+- **Relations** run from -100 to 100 (Blood feud · Hostile · Wary · Friendly · Allied) and drift back toward each clan's temperament. They drop when you gather or scout on their hunting grounds, build near them, or attack or kill their people. Clans remember grudges.
+- **Raids.** Hostile clans send war bands (bigger and more often the deeper the feud, worse in winter) to the village or a running outpost. Raiders who reach an undefended camp steal food and carry it home over the ford. Defenders, the War Chief and contract `enemy_attack` aborts all treat them like beasts. With Challenges set to Off, there are no raids.
+- The **NEIGHBORING CLANS** panel shows each clan's stance and any war bands on the march. Personas know the clans you've met (stance, ways and grudges), in both negotiation and emergency prompts.
+
 ## Language
 
 English and Simplified Chinese (简体中文). Switch with the **中文 / English** button in the top bar. The choice is saved, and the default follows your system language.
