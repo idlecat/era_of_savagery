@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 12
+const ART_VERSION := 14
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -158,7 +158,7 @@ func _bake(job: Dictionary) -> void:
 	var anchor := _frame(job.get("size", 256), job.get("lift", 12.0))
 	var model: Node3D = job["build"].call()
 	stage.add_child(model)
-	catcher.visible = not job.get("mask", false)
+	catcher.visible = not job.get("mask", false) and not job.get("nocatch", false)
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
@@ -290,6 +290,19 @@ func _jobs() -> Array:
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
 		jobs.append({"key": "stones" + sfx, "size": 224, "lift": 12.0, "build": _stones.bind(snowy)})
 		jobs.append({"key": "peak" + sfx, "size": 320, "lift": 45.0, "build": _peak.bind(snowy)})
+	# fields by season, dock, remaining landmarks, the dragon guardian
+	for season in ["spring", "summer", "autumn", "winter"]:
+		jobs.append({"key": "farm_" + season, "size": 192, "lift": 4.0, "build": _farm.bind(season)})
+	for snowy in [false, true]:
+		var sfx := "_snow" if snowy else ""
+		jobs.append({"key": "dock" + sfx, "size": 192, "lift": 4.0, "build": _dock.bind(snowy, false)})
+		jobs.append({"key": "dock_w" + sfx, "size": 192, "lift": 4.0, "build": _dock.bind(snowy, true)})
+		jobs.append({"key": "spring" + sfx, "size": 192, "lift": 4.0, "build": _hot_spring.bind(snowy)})
+		jobs.append({"key": "bones" + sfx, "size": 192, "lift": 8.0, "build": _bones.bind(snowy)})
+		jobs.append({"key": "flint" + sfx, "size": 160, "lift": 8.0, "build": _flint.bind(snowy)})
+	for d in DIRS:
+		for f in 4:
+			jobs.append({"key": "dragon_%d_%d" % [d, f], "size": 192, "lift": 0.0, "nocatch": true, "build": _dragon.bind(d * 360.0 / DIRS, f / 4.0)})
 	# ground cover
 	for snowy in [false, true]:
 		var sfx := "_snow" if snowy else ""
@@ -604,6 +617,117 @@ func _fire_base(snowy: bool) -> Node3D:
 	mi(root, cyl(1.4, 1.4, 16, 7), lg, Vector3(0, 2.6, 0), Vector3(0, -40, 80))
 	mi(root, cyl(1.3, 1.3, 14, 7), lg, Vector3(0, 3.2, 0), Vector3(0, 95, 80))
 	return root
+
+# ---- fields, dock, landmarks, dragon
+func _farm(season: String) -> Node3D:
+	var root := Node3D.new()
+	var soil := mat(Color("#6e4f30"), "coarse", 0.2, Vector3.ONE, 0.5, 0.85 if season == "winter" else 0.0)
+	var ridge := mat(Color("#5a3e24"), "coarse", 0.25, Vector3.ONE, 0.5, 0.85 if season == "winter" else 0.0)
+	mi(root, box(Vector3(60, 0.8, 40)), soil, Vector3(0, 0.4, 0))
+	for i in 6: mi(root, box(Vector3(56, 1.6, 2.2)), ridge, Vector3(0, 1.0, -16 + i * 6.5))
+	if season != "winter":
+		var col: Color = {"spring": Color("#8cc24a"), "summer": Color("#5f9a32"), "autumn": Color("#d8b04a")}[season]
+		var h: float = {"spring": 2.5, "summer": 6.0, "autumn": 7.0}[season]
+		var crop := mat(col, "fine", 0.4, Vector3.ONE, 0.35)
+		for i in 6:
+			for k in 10:
+				var p := Vector3(-25 + k * 5.5, 1.6, -16 + i * 6.5)
+				mi(root, cyl(0.0, 1.3, h, 5), crop, p + Vector3(0, h / 2, 0), Vector3(randf_range(-8, 8), 0, randf_range(-8, 8)))
+				if season == "autumn": mi(root, cap(0.6, 2.4), mat(Color("#e8c85a"), "fine", 0.4, Vector3.ONE, 0.3), p + Vector3(0, h + 0.5, 0))
+	var wicker := mat(Color("#8a6a40"), "streak", 0.3, Vector3(4, 1, 1), 0.5, 0.6 if season == "winter" else 0.0)
+	for side in [-1, 1]: # low wicker fence on two sides
+		mi(root, box(Vector3(62, 3, 0.8)), wicker, Vector3(0, 1.5, side * 21))
+		for k in 7: mi(root, cyl(0.4, 0.4, 4.5, 4), wicker, Vector3(-30 + k * 10, 2.2, side * 21))
+	return root
+
+## Pier on posts running out over the water from the anchor point (towards -x).
+func _dock(snowy: bool, west_bank: bool) -> Node3D:
+	var root := Node3D.new()
+	if west_bank: root.rotation_degrees.y = 180.0 # pier runs east into the river
+	var plank := mat(Color("#9a7448"), "streak", 0.2, Vector3(1, 1, 5), 0.5, 0.6 if snowy else 0.0)
+	var post := mat(Color("#5a3e24"), "streak", 0.2, Vector3(1, 4, 1), 0.5)
+	for i in 9: mi(root, box(Vector3(5.6, 0.8, 14)), plank, Vector3(-46 + i * 6, 3, 0), Vector3(0, 0, randf_range(-1.5, 1.5)))
+	for x in [-48, -32, -16, 0]:
+		for z in [-7, 7]: mi(root, cyl(0.9, 1.0, 9, 6), post, Vector3(x, 0.5, z))
+	mi(root, cyl(0.25, 0.3, 24, 4), mat(Color("#c8b48a"), "streak", 0.3, Vector3(1, 4, 1)), Vector3(-50, 12, 4), Vector3(0, 0, 55))
+	mi(root, cyl(3.0, 2.4, 4, 9), mat(Color("#a8864e"), "streak", 0.3, Vector3(1, 3, 1), 0.5), Vector3(-6, 5.4, -4)) # fish basket
+	for i in 3: mi(root, cap(0.8, 4.0), mat(Color("#9ab0b8"), "fine", 0.4, Vector3.ONE, 0.3), Vector3(-7 + i * 1.2, 7.2, -4), Vector3(0, i * 50, 90))
+	return root
+
+func _hot_spring(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var stone := mat(Color("#9a9286"), "coarse", 0.2, Vector3.ONE, 0.55, 0.8 if snowy else 0.0)
+	for i in 16:
+		var a := i * TAU / 16
+		mi(root, sph(randf_range(3.5, 5.5), 7, 4), stone, Vector3(cos(a) * 42, 1.5, sin(a) * 26), Vector3(0, randf() * 90, 0), Vector3(1, 0.65, 1))
+	mi(root, cyl(40, 40, 1.0, 24), mat(Color("#c2b48e"), "coarse", 0.2, Vector3.ONE, 0.4), Vector3(0, 0.3, 0), Vector3.ZERO, Vector3(1, 1, 0.62))
+	mi(root, cyl(36, 36, 1.0, 24), mat(Color("#3fa6b2"), "fine", 0.08, Vector3.ONE, 0.35), Vector3(0, 0.9, 0), Vector3.ZERO, Vector3(1, 1, 0.6))
+	mi(root, cyl(16, 16, 1.0, 20), mat(Color("#7fd6dc"), "fine", 0.1, Vector3.ONE, 0.3), Vector3(-6, 1.0, -2), Vector3.ZERO, Vector3(1, 1, 0.6))
+	return root
+
+func _bones(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var bone := mat(Color("#e8dcc0"), "fine", 0.3, Vector3.ONE, 0.3, 0.4 if snowy else 0.0)
+	segment(root, Vector3(-30, 2, 0), Vector3(22, 3, 0), 1.6, bone) # spine
+	for i in 7: # ribs arching over
+		var x := -24 + i * 6.5
+		for side in [-1, 1]:
+			segment(root, Vector3(x, 3, 0), Vector3(x + 1, 11, side * 6), 0.7, bone)
+			segment(root, Vector3(x + 1, 11, side * 6), Vector3(x + 2, 1, side * 11), 0.6, bone)
+	mi(root, sph(6, 10, 6), bone, Vector3(28, 5, 0), Vector3.ZERO, Vector3(1.3, 1, 1)) # skull
+	for side in [-1, 1]: # great curved tusks
+		var prev := Vector3(32, 4, side * 3)
+		for k in 6:
+			var nxt := prev + Vector3(4.5 - k * 0.6, 2.5 - k * 0.9, side * 1.8)
+			segment(root, prev, nxt, 1.1 - k * 0.12, bone)
+			prev = nxt
+	return root
+
+func _flint(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1001
+	for i in 9:
+		var h := rng.randf_range(6, 18)
+		var col: Color = [Color("#3c3a40"), Color("#4a4852"), Color("#2e2c32")][i % 3]
+		var pr := PrismMesh.new()
+		pr.size = Vector3(rng.randf_range(5, 9), h, rng.randf_range(4, 7))
+		mi(root, pr, mat(col, "fine", 0.3, Vector3.ONE, 0.25, 0.7 if snowy else 0.0), Vector3(rng.randf_range(-22, 22), h / 2, rng.randf_range(-14, 14)), Vector3(rng.randf_range(-12, 12), rng.randf_range(0, 180), rng.randf_range(-12, 12)))
+	for i in 10: mi(root, box(Vector3(1.6, 0.5, 1.2)), mat(Color("#6d6a78"), "fine", 0.3), Vector3(rng.randf_range(-26, 26), 0.3, rng.randf_range(-18, 18)), Vector3(0, rng.randf() * 180, 0))
+	return root
+
+## Yinglong: a winged, serpentine dragon, baked flying (no ground shadow).
+func _dragon(yaw: float, phase: float) -> Node3D:
+	var holder := Node3D.new()
+	holder.rotation_degrees.y = yaw
+	var scale_m := mat(Color("#3fbfa0"), "fine", 0.3, Vector3.ONE, 0.5)
+	var belly := mat(Color("#e8c25a"), "fine", 0.3, Vector3.ONE, 0.3)
+	var wing_m := mat(Color("#2f9a82"), "coarse", 0.2, Vector3.ONE, 0.4)
+	var pts: Array = []
+	for i in 8: # S-curved body from tail to neck
+		var z := -22.0 + i * 5.5
+		pts.append(Vector3(sin(i * 0.9 + phase * TAU) * 3.0, sin(i * 0.6) * 2.0, z))
+	for i in pts.size() - 1:
+		var r := 1.2 + i * 0.45
+		segment(holder, pts[i], pts[i + 1], r, scale_m)
+		mi(holder, sph(r * 0.8, 6, 4), belly, pts[i] + Vector3(0, -r * 0.5, 0))
+	var head_p: Vector3 = pts[pts.size() - 1] + Vector3(0, 2, 4)
+	mi(holder, sph(3.4, 10, 6), scale_m, head_p, Vector3.ZERO, Vector3(0.9, 0.8, 1.4))
+	for side in [-1, 1]:
+		segment(holder, head_p + Vector3(side * 1.2, 2, -1), head_p + Vector3(side * 3.0, 6, -5), 0.4, belly) # horns
+		mi(holder, sph(0.6, 6, 4), flat(Color.WHITE), head_p + Vector3(side * 1.6, 1.0, 2.5))
+	var flap := sin(phase * TAU) * 35.0
+	for side in [-1, 1]:
+		var wing := Node3D.new()
+		wing.position = Vector3(side * 2.5, 2, 2)
+		wing.rotation_degrees = Vector3(0, 0, side * (10.0 + flap))
+		holder.add_child(wing)
+		var pr := PrismMesh.new() # membrane lying flat, spread sideways
+		pr.size = Vector3(24, 13, 0.6)
+		mi(wing, pr, wing_m, Vector3(side * 12, 0, -2), Vector3(90, 0, 0))
+		segment(wing, Vector3.ZERO, Vector3(side * 24, 0, 4), 0.5, scale_m) # leading bone
+	segment(holder, pts[0], pts[0] + Vector3(0, 1, -6), 0.6, scale_m) # tail tip
+	return holder
 
 # ---- ground cover
 func _grass(v: int, snowy: bool) -> Node3D:

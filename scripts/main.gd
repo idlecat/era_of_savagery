@@ -141,6 +141,10 @@ func _debug_shot(args: Dictionary) -> void:
 					var st = sim.add_structure(spec[0], V + Vector2(-260 + (k % 3) * 220, 260 + (k / 3) * 200), false, "village", spec[2])
 					st.progress = st.work * spec[1]
 					k += 1
+			if stage >= 2:
+				var dy := 1120.0
+				var dx: float = 1960.0 + 40.0 * sin(dy / 170.0) - 46.0 - 6.0
+				sim.add_structure("fishing_dock", Vector2(dx, dy), true)
 			sim.renovate([])
 			for st in sim.structures:
 				if st.reno: sim._finish_reno(st, sim.units[0])
@@ -150,6 +154,7 @@ func _debug_shot(args: Dictionary) -> void:
 					sim.pending_event = ""
 					sim.paused = false
 			if args.has("night"): sim.time = floor(sim.time / 90.0) * 90.0 + 75.0
+			if args.has("dusk"): sim.time = floor(sim.time / 90.0) * 90.0 + 60.0
 			hud._close_modal()
 			world.selected = []
 			world.selection_changed.emit()

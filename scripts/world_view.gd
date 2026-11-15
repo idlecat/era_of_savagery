@@ -55,6 +55,7 @@ var ground: Node2D
 var ground_fx: Node2D
 var objects: Node2D # y-sorted container: iso y == depth (x + y)
 var overlay: Node2D
+var glow: Node2D
 var items := {} # key -> Item
 var edge_scroll := true
 var blocked: Callable # returns true while a modal is open (set by main)
@@ -89,6 +90,24 @@ func setup(s) -> void:
 	cam.make_current()
 	night = CanvasModulate.new()
 	add_child(night)
+	var vig := CanvasLayer.new()
+	vig.layer = 5
+	var vr := TextureRect.new()
+	vr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vr.stretch_mode = TextureRect.STRETCH_SCALE
+	var vg := Gradient.new()
+	vg.set_color(0, Color(0, 0, 0, 0))
+	vg.add_point(0.62, Color(0, 0, 0, 0))
+	vg.set_color(vg.get_point_count() - 1, Color(0.05, 0.03, 0.02, 0.28))
+	var vt := GradientTexture2D.new()
+	vt.gradient = vg
+	vt.fill = GradientTexture2D.FILL_RADIAL
+	vt.fill_from = Vector2(0.5, 0.5)
+	vt.fill_to = Vector2(1.0, 1.0)
+	vr.texture = vt
+	vig.add_child(vr)
+	add_child(vig)
 	var g := Gradient.new()
 	g.set_color(0, Color(1.0, 0.82, 0.55, 1.0))
 	g.set_color(1, Color(1.0, 0.55, 0.25, 0.0))
@@ -117,6 +136,12 @@ func setup(s) -> void:
 	objects = Node2D.new()
 	objects.y_sort_enabled = true
 	add_child(objects)
+	glow = Glow.new() # additive soft light around fires, above objects
+	glow.wv = self
+	var gmat := CanvasItemMaterial.new()
+	gmat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	glow.material = gmat
+	add_child(glow)
 	overlay = Overlay.new()
 	overlay.wv = self
 	add_child(overlay)
@@ -203,7 +228,7 @@ func _build_terrain() -> void:
 func _process(delta: float) -> void:
 	t += delta
 	_pan_keys(delta)
-	night.color = Color.WHITE.lerp(Color(0.30, 0.34, 0.55), sim.night_amt * 0.85)
+	night.color = _sky_tint()
 	_sync_lights()
 	if sim.guardian and not sim.guardian.dead:
 		guardian_trail.push_front(sim.guardian.pos)
@@ -220,8 +245,10 @@ func _process(delta: float) -> void:
 	view = Rect2(cam.get_screen_center_position() - vs / 2, vs).grow(140)
 	_sync_items()
 	ground_fx.queue_redraw()
+	glow.queue_redraw()
 	overlay.queue_redraw()
 	for u in sim.units: _track("u%d" % u.id, u.pos)
+	if sim.guardian and not sim.guardian.dead: _track("g", sim.guardian.pos)
 	attacking.clear()
 	for p in sim.predators:
 		_track("p%d" % p.id, p.pos)
@@ -340,6 +367,16 @@ func _refresh_wear() -> void:
 		data[k * 4 + 3] = int(clampf((w - 0.12) * 1.1, 0.0, 0.62) * 255)
 	wear_img.set_data(sim.wear_w, sim.wear_h, false, Image.FORMAT_RGBA8, data)
 	wear_tex.update(wear_img)
+
+## Time-of-day colour grading: warm golden dusk, blue night, pink dawn.
+func _sky_tint() -> Color:
+	var f: float = sim.day_frac()
+	var c := Color.WHITE
+	if f > 0.58 and f < 0.76: c = Color.WHITE.lerp(Color(1.0, 0.88, 0.74), sin((f - 0.58) / 0.18 * PI))
+	elif f > 0.94 or f < 0.06:
+		var k := (f - 0.94) / 0.12 if f > 0.94 else (f + 0.06) / 0.12
+		c = Color.WHITE.lerp(Color(1.0, 0.78, 0.82), sin(k * PI) * 0.8)
+	return c.lerp(Color(0.30, 0.34, 0.55), sim.night_amt * 0.85)
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -490,6 +527,23 @@ func draw_ground_fx() -> void:
 		ci.draw_rect(Rect2(0, 0, D.W, D.H), Color(0.2, 0.4, 0.75, sim.flood_fx * 0.4))
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
+## Fire glow: additive warm halos, stronger at night (bonfires, council fire, smelter, torches).
+func draw_glow() -> void:
+	var night: float = sim.night_amt
+	for st in sim.structures:
+		if not st.built or not _in_view(st.pos) or not sim.is_explored(st.pos): continue
+		var r := 0.0
+		match st.type:
+			"bonfire": r = 70.0
+			"council_ring": r = 45.0
+			"smelter": r = 38.0
+		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.22 + 0.4 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
+	for u in sim.units:
+		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
+
+func _halo(c: Vector2, r: float, a: float) -> void:
+	ci.draw_texture_rect(light_tex, Rect2(c - Vector2(r, r * 0.75), Vector2(r * 2, r * 1.5)), false, Color(1.0, 0.62, 0.3, a))
+
 ## Drawn by the Overlay child (above all objects): fog of war, then labels and bars.
 func draw_overlay() -> void:
 	# ---- fog of war over everything in the world (labels below stay readable)
@@ -583,6 +637,12 @@ func _in_view(p: Vector2) -> bool:
 
 func _draw_landmark(lm: Dictionary) -> void:
 	var b := iso(lm["pos"])
+	if lm["kind"] == "spring" and _sprite("spring" + _snowy(), b):
+		for i in 4:
+			var k := fmod(t * 0.5 + i * 0.25, 1.0)
+			ci.draw_circle(b + Vector2(-20 + i * 13 + sin(t + i) * 4, -10 - 40 * k), 4 + 6 * k, Color(1, 1, 1, 0.35 * (1 - k)))
+		return
+	if lm["kind"] in ["bones", "flint"] and _sprite(lm["kind"] + _snowy(), b): return
 	if lm["kind"] in ["den", "cave", "stones", "peak"] and _sprite(lm["kind"] + _snowy(), b):
 		if lm["kind"] == "den":
 			ci.draw_circle(b + Vector2(-4, -6), 1.6, Color("#ffcf40", 0.6 + 0.4 * sin(t * 3)))
@@ -922,6 +982,7 @@ func _draw_node(n) -> void:
 func _draw_ground_part(s) -> void:
 	var p: Vector2 = s.pos
 	var a := 1.0 if s.built else 0.5
+	if s.built and art != null and ((s.type == "farm_plot" and art.has("farm_spring")) or (s.type == "fishing_dock" and art.has("dock"))): return
 	match s.type:
 		"farm_plot":
 			ci.draw_rect(Rect2(p.x - 30, p.y - 20, 60, 40), Color(0.42, 0.3, 0.17, a))
@@ -967,6 +1028,14 @@ func _draw_structure(s) -> void:
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
 	if not s.built and _draw_site_stage(s, b): return
+	if s.built and s.type == "farm_plot":
+		var season: String = ["spring", "summer", "autumn", "winter"][sim.hz.season_idx()] if sim.hz.on() else "summer"
+		if _sprite("farm_" + season, b): return
+	var west_dock: bool = s.type == "fishing_dock" and D.bank_of(s.pos) == "west"
+	if s.built and s.type == "fishing_dock" and _sprite(("dock_w" if west_dock else "dock") + _snowy(), b):
+		var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
+		ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
+		return
 	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
 		if _sprite(s.type + _snowy(), b):
 			match s.type:
@@ -1438,6 +1507,10 @@ func _draw_guardian(g) -> void:
 		var k := 1.0 - float(i) / guardian_trail.size()
 		ci.draw_circle(iso(guardian_trail[i]) - Vector2(0, lift), 3 + 8 * k, Color(0.4, 0.95, 0.8, 0.2 + 0.45 * k))
 	var c := b - Vector2(0, lift)
+	if art != null and art.has("dragon_0_0"):
+		_sprite("dragon_%d_%d" % [_dir_index("g"), int(t * 6.0) % 4], c, 1.3)
+		_draw_label(c + Vector2(0, -34), tr("Yinglong"), 13, Color("#9ff0d0"), true)
+		return
 	var flap := sin(t * 6) * 10
 	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-4, -2), c + Vector2(-32, -16 - flap), c + Vector2(-22, 4)]), Color("#3fbfa0"))
 	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(4, -2), c + Vector2(32, -16 - flap), c + Vector2(22, 4)]), Color("#38ad91"))
@@ -1627,6 +1700,13 @@ class GroundFX extends Node2D:
 		wv.draw_ground_fx()
 		wv.ci = wv
 
+class Glow extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_glow()
+		wv.ci = wv
+
 class Overlay extends Node2D:
 	var wv
 	func _draw() -> void:
@@ -1708,7 +1788,7 @@ func _sync_items() -> void:
 				var it := _item(key, 5, [pp, i < shown, st.built, st.style], iso(pp), false)
 				it.visible = exp
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
-		elif st.type != "farm_plot":
+		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
 			var key := "s%d" % st.id
 			seen[key] = true
 			var anim: bool = st.type in ["bonfire", "fishing_dock", "aurochs_pen", "smelter", "council_ring"] or not st.built or st.reno \
@@ -1716,7 +1796,7 @@ func _sync_items() -> void:
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
-			_touch(it, (1 if st.built else 0) + st.style * 10)
+			_touch(it, (1 if st.built else 0) + st.style * 10 + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true

@@ -68,6 +68,8 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Animated in 8 directions:** villagers (idle, walk, work; clothing tinted per person) and animals (deer, tiger, wolf).
 - **Terrain:** drawn by `shaders/terrain.gdshader` (grass detail, sand grain, rippling water, shoreline foam).
 - **Fallback:** anything not yet baked falls back to the old drawn art, which is also used when running headless.
+- **Also baked:** construction stages (staked plan, materials, frame, walls with a scaffold); animation sets (gather, build, spear attack, ritual and death for villagers; pounce and death for beasts; stone or bronze tools); ground cover and rock outcrops; seasonal crop fields, the dock, Hot Spring, bones, flint and Yinglong.
+- **Lighting:** a time-of-day tint (golden dusk, blue night, pink dawn), additive fire and torch glow, and a soft vignette.
 
 ## Hardships (Challenges: Off / Normal / Harsh in LLM Settings)
 
