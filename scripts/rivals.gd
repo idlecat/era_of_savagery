@@ -19,7 +19,7 @@ var sim
 var clans := {} # id -> state dict
 var pending: Array = [] # event ids waiting to be shown ("contact_<id>", "demand_<id>")
 
-const TREATIES := ["none", "peace", "hunting_rights"]
+const TREATIES := ["none", "peace", "hunting_rights", "alliance"]
 const RES := ["food", "wood", "stone"]
 
 func _init(s) -> void:
@@ -43,6 +43,10 @@ func setup() -> void:
 		c["war_t"] = -9999.0 # when we last attacked their village
 		c["trade_t"] = D.DAY_LEN * 1.5
 		c["trade_offers"] = []
+		c["vassal"] = 0 # food per day they pay us as our vassal (0 = free)
+		c["call_t"] = D.DAY_LEN * 3.0
+		c["call_target"] = ""
+		c["share_day"] = 0
 		clans[c["id"]] = c
 		_build_village(c)
 		for i in 2: _spawn(c, "hunter")
@@ -79,12 +83,21 @@ func _spawn(c: Dictionary, kind: String, goal: Variant = null) -> E.Predator:
 
 # ------------------------------------------------------------ queries
 func stance(id: String) -> String:
+	if clans[id]["vassal"] > 0: return "Vassal"
+	if has_treaty(id, "alliance"): return "Allied"
 	var r: float = clans[id]["relation"]
 	if r <= -50: return "Blood feud"
 	if r <= -15: return "Hostile"
 	if r < 15: return "Wary"
 	if r < 50: return "Friendly"
-	return "Allied"
+	return "Trusted"
+
+## No raids, no demands: a peace pact, an alliance, or they are our vassals.
+func at_peace(id: String) -> bool:
+	return has_treaty(id, "peace") or has_treaty(id, "alliance") or clans[id]["vassal"] > 0
+
+func allies() -> Array:
+	return clans.keys().filter(func(id): return has_treaty(id, "alliance"))
 
 func has_treaty(id: String, type: String) -> bool:
 	var t: Dictionary = clans[id]["treaties"]
@@ -100,10 +113,12 @@ func treaty_text(id: String) -> String:
 		var trib: int = clans[id]["treaties"]["peace"].get("tribute", 0)
 		parts.append(tr("Peace (%d days)") % treaty_days_left(id, "peace") + ((tr(", tribute %d food/day") % trib) if trib > 0 else ""))
 	if has_treaty(id, "hunting_rights"): parts.append(tr("Hunting rights (%d days)") % treaty_days_left(id, "hunting_rights"))
+	if has_treaty(id, "alliance"): parts.append(tr("Alliance (%d days)") % treaty_days_left(id, "alliance"))
+	if clans[id]["vassal"] > 0: parts.append(tr("Our vassals, paying %d food/day") % clans[id]["vassal"])
 	return ", ".join(parts)
 
 func owns_event(ev: String) -> bool:
-	return ev.begins_with("contact_") or ev.begins_with("demand_") or ev.begins_with("trade_")
+	return ev.begins_with("contact_") or ev.begins_with("demand_") or ev.begins_with("trade_") or ev.begins_with("call_") or ev.begins_with("submit_")
 
 func owner_clan(owner: String) -> String:
 	return owner.trim_prefix("rival:") if owner.begins_with("rival:") else ""
@@ -151,9 +166,9 @@ func on_hunter_attacked(p: E.Predator) -> void:
 	sim.alert(tr("We attacked a hunter of the %s. He runs home to tell his clan.") % tr(c["name"]), p.pos, "warn")
 
 func _break_peace(id: String) -> void:
-	if not has_treaty(id, "peace"): return
-	clans[id]["treaties"].erase("peace")
-	clans[id]["treaties"].erase("hunting_rights")
+	if not at_peace(id): return
+	clans[id]["treaties"].clear()
+	clans[id]["vassal"] = 0
 	change(id, -30.0, tr("you broke the peace you swore"))
 	sim.alert(tr("We have broken the peace with the %s! They will remember us as oath-breakers.") % tr(clans[id]["name"]), clans[id]["pos"], "danger")
 
@@ -176,8 +191,8 @@ func steal(p: E.Predator) -> void:
 	p.loot = true
 	p.fleeing = true
 	sim.popup(p.pos + Vector2(0, -30), tr("Food stolen! -%d") % roundi(amount), Color("#ff8a7a"), true)
-	if not sim.flags.get("theft_alert_%s_%d" % [p.clan, sim.day()], false):
-		sim.flags["theft_alert_%s_%d" % [p.clan, sim.day()]] = true
+	if sim.flags.get("theft_alert_" + p.clan, -1) != sim.day():
+		sim.flags["theft_alert_" + p.clan] = sim.day()
 		sim.alert(tr("Raiders of the %s are carrying off our food!") % tr(clans[p.clan]["name"]), p.pos, "danger")
 
 # ------------------------------------------------------------ tick
@@ -185,7 +200,7 @@ func update(dt: float) -> void:
 	for id in clans:
 		var c: Dictionary = clans[id]
 		# drift back toward the clan's temperament (slowly)
-		var target: float = c["base"] + (25.0 if has_treaty(id, "peace") else 0.0)
+		var target: float = c["base"] + (25.0 if has_treaty(id, "peace") else 0.0) + (45.0 if has_treaty(id, "alliance") else 0.0) + (20.0 if c["vassal"] > 0 else 0.0)
 		c["relation"] += (target - c["relation"]) * dt * 0.0008
 		_treaties(c)
 		_contact(c)
@@ -223,7 +238,10 @@ func _treaties(c: Dictionary) -> void:
 	for type in c["treaties"].keys():
 		if c["treaties"][type]["until"] <= sim.time:
 			c["treaties"].erase(type)
-			sim.alert(tr("Our %s with the %s has ended.") % [tr({"peace": "peace", "hunting_rights": "hunting rights"}[type]), tr(c["name"])], c["pos"], "warn")
+			sim.alert(tr("Our %s with the %s has ended.") % [tr({"peace": "peace", "hunting_rights": "hunting rights", "alliance": "alliance"}[type]), tr(c["name"])], c["pos"], "warn")
+	if sim.day() > c["share_day"]:
+		c["share_day"] = sim.day()
+		_daily_bonds(c)
 	if has_treaty(id, "peace") and c["treaties"]["peace"].get("tribute", 0) > 0 and sim.day() > c["tribute_day"]:
 		c["tribute_day"] = sim.day()
 		var due: int = c["treaties"]["peace"]["tribute"]
@@ -241,6 +259,7 @@ func _trespass(c: Dictionary, dt: float) -> void:
 	for u in sim.living():
 		if u.pos.distance_to(c["pos"]) < D.RIVAL_TERRITORY and u.job.get("type", "") in ["gather", "explore"]: n += 1
 	if n == 0 or has_treaty(c["id"], "hunting_rights"): return
+	if has_treaty(c["id"], "alliance") or c["vassal"] > 0: return
 	c["relation"] = maxf(-100.0, c["relation"] - 0.05 * n * dt * (0.5 if has_treaty(c["id"], "peace") else 1.0))
 	if c["met"] and sim.time - c["trespass_warned"] > D.DAY_LEN:
 		c["trespass_warned"] = sim.time
@@ -256,7 +275,7 @@ func on_structure_placed(s) -> void:
 ## from an undefended camp and slips home. Bigger feuds mean bigger, more frequent raids.
 func _raids(c: Dictionary, dt: float) -> void:
 	if sim.hz.level == "off": return # peaceful setting: neighbours never raid
-	if c["relation"] > -15 or has_treaty(c["id"], "peace"): return
+	if c["relation"] > -15 or at_peace(c["id"]): return
 	c["raid_t"] -= dt
 	if c["raid_t"] > 0: return
 	var hostility := clampf(-c["relation"] / 80.0, 0.0, 1.0)
@@ -298,6 +317,8 @@ func _hunters(c: Dictionary, dt: float) -> void:
 func event_def(ev: String) -> Dictionary:
 	if ev.begins_with("demand_"): return _demand_def(ev.trim_prefix("demand_"))
 	if ev.begins_with("trade_"): return _trade_def(ev.trim_prefix("trade_"))
+	if ev.begins_with("call_"): return _call_def(ev.trim_prefix("call_"))
+	if ev.begins_with("submit_"): return _submit_def(ev.trim_prefix("submit_"))
 	var id := ev.trim_prefix("contact_")
 	var c: Dictionary = clans[id]
 	return {"title": tr("First Contact: the %s") % tr(c["name"]),
@@ -311,10 +332,13 @@ func event_def(ev: String) -> Dictionary:
 func resolve(ev: String, idx: int) -> String:
 	if ev.begins_with("demand_"): return _demand_resolve(ev.trim_prefix("demand_"), idx)
 	if ev.begins_with("trade_"): return _trade_resolve(ev.trim_prefix("trade_"), idx)
+	if ev.begins_with("call_"): return _call_resolve(ev.trim_prefix("call_"), idx)
+	if ev.begins_with("submit_"): return _submit_resolve(ev.trim_prefix("submit_"), idx)
 	var id := ev.trim_prefix("contact_")
 	var c: Dictionary = clans[id]
 	match idx:
 		0:
+			if sim.stock["food"] < 20: return tr("We have no food to spare for gifts. We watch the %s from afar.") % tr(c["name"])
 			sim.stock["food"] -= 20
 			change(id, 20.0)
 			return tr("The %s accept our gifts. %s nods: \"Your people may pass in peace.\"") % [tr(c["name"]), tr(c["chief"])]
@@ -397,9 +421,10 @@ func sanitize_terms(raw: Variant, fallback: Dictionary, id := "") -> Dictionary:
 	if not (raw is Dictionary): return fallback.duplicate(true)
 	var t := empty_terms()
 	var tr_id := str(raw.get("treaty", "none")).to_lower().replace(" ", "_")
-	tr_id = {"peace_pact": "peace", "truce": "peace", "non_aggression": "peace", "hunting": "hunting_rights", "trade": "none", "exchange": "none", "gift": "none"}.get(tr_id, tr_id)
+	tr_id = {"peace_pact": "peace", "truce": "peace", "non_aggression": "peace", "hunting": "hunting_rights", "trade": "none", "exchange": "none", "gift": "none",
+		"ally": "alliance", "allies": "alliance", "blood_brothers": "alliance", "union": "alliance"}.get(tr_id, tr_id)
 	t["treaty"] = tr_id if tr_id in TREATIES else "none"
-	t["days"] = clampi(_int(raw.get("days", 15)), 5, 40)
+	t["days"] = clampi(_int(raw.get("days", 15)), 5, 60 if t["treaty"] == "alliance" else 40)
 	t["tribute"] = clampi(_int(raw.get("tribute", raw.get("tribute_per_day", 0))), 0, 10) if t["treaty"] == "peace" else 0
 	var teach := str(raw.get("teach", raw.get("clan_teaches", ""))).to_lower()
 	for td in D.TECHS: # names as well as ids
@@ -447,6 +472,9 @@ func deal_value(id: String, t: Dictionary, envoy: E.Unit, round_i := 0) -> float
 			v += t["tribute"] * t["days"] * 0.9 * w["food"]
 		"hunting_rights":
 			v -= 18.0 + t["days"] * 0.5
+		"alliance": # only between peoples who already trust each other
+			if c["relation"] < 30 or c["vassal"] > 0: v -= 200.0
+			else: v -= (25.0 if martial else 15.0) + t["days"] * 0.3
 	return v
 
 func inclination(v: float) -> String:
@@ -481,6 +509,7 @@ func terms_text(t: Dictionary) -> String:
 	match t["treaty"]:
 		"peace": parts.append(tr("Peace for %d days") % t["days"] + ((tr(", tribute %d food/day") % t["tribute"]) if t["tribute"] > 0 else ""))
 		"hunting_rights": parts.append(tr("Hunting rights for %d days") % t["days"])
+		"alliance": parts.append(tr("Alliance for %d days") % t["days"])
 	var give: Array = []
 	var take: Array = []
 	for r in RES:
@@ -552,6 +581,9 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 	if t["treaty"] != "none":
 		c["treaties"][t["treaty"]] = {"until": sim.time + t["days"] * D.DAY_LEN, "tribute": t["tribute"]}
 		if t["treaty"] == "peace": c["tribute_day"] = sim.day()
+		if t["treaty"] == "alliance":
+			c["treaties"].erase("hunting_rights") # allies hunt freely anyway
+			sim.evo.drift("martial", -4.0) # sworn brothers make a gentler people
 	change(id, clampf(5.0 + v * 0.4, 3.0, 25.0) + (8.0 if t["treaty"] != "none" else 0.0))
 	var what := terms_text(t)
 	sim.remember(envoy, tr("sealed an agreement with the %s on Day %d: %s") % [tr(c["name"]), sim.day(), what], 7)
@@ -571,10 +603,15 @@ func defend(id: String, contract) -> int:
 	var c: Dictionary = clans[id]
 	c["met"] = true
 	c["war_t"] = sim.time
-	if has_treaty(id, "peace"): _break_peace(id)
+	if at_peace(id): _break_peace(id)
 	else: change(id, -35.0, tr("you attacked our village"))
 	c["treaties"].erase("hunting_rights")
 	var n: int = clampi(c["warriors"] + 2 + (0 if contract.flags.get("scouted", false) else 1), 2, 8)
+	var friends: Array = allies().filter(func(a): return a != id)
+	if not friends.is_empty(): # our allies send spears: fewer defenders dare to come out
+		n = maxi(2, n - 2)
+		contract.flags["allies"] = friends[0]
+		sim.add_log(tr("Warriors of the %s fight beside our war party!") % tr(clans[friends[0]]["name"]), "combat")
 	c["warriors"] = 0
 	for i in n:
 		var g := _spawn(c, "warrior")
@@ -594,6 +631,8 @@ func _guards_home(c: Dictionary) -> void:
 func war_spoils(id: String, objective: String, contract) -> String:
 	var c: Dictionary = clans[id]
 	sim.evo.drift("martial", 4.0)
+	c["defeats"] = c.get("defeats", 0) + 1
+	if not ("submit_" + id) in pending: pending.append("submit_" + id) # beaten at home, they may bend the knee
 	match objective:
 		"burn":
 			var huts: Array = sim.structures.filter(func(st): return st.owner == "rival:" + id and st.type in ["hut", "large_hut"])
@@ -688,3 +727,95 @@ func _trade_resolve(id: String, idx: int) -> String:
 		sim.evo.seed(known[0], 0.1, null)
 		return tr("Goods change hands: %s. Watching the trader work, our people learn a little of %s.") % [_offer_text(o), tr(sim.evo.tech_def(known[0])["name"])]
 	return tr("Goods change hands: %s.") % _offer_text(o)
+
+# ------------------------------------------------------------ alliances and vassals
+## Once a day: allies share what they know and may call us to their wars; vassals pay.
+func _daily_bonds(c: Dictionary) -> void:
+	var id: String = c["id"]
+	if c["vassal"] > 0:
+		sim.stock["food"] += c["vassal"]
+		sim.add_log(tr("The %s, our vassals, bring %d food.") % [tr(c["name"]), c["vassal"]], "info")
+		if c["relation"] < -80 and c["warriors"] >= 3: # they have had enough
+			c["vassal"] = 0
+			sim.alert(tr("The %s throw off our yoke and rise against us!") % tr(c["name"]), c["pos"], "danger")
+			launch_raid(c)
+		return
+	if not has_treaty(id, "alliance"): return
+	var tl := teachable(id)
+	if not tl.is_empty():
+		sim.evo.seed(tl[0], 0.08, null)
+		if randf() < 0.3: sim.add_log(tr("Living beside the %s, our people learn more of %s.") % [tr(c["name"]), tr(sim.evo.tech_def(tl[0])["name"])], "tech")
+	if sim.time >= c["call_t"] and pending.filter(func(e): return e.begins_with("call_")).is_empty():
+		for other in clans:
+			if other == id or not clans[other]["met"] or at_peace(other): continue
+			if randf() < 0.35:
+				c["call_t"] = sim.time + D.DAY_LEN * 4.0
+				c["call_target"] = other
+				pending.append("call_" + id)
+				break
+
+func _call_def(id: String) -> Dictionary:
+	var c: Dictionary = clans[id]
+	var foe: Dictionary = clans[c["call_target"]]
+	return {"title": tr("The %s Call Us to War") % tr(c["name"]),
+		"text": tr("A runner of our allies the %s arrives breathless: \"%s %s asks: will our brothers send spears against the %s?\"") % [tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), tr(foe["name"])],
+		"options": [
+			{"label": tr("Send a war party"), "desc": tr("Choose a leader to plan a raid on the %s (+10 with our allies).") % tr(foe["name"]), "enabled": true},
+			{"label": tr("Send gifts instead"), "desc": tr("15 food for their warriors; they go alone (+3).") , "enabled": sim.stock["food"] >= 15},
+			{"label": tr("Refuse"), "desc": tr("This is not our fight (-12 with our allies)."), "enabled": true},
+		]}
+
+func _call_resolve(id: String, idx: int) -> String:
+	var c: Dictionary = clans[id]
+	var foe: Dictionary = clans[c["call_target"]]
+	match idx:
+		0:
+			change(id, 10.0)
+			sim.flags["open_war"] = c["call_target"]
+			return tr("We will march with the %s against the %s. Choose who leads our spears.") % [tr(c["name"]), tr(foe["name"])]
+		1:
+			sim.stock["food"] -= 15
+			change(id, 3.0)
+			foe["pop"] = maxi(3, foe["pop"] - 1)
+			change(foe["id"], -5.0)
+			return tr("The %s raid the %s alone, fed by our food.") % [tr(c["name"]), tr(foe["name"])]
+	change(id, -12.0, tr("you left us to fight alone"))
+	return tr("The runner leaves without a word. The %s will remember.") % tr(c["name"])
+
+func _submit_def(id: String) -> Dictionary:
+	var c: Dictionary = clans[id]
+	var broken: bool = c["warriors"] <= 1 or c["pop"] <= 7 or c.get("defeats", 0) >= 2
+	var opts: Array = []
+	if broken:
+		opts = [
+			{"label": tr("Accept their submission"), "desc": tr("They become our vassals: 3 food a day, no more raids."), "enabled": true},
+			{"label": tr("Demand a heavy tribute"), "desc": tr("6 food a day - but they will hate us, and may rise again."), "enabled": true},
+			{"label": tr("Spare them freely"), "desc": tr("Make peace with no tribute (+20 relations, 20 days of peace)."), "enabled": true},
+		]
+	else:
+		opts = [{"label": tr("Let them lick their wounds"), "desc": tr("They are beaten, but not yet broken."), "enabled": true}]
+	return {"title": tr("The %s After the Battle") % tr(c["name"]),
+		"text": (tr("%s %s comes out of the smoke, unarmed. \"Enough. The %s will bow to your fire, if you let our children live.\"") % [tr(c["chief"]), tr(c["epithet"]), tr(c["name"])]) if broken
+			else tr("The %s pull back behind their huts, bloodied but still defiant.") % tr(c["name"]),
+		"options": opts}
+
+func _submit_resolve(id: String, idx: int) -> String:
+	var c: Dictionary = clans[id]
+	if _submit_def(id)["options"].size() == 1: return tr("We leave them to mourn.")
+	match idx:
+		0:
+			c["vassal"] = 3
+			c["relation"] = maxf(c["relation"], -30.0)
+			c["treaties"].clear()
+			sim.evo.drift("ranked", 6.0) # lords over another people
+			sim.alert(tr("The %s are now our vassals.") % tr(c["name"]), c["pos"], "info")
+			return tr("%s lays down their weapons at our fire. The %s are ours.") % [tr(c["chief"]), tr(c["name"])]
+		1:
+			c["vassal"] = 6
+			c["relation"] = minf(c["relation"], -60.0)
+			c["grudges"].append(tr("you crushed us under a heavy tribute"))
+			sim.alert(tr("The %s are now our vassals.") % tr(c["name"]), c["pos"], "info")
+			return tr("They will pay, and they will hate us for it.")
+	c["relation"] = maxf(c["relation"], -10.0) + 20.0
+	c["treaties"]["peace"] = {"until": sim.time + 20 * D.DAY_LEN, "tribute": 0}
+	return tr("We let them go in peace. The tale of our mercy will travel far.")

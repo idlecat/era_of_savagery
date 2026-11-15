@@ -225,6 +225,7 @@ func _build_top(root: Control) -> void:
 		speed_btns.append(b)
 		h.add_child(b)
 	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
+	h.add_child(_button("Legacy", _open_legacy, "The three paths to victory: conquest, unity and wisdom"))
 	h.add_child(_button("LLM Settings", _open_settings))
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
@@ -713,7 +714,7 @@ func _refresh_right() -> void:
 
 func _clans_bbcode() -> String:
 	var out := ""
-	var cols := {"Blood feud": "#ff5a4a", "Hostile": "#ff8a6a", "Wary": "#ffe08a", "Friendly": "#b6f28a", "Allied": "#8af2d0"}
+	var cols := {"Blood feud": "#ff5a4a", "Hostile": "#ff8a6a", "Wary": "#ffe08a", "Friendly": "#b6f28a", "Trusted": "#9af0b0", "Allied": "#8af2d0", "Vassal": "#e6c46a"}
 	for id in sim.rivals.clans:
 		var c: Dictionary = sim.rivals.clans[id]
 		if not c["met"]: continue
@@ -1105,6 +1106,9 @@ func _toast_contract_done(c) -> void:
 
 # ------------------------------------------------------------ milestone events
 func _on_event(id: String) -> void:
+	if sim.legacy.owns_event(id):
+		_show_ending(id)
+		return
 	var d: Dictionary = sim.event_def(id)
 	var v := _open_modal("☼ " + d["title"], 820)
 	var txt := _rich(0, true)
@@ -1133,6 +1137,17 @@ func _event_choose(id: String, idx: int) -> void:
 		for u in cands.slice(0, 5):
 			var trs: String = tr(D.TRAITS[u.traits[0]]["name"])
 			v.add_child(_button(tr("%s \"%s\" — %s, Lv%d") % [tr(u.name), tr(u.epithet), trs, sim.unit_level(u)], func(): open_negotiation(u)))
+	if r.get("open_war", "") != "":
+		var foe: String = r["open_war"]
+		v.add_child(_label("Choose who leads the war party:", 15, COL_DIM))
+		var fighters: Array = sim.contracts.available_helpers()
+		fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
+		for u in fighters.slice(0, 5):
+			var who = u
+			v.add_child(_button(tr("%s \"%s\" — Combat %d") % [tr(u.name), tr(u.epithet), u.lv("combat")], func():
+				open_negotiation(who, "war")
+				var ti: int = neg["target_ids"].find(foe)
+				if ti >= 0: neg["target"].select(ti)))
 	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = false))
 
 # ------------------------------------------------------------ tech tree
@@ -1390,7 +1405,7 @@ func open_parley(u, clan_id: String) -> void:
 	rcol.add_child(g)
 	g.add_child(_label("Treaty", 14, COL_DIM))
 	var treaty := OptionButton.new()
-	for k in R.TREATIES: treaty.add_item(tr({"none": "Exchange of goods only", "peace": "Peace pact (no raids)", "hunting_rights": "Hunting rights on their land"}[k]))
+	for k in R.TREATIES: treaty.add_item(tr({"none": "Exchange of goods only", "peace": "Peace pact (no raids)", "hunting_rights": "Hunting rights on their land", "alliance": "Alliance (fight and learn together)"}[k]))
 	treaty.select(1)
 	g.add_child(treaty)
 	par["treaty"] = treaty
@@ -1511,3 +1526,52 @@ func _par_end(text: String) -> void:
 	txt.text = text
 	v.add_child(txt)
 	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = false))
+
+# ------------------------------------------------------------ legacy: the paths to victory
+func _open_legacy() -> void:
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var v := _open_modal(tr("LEGACY · Day %d") % sim.day(), 760)
+	var r := _rich(0, true)
+	var s := ""
+	for p in sim.legacy.progress():
+		var won: bool = sim.legacy.achieved.has(p["path"])
+		s += tr("[color=%s][b]%s[/b][/color]%s — [i]%s[/i]\n") % ["#b6f28a" if won else "#ffd36b", p["title"], (tr("  (achieved on Day %d)") % sim.legacy.achieved[p["path"]]) if won else "", p["desc"]]
+		for c in p["conds"]:
+			s += tr("   [color=%s]%s %s[/color]\n") % ["#b6f28a" if c["done"] else "#a89878", "✔" if c["done"] else "○", c["text"]]
+		s += "\n"
+	s += tr("[color=#8a7a60]If every one of our people dies, the chronicle ends in defeat. After a victory you may keep playing.[/color]")
+	r.text = s
+	v.add_child(r)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+## A victory or defeat: the storyteller's LLM node composes the saga of the game.
+func _show_ending(id: String) -> void:
+	var L = sim.legacy
+	var path: String = L.path_of(id)
+	var d: Dictionary = sim.event_def(id)
+	var v := _open_modal(("☠ " if path == "defeat" else "♛ ") + d["title"], 900, path == "defeat")
+	var token := modal_token
+	var head := _rich(0, true)
+	var ctx: Dictionary = L.saga_ctx(path)
+	head.text = tr("[i]%s[/i]\n[color=#b8a888]Day %d · %s · %d living, %d fallen · %d pieces of wisdom[/color]") % [d["text"], ctx["day"], ctx["age"], ctx["people_living"], ctx["people_fallen"], ctx["wisdom"].size()]
+	v.add_child(head)
+	v.add_child(_header("THE SAGA"))
+	var saga := _rich(0, true)
+	var teller: Dictionary = ctx["storyteller"]
+	saga.text = tr("[color=#8a7a60][i]%s gathers the children by the fire…[/i][/color]") % teller.get("name", tr("An elder"))
+	v.add_child(saga)
+	var bh := HBoxContainer.new()
+	v.add_child(bh)
+	var i := 0
+	for o in d["options"]:
+		var idx := i
+		bh.add_child(_button(tr(o["label"]), func():
+			var res: Dictionary = sim.resolve_event(id, idx)
+			_close_modal()
+			if res.get("restart", false): get_tree().reload_current_scene()
+			else: sim.paused = false))
+		i += 1
+	var r: Dictionary = await llm.saga(ctx, L.saga_offline(ctx))
+	if modal == null or modal_token != token: return
+	saga.text = tr("[color=#e6b8ff][b]%s:[/b][/color] %s\n[color=#8a9aa8](%s)[/color]") % [teller.get("name", tr("An elder")), r["saga"], r.get("source", "")]

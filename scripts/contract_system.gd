@@ -178,7 +178,7 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 				var st := str(s.get("structure", "")).to_lower().replace(" ", "_")
 				st = D.STRUCT_ALIASES.get(st, st)
 				if st not in D.CONTRACT_STRUCTURES:
-					notes.append("Dropped unknown structure '%s'." % st)
+					notes.append(tr("Dropped unknown structure '%s'.") % st)
 					continue
 				var sd: Dictionary = D.STRUCTURES[st]
 				if sd.has("tech") and not sim.has_tech(sd["tech"]):
@@ -193,10 +193,10 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 			"ritual":
 				steps.append({"action": "ritual", "duration_sec": clampi(_int(s.get("duration_sec", s.get("duration")), 10), 4, 30)})
 			_:
-				notes.append("Dropped unknown action '%s'." % action)
+				notes.append(tr("Dropped unknown action '%s'.") % action)
 		if steps.size() >= 8: break
 	if steps.is_empty():
-		return {"ok": false, "blueprint": out, "notes": notes + ["Blueprint had no valid steps."]}
+		return {"ok": false, "blueprint": out, "notes": notes + [tr("Blueprint had no valid steps.")]}
 	out["steps"] = steps
 
 	var aborts: Array = []
@@ -227,7 +227,7 @@ func _sanitize_research(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Di
 		tech = terms["tech"]
 	if tech not in cands:
 		if cands.is_empty():
-			return {"ok": false, "blueprint": out, "notes": ["No new wisdom is within reach yet."]}
+			return {"ok": false, "blueprint": out, "notes": [tr("No new wisdom is within reach yet.")]}
 		if tech != "": notes.append("'%s' is out of reach; seeking %s instead." % [tech, sim.evo.tech_def(cands[0])["name"]])
 		tech = cands[0]
 	out["tech"] = tech
@@ -423,10 +423,10 @@ func update(dt: float) -> void:
 		_manage_wounded(c)
 		var ld := leader(c)
 		if ld == null or ld.dead:
-			_fail(c, "%s fell; the expedition lost its leader." % (ld.name if ld else "The leader"))
+			_fail(c, tr("%s fell; the expedition lost its leader.") % (tr(ld.name) if ld else tr("The leader")))
 			continue
 		if crew(c, true).is_empty():
-			_fail(c, "No crew remain.")
+			_fail(c, tr("No crew remain."))
 			continue
 		match c.status:
 			"assembling": _assemble(c)

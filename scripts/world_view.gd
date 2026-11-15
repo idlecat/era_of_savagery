@@ -1296,7 +1296,7 @@ func _draw_clan_banner(c: Dictionary) -> void:
 	for i in 3: # feather tassels
 		ci.draw_line(top + Vector2(6 + i * 8, 17 + wv * 0.6), top + Vector2(5 + i * 8, 25 + wv * 0.6), Color("#e8dcc0"), 1.2)
 	var st: String = sim.rivals.stance(c["id"])
-	var scol: Color = {"Blood feud": Color("#ff5a4a"), "Hostile": Color("#ff8a6a"), "Wary": Color("#ffe08a"), "Friendly": Color("#b6f28a"), "Allied": Color("#8af2d0")}[st]
+	var scol: Color = {"Blood feud": Color("#ff5a4a"), "Hostile": Color("#ff8a6a"), "Wary": Color("#ffe08a"), "Friendly": Color("#b6f28a"), "Trusted": Color("#9af0b0"), "Allied": Color("#8af2d0"), "Vassal": Color("#e6c46a")}[st]
 	_draw_label(fp + Vector2(12, -72), tr(c["name"]).to_upper(), 15, col.lightened(0.5), true)
 	if c["met"]: _draw_label(fp + Vector2(12, -88), tr(st), 12, scol, true)
 

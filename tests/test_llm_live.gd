@@ -106,6 +106,14 @@ func _run() -> void:
 	print("   verdict: %s · %s %s" % [pc["verdict"], R.terms_text(pc["terms"]), pc.get("note", "")])
 	check(pr["source"] != "offline fallback", "the rival chieftain answered via cloud LLM")
 	check(pc["verdict"] in ["accept", "counter", "refuse"], "parley reply is a valid verdict")
+	# the endgame saga
+	sim.remember(sim.unit_by_name("Alie"), "led the war party against the Red Ochre Clan on Day 9 (burned 2 of their huts)", 9)
+	for cid in sim.rivals.clans: sim.rivals.clans[cid]["vassal"] = 3
+	var sctx: Dictionary = sim.legacy.saga_ctx("conquest")
+	t0 = Time.get_ticks_msec()
+	var sg: Dictionary = await llm.saga(sctx, sim.legacy.saga_offline(sctx))
+	print("\n[SAGA by %s] (%s, %d ms)\n%s" % [sctx["storyteller"]["name"], sg["source"], Time.get_ticks_msec() - t0, sg["saga"]])
+	check(sg["source"] != "offline fallback", "the saga was told via cloud LLM")
 	print("\nLLM calls counted: ", sim.llm_calls)
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)

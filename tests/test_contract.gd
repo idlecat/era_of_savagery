@@ -6,6 +6,7 @@ const Sim = preload("res://scripts/sim.gd")
 const Persona = preload("res://scripts/persona_engine.gd")
 const LLM = preload("res://scripts/llm_client.gd")
 const D = preload("res://scripts/data.gd")
+const E = preload("res://scripts/entities.gd")
 const I18N = preload("res://scripts/i18n.gd")
 # Compile-check the UI scripts too (a parse error in any of them fails this test run).
 const _Main = preload("res://scripts/main.gd")
@@ -35,6 +36,7 @@ func _initialize() -> void:
 	test_rivals()
 	test_diplomacy()
 	test_war_and_trade()
+	test_endgames()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -269,7 +271,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "rivals", "hud", "world_view", "persona_engine", "llm_client"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -391,6 +393,13 @@ func test_rivals() -> void:
 	for i in 100: sim.tick(0.05)
 	check(u.hp == u.max_hp, "a hunter beside a villager does not attack")
 	check(sim.active_predators_near(h.pos, 200).filter(func(p): return p.kind == "hunter").is_empty(), "hunters don't count as threats")
+	# Yinglong leaves peaceful clan hunters alone
+	sim.guardian = E.Guardian.new()
+	sim.guardian.pos = h.pos + Vector2(20, 0)
+	var h_hp: float = h.hp
+	for i in 40: sim._update_guardian(0.05)
+	check(h.hp == h_hp and not h.dead, "the guardian dragon does not hunt peaceful clan hunters")
+	sim.guardian = null
 	check(sim.rivals.clans["heron"]["met"] and sim.pending_event == "contact_heron", "meeting their hunter is first contact too")
 	var keep: Dictionary = sim.resolve_event("contact_heron", 2)
 	check(keep["text"] != "" and sim.pending_event == "", "keeping our distance resolves the meeting")
@@ -630,3 +639,88 @@ func test_war_and_trade() -> void:
 	check(bad["teach"] == "", "a clan can't teach what it doesn't know")
 	sim3.rivals.seal(sim3.unit_by_name("Linghe"), "heron", lesson, 0)
 	check(sim3.evo.insight_frac("pottery") > ins0 + 0.5, "being taught a secret brings it within reach (%d%%)" % roundi(sim3.evo.insight_frac("pottery") * 100))
+
+func test_endgames() -> void:
+	print("\n== Alliances, vassals, endings ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	for id in R.clans: R.clans[id]["met"] = true
+	R.pending.clear()
+	sim.techs["fire"] = true
+	var heron: Dictionary = R.clans["heron"]
+	var ochre: Dictionary = R.clans["ochre"]
+	var envoy = sim.unit_by_name("Linghe")
+	var ally: Dictionary = R.empty_terms()
+	ally["treaty"] = "alliance"
+	ally["days"] = 40
+	heron["relation"] = 10.0
+	check(R.deal_value("heron", ally, envoy) < -100, "strangers won't swear an alliance")
+	heron["relation"] = 45.0
+	check(R.deal_value("heron", ally, envoy) > -60, "trusted neighbours will consider it")
+	R.seal(envoy, "heron", ally, 0)
+	check(R.stance("heron") == "Allied" and R.at_peace("heron") and R.allies() == ["heron"], "an alliance is sworn")
+	var ins0: float = sim.evo.insight_frac("pottery")
+	heron["share_day"] = 0
+	R._treaties(heron)
+	check(sim.evo.insight_frac("pottery") > ins0, "allies share what they know")
+	# call to arms
+	var called := false
+	for i in 40:
+		heron["call_t"] = 0.0
+		heron["share_day"] = 0
+		R._daily_bonds(heron)
+		if "call_heron" in R.pending:
+			called = true
+			break
+	check(called and heron["call_target"] == "ochre", "allies call us to war against their enemies")
+	R.pending.clear()
+	sim._fire_event("call_heron")
+	var d: Dictionary = sim.event_def("call_heron")
+	check(d["options"].size() == 3, "join, send gifts, or refuse")
+	var res: Dictionary = sim.resolve_event("call_heron", 0)
+	check(res.get("open_war", "") == "ochre", "joining opens a war contract against their enemy")
+	# allies fight beside us
+	var u = sim.unit_by_name("Alie")
+	var bp: Dictionary = sim.contracts.sanitize({"kind": "war", "target": "ochre", "objective": "break", "crew_size": 3}, {"kind": "war"}, u)["blueprint"]
+	var c = sim.contracts.create(bp, u, "war")
+	ochre["warriors"] = 4
+	var n: int = R.defend("ochre", c)
+	check(c.flags.get("allies", "") == "heron" and n == 5, "allied spears mean fewer defenders (%d)" % n)
+	# submission
+	ochre["warriors"] = 0
+	R.war_spoils("ochre", "break", c)
+	check("submit_ochre" in R.pending, "a beaten clan may bend the knee")
+	R.pending.clear()
+	d = sim.event_def("submit_ochre")
+	check(d["options"].size() == 3, "accept, demand more, or spare them")
+	sim.resolve_event("submit_ochre", 0)
+	check(R.stance("ochre") == "Vassal" and R.at_peace("ochre"), "the Red Ochre become our vassals")
+	var food0: float = sim.stock["food"]
+	ochre["share_day"] = 0
+	R._treaties(ochre)
+	check(sim.stock["food"] == food0 + 3, "vassals pay tribute every day")
+	# conquest needs every clan
+	sim.legacy.update(1.1)
+	check(sim.legacy.pending == "", "no victory while a clan is free")
+	heron["treaties"].clear()
+	heron["vassal"] = 3
+	sim.legacy.check_t = 0.0
+	sim.legacy.update(0.1)
+	check(sim.legacy.pending == "victory_conquest", "every clan a vassal: victory by conquest")
+	sim.pending_event = ""
+	sim._check_events()
+	check(sim.pending_event == "victory_conquest" and sim.paused, "the ending pauses the game")
+	var ctx: Dictionary = sim.legacy.saga_ctx("conquest")
+	var saga: String = sim.legacy.saga_offline(ctx)
+	print("   ", saga.replace("\n", " / ").left(300))
+	check(not ctx["great_deeds"].is_empty() and saga.length() > 80, "the storyteller has deeds to tell")
+	var end: Dictionary = sim.resolve_event("victory_conquest", 0)
+	check(not end["restart"] and sim.legacy.achieved.has("conquest"), "the chronicle can go on after victory")
+	var unity: Dictionary = sim.legacy.progress()[1]
+	check(not unity["conds"][0]["done"], "unity needs alliances, not vassals")
+	# defeat
+	var sim2 = _new_sim()
+	for o in sim2.living(): sim2.kill_unit(o, null)
+	sim2.legacy.update(1.1)
+	check(sim2.legacy.pending == "defeat", "when the last of us dies, the chronicle ends")
+	check(sim2.event_def("defeat")["options"].size() == 1 and sim2.resolve_event("defeat", 0)["restart"], "defeat can only begin anew")

@@ -251,6 +251,25 @@ Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept
 	fb["error"] = res.get("error", "invalid JSON shape")
 	return fb
 
+# ------------------------------------------------------------ the saga (endgame)
+## The tribe's storyteller tells the whole game as a legend. Returns {"saga", "source", "error"}.
+func saga(ctx: Dictionary, fallback: String) -> Dictionary:
+	_count_call()
+	if not is_online():
+		await get_tree().create_timer(0.6).timeout
+		return {"saga": fallback, "source": "offline", "error": ""}
+	var st: Dictionary = ctx.get("storyteller", {})
+	var system := """You are %s, "%s", the storyteller of a prehistoric tribe%s. The chronicle of your people has reached its end: %s.
+Tell it as a saga to the children around the fire: 120-200 words, vivid and primal, in the voice of an elder. Name the people and their great deeds from great_deeds (in order), the fate of the neighbouring clans, and how it ended.
+Use only words your tribe would know; no modern words, no numbers larger than a hand can count unless they are days.
+Reply with ONLY one JSON object: {"saga": "<the saga>"}""" % [st.get("name", "an elder"), st.get("epithet", ""), " (you speak from among the dead)" if st.get("fallen", false) else "", ctx["ending"]]
+	if I.is_zh():
+		system += "\nLANGUAGE: write the saga in Simplified Chinese (简体中文), like an ancient oral epic."
+	var res := await chat_json(system, JSON.stringify(ctx))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("saga") is String and res["data"]["saga"].length() > 40:
+		return {"saga": res["data"]["saga"], "source": label(), "error": ""}
+	return {"saga": fallback, "source": "offline fallback", "error": res.get("error", "invalid JSON shape")}
+
 # ------------------------------------------------------------ transport
 func chat_json(system: String, user: String, json_mode := true) -> Dictionary:
 	if api_key == "" and provider != "ollama":

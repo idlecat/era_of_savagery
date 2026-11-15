@@ -7,6 +7,7 @@ const ContractSystem = preload("res://scripts/contract_system.gd")
 const Evolution = preload("res://scripts/evolution.gd")
 const Hazards = preload("res://scripts/hazards.gd")
 const Rivals = preload("res://scripts/rivals.gd")
+const Legacy = preload("res://scripts/legacy.gd")
 
 signal contract_interrupted(contract)
 signal event_fired(event_id)
@@ -55,6 +56,7 @@ const MEAL := 3.0 # food per meal
 var evo: Evolution
 var hz: Hazards
 var rivals: Rivals
+var legacy: Legacy
 var alerts: Array = [] # {text, pos, level, t}
 # ---- worn paths: foot traffic slowly wears trails into the grass ----
 const WEAR_CELL := 30.0
@@ -68,6 +70,7 @@ func _init() -> void:
 	evo = Evolution.new(self)
 	hz = Hazards.new(self)
 	rivals = Rivals.new(self)
+	legacy = Legacy.new(self)
 
 func uid() -> int:
 	next_id += 1
@@ -508,7 +511,9 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					u.resume_job = {}
 					assign_explore(u)
 				elif j.get("warm", false) and not u.resume_job.is_empty():
-					if u.hp < u.max_hp * 0.8: return # stay by the fire until warm again
+					if u.hp < u.max_hp * 0.8:
+						u.act = "Warming by the fire"
+						return # stay by the fire until warm again
 					var rj := u.resume_job
 					u.resume_job = {}
 					set_job(u, rj, u.resume_key)
@@ -939,7 +944,7 @@ func _update_guardian(dt: float) -> void:
 	var target = null
 	var best := 900.0
 	for p in predators:
-		if p.dead or p.fled: continue
+		if p.dead or p.fled or p.kind in ["hunter", "trader"]: continue # peaceful clan folk
 		var d: float = p.pos.distance_to(g.pos)
 		if d < best:
 			best = d
@@ -1005,6 +1010,7 @@ func tick(dt: float) -> void:
 	evo.update(dt)
 	hz.update(dt)
 	rivals.update(dt)
+	legacy.update(dt)
 	wear_t -= dt
 	if wear_t <= 0:
 		wear_t = 1.0
@@ -1149,10 +1155,10 @@ func reno_cost(list: Array) -> Dictionary:
 
 func renovate(helpers: Array) -> String:
 	var list := outdated()
-	if list.is_empty(): return "Nothing to renovate"
+	if list.is_empty(): return tr("Nothing to renovate")
 	var cost := reno_cost(list)
 	if stock["wood"] < cost["wood"] or stock["stone"] < cost["stone"]:
-		return "Needs %d wood%s" % [cost["wood"], (" and %d stone" % cost["stone"]) if cost["stone"] > 0 else ""]
+		return tr("Needs %d wood and %d stone") % [cost["wood"], cost["stone"]] if cost["stone"] > 0 else tr("Needs %d wood") % cost["wood"]
 	stock["wood"] -= cost["wood"]
 	stock["stone"] -= cost["stone"]
 	for s in list:
@@ -1180,6 +1186,9 @@ func _finish_reno(s: E.Structure, u: E.Unit) -> void:
 # ------------------------------------------------------------------ milestone events
 func _check_events() -> void:
 	if pending_event != "": return
+	if legacy.pending != "": # endings come first
+		_fire_event(legacy.pending)
+		return
 	if not flags.has("flood") and time >= (D.FLOOD_DAY - 1) * D.DAY_LEN + 5:
 		flags["flood"] = true
 		_fire_event("flood")
@@ -1212,7 +1221,7 @@ func flood_strike() -> void:
 			hurt += 1
 			remember(u, tr("survived the Great Flood on Day %d") % day(), 7)
 	for s in structures:
-		if s.built and s.type != "palisade" and absf(s.pos.x - D.river_x(s.pos.y)) < 220:
+		if ours(s) and s.built and s.type != "palisade" and absf(s.pos.x - D.river_x(s.pos.y)) < 220:
 			s.built = false
 			s.progress = s.work * 0.4
 	add_log(tr("The Great Flood strikes! %d food washed away, %d hurt, riverside structures damaged.") % [lost, hurt], "danger")
@@ -1228,6 +1237,7 @@ func best_unit(skill: String, exclude_contract := true) -> E.Unit:
 ## Civilization-style dilemmas. Each option: {label, desc, enabled}.
 func event_def(id: String) -> Dictionary:
 	if rivals.owns_event(id): return rivals.event_def(id)
+	if legacy.owns_event(id): return legacy.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1262,7 +1272,14 @@ func event_def(id: String) -> Dictionary:
 ## Returns {"text": outcome, "open_contract": bool}
 func resolve_event(id: String, idx: int) -> Dictionary:
 	pending_event = ""
-	if rivals.owns_event(id): return {"text": rivals.resolve(id, idx), "open_contract": false}
+	if rivals.owns_event(id):
+		var txt: String = rivals.resolve(id, idx)
+		var ow: String = flags.get("open_war", "")
+		flags.erase("open_war")
+		return {"text": txt, "open_contract": false, "open_war": ow}
+	if legacy.owns_event(id):
+		var lr: Dictionary = legacy.resolve(id, idx)
+		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}
 	var shaman := best_unit("lore", false)
 	var out := {"text": tr(""), "open_contract": false}
 	match id:

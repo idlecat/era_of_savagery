@@ -250,6 +250,31 @@ func _debug_shot(args: Dictionary) -> void:
 				if fight_t >= 0 and tt - fight_t > into: break
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.3")), float(args.get("zoom", "1.3")))
 			world.focus_on(sim.rivals.clans[wid]["pos"] + Vector2(0, 60))
+		"ending": # debug: reach an ending (--path=conquest|unity|wisdom|defeat), or --panel for the Legacy panel
+			hud._close_modal()
+			var ep: String = args.get("path", "conquest")
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			for i in int(20 / STEP): sim.tick(STEP)
+			# a few deeds worth telling
+			sim.remember(sim.unit_by_name("Alie"), "led the war party against the Red Ochre Clan on Day 9 (burned 2 of their huts)", 9)
+			sim.remember(sim.unit_by_name("Linghe"), "sealed an agreement with the Heron Clan on Day 4: Peace for 20 days", 7)
+			match ep:
+				"conquest":
+					for id in sim.rivals.clans: sim.rivals.clans[id]["vassal"] = 3
+				"unity":
+					for id in sim.rivals.clans: sim.rivals.clans[id]["treaties"]["alliance"] = {"until": sim.time + 3000.0, "tribute": 0}
+					sim.add_structure("council_ring", Vector2(1300, 1200) + Vector2(-200, 160), true)
+				"wisdom":
+					for t in sim.evo.D.TECHS: sim.techs[t["id"]] = true
+					sim.add_structure("grand_altar", Vector2(1300, 1200) + Vector2(-200, 160), true)
+				"defeat":
+					for o in sim.living(): sim.kill_unit(o, null)
+			if args.has("panel"):
+				sim.legacy.achieved.clear()
+				hud._open_legacy()
+			else:
+				for i in int(1.5 / STEP): sim.tick(STEP)
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))
