@@ -12,6 +12,7 @@ const _Story = preload("res://scripts/story.gd")
 const _NewGame = preload("res://scripts/new_game_ui.gd")
 const E = preload("res://scripts/entities.gd")
 const I18N = preload("res://scripts/i18n.gd")
+const Cultures = preload("res://scripts/cultures.gd")
 # Compile-check the UI scripts too (a parse error in any of them fails this test run).
 const _Main = preload("res://scripts/main.gd")
 const _HUD = preload("res://scripts/hud.gd")
@@ -52,6 +53,7 @@ func _initialize() -> void:
 	test_mapgen()
 	test_water()
 	test_inventions()
+	test_cultures()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -292,7 +294,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen", "culture", "cultures", "inventions"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -302,8 +304,12 @@ func test_translations() -> void:
 	var data_keys: Array = ["east", "west", "north", "south", "north-east", "north-west", "south-east", "south-west",
 		"The tribe gathers around the bonfire, in a land no one has walked before."]
 	for k in D.LANDMARK_KINDS: data_keys += D.LANDMARK_KINDS[k]["names"] + D.LANDMARK_KINDS[k]["texts"]
-	for k in D.TEMPERAMENTS: data_keys += D.TEMPERAMENTS[k]["epithets"] + D.TEMPERAMENTS[k]["memories"]
-	data_keys += D.TRIBE_NAMES + D.BIRTH_NAMES
+	for k in D.BASE_TEMPERAMENTS: data_keys += D.BASE_TEMPERAMENTS[k]["epithets"] + D.BASE_TEMPERAMENTS[k]["memories"]
+	data_keys += D.BASE_TRIBE_NAMES + D.BASE_BIRTH_NAMES
+	for h in D.BASE_CHOSEN: data_keys += [h["name"], h["epithet"], h["label"], h["desc"]]
+	# culture packs carry their own Chinese (zh.json)
+	for id in Cultures.ids():
+		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
 	for s in Scenarios.LIST:
 		var sp: Dictionary = s.spec()
 		data_keys += [s.INFO["name"], s.INFO["desc"], s.INFO["brief"]] + s.INFO["intro"]
@@ -1393,3 +1399,114 @@ func test_inventions() -> void:
 	kinds = inv.feats.map(func(f): return f["kind"])
 	check(kinds.has("find") and kinds.has("wisdom"), "finds and wisdom are achievements too")
 	check(sim.evo.world_ctx()["everyday_inventions"].size() == 4, "the personas know the tribe's inventions")
+
+func test_cultures() -> void:
+	print("\n== Culture packs ==")
+	Cultures.load_all(true)
+	check(Cultures.problems.is_empty(), "every culture pack loads without errors %s" % str(Cultures.problems))
+	check(Cultures.ids().has("huaxia") and Cultures.ids().size() >= 3, "the packs are found: %s" % ", ".join(Cultures.ids()))
+	for id in Cultures.ids():
+		var errs: Array = Cultures.validate(Cultures.by_id(id))
+		check(errs.is_empty(), "%s passes validation %s" % [id, str(errs)])
+	# the validator explains what is wrong
+	var bad := {"id": "bad pack", "name": "X", "desc": "Y", "colour": 1,
+		"inventions": [{"id": "axe", "name": "Axe", "desc": "d", "practice": {"juggling": 5}, "effects": [{"stat": "luck", "mul": 2}]},
+			{"id": "moss_dressing", "name": "Dup", "desc": "d", "practice": {"hunt": 5}, "needs": {"techs": ["steam"]}}],
+		"events": [{"id": "e", "title": "T", "text": "t", "when": {"moon": 1}, "options": [{"label": "a"}], "do": [{"invent": "nothing"}]}],
+		"people": [{"id": "p", "name": "P", "desc": "d", "as": "god"}]}
+	var errs: Array = Cultures.validate(bad)
+	var all := "\n".join(errs)
+	for want in ["unknown key 'colour'", "plain identifier", "unknown practice 'juggling'", "unknown stat 'luck'", "id 'moss_dressing' is already used",
+			"unknown id 'steam'", "unknown condition 'moon'", "at least 2 options", "unknown invention 'nothing'", "as must be one of"]:
+		check(all.contains(want), "the validator reports: " + want)
+	# base effects are unchanged by the data-driven refactor
+	Cultures.reset()
+	var sim = _new_sim()
+	var u = sim.unit_by_name("Tuo")
+	check(not sim.cult.on() and sim.inv.mul("heal") == 1.0, "no culture: the base game")
+	sim.inv.discover("moss_dressing", u)
+	sim.inv.discover("smoking_rack", u)
+	sim.inv.discover("salt_curing", u)
+	check(is_equal_approx(sim.inv.heal_mult(), 1.4) and is_equal_approx(sim.inv.spoil_mult(), 0.56), "invention effects come from data (heal x1.4, spoil x0.7x0.8)")
+	var spd0: float = sim.unit_speed(u)
+	u.hp = u.max_hp * 0.2
+	var slow: float = sim.unit_speed(u)
+	sim.inv.discover("bone_setting", u)
+	check(slow < spd0 and is_equal_approx(sim.unit_speed(u), spd0), "bone setting: the badly hurt are not slowed (steady)")
+	# a culture adds its inventions, foods, finds and bloodlines
+	Cultures.apply("huaxia")
+	check(D.CULTURE["id"] == "huaxia" and D.INVENTIONS.any(func(d): return d["id"] == "leisi") and D.INVENTIONS.any(func(d): return d["kind"] == "food"), "Huaxia brings its inventions and foods")
+	check(D.FINDS.has("mulberry") and D.FINDS["mulberry"]["look"] == "yarrow", "and its finds (drawn like a base find)")
+	check(D.CHOSEN.size() == 3 and D.CHOSEN[0]["label"] == "Hou Yi the Archer", "and the Chosen One's bloodlines")
+	sim = _new_sim()
+	var cu = sim.cult
+	check(cu.on() and sim.nodes.any(func(n): return n.kind == "mulberry"), "the culture's finds are placed on the map")
+	u = sim.unit_by_name("Linghe")
+	sim.inv.discover("leisi", u)
+	sim.inv.discover("fuxi_net", u)
+	sim.inv.discover("fish_hook", u)
+	check(is_equal_approx(sim.inv.mul("yield", "farm_plot"), 1.25) and is_equal_approx(sim.inv.mul("yield", "fishing_dock"), 1.0), "yield effects apply to their structure only")
+	check(is_equal_approx(sim.inv.gather_mult("fish", "hunt"), 1.3 * 1.4) and is_equal_approx(sim.inv.gather_mult("bush", "berry"), 1.0), "gather effects stack on their kind only")
+	# a chronicle event: tracks in the mud
+	sim.inv.discover("knotted_cords", u)
+	sim.evo.era = 2
+	while sim.living().size() < 10: sim.units.append(sim.folk.make_child("Kesh", null))
+	var ins0: float = sim.evo.insight["code"]
+	cu.update(1.1)
+	check(cu.fired.has("bird_tracks") and sim.evo.insight["code"] > ins0, "a chronicle event fires when its conditions hold (insight into Tribal Code)")
+	check(sim.log_lines.any(func(l): return l["text"].contains("Tracks in the Mud")), "and is written in the log")
+	# a dilemma: ten suns, after a drought
+	cu.on_event("drought")
+	sim.time = D.DAY_LEN * 4.0 + 5.0
+	for i in 3000:
+		cu.update(1.1)
+		if not cu.pending.is_empty(): break
+	check(cu.pending.has("culture:ten_suns"), "a dilemma waits once its conditions hold and its chance comes up")
+	sim._check_events()
+	check(sim.pending_event == "culture:ten_suns" and sim.paused, "it pauses the game like any event")
+	var ev: Dictionary = sim.event_def(sim.pending_event)
+	check(ev["options"].size() == 3 and ev["options"][0]["desc"].contains("20"), "its options show their costs")
+	sim.stock["food"] = 50.0
+	var dev0: float = sim.devotion
+	var res: Dictionary = sim.resolve_event("culture:ten_suns", 0)
+	check(sim.stock["food"] == 30.0 and sim.devotion > dev0 and res["text"].contains("gentle sun"), "choosing pays the cost, runs the actions and tells the outcome")
+	# folk tales: told by the fire at night, once each
+	sim.time = floor(sim.time / D.DAY_LEN) * D.DAY_LEN + D.DAY_LEN * 0.8
+	cu.tale_day = -1
+	cu.update(1.1)
+	check(cu.told.size() == 1, "a tale is told at night")
+	var first: String = cu.told.keys()[0]
+	cu.update(1.1)
+	check(cu.told.size() == 1, "only one tale a night")
+	check(cu.told[first]["by"] == sim.best_unit("lore", false).name, "the best keeper of lore tells it")
+	check(sim.evo.world_ctx().has("tales_we_tell") and sim.evo.world_ctx()["tales_we_tell"].size() == 1, "personas know the tales that were told")
+	cu.on_event("earthquake")
+	cu.update(1.1)
+	check(cu.told.has("nuwa_sky"), "an event can tell a tale (an earthquake: Nüwa mends the sky)")
+	var b0: int = cu.boons.size()
+	cu.tell("shennong_herbs")
+	check(cu.boons.size() == b0 + 1 and sim.inv.mul("sick") > 1.0, "a tale can leave a lasting boon")
+	# people: a wanderer joins, the chosen one comes from the culture
+	var n0: int = sim.living().size()
+	cu.join("yidi")
+	check(sim.living().size() == n0 + 1 and sim.unit_by_name("Yi Di") != null and cu.joined.has("yidi"), "a wanderer joins the tribe")
+	check(sim.event_def("chosen")["options"][1]["label"] == "Yu the Flood-Tamer", "the Chosen One's bloodlines come from the culture")
+	sim.resolve_event("chosen", 0)
+	check(cu.joined.has("houyi") and sim.unit_by_name("Hou Yi").hero, "and the one born is known to the Heritage panel")
+	var codex: Array = cu.codex()
+	var people: Dictionary = codex.filter(func(sec): return sec["section"] == "people")[0]
+	check(people["entries"].filter(func(e): return e["known"]).size() >= 8, "the Heritage panel lists ancestors, the joined and the chosen")
+	check(codex.any(func(sec): return sec["entries"].any(func(e): return e["history"] == "legend" and e["source"] != "")), "entries carry their history and source")
+	# a random map: the tribe takes the culture's names, led by its founders
+	for id in Cultures.ids():
+		var c: Dictionary = Cultures.by_id(id)
+		if not c.has("tribe_names") or not c.get("people", []).any(func(p): return p.get("as", "") == "founder"): continue
+		Cultures.apply(id)
+		MapGen.generate("small", 2, 7)
+		var rs = _new_sim()
+		var founders: Array = c["people"].filter(func(p): return p.get("as", "") == "founder")
+		check(founders.all(func(p): return rs.unit_by_name(p["name"]) != null), "%s: the founders lead the random tribe" % id)
+		check(rs.living().filter(func(x): return x.role == "").all(func(x): return x.name in c["tribe_names"] or founders.any(func(p): return p["name"] == x.name)), "%s: the others bear the culture's names" % id)
+		break
+	Cultures.reset()
+	Scenarios.apply()

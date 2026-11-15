@@ -233,6 +233,7 @@ func _build_top(root: Control) -> void:
 	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
 	h.add_child(_button("Legacy", _open_legacy, "The three paths to victory: conquest, unity and wisdom"))
 	h.add_child(_button("Achievements", open_achievements, "The tribe's inventions and everything it did first"))
+	if sim.cult.on(): h.add_child(_button("Heritage", open_heritage, "Your people's history and legends: tools, foods, people, happenings and folk tales"))
 	h.add_child(_button("LLM Settings", _open_settings))
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
@@ -1787,7 +1788,8 @@ func _open_legacy() -> void:
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "outpost": ["Outpost", "#b6f28a"]}
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "outpost": ["Outpost", "#b6f28a"],
+	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)
 ## and the record of its firsts.
@@ -1823,6 +1825,47 @@ func open_achievements() -> void:
 		lines.append(tr("[color=#8a7a60]Day %d[/color]  [color=%s]%s[/color]  %s%s") % [e["day"], fk[1], tr(fk[0]), e["text"], who])
 	f.text = "\n".join(lines) if not lines.is_empty() else tr("[color=#8a7a60]Nothing yet. Explore, work and learn: every first is written here.[/color]")
 	v.add_child(f)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+## Real history or legend? Shown beside every Heritage entry that says.
+const HISTORY_BADGES := {"real": ["Historical", "#9fd0ff"], "legend": ["Legend", "#e8c070"], "invented": ["Imagined", "#c0a8e0"]}
+
+func _badge(h: String) -> String:
+	if not HISTORY_BADGES.has(h): return ""
+	return " [color=%s][%s][/color]" % [HISTORY_BADGES[h][1], tr(HISTORY_BADGES[h][0])]
+
+## The culture's heritage: what the tribe has made, found, met, lived through and been
+## told, each marked as history or legend with its source; the rest still hidden.
+func open_heritage() -> void:
+	var cu = sim.cult
+	if not cu.on(): return
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var c: Dictionary = cu.def
+	var v := _open_modal(tr("HERITAGE · %s") % tr(c["name"]), 860)
+	var head := _rich(0, true)
+	var where: Array = []
+	for k in ["period", "place"]:
+		if c.has(k): where.append(tr(c[k]))
+	head.text = ("[color=#8a7a60]%s[/color]\n" % " · ".join(where) if not where.is_empty() else "") + tr(c["desc"]) \
+		+ (("\n[color=#8a7a60][i]%s[/i][/color]" % (tr("Source: %s") % tr(c["source"]))) if c.has("source") else "")
+	v.add_child(head)
+	for sec in cu.codex():
+		var rows: Array = sec["entries"]
+		var known: int = rows.filter(func(e): return e["known"]).size()
+		v.add_child(_header("%s (%d / %d)" % [sec["title"].to_upper(), known, rows.size()]))
+		var r := _rich(0, true)
+		var lines: Array = []
+		for e in rows:
+			if not e["known"]:
+				lines.append("[color=#6a5e4a]○ ???[/color]")
+				continue
+			var sub: String = (" [color=#8a7a60]— %s[/color]" % e["sub"]) if e["sub"] != "" else ""
+			var line: String = "[color=#e8d8b0][b]%s[/b][/color]%s%s\n    %s" % [e["name"], sub, _badge(e["history"]), e["desc"]]
+			if e["source"] != "": line += "\n    [color=#8a7a60][i]%s[/i][/color]" % (tr("Source: %s") % e["source"])
+			lines.append(line)
+		r.text = "\n".join(lines)
+		v.add_child(r)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
 
 ## A victory or defeat: the storyteller's LLM node composes the saga of the game.

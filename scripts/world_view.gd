@@ -1039,7 +1039,7 @@ func _draw_node(n) -> void:
 	match n.kind:
 		"tree":
 			_draw_tree_shape(n, b)
-		"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "flint", "copper", "tin", "ochre", "salt", "obsidian":
+		_ when D.FINDS.has(n.kind): # the natural finds, the culture's own among them
 			_draw_find(n, b)
 		"boulder":
 			var k: float = clampf(n.amount / 40.0, 0.35, 1.0)
@@ -1669,7 +1669,8 @@ func _draw_find(n, b: Vector2) -> void:
 	var full: bool = n.amount >= 1
 	var a := 1.0 if full else 0.45
 	var snow: bool = sim.hz.snow > 0.5
-	match n.kind:
+	var look: String = D.FINDS.get(n.kind, {}).get("look", n.kind) # culture finds borrow a look
+	match look:
 		"mushroom":
 			_ell(b + Vector2(2, 1), 10, 3.5, SHADOW)
 			for i in (3 if full else 1):
@@ -1731,13 +1732,13 @@ func _draw_find(n, b: Vector2) -> void:
 				ci.draw_line(q + Vector2(-2, -6), q + Vector2(3, -5), Color(0.6, 0.62, 0.7, a), 1)
 		"copper", "tin":
 			var k: float = clampf(n.amount / 40.0, 0.5, 1.0)
-			var rock := Color("#7c6e60") if n.kind == "copper" else Color("#4c4c54")
+			var rock := Color("#7c6e60") if look == "copper" else Color("#4c4c54")
 			_ell(b + Vector2(7, 3), 18 * k, 7 * k, SHADOW)
 			for i in 2:
 				var q := b + Vector2((i * 2 - 1) * 7 * k, i * 2)
 				var h := (13.0 - i * 3.0) * k
 				ci.draw_colored_polygon(PackedVector2Array([q + Vector2(-8, 0) * k, q + Vector2(-6 * k, -h), q + Vector2(2 * k, -h - 3 * k), q + Vector2(8, 0) * k]), rock)
-				if n.kind == "copper":
+				if look == "copper":
 					ci.draw_line(q + Vector2(-4 * k, -h * 0.4), q + Vector2(3 * k, -h * 0.8), Color("#4fb08a"), 2)
 				else:
 					ci.draw_circle(q + Vector2(-1, -h * 0.6), 1.3, Color("#e8eef4"))

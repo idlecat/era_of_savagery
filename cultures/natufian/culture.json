@@ -1,0 +1,149 @@
+{
+  "id": "natufian",
+  "order": 3,
+  "name": "Natufian Foragers",
+  "period": "c. 12,500–9,500 BCE",
+  "place": "the hills and valleys of the Levant",
+  "desc": "Among the first people anywhere to stay in one place all year: hunters of gazelle and harvesters of wild barley and wheat, who ground seeds in stone mortars, baked the oldest known bread, and buried their dead beneath their round stone houses.",
+  "history": "real",
+  "source": "Named after Wadi an-Natuf, where Dorothy Garrod excavated Shuqba Cave in 1928",
+
+  "tribe_names": ["Arin", "Bashu", "Dara", "Ennu", "Galla", "Hesh", "Ira", "Kesha", "Lumi", "Maro", "Nesa", "Orun", "Pela", "Rusa", "Sekh", "Tavi"],
+  "birth_names": ["Abi", "Didu", "Fen", "Gali", "Hun", "Ishi", "Mesu", "Nuri", "Rani", "Tula"],
+  "epithets": {
+    "belligerent": ["Gazelle Spear", "Runner of the Wadi"],
+    "gluttonous": ["Grinder of Seeds", "Reaper of the Wild Barley"],
+    "devout": ["Keeper of the Shell Beads"]
+  },
+  "memories": {
+    "belligerent": ["ran down a gazelle across the whole valley floor"],
+    "gluttonous": ["reaped wild barley from dawn until the sickle stopped cutting"],
+    "devout": ["strung a headdress of white tusk shells for the dead"]
+  },
+
+  "inventions": [
+    {"id": "bone_sickle", "kind": "tool", "name": "Bone-Hafted Sickle", "history": "real",
+     "source": "Flint blades set in carved bone handles, their edges polished by grass stems ('sickle gloss'), from El-Wad and Kebara",
+     "practice": {"berry": 180, "quarry": 20}, "needs": {"finds": ["flint"]},
+     "effects": [{"stat": "gather", "of": "grain", "mul": 1.3}, {"stat": "gather", "of": "wild_barley", "mul": 1.3}],
+     "desc": "Little flint blades set in a curved bone handle: wild grain is reaped 30% faster.",
+     "hint": "Needs flint, and many harvests of wild grass."},
+    {"id": "stone_mortar", "kind": "tool", "name": "Basalt Mortar and Pestle", "history": "real",
+     "source": "Deep stone mortars and pestles, some cut into the bedrock, are found at most Natufian sites",
+     "practice": {"berry": 150, "quarry": 60}, "needs": {},
+     "effects": [{"stat": "hunger", "mul": 0.92}],
+     "desc": "Seeds, acorns and roots pounded into meal: hunger grows 8% slower.",
+     "hint": "Comes from foraging, and from working stone."},
+    {"id": "shell_headdress", "kind": "goods", "name": "Tusk-Shell Headdress", "history": "real",
+     "source": "Caps of Dentalium shells from the Mediterranean and Red Sea, found with the dead at El-Wad and Ain Mallaha",
+     "practice": {"explore": 100, "ritual": 80}, "needs": {},
+     "effects": [{"stat": "mood", "add": 3}],
+     "desc": "Caps strung with white tusk shells carried from distant seas: +3 mood.",
+     "hint": "Comes from far journeys, and from the rites."},
+    {"id": "storage_pits", "kind": "goods", "name": "Plastered Storage Pits", "history": "real",
+     "source": "Lime-plastered pits and basins at Ain Mallaha (Eynan)",
+     "practice": {"build": 80, "berry": 120}, "needs": {"techs": ["fire"]},
+     "effects": [{"stat": "store", "add": 30}],
+     "desc": "Pits lined with burnt-lime plaster keep grain dry: the stores hold 30 more food.",
+     "hint": "Needs fire, and builders who also gather grain."}
+  ],
+
+  "foods": [
+    {"id": "shubayqa_bread", "name": "Ash-Baked Flatbread", "history": "real",
+     "source": "Charred flatbread of wild einkorn and club-rush tubers from Shubayqa 1, Jordan, about 14,400 years old: the oldest bread known",
+     "practice": {"hearth": 200, "berry": 100}, "needs": {"inventions": ["stone_mortar"]},
+     "effects": [{"stat": "hunger", "mul": 0.9}, {"stat": "mood", "add": 2}],
+     "desc": "Ground wild wheat and tubers, wetted and baked on the hearth stones: hunger grows 10% slower, +2 mood.",
+     "hint": "Needs the stone mortar, and long hours at the hearth."},
+    {"id": "raqefet_beer", "name": "Feast Beer", "history": "real",
+     "source": "Residues in stone mortars at Raqefet Cave, Israel, about 13,000 years old, read as the oldest known beer (Liu et al., 2018)",
+     "practice": {"ritual": 150, "hearth": 150}, "needs": {"inventions": ["stone_mortar"]},
+     "effects": [{"stat": "mood", "add": 3}, {"stat": "devotion", "mul": 1.1}],
+     "desc": "Malted wild grain left to bubble in a stone hollow, drunk at feasts for the dead: +3 mood, and rites bring 10% more devotion.",
+     "hint": "Needs the stone mortar, and grain brewed for the rites."}
+  ],
+
+  "finds": [
+    {"id": "wild_barley", "name": "Wild Barley Stands", "group": "food", "res": "food", "history": "real",
+     "amount": 28, "rate": 0.9, "regrow": 0.08, "winter": false, "where": "meadow", "count": 4,
+     "practice": "berry", "practice_x": 1.5, "look": "grain", "act": "Reaping wild barley", "seed": {"farming": 0.2},
+     "desc": "Dense stands of wild barley on the hill slopes. Reaping them brings farming closer."},
+    {"id": "acorns", "name": "Oak Acorns", "group": "food", "res": "food", "history": "real",
+     "amount": 30, "rate": 0.8, "regrow": 0.04, "winter": true, "where": "forest", "count": 4,
+     "practice": "berry", "look": "mushroom", "act": "Gathering acorns",
+     "desc": "Bitter until soaked and ground, but they keep: food even in winter."}
+  ],
+
+  "people": [
+    {"id": "hesha", "as": "founder", "name": "Hesha", "epithet": "Gazelle-Caller", "history": "invented",
+     "desc": "A hunter who can bring a whole herd of gazelle down the wadi with her calls.",
+     "stats": {"traits": ["belligerent"], "hp": 54, "atk": 6, "def": 3, "spd": 1.15, "color": "#c89060", "skills": {"forage": 3, "combat": 3, "craft": 1, "lore": 0}},
+     "memory": ["drove a herd of gazelle into the narrow wadi where the spears waited"]},
+    {"id": "oruk", "as": "founder", "name": "Oruk", "epithet": "Grinder of Seeds", "history": "invented",
+     "desc": "He knows every seed in the hills and how long each must be pounded.",
+     "stats": {"traits": ["gluttonous"], "hp": 50, "atk": 4, "def": 3, "spd": 0.95, "color": "#b0a070", "skills": {"forage": 4, "craft": 2, "combat": 0, "lore": 1}},
+     "memory": ["wore a hollow into the bedrock with ten summers of pounding"]},
+    {"id": "hilazon_woman", "as": "ancestor", "name": "The Woman of Hilazon Tachtit", "epithet": "the Tortoise Seer", "history": "real",
+     "source": "Hilazon Tachtit cave, Galilee, about 12,000 years ago",
+     "desc": "A healer or seer buried with fifty tortoise shells, an eagle's wing, the skulls of martens and a human foot, after a great funeral feast."},
+    {"id": "mallaha_elder", "as": "ancestor", "name": "The Elder of Ain Mallaha", "epithet": "who sleeps with a puppy", "history": "real",
+     "source": "Ain Mallaha (Eynan), upper Jordan valley, about 12,000 years ago",
+     "desc": "An old one buried with a hand resting on a puppy: one of the oldest signs of the bond between people and dogs."},
+    {"id": "nessu", "as": "wanderer", "name": "Nessu", "epithet": "the Shell-Carrier", "history": "invented",
+     "when": {"day": 6, "pop": 9}, "chance": 0.4,
+     "text": "a stranger from the coast with a bag of white tusk shells, who will trade them for flint.",
+     "stats": {"traits": ["cautious"], "hp": 46, "atk": 4, "def": 2, "spd": 1.1, "color": "#d8d0b8", "skills": {"forage": 2, "craft": 2, "lore": 2, "trade": 4}},
+     "memory": ["walked eight days from the shore of the western sea"],
+     "desc": "A trader who walks between the sea and the hills."},
+    {"id": "ketu_seer", "as": "chosen", "name": "Ketu", "epithet": "the Tortoise Seer", "label": "Ketu the Tortoise Seer", "history": "invented",
+     "desc": "A healer who reads the shells. Lore 7, Foraging 4.",
+     "stats": {"traits": ["devout"], "color": "#a8c890", "hp": 60, "atk": 5, "def": 4, "spd": 1.0, "skills": {"forage": 4, "craft": 2, "combat": 1, "lore": 7}}},
+    {"id": "bek_spear", "as": "chosen", "name": "Bek", "epithet": "the Gazelle Spear", "label": "Bek the Gazelle Spear", "history": "invented",
+     "desc": "The fastest hunter of the hills. Foraging 6, Combat 7.",
+     "stats": {"traits": ["belligerent"], "color": "#ffd36b", "hp": 75, "atk": 10, "def": 4, "spd": 1.3, "skills": {"forage": 6, "craft": 1, "combat": 7, "lore": 0}}},
+    {"id": "sefa_bread", "as": "chosen", "name": "Sefa", "epithet": "of the First Bread", "label": "Sefa of the First Bread", "history": "invented",
+     "desc": "A maker who feeds the many. Crafting 7, Foraging 6.",
+     "stats": {"traits": ["gluttonous"], "color": "#e0b070", "hp": 65, "atk": 6, "def": 5, "spd": 1.0, "skills": {"forage": 6, "craft": 7, "combat": 2, "lore": 2}}}
+  ],
+
+  "events": [
+    {"id": "long_cold", "title": "The Long Cold", "history": "real",
+     "source": "The Younger Dryas, from about 12,900 years ago: a sudden return to cold, dry weather that lasted some twelve centuries",
+     "when": {"day": 8, "after": "blizzard"}, "chance": 0.6,
+     "text": "The winters have grown longer and the summers drier for as long as the young can remember. The oak groves thin, the barley stands shrink. The elders argue: stay and store, or follow the gazelle?",
+     "options": [
+       {"label": "Stay, and store more", "cost": {"wood": 20}, "do": [{"boon": [{"stat": "spoil", "mul": 0.9}]}, {"culture": {"settled": 8}}],
+        "result": "The people deepen their pits and plaster them anew. They will outlast the cold here, at their own hearths."},
+       {"label": "Follow the herds", "do": [{"boon": [{"stat": "speed", "mul": 1.05}]}, {"culture": {"settled": -8}}],
+        "result": "The people travel lighter and farther, following the gazelle from valley to valley."},
+       {"label": "Ask the dead for help", "do": [{"devotion": 15}, {"culture": {"spiritual": 5}}],
+        "result": "Offerings are laid on the graves beneath the floors. The dead are close; the living feel less alone."}
+     ]},
+    {"id": "wolf_pup", "title": "The Pup at the Fire", "history": "real",
+     "source": "Dogs were tamed from wolves by hunter-gatherers; Natufian graves at Ain Mallaha and Hayonim hold some of the oldest dogs",
+     "when": {"day": 4}, "chance": 0.3,
+     "text": "A wolf pup, thin and alone, creeps into the firelight. A child throws it a bone. By morning it is still there, and by the next moon it barks at anything that comes near the camp.",
+     "do": [{"boon": [{"stat": "sight", "add": 20}]}, {"mood": 2}, {"feat": "Took in the first dog"}]},
+    {"id": "feast_dead", "title": "A Feast for the Dead", "history": "real",
+     "source": "At Hilazon Tachtit, mourners ate at least 71 tortoises and three aurochs at a burial, about 12,000 years ago",
+     "when": {"deaths": 1, "day": 3},
+     "text": "One of our people lies in the grave beneath the house floor. The elders say the dead should be sent off with a feast that the whole valley will remember.",
+     "options": [
+       {"label": "Hold a great feast", "cost": {"food": 30}, "do": [{"mood": 6}, {"devotion": 10}, {"culture": {"spiritual": 4}}],
+        "result": "For two nights the people eat, sing and tell the dead one's deeds. No one will forget them."},
+       {"label": "Bury them simply", "result": "The grave is closed with a stone and a handful of shell beads."}
+     ]}
+  ],
+
+  "tales": [
+    {"id": "tortoise_house", "name": "Why the Tortoise Carries Its House", "history": "invented", "when": {"day": 2},
+     "text": "When the world was new, Tortoise lived in a hut like the people's. A fire came through the hills, and Tortoise was too slow to run, so she pulled her roof down over her back and let the fire pass. She has carried it ever since, and that is why the seers keep tortoise shells: they know how to wait out the fire.",
+     "moral": "patience outlasts danger", "do": [{"devotion": 4}]},
+    {"id": "first_seeds", "name": "The Seeds That Followed Us Home", "history": "invented", "when": {"find": "wild_barley"},
+     "text": "Our grandmothers carried barley home from the hills, and some fell from their baskets on the path. The next spring, barley stood at the door of the camp. The grass had followed the people home, the old ones said, because it wanted to be near them.",
+     "moral": "what you care for comes to you", "do": [{"insight": {"farming": 0.15}}]},
+    {"id": "gazelle_moon", "name": "The Gazelle Who Outran the Moon", "history": "invented", "tell": "festival",
+     "text": "A gazelle boasted she could outrun anything. The Moon heard and raced her across the sky. All night the gazelle ran, and at dawn the Moon, tired, sank behind the hills. Ever since, gazelles are fastest at the end of the night, and that is when the hunters wait for them.",
+     "moral": "know your quarry", "do": [{"boon": [{"stat": "gather", "of": "hunt", "mul": 1.05}]}]}
+  ]
+}

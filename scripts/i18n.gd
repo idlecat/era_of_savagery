@@ -10,6 +10,15 @@ const LANGS := {"en": "English", "zh": "中文"}
 
 static var lang := "en"
 static var _installed := false
+static var _zh: Translation = null
+static var _extra := {} # translations added by culture packs (cultures.gd), kept for setup()
+
+## More English -> Chinese texts (a culture pack's zh.json). The built-in table wins.
+static func add_strings(d: Dictionary) -> void:
+	for k in d:
+		if ZH.STRINGS.has(k) or str(d[k]) == "": continue
+		_extra[k] = str(d[k])
+		if _zh: _zh.add_message(k, _extra[k])
 
 static func default_lang() -> String:
 	return "zh" if OS.get_locale_language() == "zh" else "en"
@@ -30,7 +39,9 @@ static func setup(l: String) -> void:
 		var t := Translation.new()
 		t.locale = "zh"
 		for k in ZH.STRINGS: t.add_message(k, ZH.STRINGS[k])
+		for k in _extra: t.add_message(k, _extra[k])
 		TranslationServer.add_translation(t)
+		_zh = t
 		_installed = true
 	install_cjk_font()
 	lang = l if LANGS.has(l) else "en"

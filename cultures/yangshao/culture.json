@@ -1,0 +1,148 @@
+{
+  "id": "yangshao",
+  "order": 2,
+  "name": "Yangshao Villagers",
+  "period": "c. 5000–3000 BCE",
+  "place": "the loess lands of the middle Yellow River",
+  "desc": "Millet farmers of the loess, who lived in round half-buried houses inside a ditch, raised pigs and dogs, and painted their red pots with fish, faces and swirling petals. Their villages, like Banpo and Jiangzhai, are among the best known of Neolithic China.",
+  "history": "real",
+  "source": "Named after Yangshao village (Mianchi, Henan), excavated by J. G. Andersson in 1921; Banpo (Xi'an) excavated 1954–57",
+
+  "tribe_names": ["Ruo", "Zhu", "Qian", "Liu", "Mu", "Ji", "Hao", "Jiang", "Tian", "Chen", "Wen", "Song", "Yao", "Pei", "Lu", "Rui"],
+  "birth_names": ["Niu", "Dou", "Mai", "Tong", "Shu", "Ling", "Cao", "Xiaoya", "Yaya", "Gou"],
+  "epithets": {
+    "cautious": ["Digger of the Ditch", "Keeper of the Kiln"],
+    "gluttonous": ["Millet-Sower", "Swineherd"],
+    "devout": ["Painter of Fish"]
+  },
+  "memories": {
+    "cautious": ["fired a whole kiln of pots without one cracking"],
+    "gluttonous": ["kept the pigs alive through the hungry spring"],
+    "devout": ["painted a face with fish at its mouth on a basin for the dead"]
+  },
+
+  "inventions": [
+    {"id": "painted_pottery", "kind": "goods", "name": "Painted Pottery", "history": "real",
+     "source": "Banpo, Xi'an: basin painted with a human face and fish, c. 4800–4300 BCE",
+     "practice": {"hearth": 300, "ritual": 80}, "needs": {"techs": ["pottery"]},
+     "effects": [{"stat": "mood", "add": 3}, {"stat": "store", "add": 15}],
+     "desc": "Red bowls and basins painted in black with fish, faces and nets: +3 mood, and the stores hold 15 more food.",
+     "hint": "Needs pottery, and evenings of painting by the fire.", "words": ["painted bowls"]},
+    {"id": "pointed_amphora", "kind": "goods", "name": "Pointed-Bottom Water Jar", "history": "real",
+     "source": "Small-mouthed, pointed-bottom amphorae are typical of Banpo-phase Yangshao",
+     "practice": {"hearth": 150, "berry": 150}, "needs": {"techs": ["pottery"]},
+     "effects": [{"stat": "work", "mul": 1.04}],
+     "desc": "A narrow-mouthed jar, tied on the back, that barely spills on the long walk up from the river: everyone works 4% faster.",
+     "hint": "Needs pottery, and many trips to the river."},
+    {"id": "spindle_whorl", "kind": "tool", "name": "Spindle Whorl", "history": "real",
+     "source": "Clay and stone spindle whorls are found in their thousands at Yangshao sites; hemp cloth left its marks on pots",
+     "practice": {"hearth": 250, "berry": 80}, "needs": {},
+     "effects": [{"stat": "cold", "mul": 0.85}],
+     "desc": "A clay disc on a stick spins hemp into thread for woven cloth: the cold bites 15% less.",
+     "hint": "Comes from long evenings by the fire, and the hemp gathered by day."},
+    {"id": "net_sinkers", "kind": "tool", "name": "Net Sinkers", "history": "real",
+     "source": "Notched pebble and clay net weights from Banpo and Jiangzhai",
+     "practice": {"hunt": 120}, "needs": {"finds": ["fish"]},
+     "effects": [{"stat": "gather", "of": "fish", "mul": 1.25}],
+     "desc": "Notched stones that hold the net to the riverbed: fishing yields 25% more.",
+     "hint": "Needs a fishing ground."},
+    {"id": "harvest_knife", "kind": "tool", "name": "Perforated Harvest Knife", "history": "real",
+     "source": "Rectangular stone knives with a bored hole for a cord, used to cut millet heads",
+     "practice": {"berry": 200, "quarry": 30}, "needs": {"techs": ["farming"]},
+     "effects": [{"stat": "gather", "of": "berry", "mul": 1.15}, {"stat": "yield", "of": "farm_plot", "mul": 1.1}],
+     "desc": "A flat stone blade tied to the hand to snap off millet heads: gathering is 15% faster and fields yield 10% more.",
+     "hint": "Needs farming, and stone worked by those who reap."}
+  ],
+
+  "foods": [
+    {"id": "millet_gruel", "name": "Foxtail Millet Gruel", "history": "real",
+     "source": "Foxtail and broomcorn millet are the staple grains of Yangshao sites; carbonised millet filled storage pits at Banpo",
+     "practice": {"hearth": 150, "berry": 150}, "needs": {"techs": ["farming"]},
+     "effects": [{"stat": "hunger", "mul": 0.9}],
+     "desc": "Millet boiled to a thick gruel in a tripod pot: hunger grows 10% slower.",
+     "hint": "Needs farming, and grain cooked at the hearth."},
+    {"id": "penned_pigs", "name": "Penned Pigs", "history": "real",
+     "source": "Pig and dog bones dominate the animal remains at Banpo and Jiangzhai",
+     "practice": {"hunt": 150, "hearth": 100}, "needs": {"techs": ["domestication"]},
+     "effects": [{"stat": "store", "add": 25}, {"stat": "spoil", "mul": 0.9}],
+     "desc": "Pigs fed on scraps are food kept on the hoof: the stores hold 25 more and food spoils 10% slower.",
+     "hint": "Needs Beast Domestication, and meat and scraps brought home."}
+  ],
+
+  "finds": [
+    {"id": "green_foxtail", "name": "Green Foxtail Grass", "group": "food", "res": "food", "history": "real",
+     "source": "Setaria viridis, the wild grass from which foxtail millet was domesticated",
+     "amount": 24, "rate": 0.9, "regrow": 0.08, "winter": false, "where": "meadow", "count": 4,
+     "practice": "berry", "practice_x": 1.5, "look": "grain", "act": "Stripping foxtail seeds", "seed": {"farming": 0.2},
+     "desc": "Bristly seed-heads of a wild grass. Gathering them brings farming closer."},
+    {"id": "loess_clay", "name": "Loess Clay Bank", "group": "ore", "res": "stone", "history": "real",
+     "amount": 26, "rate": 0.8, "regrow": 0.0, "winter": true, "where": "riverbank", "count": 3,
+     "practice": "quarry", "look": "salt", "act": "Digging clay", "seed": {"pottery": 0.25},
+     "desc": "Fine yellow earth that holds its shape when wet and turns red in the fire. Finding it brings pottery closer."}
+  ],
+
+  "people": [
+    {"id": "tao", "as": "founder", "name": "Tao", "epithet": "Keeper of the Kiln Yard", "history": "invented",
+     "desc": "A potter who knows which clay will crack and which will ring.",
+     "stats": {"traits": ["cautious"], "hp": 50, "atk": 4, "def": 3, "spd": 0.95, "color": "#c8643c", "skills": {"forage": 1, "craft": 4, "combat": 1, "lore": 2}},
+     "memory": ["fired the first red pots in a pit by the river"]},
+    {"id": "jiang_su", "as": "founder", "name": "Jiang Su", "epithet": "Millet Mother", "history": "invented",
+     "desc": "She remembers where every stand of wild foxtail grows.",
+     "stats": {"traits": ["gluttonous"], "hp": 52, "atk": 4, "def": 3, "spd": 1.0, "color": "#c8b060", "skills": {"forage": 4, "craft": 1, "combat": 0, "lore": 2, "trade": 1}},
+     "memory": ["sowed seeds of the wild grass and came back in autumn to a field of it"]},
+    {"id": "houji", "as": "ancestor", "name": "Houji", "epithet": "Lord Millet", "history": "legend",
+     "source": "Shijing, the ode Shengmin", "desc": "The legendary first sower of millet, ancestor of the Zhou people."},
+    {"id": "xishuipo", "as": "ancestor", "name": "The Sleeper of Xishuipo", "epithet": "between dragon and tiger", "history": "real",
+     "source": "Xishuipo, Puyang, tomb M45, c. 4400 BCE",
+     "desc": "A man buried with a dragon of clam shells laid out on one side of him and a tiger on the other: the oldest dragon image in China."},
+    {"id": "ba", "as": "wanderer", "name": "Ba", "epithet": "Carrier of Jade", "history": "invented",
+     "source": "Jade pig-dragons of the Hongshan culture (c. 4700–2900 BCE), north-east of the Yellow River",
+     "when": {"era": 2, "pop": 11, "day": 8}, "chance": 0.4,
+     "text": "a traveller from the cold north-east who carries a curled green stone, carved like a pig that dreams it is a dragon.",
+     "stats": {"traits": ["devout"], "hp": 46, "atk": 4, "def": 2, "spd": 1.1, "color": "#7fbf9a", "skills": {"forage": 2, "craft": 3, "lore": 3, "trade": 4}},
+     "memory": ["walked a whole summer south from the land of the jade-carvers"],
+     "desc": "A trader from the jade-carving peoples of the north-east."}
+  ],
+
+  "events": [
+    {"id": "the_ditch", "title": "The Ditch Around the Village", "history": "real",
+     "source": "Banpo's living area was ringed by a ditch about 5–6 m wide and deep",
+     "when": {"pop": 11, "day": 5}, "chance": 0.5,
+     "text": "The village has grown. The elders want a deep ditch dug all around the houses: kilns and graves outside, people and stores within.",
+     "options": [
+       {"label": "Dig the ditch", "cost": {"wood": 25, "food": 15}, "do": [{"boon": [{"stat": "def", "add": 1}]}, {"culture": {"settled": 6}}, {"feat": "Dug the ditch around the village"}],
+        "result": "For a whole moon everyone digs. When it is done, the ring of earth feels like the edge of the world, and home is inside it."},
+       {"label": "Not now", "result": "The houses stay open to the fields."}
+     ]},
+    {"id": "kilns_outside", "title": "Kilns Beyond the Ditch", "history": "real",
+     "source": "At Banpo the pottery kilns lay east of the ditch, away from the thatched houses",
+     "when": {"invention": "painted_pottery"},
+     "text": "After a spark from a kiln set a roof smoking, the potters move their firing pits out past the edge of the village.",
+     "do": [{"give": {"goods": 4}}, {"remember": "moved the kilns out beyond the houses", "who": "best:craft"}]},
+    {"id": "plaza", "title": "Doors Facing the Plaza", "history": "real",
+     "source": "At Jiangzhai, five groups of houses stood around a central plaza, all their doors facing it",
+     "when": {"pop": 14},
+     "text": "The people agree: every new house will open onto the great open ground in the middle, where all can see one another.",
+     "do": [{"culture": {"ranked": -6}}, {"mood": 3}]},
+    {"id": "urn_burial", "title": "The Urn by the Door", "history": "real",
+     "source": "At Banpo young children were buried in pottery urns near the houses, some lids pierced with a small hole",
+     "when": {"deaths": 2},
+     "text": "A small one has died. As the people of the river do, the mother lays the child in an urn beside the house, and bores a hole in the lid so the soul can come and go.",
+     "do": [{"devotion": 5}, {"mood": 2}]}
+  ],
+
+  "tales": [
+    {"id": "houji_birth", "name": "Lord Millet Is Born", "history": "legend", "source": "Shijing, the ode Shengmin",
+     "when": {"tech": "farming"},
+     "text": "Jiang Yuan stepped in the footprint of a god and bore a son. Three times she left him: in a narrow lane, where the oxen and sheep sheltered him; in the forest, where the woodcutters found him; on the ice, where birds covered him with their wings. He grew up to sow beans and millet, and every ear was heavy.",
+     "moral": "what is cast out may feed the world", "do": [{"boon": [{"stat": "yield", "of": "farm_plot", "mul": 1.05}]}]},
+    {"id": "face_and_fish", "name": "The Face and the Fish", "history": "invented",
+     "source": "A story made up around the human-face-and-fish basin of Banpo", "when": {"invention": "painted_pottery"},
+     "text": "A child went down to the river and did not come back. That night the mother dreamed of a round face with two fish at its mouth, smiling: the river had not taken the child, only lent it to the fish. She painted the face on a basin, and the people have painted it ever since.",
+     "moral": "the dead are not gone, only elsewhere", "do": [{"devotion": 5}]},
+    {"id": "shell_dragon", "name": "The Dragon of Shells", "history": "invented", "tell": "festival",
+     "source": "A story made up around tomb M45 at Xishuipo",
+     "text": "There was once a chief so wise that, when he died, a dragon and a tiger came to lie on either side of him. The people could not keep the beasts, so they laid out their shapes in white shells, and the chief has slept between them ever since.",
+     "moral": "wisdom is guarded", "do": [{"culture": {"spiritual": 3}}, {"mood": 2}]}
+  ]
+}

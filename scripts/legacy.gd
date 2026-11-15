@@ -95,7 +95,7 @@ func saga_ctx(path: String) -> Dictionary:
 		"treasures": sim.folk.treasures.map(func(t): return tr(t["name"]) + " (" + tr(t["maker"]) + ")"),
 		"mood_of_the_tribe": sim.folk.mood_word(),
 		"storyteller": {"name": tr(teller.name), "epithet": tr(teller.epithet), "fallen": teller.dead} if teller else {},
-	}
+	}.merged(sim.cult.ctx()) # (the culture, its tales and great ones, if the game has one)
 
 ## Offline saga: stitched from the same facts.
 func saga_offline(ctx: Dictionary) -> String:

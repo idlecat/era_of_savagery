@@ -62,6 +62,7 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 |---|---|
 | Map: rivers, fords and the land regions between them, routing over fords | `data.gd` |
 | Everyday inventions (medicine, tools, daily goods) and the Achievements panel | `inventions.gd`, `hud.gd` |
+| Culture packs: peoples described in data files (inventions, foods, finds, people, events, folk tales), the Heritage panel | `cultures/`, `cultures.gd`, `culture.gd`, [docs/CULTURES.md](docs/CULTURES.md) |
 | Game modes: random maps (`mapgen.gd`), scenarios with scripted events (`scenarios/*.gd`, `story.gd`), New Game screen | `mapgen.gd`, `scenarios.gd`, `story.gd`, `new_game_ui.gd` |
 | Forests, berries, deer, bonfire, huts, palisades | `sim.gd`, `world_view.gd` |
 | Tier 1 direct micro (select, drag-box, right-click gather/attack/build/move) | `world_view.gd` |
@@ -300,6 +301,10 @@ shaders/                    terrain, bake material, shadow catcher
 scripts/llm_client.gd       OpenAI-compatible client (DeepSeek / GLM / Ollama)
 scripts/world_view.gd       isometric 2.5D rendering (cached y-sorted canvas items), fog of war, RTS input
 scripts/hud.gd              panels and modals (negotiation, emergency, events, tech, settings)
+scripts/cultures.gd         culture packs: loading, validation, merging into the game's tables
+scripts/culture.gd          the culture at play: its events, folk tales and people (sim.cult)
+cultures/<id>/              culture packs (culture.json + zh.json), see docs/CULTURES.md
+tools/check_culture.gd      checks culture packs (schema and Chinese text)
 tests/test_contract.gd      headless end-to-end tests
 ```
 
@@ -314,4 +319,16 @@ Beyond the Wisdom Tree, the tribe makes smaller inventions out of what it does e
 | Daily goods | Woven Baskets (+30 food storage), Smoking Rack (needs fire; food spoils 30% slower), Salt-Cured Meat (needs salt; another 20%), Bone Flute (mood +5), Fur Bedding (needs Hide Tailoring; mood +3), Clay Lamp (needs Pottery; more lore) |
 
 The **Achievements** button (top bar) lists the inventions made, with who and when, and a hint and progress for each one still to come. It also lists **the tribe's firsts** in order: inventions, wisdom discovered or learned, natural finds, landmarks, clans met, traditions, new ages, masterpieces and outposts. The personas know the tribe's inventions too.
+
+## Cultures
+
+On the New Game screen the player picks the **culture** the tribe belongs to (or none, for the base game). A culture is a pack of data files in `cultures/<id>/`, with no code, so a new people can be added by writing one JSON file and its Chinese translation ([docs/CULTURES.md](docs/CULTURES.md) has the format and a checker). Three ship with the game:
+
+| Culture | |
+|---|---|
+| **Legends of Huaxia** (default) | Chinese legend: Fuxi's nets, Shennong's plough and herb broth, knotted cords, silk, millet wine; Suiren, Nüwa, Cangjie and the other ancestors; the ten suns, tracks in the mud; tales of Nüwa mending the sky, Hou Yi, Jingwei and Kuafu |
+| **Yangshao Villagers** (c. 5000–3000 BCE) | Painted pottery, spindle whorls, net sinkers, harvest knives, millet gruel, penned pigs; the Banpo ditch and urn burials, Jiangzhai's plaza; Houji and the Sleeper of Xishuipo |
+| **Natufian Foragers** (c. 12,500–9,500 BCE) | Bone-hafted sickles, stone mortars, shell headdresses, the oldest bread and beer; the Long Cold (Younger Dryas), the first dog, the feast for the dead at Hilazon Tachtit |
+
+A culture brings everyday inventions and **foods** (with effects such as +25% farm yield or slower hunger), **natural finds** placed on the map, **people** (the Chosen One's bloodlines, founders who lead a random tribe, wanderers who come to join, and ancestors), **events** (chronicle entries or dilemmas that pause the game) and **folk tales**, told by the best keeper of lore by the fire at night, one a night, or at festivals. Tales can leave lasting boons. The **Heritage** button lists everything the tribe has made, found, met, lived through and been told, each marked *Historical*, *Legend* or *Imagined* with its source. The personas know the tales that were told and the great people of their culture.
 

@@ -193,6 +193,7 @@ func _flash(at: Vector2) -> void:
 	sim.devotion = minf(100.0, sim.devotion + 2)
 
 func _hit_person(u: E.Unit) -> void:
+	sim.cult.on_event("lightning")
 	_hurt(u, u.max_hp * 0.6, tr("struck by lightning"))
 	if u.dead: return
 	sim.popup(u.pos + Vector2(0, -36), tr("Struck by lightning!"), Color("#fff6a0"), true)
@@ -214,6 +215,7 @@ func _sky_fire(at: Vector2) -> void:
 
 # ------------------------------------------------------------ wildfire
 func ignite(n) -> void:
+	sim.cult.on_event("wildfire")
 	if n == null or n.kind != "tree" or burning.has(n.id): return
 	if burning.is_empty():
 		fire_size = 0
@@ -295,6 +297,7 @@ func _flood_tick(dt: float) -> void:
 			sim.add_log(tr("The river falls back. The silt it left will feed the riverside fields."), "story")
 
 func _flood_strike() -> void:
+	sim.cult.on_event("spring_flood")
 	flood_left = 45.0
 	sim.flood_fx = maxf(sim.flood_fx, 0.5)
 	sim.flags["flood_active"] = sim.time
@@ -337,6 +340,7 @@ func _volcano_tick(dt: float) -> void:
 		erupt()
 
 func erupt() -> void:
+	sim.cult.on_event("eruption")
 	if not D.has_volcano(): return
 	erupt_left = 25.0
 	shake = 4.0
@@ -420,6 +424,7 @@ func resolve(_id: String, idx: int) -> String:
 
 # ------------------------------------------------------------ earthquake
 func quake() -> void:
+	sim.cult.on_event("earthquake")
 	shake = 3.0
 	var cands: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and not (s.type in ["bonfire", "burial_ground", "farm_plot", "palisade"]))
 	cands.shuffle()

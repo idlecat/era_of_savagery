@@ -187,6 +187,7 @@ func _weather(dt: float) -> void:
 			return
 
 func _start(w: String) -> void:
+	sim.cult.on_event(w) # (weather: blizzard, storm, drought...)
 	incoming = ""
 	weather = w
 	weather_left = randf_range(WEATHER[w]["dur"][0], WEATHER[w]["dur"][1])

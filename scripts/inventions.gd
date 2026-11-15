@@ -37,6 +37,7 @@ func needs_met(d: Dictionary) -> bool:
 		if not sim.knows_find(f): return false
 	for i in n.get("inventions", []):
 		if not has(i): return false
+	if sim.evo.era < int(n.get("era", 1)): return false
 	return true
 
 ## 0..1: how close the tribe is to an invention (the least advanced activity).
@@ -111,11 +112,11 @@ func _sources() -> Array:
 		if has(d["id"]): out.append_array(d.get("effects", []))
 	for f in sim.known_finds:
 		out.append_array(D.FINDS.get(f, {}).get("effects", []))
-	if sim.cult: out.append_array(sim.cult.boons)
+	out.append_array(sim.cult.boons)
 	return out
 
 func _fold(stat: String, of: String) -> Dictionary:
-	var sig: int = known.size() + sim.known_finds.size() * 1000 + (sim.cult.boons.size() * 1000000 if sim.cult else 0)
+	var sig: int = known.size() + sim.known_finds.size() * 1000 + sim.cult.boons.size() * 1000000
 	if sig != _fx_sig:
 		_fx = {}
 		_fx_sig = sig

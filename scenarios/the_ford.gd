@@ -13,7 +13,7 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 
 const SHIFT := Vector2(1400, 1000)
-const INFO := {"id": "the_ford", "name": "The River Ford",
+const INFO := {"id": "the_ford", "name": "The River Ford", "culture": "huaxia",
 	"desc": "The hand-made land of the bonfire: the river and its ford, the Red Ochre and Heron clans close by, four more clans in the far reaches. A flood is foretold, and something stalks the far bank.",
 	"brief": "A vision foretells a Great Flood on Day 4. Saber-tooth dens lurk across the ford, where the tribe hopes to found its first sister settlement.",
 	"intro": ["The tribe gathers around the bonfire. Saber-tooth tracks have been seen east of the ford."]}

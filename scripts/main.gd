@@ -11,6 +11,7 @@ const ArtBaker = preload("res://scripts/art_baker.gd")
 const D = preload("res://scripts/data.gd")
 const MapGen = preload("res://scripts/mapgen.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
+const Cultures = preload("res://scripts/cultures.gd")
 const NewGameUI = preload("res://scripts/new_game_ui.gd")
 
 const STEP := 0.05
@@ -37,6 +38,7 @@ func _ready() -> void:
 	await art.prepare()
 	loading.queue_free()
 	var settings: Dictionary = await _new_game_settings()
+	Cultures.apply(settings.get("culture", "")) # before the map: a random tribe takes the culture's names
 	if MapGen.SIZES.has(settings["map"]): # a random map
 		MapGen.generate(settings["map"], settings["tribes"], settings["seed"])
 		seed(settings["seed"]) # forests, herds and finds grow the same way for the same seed
@@ -78,13 +80,14 @@ func _new_game_settings() -> Dictionary:
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png(args["shot"])
 		get_tree().quit()
-		return {"map": Scenarios.DEFAULT, "tribes": 6, "seed": 0}
+		return {"map": Scenarios.DEFAULT, "tribes": 6, "seed": 0, "culture": Cultures.DEFAULT}
 	if args.has("map") or args.has("shot"):
 		var m: String = args.get("map", Scenarios.DEFAULT)
 		if m == "classic": m = Scenarios.DEFAULT
 		if not MapGen.SIZES.has(m) and Scenarios.by_id(m) == null: m = "standard"
 		var tribes := int(args.get("tribes", str(MapGen.SIZES[m]["def"]) if MapGen.SIZES.has(m) else "0"))
-		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000)))}
+		var cu: String = args.get("culture", Scenarios.culture_of(m))
+		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000))), "culture": "" if cu == "none" else cu}
 	var ui := NewGameUI.new()
 	add_child(ui)
 	var s: Dictionary = await ui.chosen
@@ -458,6 +461,20 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.evo.breakthrough("fire", sim.living()[1])
 			for i in int(float(args.get("secs", "30")) / STEP): sim.tick(STEP)
 			hud.open_achievements()
+		"heritage": # the culture's Heritage panel: a few things made, found, met and told
+			hud._close_modal()
+			var cu = sim.cult
+			var who = sim.living()[0]
+			for d in cu.list("inventions").slice(0, 2) + cu.list("foods").slice(0, 1): sim.inv.discover(d["id"], who)
+			for f in cu.list("finds").slice(0, 1): sim.discover_find(f["id"], who, who.pos)
+			for t in cu.list("tales").slice(0, 2): cu.tell(t["id"])
+			for p in cu.list("people"):
+				if p.get("as", "") == "wanderer": cu.join(p["id"])
+			for e in cu.list("events").slice(0, 1): cu.fired[e["id"]] = sim.day()
+			for i in int(float(args.get("secs", "4")) / STEP): sim.tick(STEP)
+			sim.pending_event = ""
+			hud._close_modal()
+			hud.open_heritage()
 		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
 			hud._close_modal()
 			sim.fog_enabled = false

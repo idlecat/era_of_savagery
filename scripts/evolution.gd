@@ -254,6 +254,8 @@ func world_ctx() -> Dictionary:
 		else:
 			unknown_words.append_array(t["words"])
 			if tr(t["name"]) != t["name"]: unknown_words.append(tr(t["name"]))
+	for d in D.INVENTIONS: # (a culture's inventions may bring words of their own)
+		if not sim.inv.has(d["id"]): unknown_words.append_array(d.get("words", []))
 	var trads: Array = []
 	for t in D.TRADITIONS:
 		if traditions.has(t["id"]): trads.append(tr(t["name"]))
@@ -263,4 +265,4 @@ func world_ctx() -> Dictionary:
 		"neighbors": sim.rivals.summary() if sim.rivals else [],
 		"found_in_the_land": sim.known_finds.keys().map(func(id): return tr(D.FINDS[id]["name"])),
 		"everyday_inventions": sim.inv.known.keys().map(func(id): return tr(sim.inv.def(id)["name"])),
-	}
+	}.merged(sim.cult.ctx())

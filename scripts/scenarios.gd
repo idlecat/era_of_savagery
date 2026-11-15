@@ -14,6 +14,11 @@ static func by_id(id: String) -> Variant:
 		if s.INFO["id"] == id: return s
 	return null
 
+## The culture a map is played in by default: the scenario's own, or the default one.
+static func culture_of(map_id: String) -> String:
+	var s = by_id(map_id)
+	return s.INFO.get("culture", "huaxia") if s != null else "huaxia"
+
 ## Load a scenario's map into data.gd (the default one if `id` is unknown).
 static func apply(id := DEFAULT) -> void:
 	var s = by_id(id)

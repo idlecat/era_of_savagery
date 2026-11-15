@@ -12,6 +12,7 @@ const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
+const Culture = preload("res://scripts/culture.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
 signal contract_interrupted(contract)
@@ -80,7 +81,7 @@ var nat: Nature
 var folk: Folk
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
-var cult = null # the culture's events, tales and legendary people (culture.gd)
+var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -100,6 +101,7 @@ func _init() -> void:
 	folk = Folk.new(self)
 	story = Story.new(self)
 	inv = Inventions.new(self)
+	cult = Culture.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -138,6 +140,7 @@ func new_game() -> void:
 		var kid: E.Unit = folk.make_child(nm, null)
 		kid.born_t = -D.DAY_LEN * randf_range(0.5, 1.5)
 		units.append(kid)
+	cult.setup() # (a random tribe may be led by the culture's founders)
 	_start_jobs()
 	story.setup(D.SCRIPT)
 	for line in D.MAP.get("intro", []): add_log(tr(line), "story")
@@ -956,6 +959,8 @@ func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 		"copper", "tin": evo.seed("bronze", 0.12, u)
 		"ochre": evo.drift("spiritual", 3.0)
 		"willow", "yarrow": stock["lore"] += 5
+	for t in fd.get("seed", {}): evo.seed(t, float(fd["seed"][t]), u) # a culture find's insight
+	for ax in fd.get("culture", {}): evo.drift(ax, float(fd["culture"][ax]))
 
 ## What a load does when it reaches the stores, beyond the food or lore it is.
 func _find_effects(u: E.Unit, amt: int) -> void:
@@ -1631,6 +1636,7 @@ func tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	story.tick(dt)
+	cult.update(dt)
 	inv.update(dt)
 	var f := day_frac()
 	var target := maxf(1.0 if (f > 0.72 and f < 0.97) else 0.0, nat.darkness())
@@ -1878,6 +1884,8 @@ func _check_events() -> void:
 		return
 	if not story.pending.is_empty(): # the scenario's scripted events
 		_fire_event(story.pending.pop_front())
+	elif not cult.pending.is_empty(): # the culture's dilemmas
+		_fire_event(cult.pending.pop_front())
 	elif not flags.has("overpop") and living().size() >= D.OVERPOP_THRESHOLD:
 		flags["overpop"] = true
 		_fire_event("overpop")
@@ -1899,11 +1907,13 @@ func _check_events() -> void:
 		_fire_event(rivals.pending.pop_front())
 
 func _fire_event(id: String) -> void:
+	cult.on_event(id)
 	pending_event = id
 	paused = true
 	event_fired.emit(id)
 
 func flood_strike() -> void:
+	cult.on_event("great_flood")
 	flood_fx = 1.0
 	var lost := floori(stock["food"] * 0.5)
 	stock["food"] -= lost
@@ -1933,6 +1943,7 @@ func event_def(id: String) -> Dictionary:
 	if legacy.owns_event(id): return legacy.event_def(id)
 	if nat.owns_event(id): return nat.event_def(id)
 	if folk.owns_event(id): return folk.event_def(id)
+	if cult.owns_event(id): return cult.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -1969,7 +1980,14 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		flags.erase("open_war")
 		return {"text": txt, "open_contract": false, "open_war": ow}
 	if nat.owns_event(id): return {"text": nat.resolve(id, idx), "open_contract": false}
-	if folk.owns_event(id): return {"text": folk.resolve(id, idx), "open_contract": false}
+	if folk.owns_event(id):
+		var ft: String = folk.resolve(id, idx)
+		cult.festival() # a tale saved for feasts
+		return {"text": ft, "open_contract": false}
+	if cult.owns_event(id):
+		var ct: String = cult.resolve(id, idx)
+		add_log(ct, "story")
+		return {"text": ct, "open_contract": false}
 	if legacy.owns_event(id):
 		var lr: Dictionary = legacy.resolve(id, idx)
 		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}
@@ -2023,6 +2041,7 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		"chosen":
 			var def: Dictionary = D.CHOSEN[clampi(idx, 0, mini(D.CHOSEN.size(), 4) - 1)].duplicate(true)
 			def["hero"] = true
+			cult.on_chosen(def)
 			var u := make_unit(def, D.VILLAGE + Vector2(0, 40))
 			remember(u, tr("was born under a lightning sky, bearing a mythic bloodline"), 10)
 			units.append(u)

@@ -1,8 +1,9 @@
 ## The "New Game" screen shown before the world is built. Two modes:
 ##   Random map — size, how many neighbouring clans, and a seed; nothing pre-configured.
 ##   Scenario   — a hand-made map with its own tribe, clans and scripted events.
-## Emits `chosen` with {"map": size id | scenario id, "tribes": int, "seed": int} and
-## remembers the choice.
+## Either way the player picks the culture the tribe belongs to (cultures.gd packs).
+## Emits `chosen` with {"map": size id | scenario id, "tribes": int, "seed": int,
+## "culture": pack id or ""} and remembers the choice.
 extends CanvasLayer
 
 signal chosen(settings: Dictionary)
@@ -10,6 +11,7 @@ signal chosen(settings: Dictionary)
 const MapGen = preload("res://scripts/mapgen.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 const HUD = preload("res://scripts/hud.gd")
+const Cultures = preload("res://scripts/cultures.gd")
 const CFG := "user://newgame.cfg"
 const MODES := ["random", "scenario"]
 
@@ -17,6 +19,9 @@ var mode_opt: OptionButton
 var map_opt: OptionButton
 var tribe_opt: OptionButton
 var seed_edit: LineEdit
+var culture_opt: OptionButton
+var culture_ids: Array = [] # option index -> pack id ("" = none)
+var picked_culture := "" # the player's own pick (else: the scenario's culture)
 var desc: Label
 var tribes_by_map := {} # remembered clan count per map size
 var last := {"random": "standard", "scenario": Scenarios.DEFAULT} # remembered map per mode
@@ -80,6 +85,17 @@ func _ready() -> void:
 	dice.pressed.connect(func(): seed_edit.text = str(randi() % 1000000))
 	sh.add_child(dice)
 	_row(grid, tr("Seed"), sh)
+	culture_opt = OptionButton.new()
+	culture_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	culture_ids = Cultures.ids()
+	for id in culture_ids: culture_opt.add_item(tr(Cultures.by_id(id)["name"]))
+	culture_ids.append("")
+	culture_opt.add_item(tr("None (base game only)"))
+	culture_opt.tooltip_text = tr("The people your tribe belongs to: their tools, foods, finds, heroes, happenings and folk tales.")
+	culture_opt.item_selected.connect(func(i):
+		picked_culture = culture_ids[i] if culture_ids[i] != "" else "none"
+		_describe())
+	_row(grid, tr("Culture"), culture_opt)
 	desc = Label.new()
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(480, 0)
@@ -139,19 +155,31 @@ func _refresh_tribes() -> void:
 		tribe_opt.select(clampi(int(tribes_by_map.get(m, MapGen.SIZES[m]["def"])), 1, mx) - 1)
 	_describe()
 
+func _culture() -> String:
+	if picked_culture == "none": return ""
+	if picked_culture != "" and picked_culture in culture_ids: return picked_culture
+	var c := Scenarios.culture_of(_map()) if _mode() == "scenario" else Cultures.DEFAULT
+	return c if c in culture_ids else ""
+
 func _describe() -> void:
 	var m := _map()
+	var cu := _culture()
+	culture_opt.select(culture_ids.find(cu))
+	var cdesc := ""
+	if cu != "":
+		var c := Cultures.by_id(cu)
+		cdesc = "\n\n" + tr(c["name"]) + ((" · " + tr(c["period"])) if c.has("period") else "") + "\n" + tr(c["desc"])
 	if _mode() == "scenario":
-		desc.text = tr(Scenarios.by_id(m).INFO["desc"])
+		desc.text = tr(Scenarios.by_id(m).INFO["desc"]) + cdesc
 		return
 	var sz: Dictionary = MapGen.SIZES[m]
-	desc.text = tr("A new land every time, with nothing set in advance: %d × %d paces, rivers and their fords, a tribe of strangers and %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1]
+	desc.text = tr("A new land every time, with nothing set in advance: %d × %d paces, rivers and their fords, a tribe of strangers and %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1] + cdesc
 
 func _start() -> void:
 	var m := _map()
 	var random := _mode() == "random"
 	var s := {"map": m, "tribes": tribe_opt.selected + 1 if random else 0,
-		"seed": int(seed_edit.text) if seed_edit.text.strip_edges().is_valid_int() else randi() % 1000000}
+		"seed": int(seed_edit.text) if seed_edit.text.strip_edges().is_valid_int() else randi() % 1000000, "culture": _culture()}
 	_save(s)
 	chosen.emit(s)
 
@@ -164,6 +192,7 @@ func _load() -> void:
 	if random or Scenarios.by_id(m) != null: last["random" if random else "scenario"] = m
 	last["random"] = str(cf.get_value("new_game", "random_map", last["random"]))
 	tribes_by_map = cf.get_value("new_game", "tribes_by_map", {})
+	picked_culture = str(cf.get_value("new_game", "culture", ""))
 	if bool(cf.get_value("new_game", "keep_seed", false)): seed_edit.text = str(cf.get_value("new_game", "seed", ""))
 
 func _save(s: Dictionary) -> void:
@@ -172,5 +201,6 @@ func _save(s: Dictionary) -> void:
 	cf.set_value("new_game", "random_map", last["random"])
 	cf.set_value("new_game", "tribes_by_map", tribes_by_map)
 	cf.set_value("new_game", "seed", s["seed"])
+	cf.set_value("new_game", "culture", picked_culture)
 	cf.set_value("new_game", "keep_seed", seed_edit.text.strip_edges() != "")
 	cf.save(CFG)
