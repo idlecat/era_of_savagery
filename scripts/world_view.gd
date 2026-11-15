@@ -562,11 +562,15 @@ func draw_overlay() -> void:
 		if lm["found"] and _in_view(lm["pos"]):
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
 	for id in sim.rivals.clans: _draw_clan_banner(sim.rivals.clans[id])
-	for c in sim.contracts.list: _draw_site_flag(c)
 	for s in sim.structures:
 		if _in_view(s.pos): _draw_structure_overlay(s)
 	for u in sim.units:
 		if _in_view(u.pos): _draw_unit_overlay(u)
+	var abed := {} # hut id -> sleepers inside
+	for u in sim.units:
+		if sim.in_hut(u): abed[u.bed_id] = abed.get(u.bed_id, 0) + 1
+	for s in sim.structures:
+		if abed.has(s.id) and _in_view(s.pos): _zzz(iso(s.pos) + Vector2(12, -52), s.id)
 	for p in sim.predators:
 		if p.dead or p.fled or not sim.is_visible(p.pos): continue
 		if p.clan != "":
@@ -1012,6 +1016,10 @@ func _draw_ground_part(s) -> void:
 			ci.draw_circle(p, 8, Color(0.15, 0.1, 0.06, 0.8 * a))
 		"grand_altar", "totem_shrine":
 			ci.draw_circle(p, D.STRUCTURES[s.type]["r"] + 10, Color(0.55, 0.5, 0.4, 0.35 * a))
+		"burial_ground":
+			ci.draw_circle(p, 44, Color(0.36, 0.33, 0.24, 0.3))
+			for i in 20:
+				ci.draw_circle(p + Vector2.from_angle(i * TAU / 20) * 46, 3.0, Color(0.62, 0.6, 0.55, 0.95))
 
 ## Construction sprite for an unbuilt structure: footprint shape and size by type
 ## (homes follow the current era), stage by progress. False if not baked.
@@ -1050,6 +1058,7 @@ func _draw_structure(s) -> void:
 				"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
 			return
 	match s.type:
+		"burial_ground": _burial_ground(s, b)
 		"hut", "large_hut":
 			var big: bool = s.type == "large_hut"
 			var r := 27.0 if big else 20.0
@@ -1124,6 +1133,26 @@ func _draw_structure(s) -> void:
 			_box(s.pos, 30, 30, 8, Color(0.62, 0.6, 0.56, a))
 			_box(s.pos, 20, 20, 16, Color(0.66, 0.64, 0.6, a))
 			_totem(b - Vector2(0, 16), 54, 1.3, a)
+
+## Earth mounds in rows, each with a marker stone; a tall standing stone watches over them.
+## A name-stone alone (no mound) for those whose bodies were never found.
+func _burial_ground(s, b: Vector2) -> void:
+	var back := iso(s.pos + Vector2(-34, -34))
+	_ell(back + Vector2(5, 2), 9, 4, SHADOW)
+	ci.draw_colored_polygon(PackedVector2Array([back + Vector2(-6, 0), back + Vector2(-4, -30), back + Vector2(1, -36), back + Vector2(5, -29), back + Vector2(6, 0)]), Color("#8c877c"))
+	ci.draw_line(back + Vector2(-4, -30), back + Vector2(1, -36), Color("#a9a497"), 2)
+	var graves: Array = s.graves.duplicate()
+	graves.sort_custom(func(x, y): return (x["pos"] as Vector2).x + (x["pos"] as Vector2).y < (y["pos"] as Vector2).x + (y["pos"] as Vector2).y)
+	for g in graves:
+		var q := iso(g["pos"])
+		if not g["lost"]: # an earth mound, long side along the row
+			_ell(q + Vector2(2, 2), 13, 5.5, SHADOW)
+			_ell(q, 12, 5.5, Color("#4a3a26"))
+			_ell(q - Vector2(0, 2.5), 10, 4.2, Color("#7a6545") if sim.hz.snow < 0.5 else Color("#e8ecf2"))
+			for k in 3: ci.draw_circle(q + Vector2(-6 + k * 6, -1 + (k % 2)), 1.6, Color("#8f8a7e"))
+		var m := q + Vector2(-11, -2)
+		ci.draw_colored_polygon(PackedVector2Array([m + Vector2(-3.5, 0), m + Vector2(-3, -12), m + Vector2(0, -15), m + Vector2(3, -12), m + Vector2(3.5, 0)]), Color("#a29d92") if not g["lost"] else Color("#c2b896"))
+		ci.draw_line(m + Vector2(-3, -12), m + Vector2(0, -15), Color("#c8c3b6"), 1.5)
 
 # ---- era styles & new buildings
 ## Era 1 home: a hide tent on leaning poles.
@@ -1255,6 +1284,9 @@ func _totem(b: Vector2, h: float, s: float, a: float) -> void:
 	ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x + 4 * s, wy), Vector2(b.x + 18 * s, wy - 8 * s), Vector2(b.x + 15 * s, wy + 2 * s)]), Color(Color("#d4a02e"), a))
 
 func _draw_structure_overlay(s) -> void:
+	if s.type == "burial_ground":
+		_draw_label(iso(s.pos) + Vector2(0, 40), tr("Burial Ground") + (" (%d)" % s.graves.size() if not s.graves.is_empty() else ""), 12, Color(0.85, 0.82, 0.9, 0.75), true)
+		return
 	if s.reno:
 		var rb := iso(s.pos)
 		_bar(Vector2(rb.x, rb.y + 10), 38, s.reno_progress / (s.work * 0.6), Color("#ffd36b"))
@@ -1267,8 +1299,8 @@ func _draw_structure_overlay(s) -> void:
 	if not s.paid: _draw_label(Vector2(b.x, by + 17), tr("awaiting wood"), 11, Color(1, 0.8, 0.6), true)
 
 func _draw_site_ring(c) -> void:
+	if not sim.contracts.is_running(c): return # only live sites are marked on the map
 	var col := _site_col(c)
-	if c.status == "done": return
 	for i in 32:
 		var a0 := float(i) / 32 * TAU + t * 0.2
 		ci.draw_arc(c.site, 125, a0, a0 + TAU / 64, 4, Color(col, 0.6), 4)
@@ -1300,21 +1332,10 @@ func _draw_clan_banner(c: Dictionary) -> void:
 	_draw_label(fp + Vector2(12, -72), tr(c["name"]).to_upper(), 15, col.lightened(0.5), true)
 	if c["met"]: _draw_label(fp + Vector2(12, -88), tr(st), 12, scol, true)
 
-func _draw_site_flag(c) -> void:
-	var col := _site_col(c)
-	var fp := iso(c.site + Vector2(-100, -100))
-	ci.draw_line(fp, fp + Vector2(0, -44), Color("#5a3d22"), 3)
-	var wv := sin(t * 4) * 3
-	ci.draw_colored_polygon(PackedVector2Array([fp + Vector2(0, -44), fp + Vector2(24, -38 + wv), fp + Vector2(0, -30)]), col)
-	var ld = sim.unit_by_id(c.leader_id)
-	var label := "%s  [%s %d%%]" % [c.plan["plan_id"], tr(c.status).to_upper(), roundi(c.progress * 100)]
-	_draw_label(fp + Vector2(0, -52), label, 14, col, true)
-	if ld and c.status not in ["done", "abandoned", "failed"]:
-		_draw_label(fp + Vector2(0, -70), tr("Leader: %s · %s") % [tr(ld.name), c.substate], 12, Color(1, 1, 1, 0.85), true)
-
 func _draw_unit(u) -> void:
 	var b := iso(u.pos)
 	_scale_about(b, FIG_SCALE)
+	if u.buried: return
 	if u.dead and art and art.has("man_dead_0_0"):
 		var dn := "man_dead_%d_0" % _dir_index("u%d" % u.id)
 		_sprite(dn, b, 0.95, Color(1, 1, 1, 0.85))
@@ -1324,6 +1345,10 @@ func _draw_unit(u) -> void:
 		_ell(b, 9, 4, Color(0.25, 0.1, 0.08, 0.5))
 		ci.draw_line(b + Vector2(-8, -1), b + Vector2(8, 1), Color(u.color, 0.6), 4)
 		ci.draw_circle(b + Vector2(10, 1), 3, Color(0.85, 0.7, 0.55, 0.6))
+		return
+	if sim.in_hut(u): return # asleep indoors: the hut shows the z's
+	if u.sleeping:
+		_draw_sleeper(u, b)
 		return
 	var key := "u%d" % u.id
 	var f: float = facing.get(key, 1)
@@ -1345,7 +1370,7 @@ func _draw_unit(u) -> void:
 	ci.draw_line(b + Vector2(2, -9 - bob), b + Vector2(2 - sw, 0), skin.darkened(0.15), 2.5)
 	# torso (fur tunic)
 	var hip := b + Vector2(0, -8 - bob)
-	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
+	if u.ox and u.job.get("type", "") == "gather":
 		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 18.0
 		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * f, 3), f, walk)
 	if sim.has_tech("hide"): # fur cloak behind the body
@@ -1420,6 +1445,25 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 	return _sprite(name, b, sc)
 
 ## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
+## Asleep in the open: lying down under a hide, with drifting z's.
+func _draw_sleeper(u, b: Vector2) -> void:
+	if u.id in selected: _ell_line(b, 16, 7, Color("#ffe066"), 2)
+	if art and art.has("man_dead_0_0"):
+		var dn := "man_dead_%d_0" % _dir_index("u%d" % u.id)
+		_sprite(dn, b, 0.95)
+		_sprite(dn + "_cloth", b, 0.95, u.color)
+	else:
+		_ell(b, 10, 4.5, Color(0.2, 0.14, 0.1, 0.5))
+		ci.draw_line(b + Vector2(-8, -2), b + Vector2(7, 0), u.color, 5)
+		ci.draw_circle(b + Vector2(10, -1), 3.2, Color("#d9a77c"))
+	_zzz(b + Vector2(6, -14), u.id)
+
+func _zzz(at: Vector2, seed_: int) -> void:
+	for i in 3:
+		var k := fmod(t * 0.45 + i / 3.0 + seed_ * 0.17, 1.0)
+		var q := at + Vector2(sin(t * 1.5 + i + seed_) * 3.0 + k * 8.0, -k * 22.0)
+		_draw_label(q, "z", 12 + int(k * 8), Color(0.88, 0.92, 1.0, 1.0 - k * 0.9), true)
+
 func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
 	var di := _dir_index(key)
 	var anim := "idle"
@@ -1457,7 +1501,7 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 			ci.draw_circle(bk, 3.5, Color("#9a968c"))
 		else:
 			ci.draw_circle(bk, 3.5, Color("#b03a2e"))
-	if u.carry_amt > 0 and sim.has_tech("domestication") and u.job.get("type", "") == "gather":
+	if u.ox and u.job.get("type", "") == "gather":
 		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 18.0
 		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * f, 3), f, walk)
 	if _has_torch(u):
@@ -1486,7 +1530,7 @@ func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
 	ci.draw_rect(Rect2(q.x - 5, q.y - 18, 10, 5), Color("#8a5a32"))
 
 func _draw_unit_overlay(u) -> void:
-	if u.dead: return
+	if u.dead or sim.in_hut(u): return
 	var b := iso(u.pos) * 1.0
 	var sel: bool = u.id in selected
 	var title: String = ("★ " if u.title != "" else "") + tr(u.name)
@@ -1663,7 +1707,7 @@ func _click_select(sm: Vector2, add: bool) -> void:
 	var best = null
 	var bd := 16.0
 	for u in sim.units:
-		if u.dead: continue
+		if u.dead or sim.in_hut(u): continue
 		var d := _pick_dist(sm, u.pos, 34)
 		if d < bd:
 			bd = d
@@ -1870,7 +1914,7 @@ func _sync_items() -> void:
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
-			_touch(it, (1 if st.built else 0) + st.style * 10 + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
+			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true

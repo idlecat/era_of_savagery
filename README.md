@@ -22,6 +22,7 @@ A Godot 4 prototype of the MVP scope in [docs/PRD.md](docs/PRD.md). It uses a 2.
   - *By quest* (default): people are grouped under each running Task Contract (leader first), then scouts, then the village. Click a group header to select the whole group.
   - *By ability*: a table of level and the four skills. Click a column to sort by it; click it again to reverse. Hover a row to see HP, ATK, DEF and what the person is doing.
   - In both views, Shift-click adds a person to the selection or removes them.
+- **Chronicle:** names of our people are links. Click one to select that person and centre the view on them (for the dead, the view goes to where they lie).
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 
 ## LLM setup (DeepSeek / GLM)
@@ -70,6 +71,20 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Fallback:** anything not yet baked falls back to the old drawn art, which is also used when running headless.
 - **Also baked:** construction stages (staked plan, materials, frame, walls with a scaffold); animation sets (gather, build, spear attack, ritual and death for villagers; pounce and death for beasts; stone or bronze tools); ground cover and rock outcrops; seasonal crop fields, the dock, Hot Spring, bones, flint and Yinglong.
 - **Lighting:** a time-of-day tint (golden dusk, blue night, pink dawn), additive fire and torch glow, and a soft vignette.
+
+## Day and night
+
+- **Night rest:** at nightfall everyone without a mission walks to bed and sleeps until dawn. A hut holds as many sleepers as it houses (3, or 5 for a Large Hut) and keeps them warm and hidden from wolves. The rest sleep around a bonfire, and anyone far from both camps where they stand. The job they had waits for them in the morning.
+- **Who stays up:** a war party on the march, people fighting, fleeing or freezing, gravediggers, and anyone you give an order to during the night. Task Contract crews (settlers and wisdom seekers) and envoys sleep too. A peaceful contract's clock stops overnight ("Camping for the night").
+- **Fast-forward:** once the whole tribe is in bed and nothing is stirring, the night passes at 12× speed (the top bar says "Night, all asleep"). Any alarm drops back to normal speed at once.
+- **Alarms:** beasts or raiders at the village (within the War Chief's 500-unit range), someone being hit, or a flood rouse the camp ("Danger in the night! The camp is roused."). Fighters answer the War Chief or defend themselves. Everyone in a hut stays inside ("Sheltering in a hut"), and outdoor sleepers get up and keep watch. Nobody goes back to the day's work, and once the danger is gone they sleep on. A wolf pack prowling the woods doesn't wake the village: hut sleepers are safe from it, and someone sleeping in the open keeps watch only if a beast comes within 300 units.
+- **The Steward** hands out no work during sleeping hours.
+
+## The dead
+
+- When the first person dies, the tribe lays out a **Burial Ground** at a quiet edge of the village. A free villager (idle first, else a gatherer) fetches each body, drags it home on a hide litter and buries it under a mound with a marker stone. The gravedigger remembers it, and each burial adds devotion and a little spiritual culture.
+- A body more than 1500 units away is never fetched. After a day it is counted lost, and a paler name-stone is raised for them instead.
+- Nobody is sent for a body while beasts are near it or at night.
 
 ## Hardships (Challenges: Off / Normal / Harsh in LLM Settings)
 
@@ -146,7 +161,12 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 - With **oral tradition** on, a tech is lost if its last keeper dies before Megalithic Totems or a Tribal Code preserve it. This can be toggled in settings.
 
 **What each tech changes:**
-- **Actions:** stone tools let people quarry stone; pack oxen haul goods; torches at night.
+- **Actions:** stone tools let people quarry stone; torches at night.
+- **Pack oxen** (Beast Domestication):
+  - **Where they live:** the herd lives in Aurochs Pens, up to 2 per pen. Finishing a pen tames the first calf, and another comes at a later dawn while there's room, at least 30 food and good care.
+  - **What they do:** each ox goes with one gatherer, starting with whoever works furthest from the village, and lets them carry 15 instead of 10. The top bar shows `Oxen n/max`.
+  - **Food:** each ox eats 0.03 food a second (half again in winter) and gives milk while cared for. A herd left without fodder for a day loses an ox to the pot (+20 food).
+  - **Care:** care runs out in a day and a half. When it drops below 50%, a villager goes to tend them in daytime. Neglected oxen won't carry, and after a day of neglect one breaks out and is gone.
 - **Buildings:** Aurochs Pen, Bronze Smelter (bronze gear only works while one stands), Council Ring, Grand Altar (needs stone).
 - **Appearance:** fur cloaks, stone or bronze blades, bronze helmets, hearth smoke.
 

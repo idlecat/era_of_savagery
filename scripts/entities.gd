@@ -37,10 +37,19 @@ class Unit:
 	var wander_t: float = 0.0
 	var wander_to: Variant = null
 	var idle_t: float = 0.0
+	var job_t: float = 0.0 # when the current job was given (night orders keep people up)
+	var sleeping: bool = false
+	var bed_id: int = -1 # the hut someone sleeps in tonight (-1 = by a fire or in the open)
+	var bed_pos: Variant = null
+	var fell_t: float = 0.0 # when they died
+	var buried: bool = false
+	var carrier_id: int = -1
+	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load) # who is carrying the body to the burial ground
 	var kills: int = 0
 	var unlocked: Dictionary = {}
 	var resume_job: Dictionary = {}
 	var resume_key: String = ""
+	var resume_t: float = 0.0
 	var hero: bool = false
 	var sick: float = 0.0 # 1 = just fell ill, 0 = healthy
 	var immune_t: float = 0.0
@@ -104,6 +113,7 @@ class Structure:
 	var style: int = 1 # era look (1 hide & branch, 2 mud & thatch, 3 timber & stone)
 	var reno: bool = false # being renovated to the current era's style
 	var reno_progress: float = 0.0
+	var graves: Array = [] # burial ground: [{name, day, lost, pos}]
 
 class Guardian:
 	var id: int

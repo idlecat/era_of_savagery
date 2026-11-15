@@ -125,11 +125,11 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		if how == "invented":
 			sim.remember(inventor, tr("invented %s on Day %d") % [tr(t["name"]), sim.day()], 8)
 			sim.gain_xp(inventor, "lore", 12)
-			sim.add_log(tr("Breakthrough! %s discovered %s: %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech")
+			sim.add_log(tr("Breakthrough! %s discovered %s: %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech", [inventor])
 			sim.popup(inventor.pos + Vector2(0, -50), tr("Breakthrough: ") + tr(t["name"]), Color("#c8a8ff"), true)
 		else:
 			sim.remember(inventor, tr("taught the tribe %s on Day %d") % [tr(t["name"]), sim.day()], 6)
-			sim.add_log(tr("Tribal Wisdom: %s taught %s - %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech")
+			sim.add_log(tr("Tribal Wisdom: %s taught %s - %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech", [inventor])
 	if id in ["totems", "code"] and not codified:
 		codified = true
 		sim.add_log(tr("The tribe's knowledge is now %s - it can no longer be lost.") % (tr("carved into the great totems") if id == "totems" else tr("kept in the Tribal Code")), "tech")
@@ -163,7 +163,7 @@ func _lose(id: String, u: E.Unit) -> void:
 	var t := tech_def(id)
 	sim.techs.erase(id)
 	insight[id] = t["cost"] * 0.35 # half-remembered: easier to rediscover
-	sim.add_log(tr("The secret of %s died with %s - no one else knew it. (Megalithic Totems or a Tribal Code would preserve knowledge.)") % [tr(t["name"]), tr(u.name)], "danger")
+	sim.add_log(tr("The secret of %s died with %s - no one else knew it. (Megalithic Totems or a Tribal Code would preserve knowledge.)") % [tr(t["name"]), tr(u.name)], "danger", [u])
 	sim.popup(u.pos + Vector2(0, -60), tr("%s is forgotten") % tr(t["name"]), Color("#ff8a8a"), true)
 	for o in sim.living(): sim.remember(o, tr("mourned the lost knowledge of %s on Day %d") % [tr(t["name"]), sim.day()], 5)
 

@@ -387,7 +387,7 @@ func send_envoy(u: E.Unit, id: String) -> String:
 	clans[id]["envoy"] = u.id
 	u.role = "envoy"
 	sim.set_job(u, {"type": "envoy", "clan": id})
-	sim.add_log(tr("%s sets out as our envoy to the %s.") % [tr(u.name), tr(clans[id]["name"])], "story")
+	sim.add_log(tr("%s sets out as our envoy to the %s.") % [tr(u.name), tr(clans[id]["name"])], "story", [u])
 	return ""
 
 ## Where the envoy stops: at the edge of their village, on our side.
@@ -400,7 +400,7 @@ func envoy_arrived(u: E.Unit, id: String) -> void:
 	if stance(id) == "Blood feud" and randf() < 0.5: # no words for enemies of the blood
 		sim.hurt_unit(u, u.max_hp * 0.35, null)
 		sim.remember(u, tr("was beaten and driven off by the %s when sent as envoy on Day %d") % [tr(c["name"]), sim.day()], 8)
-		sim.alert(tr("The %s beat our envoy %s and drove them off. There is blood between us.") % [tr(c["name"]), tr(u.name)], c["pos"], "danger")
+		sim.alert(tr("The %s beat our envoy %s and drove them off. There is blood between us.") % [tr(c["name"]), tr(u.name)], c["pos"], "danger", [u])
 		end_parley(u, id)
 		return
 	sim.paused = true

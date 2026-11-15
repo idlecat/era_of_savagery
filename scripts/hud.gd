@@ -389,7 +389,7 @@ func _build_right(root: Control) -> void:
 		var sd: Dictionary = D.STRUCTURES[k]
 		var b := _button(tr("%s (%s)") % [tr(sd["name"]), _cost_short(sd)], func(): world.build_type = k, tr("Costs %s") % _cost_long(sd))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.clip_text = true
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # room for "Requires <wisdom>" hints
 		b.custom_minimum_size = Vector2(60, 0)
 		build_btns[k] = b
 		grid.add_child(b)
@@ -420,6 +420,8 @@ func _build_right(root: Control) -> void:
 	v.add_child(contracts_text)
 	v.add_child(_header("CHRONICLE"))
 	log_text = _rich(0)
+	log_text.meta_clicked.connect(_on_log_link)
+	log_text.meta_underlined = false
 	log_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(log_text)
 	v.add_child(_label("LMB select/drag · RMB command (tree/bush/deer = gather, tiger = attack, site = build) · pan: WASD / screen edge / MMB drag / two-finger swipe · zoom: wheel / pinch · Space pause · F11 fullscreen", 12, COL_DIM))
@@ -438,6 +440,7 @@ func _process(delta: float) -> void:
 func _refresh_top() -> void:
 	var f: float = sim.day_frac()
 	var phase := tr("Night") if sim.night_amt > 0.5 else (tr("Dusk") if f > 0.65 else tr("Day"))
+	if sim.night_ff(): phase = "[color=#a8c8ff]%s[/color]" % tr("Night, all asleep")
 	if sim.hz.on():
 		phase += " · " + tr("Year %d") % sim.hz.year() + " " + tr(sim.hz.season())
 		if sim.hz.weather != "clear" or sim.hz.winter(): phase += " · [color=#cfe8ff]%s[/color]" % tr(sim.hz.weather_name())
@@ -446,6 +449,10 @@ func _refresh_top() -> void:
 		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), sim.stock["food"], sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
 		sim.devotion, sim.explored_pct(), sim.llm_calls]
 	top_stats.tooltip_text = tr("LLM node: %s") % llm.label()
+	if sim.ox_cap() > 0: # the herd: count, and a warning colour when it needs tending or feeding
+		var oc: String = "#ff8a7a" if sim.ox_care < 25 or sim.ox_hunger > 0 else "#e0c89a"
+		top_stats.text += "   [color=%s]%s[/color]" % [oc, tr("Oxen %d/%d") % [sim.oxen, sim.ox_cap()]]
+		top_stats.tooltip_text += "\n" + tr("Oxen: %d of %d (pens). Care %d%%. Each ox eats food and lets one gatherer carry 50%% more.") % [sim.oxen, sim.ox_cap(), roundi(sim.ox_care)]
 	pause_btn.text = "Resume" if sim.paused else "Pause"
 	for i in speed_btns.size():
 		speed_btns[i].modulate = COL_ACCENT if sim.speed == [1, 2, 4][i] else Color.WHITE
@@ -675,15 +682,22 @@ func _refresh_right() -> void:
 	for k in build_btns:
 		var sd: Dictionary = D.STRUCTURES[k]
 		var locked: bool = sd.has("tech") and not sim.has_tech(sd["tech"])
-		build_btns[k].text = "%s (%s)" % [tr(sd["name"]), _cost_short(sd)]
-		build_btns[k].disabled = locked or sim.stock["wood"] < sd["wood"] or sim.stock["stone"] < sd.get("stone", 0)
-		build_btns[k].tooltip_text = (tr("Requires %s") % tr(sim.evo.tech_def(sd["tech"])["name"])) if locked else (tr("Costs %s") % _cost_long(sd))
+		var short := _shortfall(sd["wood"], sd.get("stone", 0))
+		var why := ""
+		if locked: why = tr("Requires %s") % tr(sim.evo.tech_def(sd["tech"])["name"])
+		elif short != "": why = tr("Short of %s") % short
+		var bb: Button = build_btns[k]
+		bb.text = "%s\n%s" % [tr(sd["name"]), why if why != "" else _cost_long(sd)]
+		bb.disabled = why != ""
+		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd)
 	var old: Array = sim.outdated()
 	reno_btn.visible = not old.is_empty()
 	if not old.is_empty():
 		var rc: Dictionary = sim.reno_cost(old)
 		reno_btn.text = tr("Renovate %d homes in %s style (%dw%s)") % [old.size(), ["", tr("hide"), tr("mud & thatch"), tr("timber & stone")][sim.evo.era], rc["wood"], (tr(" %ds") % rc["stone"]) if rc["stone"] > 0 else ""]
-		reno_btn.disabled = sim.stock["wood"] < rc["wood"] or sim.stock["stone"] < rc["stone"]
+		var rshort := _shortfall(rc["wood"], rc["stone"])
+		reno_btn.disabled = rshort != ""
+		if rshort != "": reno_btn.text += "\n" + tr("Short of %s") % rshort
 	var s := ""
 	if sim.contracts.list.is_empty():
 		s = tr("[color=#8a7a60]None yet. Select a tribesperson and press 'Assign Task Contract'.[/color]")
@@ -709,8 +723,32 @@ func _refresh_right() -> void:
 		var l := ""
 		var colors := {"danger": "#ff8a8a", "story": "#ffd6a0", "contract": "#9fd0ff", "tech": "#c8a8ff", "vice": "#a8e0a8", "combat": "#ffb07a", "xp": "#7ff0ff", "build": "#b6f28a"}
 		for e in sim.log_lines.slice(0, 40):
-			l += tr("[color=#7a6a50]D%d[/color] [color=%s]%s[/color]\n") % [e["day"], colors.get(e["kind"], "#d8ccb0"), e["text"]]
+			l += tr("[color=#7a6a50]D%d[/color] [color=%s]%s[/color]\n") % [e["day"], colors.get(e["kind"], "#d8ccb0"), _link_names(e)]
 		log_text.text = l
+
+## A chronicle line with the names of the people it is about turned into links (`u<id>`).
+## Only the names recorded with the line are linked, so a one-character Chinese name never
+## lights up inside an ordinary word.
+func _link_names(e: Dictionary) -> String:
+	var text: String = e["text"]
+	var done := {}
+	for w in e.get("who", []):
+		var nm: String = w["name"]
+		if nm == "" or done.has(nm): continue
+		done[nm] = true
+		var at := text.find(nm)
+		if at < 0: continue
+		text = text.substr(0, at) + "[url=u%d][color=#ffe6a8]%s[/color][/url]" % [w["id"], nm] + text.substr(at + nm.length())
+	return text
+
+## Clicking a name in the chronicle: select that person and look at them.
+func _on_log_link(meta) -> void:
+	var m := str(meta)
+	if not m.begins_with("u"): return
+	var u = sim.unit_by_id(int(m.substr(1)))
+	if u == null: return
+	world.focus_on(u.pos)
+	if not u.dead: world.select_only(u)
 
 func _clans_bbcode() -> String:
 	var out := ""
@@ -743,6 +781,13 @@ func _toggle_lang() -> void:
 
 func _cost_short(sd: Dictionary) -> String:
 	return tr("%d") % sd["wood"] if sd.get("stone", 0) == 0 else tr("%dw %ds") % [sd["wood"], sd["stone"]]
+
+## What we still lack to afford a cost ("" = affordable), e.g. "12 wood and 5 stone".
+func _shortfall(wood: int, stone: int) -> String:
+	var parts: Array = []
+	if sim.stock["wood"] < wood: parts.append(tr("%d wood") % ceili(wood - sim.stock["wood"]))
+	if sim.stock["stone"] < stone: parts.append(tr("%d stone") % ceili(stone - sim.stock["stone"]))
+	return tr(" and ").join(parts) if parts.size() > 0 else ""
 
 func _cost_long(sd: Dictionary) -> String:
 	return tr("%d wood") % sd["wood"] + ((tr(" and %d stone") % sd["stone"]) if sd.get("stone", 0) > 0 else "")

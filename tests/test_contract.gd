@@ -37,6 +37,10 @@ func _initialize() -> void:
 	test_diplomacy()
 	test_war_and_trade()
 	test_endgames()
+	test_night_rest()
+	test_burials()
+	test_night_contracts()
+	test_herd()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -639,6 +643,171 @@ func test_war_and_trade() -> void:
 	check(bad["teach"] == "", "a clan can't teach what it doesn't know")
 	sim3.rivals.seal(sim3.unit_by_name("Linghe"), "heron", lesson, 0)
 	check(sim3.evo.insight_frac("pottery") > ins0 + 0.5, "being taught a secret brings it within reach (%d%%)" % roundi(sim3.evo.insight_frac("pottery") * 100))
+
+func test_night_rest() -> void:
+	print("\n== Night rest ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true # no clan folk or beasts about
+	var u = sim.unit_by_name("Tuo")
+	sim.assign_gather(u, "wood")
+	var job: Dictionary = u.job
+	sim.time = D.DAY_LEN * 0.745 # nights are short: keep this test inside one
+	for i in 120: sim.tick(0.05)
+	check(u.sleeping and u.job == job, "at night a worker goes to bed and keeps the day's job waiting (%s)" % u.act)
+	var abed: Array = sim.living().filter(func(o): return o.sleeping)
+	check(abed.size() == sim.living().filter(func(o): return o.role == "").size(), "everyone without a mission sleeps (%d)" % abed.size())
+	var in_huts: Array = abed.filter(func(o): return sim.in_hut(o))
+	check(in_huts.all(func(o): return sim.near_warmth(o)), "a hut keeps its sleepers warm")
+	var caps := {}
+	for o in in_huts: caps[o.bed_id] = caps.get(o.bed_id, 0) + 1
+	check(caps.keys().all(func(id): return caps[id] <= int(D.STRUCTURES[sim.struct_by_id(id).type]["cap"])), "huts hold no more sleepers than they house")
+	check(not in_huts.is_empty(), "the huts are used (%d inside, %d by the fire)" % [in_huts.size(), abed.size() - in_huts.size()])
+	check(sim.night_ff(), "with the whole tribe asleep and nothing stirring, the night can fast-forward")
+	# the Steward hands out no work at night
+	sim.appoint(sim.unit_by_name("Panshi"), "steward")
+	sim.vice_timer = 0
+	sim.tick(0.05)
+	check(sim.living().all(func(o): return o.sleeping or o.act == "Going to sleep"), "the Steward doesn't put sleepers to work")
+	# a night order keeps someone up
+	var w = sim.unit_by_name("Alie")
+	sim.assign_gather(w, "wood")
+	for i in 40: sim.tick(0.05)
+	check(not w.sleeping and w.act != "Going to sleep", "an order given at night is carried out (%s)" % w.act)
+	# danger wakes the camp
+	var wolf = sim.spawn_predator(D.VILLAGE + Vector2(300, 0))
+	wolf.kind = "wolf"
+	wolf.raid_t = 60.0
+	sim.tick(0.05)
+	sim.tick(0.05)
+	check(sim.night_alarm, "a beast at the village rouses the camp")
+	check(u.sleeping and u.act == "Sheltering in a hut" and u.job.get("type", "") == "gather", "people in huts shelter inside instead of going back to work (%s)" % u.act)
+	wolf.dead = true
+	for i in 180: sim.tick(0.05)
+	check(not sim.night_alarm and u.act == "Sleeping in a hut", "with the danger gone they sleep on (%s)" % u.act)
+	# a pack in the woods doesn't wake the village; an outdoor sleeper near it keeps watch
+	var far = sim.spawn_predator(D.VILLAGE + Vector2(-900, 0))
+	far.kind = "wolf"
+	far.raid_t = 60.0
+	sim.tick(0.05)
+	check(not sim.night_alarm, "a wolf far out in the woods does not rouse the camp")
+	var camper = sim.unit_by_name("Yan")
+	sim.wake(camper)
+	sim.set_job(camper, {})
+	camper.pos = far.pos + Vector2(120, 0)
+	camper.bed_id = -1
+	camper.bed_pos = camper.pos
+	camper.sleeping = true
+	sim.tick(0.05)
+	check(not camper.sleeping and camper.act == "Keeping watch", "someone sleeping in the open wakes and keeps watch when a beast is near (%s)" % camper.act)
+	far.dead = true
+	# dawn
+	sim.time = D.DAY_LEN * 0.97
+	sim.tick(0.05)
+	check(not u.sleeping and u.job.get("type", "") == "gather", "at dawn the worker gets back to work")
+
+func test_night_contracts() -> void:
+	print("\n== Contracts at night ==")
+	var sim = _new_sim()
+	sim.scripted_ambush = false
+	for p in sim.predators: p.fled = true
+	var u = sim.unit_by_name("Linghe")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Find new wisdom", {"kind": "research"}, false, "", {}, [], "research")
+	var san: Dictionary = sim.contracts.sanitize(Persona.propose(ctx)["blueprint"], {"kind": "research"}, u)
+	var c = sim.contracts.create(san["blueprint"], u, "Find new wisdom")
+	for i in 200: sim.tick(0.05)
+	sim.time = D.DAY_LEN * 0.745
+	for i in 200: sim.tick(0.05)
+	check(u.sleeping, "wisdom seekers sleep at night too (%s)" % u.act)
+	var st: float = c.state_t
+	var pr: float = c.progress
+	for i in 40: sim.tick(0.05)
+	check(c.state_t == st and c.progress == pr and c.substate == "Camping for the night", "a peaceful contract's clock stops while its camp sleeps")
+	sim.time = D.DAY_LEN * 0.97
+	for i in 40: sim.tick(0.05)
+	check(not u.sleeping and c.state_t > st, "at dawn the experiment goes on")
+
+func test_herd() -> void:
+	print("\n== Pack oxen ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	sim.research("domestication")
+	check(sim.oxen == 0 and sim.carry_cap(sim.unit_by_name("Tuo")) == 10, "knowing domestication alone gives no oxen")
+	var pen = sim.add_structure("aurochs_pen", D.VILLAGE + Vector2(-200, 150))
+	sim.complete_structure(pen, null)
+	check(sim.oxen == 1 and sim.ox_cap() == 2, "a new pen comes with its first calf (room for 2)")
+	var g: Array = ["Tuo", "Shan", "Bai"].map(func(nm): return sim.unit_by_name(nm))
+	for u in g: sim.assign_gather(u, "wood")
+	for i in 60: sim.tick(0.05)
+	var led: Array = sim.living().filter(func(u): return u.ox)
+	check(led.size() == 1 and led[0].job.get("type", "") == "gather" and sim.carry_cap(led[0]) == 15, "one ox, one gatherer with a bigger load")
+	check(sim.living().filter(func(u): return sim.carry_cap(u) == 10).size() == sim.living().size() - 1, "everyone else carries the usual load")
+	# oxen eat; with nothing to eat, one is slaughtered
+	sim.stock["food"] = 0.0
+	sim.oxen = 2
+	pen.built = true
+	for i in 95: sim._herd(1.0)
+	check(sim.oxen == 1 and sim.stock["food"] >= 19.0, "a starving herd loses an ox to the pot (+20 food)")
+	sim.stock["food"] = 100.0
+	var f0: float = sim.stock["food"]
+	sim.ox_care = 0.0
+	for i in 10: sim._herd(1.0)
+	check(sim.stock["food"] < f0, "oxen eat from the stores, and neglected ones give no milk")
+	check(not sim.oxen_working(), "neglected oxen won't carry")
+	sim._lend_oxen()
+	check(g.all(func(u): return not u.ox), "so no gatherer gets one")
+	# someone goes to tend them
+	sim.ox_care = 40.0
+	sim.herd_t = 0.0
+	sim.time = D.DAY_LEN * 2 + 10.0
+	sim.tick(0.05)
+	var herder: Array = sim.living().filter(func(u): return u.job.get("type", "") == "tend")
+	check(herder.size() == 1, "a villager is sent to tend the oxen")
+	for i in 600:
+		sim.tick(0.05)
+		if sim.ox_care >= 99.0: break
+	check(sim.ox_care >= 99.0 and herder[0].job.get("type", "") != "tend", "tending restores their care, then back to work (%s)" % herder[0].act)
+	# a calf at dawn when there is room, food and care
+	sim.stock["food"] = 100.0
+	sim.time = D.DAY_LEN * 3 + 2.0
+	sim._herd(0.05)
+	check(sim.oxen == 2, "a calf is tamed at dawn while the pen has room")
+	sim.time = D.DAY_LEN * 4 + 2.0
+	sim._herd(0.05)
+	check(sim.oxen == 2, "but never beyond 2 per pen")
+
+func test_burials() -> void:
+	print("\n== Burials ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	check(sim.burial_ground() == null, "no burial ground before anyone dies")
+	var d = sim.unit_by_name("Tuo")
+	d.pos = D.VILLAGE + Vector2(120, 80)
+	sim.kill_unit(d, null)
+	sim.tick(0.05)
+	var bg = sim.burial_ground()
+	check(bg != null and bg.pos.distance_to(D.VILLAGE) > 250, "the first death lays out a burial ground at the village edge")
+	sim.time = 5.0
+	for i in 30: sim.tick(0.05)
+	var carrier = sim.unit_by_id(d.carrier_id)
+	check(carrier != null and carrier.job.get("type", "") == "bury", "someone goes to fetch the body")
+	for i in 1200:
+		sim.tick(0.05)
+		if d.buried: break
+	check(d.buried and bg.graves.size() == 1 and not bg.graves[0]["lost"], "the body is carried to the burial ground and buried (%s)" % (carrier.act if carrier else "-"))
+	check(d.pos.distance_to(bg.pos) < 60, "the grave lies inside the burial ground")
+	check(carrier.memory.any(func(m): return "Tuo" in m["text"]), "the gravedigger remembers it")
+	check(carrier.job.get("type", "") != "bury", "and goes back to their day")
+	var line: Dictionary = sim.log_lines.filter(func(e): return "laid to rest" in e["text"])[0]
+	check(line["who"].size() == 1 and line["who"][0]["id"] == d.id and line["who"][0]["name"] in line["text"], "the chronicle line knows who it is about (its name becomes a link)")
+	# far from home, a body is lost to the wild after a day
+	var f = sim.unit_by_name("Alie")
+	f.pos = Vector2(D.W - 100, D.H - 100)
+	sim.kill_unit(f, null)
+	for i in 40: sim.tick(0.05)
+	check(not f.buried and f.carrier_id < 0, "nobody walks to the far end of the land for a body")
+	sim.time += D.DAY_LEN
+	for i in 40: sim.tick(0.05)
+	check(f.buried and bg.graves.size() == 2 and bg.graves[1]["lost"], "after a day the lost one gets a name-stone")
 
 func test_endgames() -> void:
 	print("\n== Alliances, vassals, endings ==")

@@ -39,6 +39,16 @@ var flood_fx := 0.0
 var birth_timer := 0.0
 var vice_timer := 0.0
 var guardian = null
+var night_alarm := false # something stirs in the dark: the sleepers are up
+var alarm_until := -1.0
+var was_rest_time := false
+var bury_t := 0.0
+var oxen := 0 # the tribe's pack oxen, kept in Aurochs Pens
+var ox_care := 100.0 # 0 = neglected: they won't carry, and wander off
+var ox_hunger := 0.0 # seconds the herd has gone without food
+var ox_neglect := 0.0 # seconds of neglect
+var herd_t := 0.0
+var last_herd_day := 0
 var pending_event := ""
 var scripted_ambush := true
 # ---- exploration (fog of war) ----
@@ -223,15 +233,20 @@ func add_structure(type: String, p: Vector2, built := false, owner := "village",
 
 # ------------------------------------------------------------------ helpers
 ## AoE-style alert: a banner the player can click to look at the danger.
-func alert(text: String, pos: Vector2, level := "info") -> void:
+func alert(text: String, pos: Vector2, level := "info", who: Array = []) -> void:
 	var a := {"text": text, "pos": pos, "level": level, "t": time}
 	alerts.append(a)
 	if alerts.size() > 20: alerts.pop_front()
-	add_log(text, {"danger": "danger", "warn": "story"}.get(level, "info"))
+	add_log(text, {"danger": "danger", "warn": "story"}.get(level, "info"), who)
 	alert_raised.emit(a)
 
-func add_log(text: String, kind := "info") -> void:
-	log_lines.push_front({"day": day(), "text": text, "kind": kind})
+## `who`: the people the line is about. The chronicle turns their names (as written now,
+## in the current language) into links that select them.
+func add_log(text: String, kind := "info", who: Array = []) -> void:
+	var names: Array = []
+	for u in who:
+		if u != null: names.append({"id": u.id, "name": tr(u.name)})
+	log_lines.push_front({"day": day(), "text": text, "kind": kind, "who": names})
 	if log_lines.size() > 80: log_lines.pop_back()
 	log_added.emit()
 
@@ -294,6 +309,7 @@ func _nearest_fire(p: Vector2) -> E.Structure:
 	return best
 
 func near_warmth(u: E.Unit) -> bool:
+	if in_hut(u): return true
 	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
 	for s in structures:
 		if s.built and ours(s) and s.type == "bonfire" and s.pos.distance_to(u.pos) < r: return true
@@ -336,7 +352,7 @@ func unit_speed(u: E.Unit) -> float:
 	return s
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult()
-func carry_cap(_u: E.Unit) -> int: return 15 if has_tech("domestication") else 10
+func carry_cap(u: E.Unit) -> int: return 15 if u.ox else 10
 
 # ------------------------------------------------------------------ XP & memory
 func xp_need(lv: int) -> float: return 25.0 + lv * 20.0
@@ -351,11 +367,11 @@ func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 		s["xp"] -= xp_need(s["lv"])
 		s["lv"] += 1
 		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"), true)
-		add_log(tr("%s reached %s Lv.%d.") % [tr(u.name), tr(D.SKILL_NAMES[skill]), s["lv"]], "xp")
+		add_log(tr("%s reached %s Lv.%d.") % [tr(u.name), tr(D.SKILL_NAMES[skill]), s["lv"]], "xp", [u])
 		if s["lv"] == 5 and not u.unlocked.has(skill):
 			u.unlocked[skill] = true
 			remember(u, tr("mastered %s and unlocked [%s]") % [tr(D.SKILL_NAMES[skill]).to_lower(), tr(D.SKILL_UNLOCKS[skill])], 7)
-			add_log(tr("%s unlocked [%s]!") % [tr(u.name), tr(D.SKILL_UNLOCKS[skill])], "story")
+			add_log(tr("%s unlocked [%s]!") % [tr(u.name), tr(D.SKILL_UNLOCKS[skill])], "story", [u])
 
 ## Memory stream: keep the ~10 most impactful events.
 func remember(u: E.Unit, text: String, impact: int) -> void:
@@ -423,6 +439,7 @@ func approach(u: E.Unit, t: Vector2, near: float, dt: float) -> bool:
 func set_job(u: E.Unit, job: Dictionary, key := "") -> void:
 	u.job = job
 	u.job_key = key
+	u.job_t = time
 	u.path.clear()
 	u.dest = null
 	u.gather_t = 0.0
@@ -477,6 +494,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "explore":
 				u.resume_job = u.job
 				u.resume_key = u.job_key
+				u.resume_t = u.job_t
 			set_job(u, {"type": "move", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "flee": true, "warm": true}, u.job_key)
 			popup(u.pos + Vector2(0, -30), tr("Seeking warmth"), Color("#a8d8ff"))
 	if u.role == "envoy" and u.job.get("type", "") != "envoy" and u.resume_job.get("type", "") != "envoy":
@@ -497,8 +515,10 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				if u.resume_job.is_empty() and not u.job.is_empty():
 					u.resume_job = u.job
 					u.resume_key = u.job_key
+					u.resume_t = u.job_t
 				assign_attack(u, p, u.job_key)
 
+	if _night_rest(u, dt): return
 	if u.job.is_empty():
 		unit_idle(u, dt)
 		return
@@ -510,6 +530,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				if u.resume_job.get("type", "") == "explore":
 					u.resume_job = {}
 					assign_explore(u)
+					u.job_t = u.resume_t
 				elif j.get("warm", false) and not u.resume_job.is_empty():
 					if u.hp < u.max_hp * 0.8:
 						u.act = "Warming by the fire"
@@ -517,10 +538,15 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					var rj := u.resume_job
 					u.resume_job = {}
 					set_job(u, rj, u.resume_key)
+					u.job_t = u.resume_t # back to the old job: not a new (night) order
 				else:
 					set_job(u, {})
 		"gather":
 			_do_gather(u, j, dt)
+		"bury":
+			_do_bury(u, j, dt)
+		"tend":
+			_do_tend(u, j, dt)
 		"build":
 			var s := struct_by_id(j["struct_id"])
 			if s == null or (s.built and not s.reno):
@@ -555,6 +581,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					var rj := u.resume_job
 					u.resume_job = {}
 					set_job(u, rj, u.resume_key)
+					u.job_t = u.resume_t # back to the old job: not a new (night) order
 				else:
 					set_job(u, {})
 				return
@@ -590,6 +617,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				j["to"] = null
 				set_job(u, {"type": "move", "to": u.pos + away * 260, "flee": true})
 				u.resume_job = {"type": "explore", "to": null}
+				u.resume_t = u.job_t
 				popup(u.pos + Vector2(0, -30), tr("Beast! Scout backs off"), Color("#ff9b7a"))
 				return
 			var tgt: Variant = j.get("to")
@@ -707,13 +735,353 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	s.progress = s.work
 	s.style = evo.era
 	if s.type in ["farm_plot", "granary", "aurochs_pen", "fishing_dock"]: evo.drift("settled", 5.0)
+	if s.type == "aurochs_pen" and ours(s):
+		oxen += 1
+		ox_care = maxf(ox_care, 80.0)
+		last_herd_day = day() # the next calf comes at a later dawn
+		add_log(tr("An aurochs calf is tamed and led into the new pen. Feed it and tend it, and it will carry our loads."), "build")
 	if s.type in ["totem_shrine", "grand_altar"]: evo.drift("spiritual", 4.0)
 	if s.type in ["weapon_rack", "palisade"]: evo.drift("martial", 2.0)
 	if s.type == "council_ring": evo.drift("ranked", 6.0)
 	var name: String = tr(D.STRUCTURES[s.type]["name"])
 	popup(s.pos + Vector2(0, -30), tr("%s complete!") % name, Color("#b6f28a"), true)
-	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build")
+	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build", [u] if u else [])
 	if s.type == "grand_altar": summon_guardian(s)
+
+# ------------------------------------------------------------------ the herd
+const OX_PER_PEN := 2
+const OX_EAT := 0.03 # food per second per ox (half again in winter: no grazing)
+const OX_MILK := 0.025 # food per second per cared-for ox (milk, less in winter)
+const CARE_DECAY := 100.0 / (D.DAY_LEN * 1.5) # untended, care runs out in a day and a half
+const TEND_TIME := 6.0
+
+func pens() -> Array:
+	return structures.filter(func(s): return s.built and ours(s) and s.type == "aurochs_pen")
+
+func ox_cap() -> int: return pens().size() * OX_PER_PEN
+func oxen_working() -> bool: return oxen > 0 and ox_care > 0.0
+
+## Oxen eat, give milk, need tending, and are lent to the gatherers working furthest out.
+func _herd(dt: float) -> void:
+	var cap := ox_cap()
+	if oxen > cap: oxen = cap # a pen was lost
+	if oxen > 0:
+		var need: float = OX_EAT * oxen * (1.5 if hz.winter() else 1.0) * dt
+		if stock["food"] >= need:
+			stock["food"] -= need
+			ox_hunger = 0.0
+		else:
+			stock["food"] = 0.0
+			ox_hunger += dt
+			if ox_hunger > D.DAY_LEN: # a day without fodder: one goes to the pot
+				ox_hunger = 0.0
+				oxen -= 1
+				stock["food"] += 20
+				alert(tr("With nothing left to feed them, the tribe slaughters an ox (+20 food)."), D.VILLAGE, "warn")
+		if ox_care > 0: stock["food"] += OX_MILK * oxen * hz.food_mult("aurochs_pen") * dt
+		ox_care = maxf(0.0, ox_care - CARE_DECAY * dt)
+		if ox_care <= 0:
+			ox_neglect += dt
+			if ox_neglect > D.DAY_LEN:
+				ox_neglect = 0.0
+				oxen -= 1
+				alert(tr("Untended, an ox breaks out of the pen and is gone."), pens()[0].pos if cap > 0 else D.VILLAGE, "warn")
+		else:
+			ox_neglect = 0.0
+	# a new calf at dawn, if there is room, food and care
+	if day() != last_herd_day and not rest_time() and day_frac() < 0.2:
+		last_herd_day = day()
+		if cap > oxen and oxen > 0 and ox_care >= 50 and stock["food"] >= 30:
+			oxen += 1
+			add_log(tr("A calf is tamed in the Aurochs Pen. The herd is now %d.") % oxen, "build")
+	herd_t -= dt
+	if herd_t > 0: return
+	herd_t = 2.0
+	_lend_oxen()
+	if oxen > 0 and ox_care < 50 and not rest_time() and not units.any(func(u): return not u.dead and u.job.get("type", "") == "tend"):
+		_send_herder()
+
+func _lend_oxen() -> void:
+	var gatherers: Array = units.filter(func(u): return not u.dead and not u.sleeping and u.job.get("type", "") == "gather" and D.bank_of(u.pos) == D.bank_of(D.VILLAGE))
+	gatherers.sort_custom(func(a, b): return a.pos.distance_to(D.VILLAGE) > b.pos.distance_to(D.VILLAGE))
+	var n: int = oxen if oxen_working() else 0
+	for u in units: u.ox = false
+	for u in gatherers.slice(0, n): u.ox = true
+
+func _send_herder() -> void:
+	var ps := pens()
+	if ps.is_empty(): return
+	var best: E.Unit = null
+	for u in units:
+		if u.dead or u.role != "" or u.sleeping or u.title == "War Chief": continue
+		var jt: String = u.job.get("type", "")
+		if jt != "" and jt != "gather": continue
+		if best == null or (jt == "" and best.job.get("type", "") != "") or \
+			((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(ps[0].pos) < best.pos.distance_to(ps[0].pos)): best = u
+	if best == null: return
+	if not best.job.is_empty():
+		best.resume_job = best.job
+		best.resume_key = best.job_key
+		best.resume_t = best.job_t
+	set_job(best, {"type": "tend", "pen_id": ps[0].id, "t": 0.0})
+
+func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var pen := struct_by_id(j["pen_id"])
+	if pen == null or not pen.built or oxen <= 0:
+		_end_errand(u)
+		return
+	if not approach(u, pen.pos + Vector2(cos(u.id) * 34, sin(u.id) * 20), 8, dt):
+		u.act = "Walking to the oxen"
+		return
+	u.act = "Tending the oxen"
+	j["t"] += dt
+	if j["t"] >= TEND_TIME:
+		ox_care = 100.0
+		gain_xp(u, "forage", 2.0)
+		evo.practice(u, "hunt", 1.0)
+		_end_errand(u) # back to what they were doing
+
+# ------------------------------------------------------------------ burials
+const BURY_RANGE := 1500.0 # bodies further out than this are lost to the wild after a day
+const GRAVE_DIG := 5.0
+
+func burial_ground() -> E.Structure:
+	for s in structures:
+		if s.built and ours(s) and s.type == "burial_ground": return s
+	return null
+
+## A quiet spot at the edge of the village, clear of everything else.
+func _found_burial_ground() -> E.Structure:
+	var spot: Vector2 = D.VILLAGE + Vector2(-300, 220)
+	var found := false
+	for r in [300.0, 380.0, 460.0]:
+		for k in 16:
+			var p: Vector2 = D.VILLAGE + Vector2.from_angle(2.4 + k * TAU / 16) * r
+			if D.in_river(p) or D.bank_of(p) != D.bank_of(D.VILLAGE) or p.x < 80 or p.y < 80 or p.y > D.H - 80: continue
+			if structures.any(func(s): return s.pos.distance_to(p) < (D.STRUCTURES[s.type]["r"] + 60 if not D.STRUCTURES[s.type].get("ring", false) else 0.0)): continue
+			if nodes.any(func(n): return n.kind in ["tree", "boulder", "bush"] and n.pos.distance_to(p) < 85): continue
+			spot = p
+			found = true
+			break
+		if found: break
+	var s := add_structure("burial_ground", spot, true)
+	add_log(tr("The tribe lays out a burial ground at the edge of the village."), "story")
+	return s
+
+func grave_slot(bg: E.Structure, i: int) -> Vector2:
+	var col: int = [2, 1, 3, 0, 4][i % 5] # fill each row from the middle out
+	var row := i / 5
+	# rows run along the screen's horizontal (world (1,-1)), new rows step towards the viewer
+	return bg.pos + Vector2(1, -1) * ((col - 2) * 14.0 + (row % 2) * 5.0) + Vector2(1, 1) * (row * 13.0 - 2.0)
+
+## Every second: see that each body is fetched, carried home and buried.
+func _burials(dt: float) -> void:
+	bury_t -= dt
+	if bury_t > 0: return
+	bury_t = 1.0
+	for b in units:
+		if not b.dead or b.buried: continue
+		var bg := burial_ground()
+		if bg == null: bg = _found_burial_ground()
+		if b.carrier_id >= 0:
+			var c := unit_by_id(b.carrier_id)
+			if c == null or c.dead or c.job.get("type", "") != "bury" or c.job.get("body_id", -1) != b.id: b.carrier_id = -1
+			else: continue
+		if b.pos.distance_to(bg.pos) > BURY_RANGE:
+			if time - b.fell_t > D.DAY_LEN:
+				b.buried = true
+				bg.graves.append({"name": b.name, "day": day(), "lost": true, "pos": grave_slot(bg, bg.graves.size())})
+				add_log(tr("%s's body was never found. A stone at the burial ground keeps their name.") % tr(b.name), "story", [b])
+			continue
+		if rest_time() or not active_predators_near(b.pos, 400).is_empty(): continue
+		var best: E.Unit = null
+		for u in units:
+			if u.dead or u.role != "" or u.sleeping or u.title == "War Chief": continue
+			var jt: String = u.job.get("type", "")
+			if jt != "" and jt != "gather": continue
+			if u.pos.distance_to(b.pos) > BURY_RANGE: continue
+			if best == null or (jt == "" and best.job.get("type", "") != "") or \
+				((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(b.pos) < best.pos.distance_to(b.pos)): best = u
+		if best == null: continue
+		if not best.job.is_empty():
+			best.resume_job = best.job
+			best.resume_key = best.job_key
+			best.resume_t = best.job_t
+		set_job(best, {"type": "bury", "body_id": b.id, "phase": "fetch", "t": 0.0})
+		b.carrier_id = best.id
+		popup(best.pos + Vector2(0, -30), tr("%s goes to fetch %s") % [tr(best.name), tr(b.name)], Color("#d8d0e8"))
+
+func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var b := unit_by_id(j["body_id"])
+	var bg := burial_ground()
+	if b == null or b.buried or bg == null:
+		_end_errand(u)
+		return
+	match j["phase"]:
+		"fetch":
+			u.act = "Fetching the body of " + b.name
+			if approach(u, b.pos, 10, dt):
+				j["phase"] = "carry"
+				j["slot"] = grave_slot(bg, bg.graves.size() + units.filter(func(o): return o != u and o.job.get("type", "") == "bury" and o.job.has("slot")).size())
+				u.path.clear()
+				u.dest = null
+		"carry":
+			u.act = "Carrying the body of " + b.name
+			var slot: Vector2 = j["slot"]
+			if u.pos.distance_to(slot) <= 14:
+				j["phase"] = "dig"
+				u.path.clear()
+			else:
+				go_to(u, slot)
+				step_move(u, dt, unit_speed(u) * 0.7)
+			b.pos = u.pos + Vector2(-9, 5) # dragged on a hide litter
+		"dig":
+			u.act = "Burying " + b.name
+			j["t"] += dt
+			if j["t"] >= GRAVE_DIG:
+				b.buried = true
+				b.carrier_id = -1
+				b.pos = j["slot"]
+				bg.graves.append({"name": b.name, "day": day(), "lost": false, "pos": j["slot"]})
+				remember(u, tr("buried %s on Day %d") % [tr(b.name), day()], 6)
+				add_log(tr("%s is laid to rest in the burial ground.") % tr(b.name), "story", [b])
+				popup(bg.pos + Vector2(0, -40), tr("%s is laid to rest") % tr(b.name), Color("#d8d0e8"), true)
+				devotion = minf(100.0, devotion + 1.0)
+				evo.drift("spiritual", 1.0)
+				_end_errand(u)
+
+func _end_errand(u: E.Unit) -> void:
+	if not u.resume_job.is_empty():
+		var rj := u.resume_job
+		u.resume_job = {}
+		set_job(u, rj, u.resume_key)
+		u.job_t = u.resume_t
+	else:
+		set_job(u, {})
+
+# ------------------------------------------------------------------ night rest
+const SHELTERS := ["hut", "large_hut"]
+const BED_FAR := 700.0 # further than this from a bed, people camp where they are
+
+## Sleeping hours: a little inside the dark part of the day.
+func rest_time() -> bool:
+	var f := day_frac()
+	return f >= 0.74 and f < 0.96
+
+## Start of tonight's rest (orders given after this keep people up).
+func night_start() -> float:
+	var base := floorf(time / D.DAY_LEN) * D.DAY_LEN
+	if day_frac() < 0.74: base -= D.DAY_LEN
+	return base + D.DAY_LEN * 0.74
+
+func in_hut(u: E.Unit) -> bool: return u.sleeping and u.bed_id >= 0
+
+## Is something stirring that should rouse the camp? Beasts or raiders at the village (the
+## War Chief's range), someone hurt in a fight, or the river flooding. A pack prowling the
+## woods does not count: people in huts are safe from it, and outdoor sleepers watch for
+## themselves (`_night_rest`).
+func _danger_near() -> bool:
+	if time - flags.get("flood_active", -99.0) < 20.0: return true
+	if not active_predators_near(D.VILLAGE, 500).is_empty(): return true
+	for u in units:
+		if not u.dead and time - u.last_hit_t < 4.0 and u.attacker_id >= 0: return true
+	return false
+
+func _night_watch() -> void:
+	var rest := rest_time()
+	if rest and not was_rest_time: add_log(tr("Night falls. The tribe lies down to sleep."), "info")
+	was_rest_time = rest
+	if not rest:
+		night_alarm = false
+		return
+	if _danger_near(): alarm_until = time + 6.0
+	var alarm := time < alarm_until
+	if alarm and not night_alarm and units.any(func(u): return u.sleeping):
+		add_log(tr("Danger in the night! The camp is roused."), "danger")
+		popup(D.VILLAGE + Vector2(0, -60), tr("The camp wakes!"), Color("#ff9b7a"), true)
+	night_alarm = alarm
+
+func _at_war(u: E.Unit) -> bool:
+	if u.role != "contract": return false
+	var c = contracts.by_id(u.contract_id)
+	return c != null and c.kind == "war" and contracts.is_running(c)
+
+## Peaceful Task Contracts stop their clocks while the camp sleeps (an alarm restarts them).
+func camp_asleep() -> bool:
+	return rest_time() and not night_alarm
+
+## Nothing stirs and everyone is in bed: the night can pass quickly (main.gd fast-forwards).
+func night_ff() -> bool:
+	if not camp_asleep() or paused: return false
+	if contracts.list.any(func(c): return c.kind == "war" and contracts.is_running(c)): return false
+	for u in units:
+		if not u.dead and not u.sleeping: return false
+	return true
+
+func wake(u: E.Unit) -> void:
+	if u.sleeping or u.bed_pos != null:
+		u.path.clear()
+		u.dest = null
+	u.sleeping = false
+	u.bed_id = -1
+	u.bed_pos = null
+
+## People with no orders from tonight go to bed (a hut, else beside a fire, else wherever
+## they are) and sleep until dawn, unless an alarm wakes them. The job they had waits.
+## Returns true while the unit is resting (its job is not run).
+func _night_rest(u: E.Unit, dt: float) -> bool:
+	var jt: String = u.job.get("type", "")
+	# Contract crews and envoys camp for the night too (their jobs are re-issued by the
+	# executor, so job_t says nothing about them); only a war party presses on.
+	# During an alarm nobody goes back to the day's work: fighters get attack orders (War
+	# Chief, self-defence), people in huts shelter inside, people outdoors keep watch.
+	var crew: bool = u.role != ""
+	var duty: bool = jt == "attack" or jt == "bury" or u.job.get("flee", false) \
+		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start())
+	if not rest_time() or duty:
+		if u.sleeping or u.bed_pos != null: wake(u)
+		return false
+	if u.bed_pos == null: _pick_bed(u)
+	var outdoors: bool = u.bed_id < 0
+	var danger: bool = night_alarm or (outdoors and not active_predators_near(u.pos, 300).is_empty())
+	if u.sleeping:
+		if danger and outdoors:
+			u.sleeping = false
+			u.act = "Keeping watch"
+		elif not outdoors:
+			u.act = "Sheltering in a hut" if danger else "Sleeping in a hut"
+		else:
+			u.act = "Sleeping"
+		return true
+	if approach(u, u.bed_pos, 5, dt):
+		u.path.clear()
+		u.dest = null
+		if danger and outdoors: u.act = "Keeping watch"
+		else: u.sleeping = true
+	else:
+		u.act = "Going to sleep"
+	return true
+
+func _pick_bed(u: E.Unit) -> void:
+	var bank := D.bank_of(u.pos)
+	var best: E.Structure = null
+	for s in structures:
+		if not s.built or not ours(s) or not s.type in SHELTERS or D.bank_of(s.pos) != bank: continue
+		var cap: int = int(D.STRUCTURES[s.type]["cap"])
+		var used: int = units.filter(func(o): return not o.dead and o != u and o.bed_id == s.id).size()
+		if used >= cap: continue
+		if best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos): best = s
+	if best and best.pos.distance_to(u.pos) < BED_FAR:
+		u.bed_id = best.id
+		u.bed_pos = best.pos + Vector2(0, 6)
+		return
+	u.bed_id = -1
+	var fire := _nearest_fire(u.pos)
+	if fire and D.bank_of(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
+		var a := float(u.id) * 2.39996 # golden angle: spread the sleepers round the fire
+		u.bed_pos = fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0)
+	else:
+		u.bed_pos = u.pos # camp in the open
 
 func unit_idle(u: E.Unit, dt: float) -> void:
 	u.act = "Resting (sick)" if u.sick > 0 else "Idle"
@@ -773,8 +1141,10 @@ func kill_unit(u: E.Unit, killer) -> void:
 	u.dead = true
 	u.hp = 0
 	u.job = {}
+	u.fell_t = time
+	wake(u)
 	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else tr("lost to hunger and cold")
-	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger")
+	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
 	for o in units:
 		if not o.dead and o != u and o.pos.distance_to(u.pos) < 300:
@@ -810,10 +1180,10 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 			gain_xp(u, "combat", 18)
 			if p.clan != "": # a person, not a beast
 				remember(u, tr("struck down a %s on Day %d") % [tr(p.name), day()], 8)
-				add_log(tr("%s struck down a %s!") % [tr(u.name), tr(p.name)], "combat")
+				add_log(tr("%s struck down a %s!") % [tr(u.name), tr(p.name)], "combat", [u])
 			else:
 				remember(u, tr("slew a %s on the %s bank on Day %d") % [tr(p.name), tr(D.bank_of(p.pos)), day()], 8)
-				add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat")
+				add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat", [u])
 			evo.drift("martial", 4.0)
 		if p.clan != "": rivals.on_rival_killed(p, u)
 		else: _node("carcass", "food", p.pos, 35)
@@ -861,7 +1231,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 	var prey = null
 	var best := 280.0
 	for u in units:
-		if u.dead or p.kind == "hunter" or p.kind == "trader": continue
+		if u.dead or p.kind == "hunter" or p.kind == "trader" or in_hut(u): continue
 		var d: float = u.pos.distance_to(p.pos)
 		if p.kind == "wolf" and not _wolf_target(u): continue
 		if d < best and D.bank_of(u.pos) == D.bank_of(p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
@@ -910,6 +1280,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 
 ## Wolves pick off stragglers: never people by a fire, rarely people in a group.
 func _wolf_target(u: E.Unit) -> bool:
+	if in_hut(u): return false
 	if near_warmth(u): return false
 	var near := 0
 	for o in units:
@@ -998,6 +1369,9 @@ func tick(dt: float) -> void:
 				else:
 					n.vel = -n.vel
 
+	_night_watch()
+	_burials(dt)
+	_herd(dt)
 	for u in units: update_unit(u, dt)
 	fog_t -= dt
 	if fog_t <= 0:
@@ -1043,7 +1417,7 @@ func _update_births(dt: float) -> void:
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)
 			units.append(u)
 			evo.on_birth(u)
-			add_log(tr("%s (%s) was born into the tribe.") % [tr(nm), tr(D.TRAITS[u.traits[0]]["name"])], "story")
+			add_log(tr("%s (%s) was born into the tribe.") % [tr(nm), tr(D.TRAITS[u.traits[0]]["name"])], "story", [u])
 			popup(u.pos + Vector2(0, -24), tr("%s is born!") % tr(nm), Color("#ffd6f0"), true)
 	else:
 		birth_timer = maxf(0, birth_timer - dt)
@@ -1069,7 +1443,7 @@ func appoint(u: E.Unit, role: String) -> bool:
 	u.title = "Steward" if role == "steward" else "War Chief"
 	remember(u, tr("was appointed %s of the tribe on Day %d") % [tr(u.title), day()], 7)
 	evo.drift("ranked", 8.0)
-	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice")
+	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice", [u])
 	return true
 
 func _update_vice(dt: float) -> void:
@@ -1077,7 +1451,7 @@ func _update_vice(dt: float) -> void:
 	if vice_timer > 0: return
 	vice_timer = 3
 	var steward := unit_by_id(vice["steward"])
-	if steward and not steward.dead:
+	if steward and not steward.dead and not rest_time(): # no work handed out at night
 		var idle := living().filter(func(u): return u.job.is_empty() and u.role != "contract" and u.id != steward.id and D.bank_of(u.pos) == "west")
 		var pop := living().size()
 		for u in idle:
@@ -1100,7 +1474,7 @@ func _update_vice(dt: float) -> void:
 			gain_xp(steward, "lore", 0.5)
 			evo.practice(steward, "lead", 2.0)
 		if not idle.is_empty():
-			add_log(tr("Steward %s put %d idle hands to work (%s).") % [tr(steward.name), idle.size(), tr(steward_policy)], "vice")
+			add_log(tr("Steward %s put %d idle hands to work (%s).") % [tr(steward.name), idle.size(), tr(steward_policy)], "vice", [steward])
 	var chief := unit_by_id(vice["warchief"])
 	if chief and not chief.dead:
 		var threats := active_predators_near(D.VILLAGE, 500)
@@ -1108,7 +1482,7 @@ func _update_vice(dt: float) -> void:
 			var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack")
 			fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
 			for u in fighters.slice(0, 3): assign_attack(u, threats[0])
-			add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice")
+			add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
 
 # ------------------------------------------------------------------ village building (Tier 1)
 func can_place(type: String, p: Vector2) -> String:
@@ -1470,7 +1844,7 @@ func _discover(lm: Dictionary) -> void:
 			evo.seed(tid, lm["insight"][tid], finder)
 			parts.append(tr("inspires %s") % tr(evo.tech_def(tid)["name"]))
 	var who: String = tr(finder.name) if finder else tr("The tribe")
-	add_log(tr("Discovery! %s %s (%s).") % [who, tr(lm["text"]), ", ".join(parts)], "story" if lm["kind"] != "den" else "danger")
+	add_log(tr("Discovery! %s %s (%s).") % [who, tr(lm["text"]), ", ".join(parts)], "story" if lm["kind"] != "den" else "danger", [finder])
 	popup(lm["pos"] + Vector2(0, -40), tr("Discovered: %s") % tr(lm["name"]), Color("#ffd36b"), true)
 	if finder:
 		remember(finder, tr("%s on Day %d") % [tr(lm["text"]), day()], 6)

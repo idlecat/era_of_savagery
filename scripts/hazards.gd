@@ -268,7 +268,7 @@ func _sickness(dt: float) -> void:
 			if not cands.is_empty():
 				var p0 = cands.pick_random()
 				p0.sick = 1.0
-				sim.alert(tr("%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.") % tr(p0.name), p0.pos, "warn")
+				sim.alert(tr("%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.") % tr(p0.name), p0.pos, "warn", [p0])
 	spread_t -= dt
 	if spread_t > 0: return
 	spread_t = 2.0

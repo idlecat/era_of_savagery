@@ -390,7 +390,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	elif c.kind == "war":
 		where = tr("to make war on the %s") % tr(sim.rivals.clans[bp["target"]]["name"])
 		sim.evo.drift("martial", 5.0)
-	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract")
+	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract", c.crew_ids.map(func(id): return sim.unit_by_id(id)))
 	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
 	return c
 
@@ -419,6 +419,9 @@ func _ensure(u: E.Unit, key: String, assign: Callable) -> void:
 func update(dt: float) -> void:
 	for c in list:
 		if not is_running(c): continue
+		if c.kind != "war" and sim.camp_asleep() and c.status != "interrupted":
+			c.substate = tr("Camping for the night")
+			continue
 		c.state_t += dt
 		_manage_wounded(c)
 		var ld := leader(c)
@@ -451,7 +454,7 @@ func _manage_wounded(c: E.Contract) -> void:
 		if u.id in c.resting_ids:
 			if u.hp >= u.max_hp * 0.7:
 				c.resting_ids.erase(u.id)
-				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), c.plan["plan_id"]], "contract")
+				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), c.plan["plan_id"]], "contract", [u])
 			elif u.job.is_empty() and u.pos.distance_to(D.VILLAGE) > 60:
 				sim.set_job(u, {"type": "move", "to": D.VILLAGE + Vector2(randf_range(-30, 30), 30), "flee": true})
 		elif u.hp < u.max_hp * 0.25 and not u.has_trait("belligerent") and u.id != c.leader_id:
@@ -921,7 +924,7 @@ func _complete_research(c: E.Contract) -> void:
 		sim.stock["lore"] += 15
 		sim.add_log(tr("'%s' finished, but %s was already known - the work became 15 lore.") % [c.plan["plan_id"], tr(t["name"])], "contract")
 	else:
-		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [c.plan["plan_id"], tr(ld.name), tr(t["name"])], "contract")
+		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [c.plan["plan_id"], tr(ld.name), tr(t["name"])], "contract", [ld])
 	sim.contract_finished.emit(c)
 
 func _fail(c: E.Contract, why: String) -> void:

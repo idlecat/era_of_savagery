@@ -10,6 +10,7 @@ const I = preload("res://scripts/i18n.gd")
 const ArtBaker = preload("res://scripts/art_baker.gd")
 
 const STEP := 0.05
+const NIGHT_FF := 12.0 # game-speed multiplier while the whole tribe sleeps
 
 var sim
 var world
@@ -57,11 +58,14 @@ func _loading_screen() -> CanvasLayer:
 
 func _process(delta: float) -> void:
 	if not ready_done or sim.paused or hud.modal_open(): return
-	var dt: float = minf(delta, 0.1) * sim.speed
+	# A quiet night with the whole tribe asleep passes quickly; any alarm drops back to normal speed.
+	var ff: bool = sim.night_ff()
+	var dt: float = minf(delta, 0.1) * (maxf(sim.speed, NIGHT_FF) if ff else sim.speed)
 	var n := ceili(dt / STEP)
 	for i in n:
 		sim.tick(dt / n)
 		if sim.paused: break # an abort condition or event fired mid-frame
+		if ff and not sim.night_ff(): break
 
 func _unhandled_key_input(ev: InputEvent) -> void:
 	var k := ev as InputEventKey
@@ -275,6 +279,37 @@ func _debug_shot(args: Dictionary) -> void:
 				hud._open_legacy()
 			else:
 				for i in int(1.5 / STEP): sim.tick(STEP)
+		"night": # debug: the tribe asleep (--secs into the night; --burial: two buried first)
+			hud._close_modal()
+			sim.fog_enabled = false
+			for p in sim.predators: p.fled = true
+			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+			sim.rivals.pending.clear()
+			if args.has("burial"):
+				for nm in ["Bai", "Shan"]:
+					var dd = sim.unit_by_name(nm)
+					dd.pos = Vector2(1300, 1200) + Vector2(150, 120)
+					sim.kill_unit(dd, null)
+				sim.kill_unit(sim.unit_by_name("Mo'er"), null)
+				sim.unit_by_name("Mo'er").pos = Vector2(3400, 2300)
+				sim.time = 5.0
+				var bt := 0.0
+				while sim.living().size() > 0 and bt < 80 and not (sim.unit_by_name("Bai").buried and sim.unit_by_name("Shan").buried):
+					sim.tick(STEP)
+					bt += STEP
+				sim.time += 90.0
+				for i in int(1.5 / STEP): sim.tick(STEP)
+			if not args.has("day"):
+				sim.time = floorf(sim.time / 90.0) * 90.0 + 90.0 * 0.745
+				for i in int(float(args.get("secs", "8")) / STEP): sim.tick(STEP)
+			else:
+				for i in int(float(args.get("secs", "6")) / STEP): sim.tick(STEP)
+			sim.paused = false
+			sim.pending_event = ""
+			hud._close_modal()
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.1")), float(args.get("zoom", "1.1")))
+			var bg = sim.burial_ground()
+			world.focus_on(bg.pos.lerp(Vector2(1300, 1200), 0.5) if bg and args.has("burial") else Vector2(1300, 1200))
 		"explore":
 			hud._close_modal()
 			for nm in ["Bai", "Shan", "Mo'er"]: sim.assign_explore(sim.unit_by_name(nm))

@@ -15,7 +15,7 @@ $GODOT --path . --quit-after 200 2>&1 | grep "SCRIPT ERROR"       # quick compil
 ```
 
 - There is no single-test runner: `tests/test_contract.gd` is a `SceneTree` script whose `_initialize()` calls `test_*()` functions in order. Comment out calls there to run a subset. The suite `preload`s main/hud/world_view only to compile-check them (headless tests never instantiate the UI).
-- Screenshot / scenario harness in `scripts/main.gd` (`_debug_shot`): `$GODOT --path . -- --shot=/path.png --delay=2 --demo=sheet|negotiate|emergency|explore|evolve|winter [--who=Name] [--era=1..3] [--secs=N] [--zoom=Z] [--lang=zh] [--tech] [--ability=craft] [--research=Name] [--finish] [--night]`. Move `user://llm_settings.cfg` aside first if you don't want screenshots to spend cloud LLM calls.
+- Screenshot / scenario harness in `scripts/main.gd` (`_debug_shot`): `$GODOT --path . -- --shot=/path.png --delay=2 --demo=sheet|negotiate|emergency|explore|evolve|winter|night [--burial] [--day] [--who=Name] [--era=1..3] [--secs=N] [--zoom=Z] [--lang=zh] [--tech] [--ability=craft] [--research=Name] [--finish] [--night]`. Move `user://llm_settings.cfg` aside first if you don't want screenshots to spend cloud LLM calls.
 - `$GODOT` user data lives in `~/Library/Application Support/Godot/app_userdata/Era of Savagery- Clan Chronicles (POC)/` (LLM settings incl. API key, `settings.cfg` language, `art_cache_v<N>/` baked sprites).
 
 ## Architecture
@@ -38,5 +38,7 @@ $GODOT --path . --quit-after 200 2>&1 | grep "SCRIPT ERROR"       # quick compil
 
 - GDScript: one-line `for x: if y: z` nesting is invalid; `:=` can't infer types from Variant/ternary-of-Variant expressions; don't name locals `tr`, `log`, or `len` (shadow built-ins); `var x: Material = ...` when a variable may hold either ShaderMaterial or StandardMaterial3D.
 - Don't poll `Input.is_key_pressed()` for map controls: macOS input methods can swallow key-ups of letters typed into text boxes. `world_view` tracks pan keys only when their press reached the map (`pan_held`).
+- Night rest (`sim._night_rest`): between `day_frac()` 0.74 and 0.96, units whose job was given before `night_start()` (`u.job_t`) go to bed, and so do contract crews and envoys (except war parties, `_at_war`). Non-war contracts skip `update()` while `sim.camp_asleep()`. `main.gd` runs `NIGHT_FF`× speed while `sim.night_ff()` and their job is not run. Tests that tick past ~67 s of game time will see idle workers asleep. Resumed jobs restore `u.job_t = u.resume_t` so they don't count as night orders. Units asleep in huts (`sim.in_hut(u)`) are hidden, can't be picked, and are ignored by predators.
+- Dead units stay in `sim.units` (`dead`, then `buried`); `_burials()` fetches bodies to the auto-founded `burial_ground` structure (`s.graves`).
 - `tests/_new_sim()` sets `hz.level = "off"` so older tests stay deterministic; hardship tests switch it on explicitly.
 - LLM: Z.ai GLM Coding Plan keys only work on the `zai_coding` preset (`api.z.ai/api/coding/paas/v4`); requests to Zhipu/Z.ai send `thinking: disabled` for ~2 s responses. Keys are stored only in `user://llm_settings.cfg`, never in the repo.

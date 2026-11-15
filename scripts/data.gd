@@ -105,9 +105,11 @@ const STRUCTURES := {
 	"farm_plot":    {"name": "Farm Plot", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
 	"granary":      {"name": "Granary", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
 	"grand_altar":  {"name": "Grand Altar", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
-	"aurochs_pen":  {"name": "Aurochs Pen", "wood": 25, "work": 30.0, "r": 30.0, "food": 0.05, "tech": "domestication"},
+	"aurochs_pen":  {"name": "Aurochs Pen", "wood": 25, "work": 30.0, "r": 30.0, "tech": "domestication"}, # keeps the herd (sim.oxen)
 	"smelter":      {"name": "Bronze Smelter", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
 	"council_ring": {"name": "Council Ring", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
+	# laid out by the tribe itself when the first of them dies (not in the build menu)
+	"burial_ground": {"name": "Burial Ground", "wood": 0, "work": 1.0, "r": 40.0},
 }
 ## Homes and walls get a new look per era (style = era they were built or renovated in).
 const STYLED := ["hut", "large_hut", "palisade", "granary"]
@@ -139,7 +141,7 @@ const TECHS := [
 	{"id": "pottery", "era": 2, "name": "Primitive Pottery", "cost": 35, "req": ["fire"], "practice": {"hearth": 0.6, "berry": 0.6},
 		"desc": "Unlocks the Granary (+4 pop cap). Food spoilage -50%.", "words": ["pots", "pottery", "clay jars", "granaries"]},
 	{"id": "domestication", "era": 2, "name": "Beast Domestication", "cost": 40, "req": ["tools"], "practice": {"hunt": 0.8, "explore": 0.6},
-		"desc": "Unlocks the Aurochs Pen. Pack oxen: +50% carry capacity.", "words": ["tamed beasts", "oxen", "pens", "riding"]},
+		"desc": "Unlocks the Aurochs Pen, home to up to 2 pack oxen. Each ox lets one gatherer carry 50% more, but oxen eat food and must be tended.", "words": ["tamed beasts", "oxen", "pens", "riding"]},
 	{"id": "farming", "era": 2, "name": "Slash-and-Burn Farming", "cost": 35, "req": ["fire"], "practice": {"berry": 1.0},
 		"desc": "Unlocks Farm Plots for steady food.", "words": ["farms", "fields", "planting", "crops"]},
 	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "practice": {"quarry": 1.0, "build": 0.3},
