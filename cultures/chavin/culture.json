@@ -1,0 +1,616 @@
+{
+ "id": "chavin",
+ "order": 72,
+ "name": "Chavín",
+ "period": "c. 1200–200 BCE",
+ "place": "the high valleys of the Peruvian Andes",
+ "desc": "A great pilgrimage temple high in the Andes, honeycombed with dark stone galleries where water roared in hidden channels and conch trumpets echoed, and a carved god with fangs waited at the heart of the maze. Its art and ideas spread across all of Peru.",
+ "history": "real",
+ "source": "Chavín de Huántar, studied by Julio C. Tello (from 1919) and John Rick (from 1995); acoustic studies at Stanford",
+ "tribe_names": [
+  "Anta",
+  "Chaki",
+  "Hampi",
+  "Kallpa",
+  "Llaqta",
+  "Mama",
+  "Puma",
+  "Qhapaq",
+  "Rimaq",
+  "Sinchi",
+  "Tupaq",
+  "Urpi",
+  "Wanka",
+  "Yawar",
+  "Kuyu",
+  "Qori"
+ ],
+ "birth_names": [
+  "Achu",
+  "Chiri",
+  "Hatu",
+  "Kiru",
+  "Lluta",
+  "Mirku",
+  "Pichi",
+  "Rupa",
+  "Tanta",
+  "Wawa"
+ ],
+ "epithets": {
+  "devout": [
+   "Blower of the Conch",
+   "Keeper of the Galleries"
+  ],
+  "cautious": [
+   "Beater of Gold"
+  ],
+  "gluttonous": [
+   "Driver of the Llamas"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "blew the conch in the dark gallery until the whole temple roared"
+  ],
+  "cautious": [
+   "hammered a sheet of gold into the face of the fanged god"
+  ],
+  "gluttonous": [
+   "led the llama train over the high pass with salt and wool"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "conch_trumpets",
+   "kind": "goods",
+   "name": "Conch Trumpets",
+   "history": "real",
+   "source": "Twenty decorated pututus, conch-shell trumpets, were found in a gallery at Chavín de Huántar; studies show the galleries were built to carry their sound",
+   "practice": {
+    "ritual": 200,
+    "explore": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "sight",
+     "add": 15
+    }
+   ],
+   "desc": "Great sea shells blown like horns, their sound carried through the stone galleries: rites bring 10% more devotion, and calls carry farther.",
+   "hint": "Comes from the rites and long journeys."
+  },
+  {
+   "id": "stone_galleries",
+   "kind": "goods",
+   "name": "Stone Galleries",
+   "history": "real",
+   "source": "A maze of narrow galleries inside the temple platforms, with air shafts and water channels that made the building roar",
+   "practice": {
+    "build": 250,
+    "ritual": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "Dark passages of fitted stone inside the temple, where the water roars below your feet: rites bring 10% more devotion, +1 defence.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "sheet_gold",
+   "kind": "goods",
+   "name": "Hammered Gold",
+   "history": "real",
+   "source": "Chavín goldsmiths hammered, embossed and soldered sheet gold, among the earliest metalwork in the Americas",
+   "practice": {
+    "hearth": 150,
+    "quarry": 100
+   },
+   "needs": {
+    "finds": [
+     "andean_gold"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Gold beaten thin and pressed with the faces of jaguars and serpents: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs gold and fire."
+  },
+  {
+   "id": "llama_trains",
+   "kind": "tool",
+   "name": "Llama Caravans",
+   "history": "real",
+   "source": "Llamas carried goods between coast, highlands and jungle; their bones are common at Chavín",
+   "practice": {
+    "explore": 150,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 2
+    },
+    {
+     "stat": "cold",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Trains of llamas that carry loads over the high passes and give wool besides: everyone carries 2 more, the cold bites 5% less.",
+   "hint": "Needs Beast Domestication.",
+   "words": [
+    "llamas"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "chuno",
+   "name": "Freeze-Dried Potatoes",
+   "history": "real",
+   "source": "Chuño: potatoes left out to freeze at night and trodden dry by day; it keeps for years",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "wild_potato"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.8
+    }
+   ],
+   "desc": "Potatoes frozen at night, trodden and dried in the sun until they keep for years: food spoils 20% slower.",
+   "hint": "Needs wild potatoes."
+  },
+  {
+   "id": "quinoa_soup",
+   "name": "Quinoa Soup",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "The little seeds of the high fields boiled into a thick soup: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_potato",
+   "name": "Wild Potatoes",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Potatoes were domesticated in the Andes near Lake Titicaca 7,000–10,000 years ago",
+   "amount": 28,
+   "rate": 0.8,
+   "regrow": 0.06,
+   "winter": true,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "look": "tubers",
+   "seed": {
+    "farming": 0.15
+   },
+   "act": "Digging potatoes",
+   "desc": "Small knobbly tubers in many colours that grow where nothing else will."
+  },
+  {
+   "id": "andean_gold",
+   "name": "Mountain Gold",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.5,
+   "regrow": 0.01,
+   "winter": true,
+   "where": "riverbank",
+   "count": 2,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Washing gold",
+   "desc": "Gold dust and nuggets in the cold mountain streams."
+  }
+ ],
+ "people": [
+  {
+   "id": "conch_priest",
+   "as": "founder",
+   "name": "Pututu",
+   "epithet": "Blower of the Conch",
+   "history": "invented",
+   "desc": "When he blows the great shell, the mountains answer.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0c0a0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "led the pilgrims into the dark galleries with the sound of the conch"
+   ]
+  },
+  {
+   "id": "llama_driver",
+   "as": "founder",
+   "name": "Qarwa",
+   "epithet": "Driver of Llamas",
+   "history": "invented",
+   "desc": "Her llamas will follow her over any pass.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#c0a080",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 1,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "brought a llama train down from the snow with every animal alive"
+   ]
+  },
+  {
+   "id": "lanzon",
+   "as": "ancestor",
+   "name": "The Lanzón",
+   "epithet": "the Smiling God",
+   "history": "real",
+   "source": "A 4.5 m granite shaft carved as a fanged god, still standing in its original gallery at the heart of the temple",
+   "desc": "A god with fangs, snakes for hair and a strange smile, who stands in the darkness where only priests may go."
+  },
+  {
+   "id": "tenon_heads",
+   "as": "ancestor",
+   "name": "The Stone Heads on the Wall",
+   "epithet": "who become jaguars",
+   "history": "real",
+   "source": "The tenon heads of Chavín, set into the temple walls, show a man transforming into a jaguar",
+   "desc": "Stone faces set into the temple wall, each one further along the change from priest to jaguar."
+  },
+  {
+   "id": "spondylus_trader",
+   "as": "wanderer",
+   "name": "Mullu",
+   "epithet": "Bringer of Red Shells",
+   "history": "real",
+   "source": "Spondylus shells from the warm seas of Ecuador were carried to Chavín and prized above gold",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader from the warm northern sea with a bag of spiny red shells, the food of the gods.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#d04040",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 3,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "dived for red shells in the warm sea and carried them to the mountains"
+   ],
+   "desc": "A trader in spondylus, named with the Quechua word for the shell."
+  },
+  {
+   "id": "oracle",
+   "as": "chosen",
+   "name": "Rimay",
+   "epithet": "Voice of the Oracle",
+   "label": "Rimay, Voice of the Oracle",
+   "history": "invented",
+   "desc": "She speaks for the fanged god from the dark. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "jaguar_priest",
+   "as": "chosen",
+   "name": "Uturunku",
+   "epithet": "the Jaguar Priest",
+   "label": "Uturunku, the Jaguar Priest",
+   "history": "invented",
+   "desc": "A priest who becomes a jaguar in the rites. Combat 7, Lore 6.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 80,
+    "atk": 10,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 7,
+     "lore": 6
+    }
+   }
+  },
+  {
+   "id": "goldsmith",
+   "as": "chosen",
+   "name": "Qori Waman",
+   "epithet": "the Goldsmith",
+   "label": "Qori Waman the Goldsmith",
+   "history": "invented",
+   "desc": "Her gold sings in the light. Crafting 8, Trade 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#e0c040",
+    "hp": 64,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 1,
+     "lore": 3,
+     "trade": 5
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "pilgrims",
+   "title": "Pilgrims at the Temple",
+   "history": "real",
+   "source": "Chavín de Huántar drew pilgrims from the coast, the highlands and the jungle, who left offerings from all three",
+   "when": {
+    "invention": "stone_galleries",
+    "pop": 10
+   },
+   "chance": 0.6,
+   "text": "Pilgrims have come from far away to hear the oracle, with gifts of shells, feathers and cloth. They need food and a place to sleep.",
+   "options": [
+    {
+     "label": "Welcome them",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "give": {
+        "goods": 5
+       }
+      },
+      {
+       "devotion": 8
+      },
+      {
+       "culture": {
+        "spiritual": 3
+       }
+      }
+     ],
+     "result": "The pilgrims leave their gifts and carry the god's fame home."
+    },
+    {
+     "label": "Turn them away",
+     "do": [
+      {
+       "devotion": -5
+      }
+     ],
+     "result": "The pilgrims go on to another shrine."
+    }
+   ]
+  },
+  {
+   "id": "roaring_water",
+   "title": "The Temple Roars",
+   "history": "real",
+   "source": "Water channels beneath the temple may have been flushed to make the building roar during rites",
+   "when": {
+    "invention": "conch_trumpets",
+    "after": "rain"
+   },
+   "text": "After the rains, the priests open the channels under the temple. Water rushes through the dark, the conches blow, and the whole mountain seems to roar like a jaguar.",
+   "do": [
+    {
+     "devotion": 10
+    },
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    }
+   ]
+  },
+  {
+   "id": "highland_frost",
+   "title": "The Frost Comes Early",
+   "history": "real",
+   "when": {
+    "after": "blizzard",
+    "find": "wild_potato"
+   },
+   "chance": 0.7,
+   "text": "Frost has struck the potato fields before the harvest. The elders say: dig them all now, freeze them on purpose, tread them and dry them, and they will keep for years.",
+   "do": [
+    {
+     "invent": "chuno"
+    },
+    {
+     "give": {
+      "food": 15
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "staff_god",
+   "name": "The God with Two Staffs",
+   "history": "legend",
+   "source": "The Raimondi Stela of Chavín, the first image of the Andean Staff God",
+   "when": {
+    "day": 2
+   },
+   "text": "The god stands holding a staff in each hand, and from his head rise feathers and snakes up to the sky. Turn his picture upside down, and it becomes a stack of grinning monster faces. He is both, they say: the one who holds up the world and the one who can tip it over.",
+   "moral": "everything has two faces",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "jaguar_transform",
+   "name": "The Priest Who Became a Jaguar",
+   "history": "invented",
+   "source": "A story made up around the tenon heads of Chavín",
+   "when": {
+    "era": 2
+   },
+   "text": "The priest drank the bitter juice of the cactus and went into the dark galleries. His face grew a muzzle, his teeth grew fangs, and he ran through the forests of the spirit world as a jaguar. In the morning he came out and told the people what he had seen.",
+   "moral": "some wisdom is found only in the dark",
+   "do": [
+    {
+     "devotion": 5
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "three_worlds",
+   "name": "Coast, Mountain and Jungle",
+   "history": "invented",
+   "source": "A story made up around the pilgrim offerings of Chavín",
+   "when": {
+    "invention": "llama_trains"
+   },
+   "text": "The temple stands where the paths from the three worlds meet. The coast brings shells, the mountains bring wool and potatoes, the jungle brings feathers and jaguar skins. The god keeps them in balance, and so the three worlds trade instead of fighting.",
+   "moral": "the crossroads is sacred",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "conch_festival",
+   "name": "The Night of the Conches",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the pututu trumpets of Chavín",
+   "text": "On the darkest night the priests climb to the top of the temple and blow all twenty conches at once. The sound rolls down the valley, and in every village people come out of their houses and light fires to answer.",
+   "moral": "a call shared becomes a song",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,709 @@
+{
+ "id": "maya",
+ "order": 73,
+ "name": "Maya",
+ "period": "c. 1000 BCE–900 CE",
+ "place": "the forests of Yucatán, Guatemala and Belize",
+ "desc": "Maize farmers of the tropical forest who built pyramid cities linked by white causeways, counted time with a zero and calendars reaching back thousands of years, wrote a full script of glyphs, kept stingless bees, and drank chocolate.",
+ "history": "real",
+ "source": "Maya inscriptions, deciphered largely since the 1950s–80s; El Mirador, the San Bartolo murals (c. 100 BCE); the Popol Vuh, written down in the 16th century from older tradition",
+ "tribe_names": [
+  "Balam",
+  "Chan",
+  "Ek",
+  "Kan",
+  "Muwan",
+  "Chok",
+  "Tzikin",
+  "Yax",
+  "Kaban",
+  "Ix Kabal",
+  "Ix Yohl",
+  "Ah Kin",
+  "Kawak",
+  "Itzam",
+  "Ix Chak",
+  "Bakab"
+ ],
+ "birth_names": [
+  "Ak",
+  "Chuen",
+  "Ik",
+  "Kimi",
+  "Lamat",
+  "Manik",
+  "Ok",
+  "Imix",
+  "Etznab",
+  "Ben"
+ ],
+ "epithets": {
+  "devout": [
+   "Keeper of the Days",
+   "Painter of the Books"
+  ],
+  "cautious": [
+   "Builder of the White Road"
+  ],
+  "gluttonous": [
+   "Keeper of the Bees"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "counted the days to the end of the katun and was right"
+  ],
+  "cautious": [
+   "laid a white causeway through the swamp to the next city"
+  ],
+  "gluttonous": [
+   "kept forty log hives of the little bees without stings"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "long_count",
+   "kind": "goods",
+   "name": "The Long Count and Zero",
+   "history": "real",
+   "source": "Maya scribes used a place-value count with a symbol for zero and dated monuments in the Long Count, from a starting day in 3114 BCE",
+   "practice": {
+    "ritual": 200,
+    "lead": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.025
+    }
+   ],
+   "desc": "Dots, bars and a shell for nothing, to count the days of all history: the tribe gathers much more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and long rites.",
+   "words": [
+    "calendar",
+    "zero"
+   ]
+  },
+  {
+   "id": "sacbe",
+   "kind": "tool",
+   "name": "White Causeways",
+   "history": "real",
+   "source": "Sacbeob, raised roads paved with white plaster, linked Maya cities; one from Cobá runs 100 km",
+   "practice": {
+    "build": 250,
+    "explore": 80
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.06
+    }
+   ],
+   "desc": "Raised roads of stone, paved with white plaster that glows even at night: everyone travels 6% faster.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era.",
+   "words": [
+    "roads"
+   ]
+  },
+  {
+   "id": "meliponiculture",
+   "kind": "goods",
+   "name": "Stingless Bee Hives",
+   "history": "real",
+   "source": "The Maya kept the stingless bee Melipona beecheii in hollow logs, a practice that still survives in Yucatán",
+   "practice": {
+    "hunt": 80,
+    "berry": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Hollow logs hung under the eaves for gentle bees whose honey heals: +2 mood, the hurt heal 10% faster.",
+   "hint": "Comes from foraging."
+  },
+  {
+   "id": "maya_blue",
+   "kind": "goods",
+   "name": "Maya Blue",
+   "history": "real",
+   "source": "A brilliant blue made by heating indigo with palygorskite clay, so stable it has lasted a thousand years in the rain",
+   "practice": {
+    "ritual": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A blue that never fades, painted on gods, offerings and murals: rites bring 10% more devotion, +1 mood.",
+   "hint": "Needs fire."
+  },
+  {
+   "id": "glyph_books",
+   "kind": "goods",
+   "name": "Glyph Books",
+   "history": "real",
+   "source": "Maya books of bark paper folded like screens; only four survived the Spanish conquest",
+   "practice": {
+    "ritual": 150,
+    "lead": 100
+   },
+   "needs": {
+    "inventions": [
+     "long_count"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    }
+   ],
+   "desc": "Folding books of bark paper, painted with glyphs, almanacs and the movements of Venus: more lore.",
+   "hint": "Needs the Long Count."
+  }
+ ],
+ "foods": [
+  {
+   "id": "tamales",
+   "name": "Tamales",
+   "history": "real",
+   "source": "Tamales appear in the San Bartolo murals and in glyphs for offerings",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "teosinte"
+    ],
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.88
+    }
+   ],
+   "desc": "Maize dough wrapped in leaves with beans or meat and steamed: hunger grows 12% slower.",
+   "hint": "Needs wild maize and farming."
+  },
+  {
+   "id": "kakaw",
+   "name": "Chocolate",
+   "history": "real",
+   "source": "Maya vessels are labelled with the glyph ka-ka-wa; residue tests confirm they held chocolate",
+   "practice": {
+    "hearth": 150,
+    "ritual": 50
+   },
+   "needs": {
+    "finds": [
+     "maya_cacao"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Cacao ground with chilli and poured from on high until it foams: +3 mood.",
+   "hint": "Needs cacao."
+  }
+ ],
+ "finds": [
+  {
+   "id": "teosinte",
+   "name": "Wild Maize",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Maize was bred from teosinte, a wild grass of the Balsas valley in Mexico, about 9,000 years ago",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.07,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 1.5,
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Gathering wild maize",
+   "desc": "A wild grass with tiny hard ears that, over thousands of years, became maize. Gathering it brings farming closer."
+  },
+  {
+   "id": "maya_cacao",
+   "name": "Cacao Grove",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 18,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking cacao pods",
+   "desc": "Shade-loving trees with pods on their trunks, full of bitter beans."
+  }
+ ],
+ "people": [
+  {
+   "id": "day_keeper",
+   "as": "founder",
+   "name": "Ix Kin",
+   "epithet": "Keeper of the Days",
+   "history": "invented",
+   "desc": "She knows the name and the meaning of every day for a thousand years.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#4080c0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "named the newborns by the day they were born"
+   ]
+  },
+  {
+   "id": "milpa_farmer",
+   "as": "founder",
+   "name": "Ah Nal",
+   "epithet": "Farmer of the Milpa",
+   "history": "invented",
+   "desc": "He plants maize, beans and squash in one field, so each helps the others.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0b050",
+    "skills": {
+     "forage": 5,
+     "craft": 1,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "planted the three sisters together and fed the whole village"
+   ]
+  },
+  {
+   "id": "hun_hunahpu",
+   "as": "ancestor",
+   "name": "Hun Hunahpu",
+   "epithet": "the Maize God",
+   "history": "legend",
+   "source": "Popol Vuh; the San Bartolo murals show the maize god's death and rebirth",
+   "desc": "The father of the Hero Twins, killed by the lords of the underworld, whose head became a calabash tree; he rises again each year as the maize."
+  },
+  {
+   "id": "san_bartolo",
+   "as": "ancestor",
+   "name": "The Painters of San Bartolo",
+   "epithet": "of the hidden murals",
+   "history": "real",
+   "source": "The San Bartolo murals, c. 100 BCE, found in 2001",
+   "desc": "Artists who painted the story of creation and the crowning of a king on the walls of a room later buried inside a pyramid."
+  },
+  {
+   "id": "siyaj_kak",
+   "as": "wanderer",
+   "name": "Siyaj K'ak'",
+   "epithet": "Fire Is Born",
+   "history": "real",
+   "source": "Inscriptions at Tikal record his arrival in 378 CE, the same day Tikal's king died",
+   "when": {
+    "era": 3,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "a warlord from the great city in the western highlands, with feathered warriors and a spear-thrower.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 70,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.1,
+    "color": "#c06040",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 7,
+     "lore": 3,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "arrived at the city on the day its king died"
+   ],
+   "desc": "A general from Teotihuacan whose arrival changed the dynasty of Tikal."
+  },
+  {
+   "id": "hunahpu",
+   "as": "chosen",
+   "name": "Hunahpu",
+   "epithet": "the Blowgunner Twin",
+   "label": "Hunahpu, the Blowgunner Twin",
+   "history": "legend",
+   "desc": "A hero who outwits the lords of death. Foraging 7, Combat 7.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 78,
+    "atk": 10,
+    "def": 5,
+    "spd": 1.2,
+    "skills": {
+     "forage": 7,
+     "craft": 2,
+     "combat": 7,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "xbalanque",
+   "as": "chosen",
+   "name": "Xbalanque",
+   "epithet": "the Jaguar-Sun Twin",
+   "label": "Xbalanque, the Jaguar-Sun Twin",
+   "history": "legend",
+   "desc": "The twin who becomes the moon. Lore 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 74,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 5,
+     "craft": 2,
+     "combat": 6,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "pakal",
+   "as": "chosen",
+   "name": "K'inich Janaab Pakal",
+   "epithet": "Lord of Palenque",
+   "label": "Pakal, Lord of Palenque",
+   "history": "real",
+   "desc": "A king who rules for sixty-eight years and builds a tomb inside a pyramid. Crafting 7, Lore 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 6,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 7,
+     "combat": 3,
+     "lore": 6
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "cenote_offering",
+   "title": "Offerings to the Sacred Well",
+   "history": "real",
+   "source": "The Sacred Cenote of Chichén Itzá held jade, gold, copal incense and pottery thrown in as offerings to the rain god",
+   "when": {
+    "after": "drought",
+    "era": 2
+   },
+   "chance": 0.7,
+   "text": "The rains have not come. The priests lead the people to the deep sinkhole where the rain god lives, and ask what the tribe will give him.",
+   "options": [
+    {
+     "label": "Throw in jade and incense",
+     "cost": {
+      "goods": 4
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "culture": {
+        "spiritual": 4
+       }
+      }
+     ],
+     "result": "Blue smoke rises from the well. Three days later, the clouds come."
+    },
+    {
+     "label": "Dig reservoirs instead",
+     "cost": {
+      "wood": 15
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "culture": {
+        "spiritual": -3
+       }
+      }
+     ],
+     "result": "Plaster-lined reservoirs catch every drop of the next rain."
+    }
+   ]
+  },
+  {
+   "id": "la_danta",
+   "title": "The Greatest Pyramid",
+   "history": "real",
+   "source": "La Danta at El Mirador (c. 300 BCE), among the largest pyramids in the world by volume",
+   "when": {
+    "era": 3,
+    "pop": 14
+   },
+   "chance": 0.5,
+   "text": "The king wants a pyramid so great that it can be seen from every city in the forest, with three temples on top for the gods.",
+   "options": [
+    {
+     "label": "Raise the pyramid",
+     "cost": {
+      "wood": 30,
+      "stone": 20,
+      "food": 25
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "culture": {
+        "ranked": 6
+       }
+      },
+      {
+       "feat": "Raised the greatest pyramid in the forest"
+      }
+     ],
+     "result": "For a generation everyone carries stone. When it is done, the temples on top touch the clouds."
+    },
+    {
+     "label": "Enough pyramids",
+     "do": [
+      {
+       "mood": 2
+      },
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The people go back to their fields."
+    }
+   ]
+  },
+  {
+   "id": "ball_court",
+   "title": "The Ball Court",
+   "history": "real",
+   "when": {
+    "pop": 11,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "Two towns want to settle a quarrel over land with a game in the ball court instead of a war.",
+   "options": [
+    {
+     "label": "Play the game",
+     "do": [
+      {
+       "mood": 4
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      }
+     ],
+     "result": "Our players drive the ball through the ring. The land is ours, and no one died."
+    },
+    {
+     "label": "Go to war",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         300,
+         150
+        ],
+        [
+         260,
+         200
+        ]
+       ]
+      }
+     ],
+     "result": "The warriors march. The forest is not safe tonight."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "maize_people",
+   "name": "People Made of Maize",
+   "history": "legend",
+   "source": "Popol Vuh",
+   "when": {
+    "day": 2
+   },
+   "text": "The gods made people of mud, but they crumbled and could not speak. They made people of wood, but they had no hearts and forgot their makers. At last they ground yellow and white maize, mixed it with water, and made the first true people, who could think, speak and give thanks.",
+   "moral": "we are made of what feeds us",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "insight": {
+      "farming": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "hero_twins",
+   "name": "The Hero Twins in Xibalba",
+   "history": "legend",
+   "source": "Popol Vuh",
+   "when": {
+    "deaths": 1
+   },
+   "text": "The lords of the underworld called the twins down to play ball and set them deadly tests: the House of Cold, the House of Jaguars, the House of Bats. The twins outwitted every one. At last they let themselves be killed, came back to life, and tricked the lords into being killed too, and then rose into the sky as the sun and the moon.",
+   "moral": "cleverness defeats even death",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "seven_macaw",
+   "name": "Seven Macaw, the False Sun",
+   "history": "legend",
+   "source": "Popol Vuh",
+   "when": {
+    "era": 2
+   },
+   "text": "Before the real sun rose, a great bird called Seven Macaw sat in a tree and boasted that his jewelled eyes and silver teeth were the sun and moon. The twins shot him with a blowgun and broke his jaw, and replaced his shining teeth with white maize. Without his glitter, he was only a bird.",
+   "moral": "pride is a false light",
+   "do": [
+    {
+     "culture": {
+      "ranked": -2
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "maize_rises",
+   "name": "The Maize God Rises",
+   "history": "legend",
+   "tell": "festival",
+   "source": "The San Bartolo murals and Classic Maya vase paintings",
+   "text": "Every year the maize god goes down into the earth and dies. Every year his sons find him, and he rises from a crack in the back of a great turtle, young and beautiful, with green leaves for hair. That is when we dance in the fields.",
+   "moral": "what is planted rises again",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  }
+ ]
+}

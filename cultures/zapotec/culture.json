@@ -1,0 +1,662 @@
+{
+ "id": "zapotec",
+ "order": 74,
+ "name": "Zapotec",
+ "period": "c. 700 BCE–800 CE",
+ "place": "the Valley of Oaxaca, Mexico",
+ "desc": "The 'Cloud People' of the Oaxaca valley, who levelled a mountain top to build Monte Albán, carved some of the earliest writing and calendar signs of Mesoamerica, watered their fields from pots and little canals, and dyed cloth red with cochineal insects.",
+ "history": "real",
+ "source": "Excavations at San José Mogote and Monte Albán (Alfonso Caso from 1931; Kent Flannery and Joyce Marcus)",
+ "tribe_names": [
+  "One Jaguar",
+  "Two Reed",
+  "Three Deer",
+  "Four Wind",
+  "Five Flower",
+  "Six Monkey",
+  "Seven Water",
+  "Eight Rabbit",
+  "Nine Grass",
+  "Ten Eagle",
+  "Eleven Lizard",
+  "Twelve House",
+  "Thirteen Serpent",
+  "One Movement",
+  "Two Flint",
+  "Three Rain"
+ ],
+ "birth_names": [
+  "Four Dog",
+  "Five Skull",
+  "Six Reed",
+  "Seven Deer",
+  "Eight Flower",
+  "Nine Wind",
+  "Ten Monkey",
+  "Eleven Water",
+  "Twelve Grass",
+  "Thirteen Rabbit"
+ ],
+ "epithets": {
+  "cautious": [
+   "Carver of Day Signs",
+   "Waterer of the Fields"
+  ],
+  "devout": [
+   "Priest of Cocijo"
+  ],
+  "gluttonous": [
+   "Gatherer of Cochineal"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "carried water to the maize in pots from the shallow wells all summer"
+  ],
+  "devout": [
+   "burned copal to the rain god on the mountain top"
+  ],
+  "gluttonous": [
+   "scraped enough red insects from the cactus to dye a whole cloak"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "pot_irrigation",
+   "kind": "tool",
+   "name": "Pot Irrigation and Canals",
+   "history": "real",
+   "source": "Oaxacan farmers watered maize from shallow wells by pot, and built small canals such as those of Hierve el Agua (c. 300 BCE)",
+   "practice": {
+    "berry": 200,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.2
+    }
+   ],
+   "desc": "Shallow wells beside the fields and pots to carry water to each plant, and little canals on the slopes: farm plots yield 20% more.",
+   "hint": "Needs farming and pottery."
+  },
+  {
+   "id": "day_count",
+   "kind": "goods",
+   "name": "The 260-Day Count",
+   "history": "real",
+   "source": "Carved stones at San José Mogote and Monte Albán carry some of the oldest Mesoamerican calendar signs and glyphs",
+   "practice": {
+    "ritual": 200,
+    "lead": 60
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Twenty day-signs turning with thirteen numbers, so every day has a name and every child is named for the day of birth: a little more lore, rites bring 5% more devotion.",
+   "hint": "Needs the Tribe & Agrarian Era, and rites.",
+   "words": [
+    "calendar"
+   ]
+  },
+  {
+   "id": "mountain_city",
+   "kind": "tool",
+   "name": "City on the Mountain",
+   "history": "real",
+   "source": "Monte Albán was founded around 500 BCE on a levelled ridge 400 m above the valley floor",
+   "practice": {
+    "build": 250,
+    "lead": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    },
+    {
+     "stat": "sight",
+     "add": 25
+    }
+   ],
+   "desc": "A mountain top cut flat for plazas and temples, looking down on three valleys: +2 defence, people see much farther.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "cochineal_dye",
+   "kind": "goods",
+   "name": "Cochineal Red",
+   "history": "real",
+   "source": "Cochineal insects, raised on nopal cactus in Oaxaca, give the brightest red dye; after 1500 it became Mexico's second export after silver",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "nopal"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Tiny white insects scraped from the cactus and crushed into a deep red: +3 mood.",
+   "hint": "Needs nopal cactus."
+  }
+ ],
+ "foods": [
+  {
+   "id": "tortilla_beans",
+   "name": "Tortillas and Beans",
+   "history": "real",
+   "source": "Clay griddles (comales) for tortillas appear in Oaxaca by about 700 BCE",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.88
+    }
+   ],
+   "desc": "Flat maize cakes cooked on a clay griddle, eaten with black beans: hunger grows 12% slower.",
+   "hint": "Needs farming and pottery."
+  },
+  {
+   "id": "chapulines",
+   "name": "Toasted Grasshoppers",
+   "history": "real",
+   "source": "Chapulines, toasted grasshoppers, have been eaten in Oaxaca since long before the Spanish came",
+   "practice": {
+    "hunt": 80,
+    "hearth": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Grasshoppers from the maize fields, toasted with chilli and lime: hunger grows 5% slower, +1 mood.",
+   "hint": "Comes from hunting and cooking."
+  }
+ ],
+ "finds": [
+  {
+   "id": "nopal",
+   "name": "Nopal Cactus",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.8,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "yarrow",
+   "act": "Cutting nopal",
+   "desc": "Flat-padded cactus with sweet red fruit; tiny red-blooded insects live on it."
+  },
+  {
+   "id": "oaxaca_beans",
+   "name": "Wild Beans",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.85,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "tubers",
+   "seed": {
+    "farming": 0.1
+   },
+   "act": "Picking beans",
+   "desc": "Climbing beans of the valley edge, one of the three sisters with maize and squash."
+  }
+ ],
+ "people": [
+  {
+   "id": "well_keeper",
+   "as": "founder",
+   "name": "Nine Water",
+   "epithet": "Keeper of the Wells",
+   "history": "invented",
+   "desc": "Named for the day of water, she has never let a field go dry.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#5080a0",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "found water three spans under the valley floor"
+   ]
+  },
+  {
+   "id": "glyph_carver",
+   "as": "founder",
+   "name": "One Monkey",
+   "epithet": "Carver of Signs",
+   "history": "invented",
+   "desc": "Born on the day of the monkey, patron of artists, he carves the day signs.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a080c0",
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 4
+    }
+   },
+   "memory": [
+    "carved a captive's name and his day sign on a stone"
+   ]
+  },
+  {
+   "id": "danzantes",
+   "as": "ancestor",
+   "name": "The Danzantes",
+   "epithet": "of Monte Albán",
+   "history": "real",
+   "source": "Over 300 carved stone slabs of naked figures in twisted poses, probably slain captives, on Building L at Monte Albán",
+   "desc": "Hundreds of carved figures once called 'dancers'; most now think they show enemies defeated by the first rulers of Monte Albán."
+  },
+  {
+   "id": "cocijo",
+   "as": "ancestor",
+   "name": "Cocijo",
+   "epithet": "Lord of Rain and Lightning",
+   "history": "legend",
+   "source": "Zapotec funerary urns show Cocijo with a forked tongue and a lightning headdress",
+   "desc": "The rain god of the Zapotec, whose face, with its split serpent's tongue, looks out from the urns placed in every tomb."
+  },
+  {
+   "id": "teotihuacan_envoy",
+   "as": "wanderer",
+   "name": "Ocelotl",
+   "epithet": "Envoy of the Great City",
+   "history": "real",
+   "source": "The Lápida de Bazán and carvings at Monte Albán show envoys from Teotihuacan; there was a Oaxacan neighbourhood at Teotihuacan",
+   "when": {
+    "era": 3,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "an envoy from the great city in the north, with a tasselled headdress and an offer of friendship.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 56,
+    "atk": 5,
+    "def": 4,
+    "spd": 1.0,
+    "color": "#c06040",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 3,
+     "lore": 4,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "walked for a month from the city of the pyramids"
+   ],
+   "desc": "A diplomat from Teotihuacan, of the kind carved at Monte Albán; the game names him 'Jaguar' in Nahuatl."
+  },
+  {
+   "id": "cocijo_priest",
+   "as": "chosen",
+   "name": "Thirteen Lightning",
+   "epithet": "Voice of Cocijo",
+   "label": "Thirteen Lightning, Voice of Cocijo",
+   "history": "invented",
+   "desc": "When she calls, the rain comes. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 0,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "mountain_founder",
+   "as": "chosen",
+   "name": "One Earthquake",
+   "epithet": "Founder of the Mountain City",
+   "label": "One Earthquake, Founder of the Mountain City",
+   "history": "invented",
+   "desc": "He levels a mountain to build a city. Crafting 8, Combat 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 72,
+    "atk": 7,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 5,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "jaguar_warrior",
+   "as": "chosen",
+   "name": "Eight Jaguar",
+   "epithet": "Taker of Captives",
+   "label": "Eight Jaguar, Taker of Captives",
+   "history": "invented",
+   "desc": "No warrior of the valley can stand against him. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "found_mountain",
+   "title": "A City on the Mountain Top",
+   "history": "real",
+   "source": "Around 500 BCE the people of San José Mogote and other valley towns moved together to found Monte Albán",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "The valley towns keep raiding one another. The chief proposes that they all move together to the mountain in the middle of the valley, level its top, and build one city.",
+   "options": [
+    {
+     "label": "Build on the mountain",
+     "cost": {
+      "wood": 30,
+      "food": 25
+     },
+     "do": [
+      {
+       "invent": "mountain_city"
+      },
+      {
+       "culture": {
+        "ranked": 5,
+        "settled": 4
+       }
+      },
+      {
+       "feat": "Founded a city on the mountain top"
+      }
+     ],
+     "result": "The mountain top is cut flat, stone by stone. From the new plaza, all three valleys can be seen."
+    },
+    {
+     "label": "Each town for itself",
+     "do": [
+      {
+       "culture": {
+        "martial": 4
+       }
+      }
+     ],
+     "result": "The towns keep their walls, and their quarrels."
+    }
+   ]
+  },
+  {
+   "id": "rain_god_angry",
+   "title": "Cocijo Holds Back the Rain",
+   "history": "legend",
+   "when": {
+    "after": "drought",
+    "era": 2
+   },
+   "chance": 0.7,
+   "text": "The maize is withering. The priests say Cocijo is angry and must be given copal, quail and jade on the mountain top.",
+   "options": [
+    {
+     "label": "Make the offerings",
+     "cost": {
+      "food": 15,
+      "goods": 2
+     },
+     "do": [
+      {
+       "devotion": 12
+      }
+     ],
+     "result": "Smoke rises from the mountain. Lightning flickers over the hills that night."
+    },
+    {
+     "label": "Carry water by pot",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "Everyone carries water from the wells. Sore backs, but the maize lives."
+    }
+   ]
+  },
+  {
+   "id": "carve_captives",
+   "title": "Carve the Defeated",
+   "history": "real",
+   "when": {
+    "culture": {
+     "martial": 10
+    },
+    "invention": "day_count"
+   },
+   "text": "After a victory, the chief wants the defeated enemy chiefs carved in stone on the temple wall, each with his name and the day of his defeat.",
+   "options": [
+    {
+     "label": "Carve them",
+     "do": [
+      {
+       "culture": {
+        "martial": 5,
+        "ranked": 3
+       }
+      },
+      {
+       "insight": {
+        "code": 0.1
+       }
+      }
+     ],
+     "result": "Row upon row of stone figures line the wall, and the valley towns take note."
+    },
+    {
+     "label": "Make peace with them",
+     "do": [
+      {
+       "culture": {
+        "martial": -5
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The defeated chiefs are sent home with gifts."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "cloud_people",
+   "name": "The Cloud People",
+   "history": "legend",
+   "source": "Zapotec tradition records that their ancestors were born from clouds, trees and rocks",
+   "when": {
+    "day": 2
+   },
+   "text": "Our first ancestors did not come from another land. They were born from the clouds over the mountains, and from the great trees and rocks of this valley. That is why we are called the Cloud People, and why, when we die, we go back to the clouds.",
+   "moral": "we belong to this land",
+   "do": [
+    {
+     "culture": {
+      "settled": 3
+     }
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "day_names",
+   "name": "Why Children Are Named for Their Day",
+   "history": "real",
+   "source": "Mesoamerican naming by the 260-day calendar",
+   "when": {
+    "invention": "day_count"
+   },
+   "text": "Every day has its own sign and number, and its own luck. A child born on Seven Deer will be gentle and quick; one born on Two Flint must be guarded against quarrels. So we name our children for their day, to know them and to help them.",
+   "moral": "each day has its own gift",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "cochineal_tale",
+   "name": "The Red Blood of the Cactus",
+   "history": "invented",
+   "source": "A story made up around cochineal",
+   "when": {
+    "find": "nopal"
+   },
+   "text": "A girl pricked her finger on a cactus and squeezed out a white bug, and her hand turned red as fire. She dyed her shawl and wore it to the market, and everyone wanted one. That is how the cactus taught us that the smallest creature can carry the brightest colour.",
+   "moral": "the small can be precious",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "harvest_dance",
+   "name": "The Maize Harvest Dance",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the harvest festivals of Oaxaca",
+   "text": "When the maize is in, every village of the valley climbs to the mountain city with its best dancers and its first ears of corn. Each village dances in turn in the great plaza, and each gives a gift to the others.",
+   "moral": "giving makes the valley one",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    }
+   ]
+  }
+ ]
+}

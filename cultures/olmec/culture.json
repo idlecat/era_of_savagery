@@ -1,0 +1,652 @@
+{
+ "id": "olmec",
+ "order": 71,
+ "name": "Olmec",
+ "period": "c. 1600–400 BCE",
+ "place": "the rivers and swamps of the Gulf Coast of Mexico",
+ "desc": "The 'rubber people' of the Gulf Coast, who made the first bouncing rubber balls, carved colossal stone heads of their rulers, polished mirrors of iron ore, drank cacao, and carved the were-jaguar, half child and half jaguar, on their jades.",
+ "history": "real",
+ "source": "Excavations at San Lorenzo, La Venta and El Manatí; the Cascajal Block (found 2006)",
+ "tribe_names": [
+  "Tzuk",
+  "Ajaw",
+  "Kuy",
+  "Mok",
+  "Nuh",
+  "Pak",
+  "Sun",
+  "Tem",
+  "Waw",
+  "Yom",
+  "Chik",
+  "Huk",
+  "Kenu",
+  "Matza",
+  "Ponu",
+  "Tsama"
+ ],
+ "birth_names": [
+  "Ama",
+  "Chi",
+  "Ku",
+  "Li",
+  "Nu",
+  "Pi",
+  "Sa",
+  "Tu",
+  "Wa",
+  "Ya"
+ ],
+ "epithets": {
+  "cautious": [
+   "Carver of the Great Heads",
+   "Polisher of Mirrors"
+  ],
+  "belligerent": [
+   "Player of the Rubber Ball"
+  ],
+  "devout": [
+   "Wearer of the Jaguar Mask"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "rafted a basalt boulder down the river for the chief's head"
+  ],
+  "belligerent": [
+   "kept the rubber ball in the air with my hips for a whole game"
+  ],
+  "devout": [
+   "danced as the jaguar at the night rite"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "rubber_ball",
+   "kind": "goods",
+   "name": "Rubber Balls",
+   "history": "real",
+   "source": "Rubber balls from the spring of El Manatí, about 1600 BCE, the oldest known; latex was mixed with morning-glory juice to make it bounce",
+   "practice": {
+    "hearth": 150,
+    "hunt": 80
+   },
+   "needs": {
+    "finds": [
+     "rubber_tree"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Latex from the rubber tree, cooked with vine juice into balls that bounce: +3 mood.",
+   "hint": "Needs rubber trees.",
+   "words": [
+    "rubber"
+   ]
+  },
+  {
+   "id": "colossal_heads",
+   "kind": "goods",
+   "name": "Colossal Heads",
+   "history": "real",
+   "source": "Seventeen colossal basalt heads, up to 3.4 m tall, each a different ruler wearing a helmet",
+   "practice": {
+    "quarry": 250,
+    "lead": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "The chief's face carved in a boulder taller than two men, dragged from the mountains: rites bring 10% more devotion, +2 mood.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "iron_mirrors",
+   "kind": "goods",
+   "name": "Iron-Ore Mirrors",
+   "history": "real",
+   "source": "Concave mirrors of polished magnetite and ilmenite, worn on the chest; some can focus sunlight to start a fire",
+   "practice": {
+    "quarry": 150,
+    "ritual": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.01
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Stone polished until it shines like water, curved to gather the sun: a little more lore, rites bring 5% more devotion.",
+   "hint": "Needs Polished Stone Tools."
+  },
+  {
+   "id": "cascajal_signs",
+   "kind": "goods",
+   "name": "The Cascajal Signs",
+   "history": "real",
+   "source": "The Cascajal Block, about 900 BCE, carries 62 signs that may be the oldest writing in the Americas",
+   "practice": {
+    "ritual": 150,
+    "lead": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    }
+   ],
+   "desc": "Signs of ears of maize, insects and fish carved in rows on a stone slab: a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era.",
+   "words": [
+    "writing"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "cacao_drink",
+   "name": "Cacao Drink",
+   "history": "real",
+   "source": "Traces of theobromine on pots from Paso de la Amada and San Lorenzo, from about 1900 BCE",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_cacao"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Cacao beans roasted, ground and whipped with water into a bitter foam: +3 mood.",
+   "hint": "Needs wild cacao."
+  },
+  {
+   "id": "nixtamal",
+   "name": "Nixtamal Maize",
+   "history": "real",
+   "source": "Soaking maize in lime water makes it more nourishing; the practice goes back to about 1500–1200 BCE on the Pacific coast of Guatemala",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.88
+    }
+   ],
+   "desc": "Maize boiled with lime or ashes, then ground into dough: hunger grows 12% slower.",
+   "hint": "Needs farming and fire."
+  }
+ ],
+ "finds": [
+  {
+   "id": "rubber_tree",
+   "name": "Rubber Trees",
+   "group": "food",
+   "res": "goods",
+   "history": "real",
+   "amount": 16,
+   "rate": 0.7,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest",
+   "count": 3,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Tapping rubber",
+   "desc": "Trees of the hot forest whose cut bark bleeds white sap that turns to rubber."
+  },
+  {
+   "id": "wild_cacao",
+   "name": "Wild Cacao",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 18,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking cacao pods",
+   "desc": "Small trees with fat pods growing straight from the trunk, full of bitter beans in sweet pulp."
+  }
+ ],
+ "people": [
+  {
+   "id": "head_carver",
+   "as": "founder",
+   "name": "Tuxtla",
+   "epithet": "Carver of Faces",
+   "history": "invented",
+   "desc": "She can find a face inside any boulder.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#706050",
+    "skills": {
+     "forage": 1,
+     "craft": 5,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "carved the old chief's helmet with the claws of a jaguar"
+   ]
+  },
+  {
+   "id": "ball_player",
+   "as": "founder",
+   "name": "Hulé",
+   "epithet": "the Ball Player",
+   "history": "invented",
+   "desc": "He can keep the heavy ball in the air with his hips alone.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 4,
+    "spd": 1.15,
+    "color": "#a04030",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "won the game against the river village before the whole town"
+   ]
+  },
+  {
+   "id": "el_rey",
+   "as": "ancestor",
+   "name": "The King of San Lorenzo",
+   "epithet": "Colossal Head 1",
+   "history": "real",
+   "source": "San Lorenzo Monument 1, 'El Rey', c. 1200–900 BCE",
+   "desc": "A ruler whose great stone face, nearly three metres tall, still looks out from under his helmet."
+  },
+  {
+   "id": "wrestler",
+   "as": "ancestor",
+   "name": "The Wrestler",
+   "epithet": "of the Gulf Coast",
+   "history": "real",
+   "source": "A basalt statue of a seated bearded man in motion, now in the National Museum of Anthropology, Mexico City",
+   "desc": "A man caught mid-turn, arms raised, as if about to spring: one of the most lifelike statues of the ancient Americas."
+  },
+  {
+   "id": "jade_trader",
+   "as": "wanderer",
+   "name": "Motagua",
+   "epithet": "Jade Trader",
+   "history": "invented",
+   "source": "Olmec blue-green jadeite came from the Motagua valley of Guatemala",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader from the far south-east with a pack of blue-green jade, the colour of water and young maize.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#40a080",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 1,
+     "lore": 2,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "carried jade over the mountains from the river of green stones"
+   ],
+   "desc": "A trader named after the river where the jade was found."
+  },
+  {
+   "id": "were_jaguar",
+   "as": "chosen",
+   "name": "Balam Chak",
+   "epithet": "the Were-Jaguar",
+   "label": "Balam Chak, the Were-Jaguar",
+   "history": "legend",
+   "desc": "A child of the rain and the jaguar. Lore 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#ffd36b",
+    "hp": 76,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 6,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "helmet_king",
+   "as": "chosen",
+   "name": "Chan Tun",
+   "epithet": "the Helmeted King",
+   "label": "Chan Tun, the Helmeted King",
+   "history": "invented",
+   "desc": "A ruler whose face will be carved in stone. Combat 8, Lore 4.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 6,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 8,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "mirror_seer",
+   "as": "chosen",
+   "name": "Ixtli",
+   "epithet": "Seer in the Mirror",
+   "label": "Ixtli, Seer in the Mirror",
+   "history": "invented",
+   "desc": "She reads the future in a mirror of black stone. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 0,
+     "lore": 8
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "drag_basalt",
+   "title": "Drag the Stone from the Mountain",
+   "history": "real",
+   "source": "The basalt for the heads came from the Tuxtla Mountains, some 60–80 km away, probably moved by raft and by rollers",
+   "when": {
+    "era": 2,
+    "pop": 12
+   },
+   "chance": 0.5,
+   "text": "The carvers want a boulder from the volcanic mountains for the chief's portrait. It will take hundreds of people, rafts and ropes to bring it down the river.",
+   "options": [
+    {
+     "label": "Bring the stone",
+     "cost": {
+      "food": 30,
+      "wood": 20
+     },
+     "do": [
+      {
+       "invent": "colossal_heads"
+      },
+      {
+       "culture": {
+        "ranked": 6
+       }
+      },
+      {
+       "feat": "Carved a colossal head"
+      }
+     ],
+     "result": "After a whole season the stone arrives. The chief's face emerges from it, calm and enormous."
+    },
+    {
+     "label": "Not worth the labour",
+     "do": [
+      {
+       "culture": {
+        "ranked": -4
+       }
+      }
+     ],
+     "result": "The chief is remembered in songs instead."
+    }
+   ]
+  },
+  {
+   "id": "ball_game",
+   "title": "The Great Ball Game",
+   "history": "real",
+   "when": {
+    "invention": "rubber_ball",
+    "pop": 10
+   },
+   "text": "The river village challenges us to a game: players must keep the heavy rubber ball in the air with their hips. The winner takes the loser's cacao harvest.",
+   "options": [
+    {
+     "label": "Accept the challenge",
+     "do": [
+      {
+       "mood": 5
+      },
+      {
+       "give": {
+        "food": 15
+       }
+      },
+      {
+       "culture": {
+        "martial": 2
+       }
+      }
+     ],
+     "result": "Our players win, bruised and laughing. The cacao comes home."
+    },
+    {
+     "label": "Play only for honour",
+     "do": [
+      {
+       "mood": 3
+      },
+      {
+       "culture": {
+        "martial": -2
+       }
+      }
+     ],
+     "result": "A good game, and a feast together afterwards."
+    }
+   ]
+  },
+  {
+   "id": "river_shifts",
+   "title": "The River Leaves San Lorenzo",
+   "history": "real",
+   "source": "Changes in the river courses around 900 BCE may explain why San Lorenzo declined and La Venta rose",
+   "when": {
+    "after": "spring_flood",
+    "era": 2
+   },
+   "text": "The flood has cut a new channel, and the river no longer passes the town. The canoes cannot reach the market.",
+   "options": [
+    {
+     "label": "Move to the new river",
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "gather",
+         "of": "fish",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "A new town rises on an island in the new river."
+    },
+    {
+     "label": "Bury the old heads and stay",
+     "do": [
+      {
+       "devotion": 8
+      },
+      {
+       "culture": {
+        "settled": 4
+       }
+      }
+     ],
+     "result": "The old monuments are buried with honour, and the town carries on."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "were_jaguar_child",
+   "name": "The Child of the Jaguar",
+   "history": "invented",
+   "source": "A story made up around the Olmec were-jaguar figures",
+   "when": {
+    "day": 2
+   },
+   "text": "Long ago a woman of the people and a jaguar of the forest had a child, with a baby's body and a jaguar's snarling mouth. When it cried, the rain came; when it slept, the maize grew. We carve its face on our jades so that the rain will always come.",
+   "moral": "the wild and the people are kin",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "why_rubber_bounces",
+   "name": "Why the Ball Bounces",
+   "history": "invented",
+   "source": "A story made up around the rubber balls of El Manatí",
+   "when": {
+    "invention": "rubber_ball"
+   },
+   "text": "The tree's white blood was sticky and dead until a girl stirred it with the juice of the morning-glory vine. Then it came alive and leapt from her hands. The tree and the vine had married, and their child loves to jump.",
+   "moral": "two things together make a new thing",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "mirror_sun",
+   "name": "Fire from the Mirror",
+   "history": "invented",
+   "source": "A story made up around the Olmec concave mirrors",
+   "when": {
+    "invention": "iron_mirrors"
+   },
+   "text": "The chief wore a mirror on his chest, and when he turned it to the sun at noon, a spot of light fell on dry grass and set it smoking. The people said: he carries a piece of the sun.",
+   "moral": "knowledge looks like magic",
+   "do": [
+    {
+     "insight": {
+      "fire": 0.1
+     }
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "cacao_feast",
+   "name": "The Feast of Foaming Cacao",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the early use of cacao",
+   "text": "When the cacao pods are ripe, the women pour the drink from high above one pot into another until it foams, and everyone drinks it from painted cups while the ball players show off in the plaza.",
+   "moral": "share the bitter and the sweet",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

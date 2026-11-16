@@ -1,0 +1,665 @@
+{
+ "id": "caral",
+ "order": 70,
+ "name": "Caral-Supe",
+ "period": "c. 3000–1800 BCE",
+ "place": "the desert valleys of Peru's north-central coast",
+ "desc": "The oldest cities of the Americas, built before the people had pottery: great platform mounds and sunken round plazas in the desert valleys, fed by anchovies caught in cotton nets on the coast and cotton grown inland.",
+ "history": "real",
+ "source": "Excavations at Caral by Ruth Shady Solís (from 1994) and at the coastal site of Áspero",
+ "tribe_names": [
+  "Aku",
+  "Chaska",
+  "Illa",
+  "Kusi",
+  "Mayu",
+  "Nina",
+  "Rumi",
+  "Sami",
+  "Tika",
+  "Wayra",
+  "Yaku",
+  "Allpa",
+  "Huaylla",
+  "Kuntur",
+  "Sumaq",
+  "Waman"
+ ],
+ "birth_names": [
+  "Ayni",
+  "Chuya",
+  "Inka",
+  "Kantu",
+  "Llika",
+  "Mikhu",
+  "Puyu",
+  "Sisa",
+  "Tuta",
+  "Uyu"
+ ],
+ "epithets": {
+  "cautious": [
+   "Filler of Shicras",
+   "Knotter of Cords"
+  ],
+  "gluttonous": [
+   "Netter of Anchovies"
+  ],
+  "devout": [
+   "Flute-Player of the Plaza"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "filled a thousand reed bags with stones for the new mound"
+  ],
+  "gluttonous": [
+   "brought home a net so full of anchovies it took four to lift"
+  ],
+  "devout": [
+   "played the condor-bone flute in the sunken plaza at dawn"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "shicra",
+   "kind": "tool",
+   "name": "Shicra Bags",
+   "history": "real",
+   "source": "The mounds of Caral were filled with shicras, reed bags of stones that settle and grip each other in an earthquake",
+   "practice": {
+    "build": 200,
+    "quarry": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.1
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "Woven reed bags filled with stones, stacked to fill a mound so it shakes but does not fall: building is 10% faster, +1 defence.",
+   "hint": "Comes from building and quarrying."
+  },
+  {
+   "id": "cotton_nets",
+   "kind": "tool",
+   "name": "Cotton Fishing Nets",
+   "history": "real",
+   "source": "Inland Caral grew cotton; coastal Áspero used it for the nets that caught huge numbers of anchovies",
+   "practice": {
+    "hunt": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "peru_cotton"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.3
+    }
+   ],
+   "desc": "Long nets of cotton thread for the shoals of little fish: fishing yields 30% more.",
+   "hint": "Needs cotton."
+  },
+  {
+   "id": "bone_flutes",
+   "kind": "goods",
+   "name": "Bone Flutes",
+   "history": "real",
+   "source": "Thirty-two flutes of pelican and condor wing bones were found in an amphitheatre at Caral",
+   "practice": {
+    "ritual": 150,
+    "hunt": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Flutes cut from the wing bones of condors and pelicans, played together in the plazas: +3 mood.",
+   "hint": "Comes from the rites and the hunt."
+  },
+  {
+   "id": "early_khipu",
+   "kind": "goods",
+   "name": "Knotted Cords",
+   "history": "legend",
+   "source": "A knotted cord found at Caral may be an early khipu, the Andean record of knots used for thousands of years; this is debated",
+   "practice": {
+    "lead": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "peru_cotton"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Coloured cotton cords with knots in rows that record what is owed and stored: a little more lore, the stores hold 10 more.",
+   "hint": "Needs cotton, and someone to lead.",
+   "words": [
+    "khipu"
+   ]
+  },
+  {
+   "id": "sunken_plaza",
+   "kind": "goods",
+   "name": "Sunken Round Plaza",
+   "history": "real",
+   "source": "Circular plazas sunk into the ground in front of the pyramids, where crowds gathered for rites",
+   "practice": {
+    "build": 150,
+    "ritual": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A round court dug into the earth with stone steps all around, where the whole valley gathers: rites bring 10% more devotion, +1 mood.",
+   "hint": "Comes from building and the rites."
+  }
+ ],
+ "foods": [
+  {
+   "id": "dried_anchovy",
+   "name": "Dried Anchovies",
+   "history": "real",
+   "practice": {
+    "hunt": 120,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "fish"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.88
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Tiny fish dried by the million in the desert sun and traded up the valleys: food spoils 12% slower, hunger grows 5% slower.",
+   "hint": "Needs fish."
+  },
+  {
+   "id": "squash_guava",
+   "name": "Squash and Guava",
+   "history": "real",
+   "source": "Squash, beans, guava, avocado and achira were grown in the Supe valley",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {
+    "finds": [
+     "guava"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Squash from the river fields and sweet guavas from the trees: hunger grows 8% slower, +1 mood.",
+   "hint": "Needs guava trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "peru_cotton",
+   "name": "Native Cotton",
+   "group": "food",
+   "res": "goods",
+   "history": "real",
+   "source": "Gossypium barbadense, a cotton domesticated in South America",
+   "amount": 20,
+   "rate": 0.8,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "berry",
+   "look": "yarrow",
+   "act": "Picking cotton",
+   "desc": "Shrubs along the river whose bolls burst into white and brown fibre."
+  },
+  {
+   "id": "guava",
+   "name": "Guava Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking guavas",
+   "desc": "Small trees with fragrant pink-fleshed fruit."
+  }
+ ],
+ "people": [
+  {
+   "id": "shicra_master",
+   "as": "founder",
+   "name": "Pirqa",
+   "epithet": "Builder of Mounds",
+   "history": "invented",
+   "desc": "She knows how to make a mountain that will not fall.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0a070",
+    "skills": {
+     "forage": 2,
+     "craft": 5,
+     "combat": 0,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "watched the new mound shake in an earthquake and stand"
+   ]
+  },
+  {
+   "id": "aspero_fisher",
+   "as": "founder",
+   "name": "Challwa",
+   "epithet": "Fisher of Áspero",
+   "history": "invented",
+   "desc": "He trades the sea's fish for the valley's cotton.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#4080a0",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 1,
+     "lore": 0,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "walked up the valley with a load of dried fish to trade for cotton"
+   ]
+  },
+  {
+   "id": "flute_players",
+   "as": "ancestor",
+   "name": "The Flute-Players of Caral",
+   "epithet": "of the amphitheatre",
+   "history": "real",
+   "source": "The cache of 32 bone flutes found at Caral, c. 2100 BCE",
+   "desc": "Musicians whose flutes, decorated with birds and monkeys, were carefully buried together in the great amphitheatre."
+  },
+  {
+   "id": "pyramid_builders",
+   "as": "ancestor",
+   "name": "The Builders of the Great Pyramid",
+   "epithet": "of Caral",
+   "history": "real",
+   "source": "The Pirámide Mayor of Caral, built in stages from about 2800 BCE",
+   "desc": "The nameless people who raised a platform mound as big as a city block, five centuries before the great pyramid of Egypt was finished."
+  },
+  {
+   "id": "highland_herder",
+   "as": "wanderer",
+   "name": "Llamkay",
+   "epithet": "Walker from the Mountains",
+   "history": "invented",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a traveller down from the high mountains, with dried meat, wool and stories of the snow peaks.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#a07850",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 2,
+     "lore": 2,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "came down from the snow line in three days with a pack of wool"
+   ],
+   "desc": "A highlander who trades between the mountains and the coast."
+  },
+  {
+   "id": "mound_lord",
+   "as": "chosen",
+   "name": "Hatun",
+   "epithet": "Lord of the Great Mound",
+   "label": "Hatun, Lord of the Great Mound",
+   "history": "invented",
+   "desc": "He raises the oldest pyramid of the Americas. Crafting 8, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 5,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "condor_flutist",
+   "as": "chosen",
+   "name": "Pinkullu",
+   "epithet": "Voice of the Condor",
+   "label": "Pinkullu, Voice of the Condor",
+   "history": "invented",
+   "desc": "Her flute calls the whole valley together. Lore 7, mood of all.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 0,
+     "lore": 7,
+     "trade": 3
+    }
+   }
+  },
+  {
+   "id": "sea_master",
+   "as": "chosen",
+   "name": "Qucha",
+   "epithet": "Master of the Sea Nets",
+   "label": "Qucha, Master of the Sea Nets",
+   "history": "invented",
+   "desc": "He feeds a whole city from the sea. Foraging 8, Trade 5.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#ffd36b",
+    "hp": 72,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 8,
+     "craft": 2,
+     "combat": 3,
+     "lore": 1,
+     "trade": 5
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "mound_stands",
+   "title": "The Mound Stands",
+   "history": "real",
+   "when": {
+    "after": "earthquake",
+    "invention": "shicra"
+   },
+   "text": "The earth shook hard, and the great mound swayed like a tree, but when the dust settled it was still standing. The stone bags inside had settled and gripped each other.",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "culture": {
+      "settled": 4
+     }
+    },
+    {
+     "feat": "Built a mound that survived the earthquake"
+    }
+   ]
+  },
+  {
+   "id": "fish_for_cotton",
+   "title": "Fish for Cotton",
+   "history": "real",
+   "source": "The 'maritime foundations' theory: Caral's cities rested on trade between coastal fishers and inland cotton farmers",
+   "when": {
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "Fishers from the coast come with baskets of dried anchovies and want cotton for their nets. The farmers want more fish than the fishers want to give.",
+   "options": [
+    {
+     "label": "Trade fairly",
+     "do": [
+      {
+       "give": {
+        "food": 20
+       }
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "Cotton goes down the valley, fish come up. Both sides go home satisfied."
+    },
+    {
+     "label": "Drive a hard bargain",
+     "do": [
+      {
+       "give": {
+        "food": 30
+       }
+      },
+      {
+       "mood": -2
+      },
+      {
+       "culture": {
+        "ranked": 3
+       }
+      }
+     ],
+     "result": "We get more fish, and the fishers go home grumbling."
+    }
+   ]
+  },
+  {
+   "id": "el_nino",
+   "title": "The Warm Sea Comes",
+   "history": "real",
+   "source": "El Niño years bring warm water that drives off the anchovies, and rains that flood the desert valleys",
+   "when": {
+    "after": "rain",
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "The sea has turned warm, the anchovies are gone, and rain is falling on the desert, washing mud down the valleys.",
+   "options": [
+    {
+     "label": "Make offerings at the plaza",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 12
+      }
+     ],
+     "result": "The flutes play all night. Slowly the sea grows cold again."
+    },
+    {
+     "label": "Farm the wet desert",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": 3
+       }
+      }
+     ],
+     "result": "Seeds go into the new mud. For one year the desert is green."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "city_before_pots",
+   "name": "The City Before Pots",
+   "history": "invented",
+   "source": "A story made up around the preceramic cities of Norte Chico",
+   "when": {
+    "day": 2
+   },
+   "text": "Our grandparents' grandparents built mountains before they knew how to make a single pot. They cooked in gourds with hot stones and carried water in baskets so tight they did not leak. 'We do not need clay,' they said, 'we have the sea, the river and each other.'",
+   "moral": "great things need only people working together",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "settled": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "condor_flute",
+   "name": "The Condor's Gift",
+   "history": "invented",
+   "source": "A story made up around the condor-bone flutes",
+   "when": {
+    "invention": "bone_flutes"
+   },
+   "text": "An old condor, dying, flew down to the plaza and said: when I am gone, take my wing bones and blow through them, and I will still sing over the valley. That is why the flutes sound like wind over the mountains.",
+   "moral": "the dead can still sing",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "devotion": 2
+    }
+   ]
+  },
+  {
+   "id": "sea_and_valley",
+   "name": "The Sea and the Valley Marry",
+   "history": "invented",
+   "source": "A story made up around the coast-and-valley trade of Caral",
+   "when": {
+    "invention": "cotton_nets"
+   },
+   "text": "The Sea had fish but no thread, and the Valley had cotton but no fish. They quarrelled until a wise woman said: marry! The Sea gave the Valley fish, the Valley gave the Sea nets, and their children built the city.",
+   "moral": "each needs what the other has",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "plaza_dance",
+   "name": "The Dance in the Sunken Plaza",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the plazas of Caral",
+   "text": "On the longest day, the whole valley crowds onto the steps around the round plaza, the flute-players go down into the middle, and everyone dances until the sun touches the mountains.",
+   "moral": "the circle holds everyone",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}
