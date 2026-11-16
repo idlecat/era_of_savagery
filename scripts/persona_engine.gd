@@ -183,6 +183,7 @@ static func _phrase(arch: String, s: Dictionary) -> String:
 				"fishing_dock": return I.t("build a fishing dock")
 				"totem_shrine": return I.t("raise a totem shrine")
 				"farm_plot": return I.t("clear a farm plot")
+				"granary": return I.t("raise a granary")
 				"hut": return I.t("build %s hut%s") % [_num(n), I.plural_s() if n > 1 else ""]
 				"large_hut": return I.t("build %s large hut%s") % [_num(n), I.plural_s() if n > 1 else ""]
 	return s["action"]

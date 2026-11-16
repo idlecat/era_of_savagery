@@ -10,6 +10,7 @@ const Rivals = preload("res://scripts/rivals.gd")
 const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
+const Improve = preload("res://scripts/improve.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -22,6 +23,7 @@ signal contract_finished(contract)
 signal log_added()
 signal alert_raised(alert)
 signal envoy_arrived(unit, clan_id)
+signal advice_wanted(ctx) # improve.gd asks which improvement to build; answer: improve.choose()
 signal feat_added(feat) # one of the tribe's firsts (inv.feat): the HUD celebrates it
 
 var next_id := 1
@@ -82,6 +84,7 @@ var evo: Evolution
 var hz: Hazards
 var nat: Nature
 var folk: Folk
+var improve: Improve # the village lays out improvements itself (improve.gd)
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
@@ -103,6 +106,7 @@ func _init() -> void:
 	hz = Hazards.new(self)
 	nat = Nature.new(self)
 	folk = Folk.new(self)
+	improve = Improve.new(self)
 	story = Story.new(self)
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
@@ -1736,6 +1740,7 @@ func tick(dt: float) -> void:
 		for k in wear.size():
 			if wear[k] > 0.0: wear[k] *= 0.996
 	_update_vice(dt)
+	improve.update(dt)
 	_update_births(dt)
 
 	for p in popups:

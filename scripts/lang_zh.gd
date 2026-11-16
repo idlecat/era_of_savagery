@@ -1711,4 +1711,16 @@ const STRINGS := {
 	"Cowering in fear": "惊恐地蜷缩着",
 	"Running to the fire": "奔向火场",
 	"Beating out the flames": "扑打火焰",
+	# the village lays out improvements (improve.gd)
+	"raise a granary": "盖一座粮仓",
+	"%s lays out a %s: %s": "%s 规划了一座%s：%s",
+	"The tribe lays out a %s: %s": "部落规划了一座%s：%s",
+	"the stores are nearly full and food would rot.": "仓储快满了，食物会腐烂。",
+	"people sleep in the open: there are not enough beds.": "有人露宿野外：床铺不够。",
+	"the village has no fire to keep warm by.": "村子里没有能取暖的火堆。",
+	"a field gives steady food.": "一块田地能带来稳定的食物。",
+	"a shrine brings lore and heals the sick.": "神龛能带来学识，还能治愈病人。",
+	"oxen would carry our loads.": "牛能替我们驮东西。",
+	"Steward lays out improvements": "管家规划新建筑",
+	"The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.": "村子需要时，管家会规划新建筑（仓储快满时建粮仓，床铺不够时建小屋……），并从库存里支付。接入 LLM 节点时，由管家在其中做选择。",
 }

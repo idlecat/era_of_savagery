@@ -90,11 +90,21 @@ func setup(s, w, l) -> void:
 	sim.contract_finished.connect(func(c): _toast_contract_done(c))
 	sim.alert_raised.connect(_on_alert)
 	sim.feat_added.connect(_on_feat)
+	sim.advice_wanted.connect(_on_advice_wanted)
 	feat_popups = _feat_pref()
 	world.selection_changed.connect(_refresh_left)
 	world.structure_clicked.connect(func(s): if s.type == "burial_ground": open_graves(s))
 	_refresh_left()
 	_show_intro()
+
+## The Steward weighs which improvement to build: ask its LLM node (offline: the rules'
+## first choice, at once). The answer goes through the same operation a game master uses.
+func _on_advice_wanted(ctx: Dictionary) -> void:
+	if not llm.is_online():
+		sim.improve.choose("", "")
+		return
+	var r: Dictionary = await llm.advise_build(ctx)
+	sim.improve.choose(str(r.get("choice", "")), str(r.get("speech", "")), str(r.get("source", "")))
 
 func modal_open() -> bool:
 	return modal != null
@@ -427,6 +437,12 @@ func _build_right(root: Control) -> void:
 	policy_opt.item_selected.connect(func(i): sim.steward_policy = policy_opt.get_item_text(i))
 	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ph.add_child(policy_opt)
+	var auto := CheckBox.new()
+	auto.text = tr("Steward lays out improvements")
+	auto.tooltip_text = tr("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
+	auto.button_pressed = sim.improve.on
+	auto.toggled.connect(func(b): sim.improve.on = b)
+	v.add_child(auto)
 	v.add_child(_header("NEIGHBORING CLANS"))
 	clans_text = _rich(0, true)
 	v.add_child(clans_text)

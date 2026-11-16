@@ -251,6 +251,24 @@ Reply with ONLY one JSON object: {"speech": "<what you say>", "verdict": "accept
 	fb["error"] = res.get("error", "invalid JSON shape")
 	return fb
 
+# ------------------------------------------------------------ the Steward's building plans
+## Which improvement to lay out. ctx from sim.improve.advice_ctx(). Returns {"choice",
+## "speech", "source", "error"}; the choice is still untrusted (improve.choose() checks it).
+func advise_build(ctx: Dictionary) -> Dictionary:
+	_count_call()
+	var fb := {"choice": ctx.get("fallback", ""), "speech": "", "source": "offline", "error": ""}
+	if not is_online() or ctx.get("leader", {}).is_empty(): return fb
+	var system: String = _persona_header(ctx["leader"], ctx.get("world", {})) + """You are the Steward of the tribe: you see to the village while the Chieftain leads.
+The village needs more than it has wood for. Choose which ONE of the options to build now, as you would, given your personality and memories, the season and the tribe's state, or "wait" if none should be built yet.
+Reply with ONLY one JSON object: {"choice": "<structure id from options, or wait>", "speech": "<one short in-character sentence to the tribe about it>"}"""
+	var user := {"options": ctx["options"], "tribe": ctx["tribe"], "season": ctx.get("season", {}), "your_profile": ctx["leader"]}
+	var res := await chat_json(system, JSON.stringify(user))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("choice") is String:
+		return {"choice": res["data"]["choice"], "speech": str(res["data"].get("speech", "")).left(200), "source": label(), "error": ""}
+	fb["source"] = "offline fallback"
+	fb["error"] = res.get("error", "invalid JSON shape")
+	return fb
+
 # ------------------------------------------------------------ the saga (endgame)
 ## The tribe's storyteller tells the whole game as a legend. Returns {"saga", "source", "error"}.
 func saga(ctx: Dictionary, fallback: String) -> Dictionary:

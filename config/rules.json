@@ -143,5 +143,82 @@
    "master_lv": 5,
    "master": 0.1
   }
+ },
+ "improvements": {
+  "_doc": "The village lays out improvements itself (improve.gd). planner: steward (only while a Steward is appointed) or anyone (the tribe's best at lore plans without one). Every `every` seconds by day, with fewer than `max_sites` of its sites unfinished, the first entry of `list` that is wanted (`when`: conditions as in scenario scripts), known, affordable keeping `wood_reserve`, and has room within `reach` of the village (near the structure type `near`) is laid out. If several are wanted, the Steward's LLM node may choose (`ask`; it waits `ask_wait` seconds, at most once per `ask_every`).",
+  "on": true,
+  "planner": "steward",
+  "every": 15,
+  "max_sites": 1,
+  "wood_reserve": 10,
+  "reach": 450,
+  "ring_step": 35,
+  "gap": 14,
+  "ask": true,
+  "ask_wait": 20,
+  "ask_every": 90,
+  "list": [
+   {
+    "structure": "granary",
+    "when": {
+     "food_frac": 0.85,
+     "fewer": {
+      "granary": 6
+     }
+    },
+    "near": "farm_plot",
+    "reason": "the stores are nearly full and food would rot."
+   },
+   {
+    "structure": "hut",
+    "when": {
+     "homeless": 1,
+     "fewer": {
+      "hut": 12
+     }
+    },
+    "reason": "people sleep in the open: there are not enough beds."
+   },
+   {
+    "structure": "bonfire",
+    "when": {
+     "fewer": {
+      "bonfire": 1
+     }
+    },
+    "reason": "the village has no fire to keep warm by."
+   },
+   {
+    "structure": "farm_plot",
+    "when": {
+     "pop": 5,
+     "fewer": {
+      "farm_plot": 2
+     }
+    },
+    "reason": "a field gives steady food."
+   },
+   {
+    "structure": "totem_shrine",
+    "when": {
+     "pop": 6,
+     "fewer": {
+      "totem_shrine": 1
+     }
+    },
+    "reason": "a shrine brings lore and heals the sick."
+   },
+   {
+    "structure": "aurochs_pen",
+    "when": {
+     "pop": 8,
+     "fewer": {
+      "aurochs_pen": 1
+     }
+    },
+    "near": "farm_plot",
+    "reason": "oxen would carry our loads."
+   }
+  ]
  }
 }

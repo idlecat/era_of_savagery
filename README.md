@@ -72,7 +72,7 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 | XP in 4 specializations, Lv5 unlocks, floating +EXP, Memory Archive (top 10 by impact) fed back into prompts | `sim.gd` |
 | Tribal Wisdom Tree (9 techs, 3 eras) with real stat effects | `data.gd`, `sim.gd::research` |
 | Events: Great Flood, Overpopulation (→ contract or raid), Birth of the Chosen One | `sim.gd::event_def/resolve_event` |
-| Tier 3 Vice-Chieftains: Steward (policy-driven auto-assign), War Chief (needs Tribal Code) | `sim.gd::_update_vice` |
+| Tier 3 Vice-Chieftains: Steward (policy-driven auto-assign, lays out improvements), War Chief (needs Tribal Code) | `sim.gd::_update_vice`, `improve.gd` |
 | Night cold, hunger, births, food spoilage, Yinglong guardian from the Grand Altar | `sim.gd` |
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
@@ -99,6 +99,7 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Fast-forward:** once the whole tribe is in bed and nothing is stirring, the night passes at 12× speed (the top bar says "Night, all asleep"). Any alarm drops back to normal speed at once.
 - **Alarms:** beasts or raiders at the village (within the War Chief's 500-unit range), someone being hit, or a flood rouse the camp ("Danger in the night! The camp is roused."). Fighters answer the War Chief or defend themselves. Everyone in a hut stays inside ("Sheltering in a hut"), and outdoor sleepers get up and keep watch. Nobody goes back to the day's work, and once the danger is gone they sleep on. A wolf pack prowling the woods doesn't wake the village: hut sleepers are safe from it, and someone sleeping in the open keeps watch only if a beast comes within 300 units.
 - **The Steward** hands out no work during sleeping hours.
+- **Improvements:** the Steward also lays out new buildings when the village needs them and pays for them from the stockpile, keeping some wood back: a Granary when the stores are nearly full (beside the fields), a Hut when people sleep in the open, a Bonfire if there is none, Farm Plots, a Totem Shrine, an Aurochs Pen. One site at a time, in that order of priority (`config/rules.json` "improvements"). When several are wanted and an LLM node is set, the Steward's persona chooses between them (or waits) and says why in the chronicle. A checkbox under the Steward policy turns it off.
 
 ## Village life (`folk.gd`)
 

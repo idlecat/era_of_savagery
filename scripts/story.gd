@@ -86,6 +86,12 @@ func holds(w: Dictionary) -> bool:
 	if w.has("built") and not sim.structures.any(func(st): return st.built and sim.ours(st) and st.type == w["built"]): return false
 	if w.has("devotion") and sim.devotion < float(w["devotion"]): return false
 	if w.has("mood") and sim.folk.mood < float(w["mood"]): return false
+	if w.has("food_frac") and sim.stock["food"] < sim.food_cap() * float(w["food_frac"]): return false
+	if w.has("homeless") and sim.living().size() - sim.pop_cap() < int(w["homeless"]): return false
+	if w.has("wood") and sim.stock["wood"] < float(w["wood"]): return false
+	if w.has("fewer"): # fewer than n of a structure of ours, building sites included
+		for st in w["fewer"]:
+			if sim.structures.filter(func(s): return s.type == st and sim.ours(s)).size() >= int(w["fewer"][st]): return false
 	if w.has("deaths") and sim.units.filter(func(u): return u.dead).size() < int(w["deaths"]): return false
 	if w.has("culture"):
 		for ax in w["culture"]:

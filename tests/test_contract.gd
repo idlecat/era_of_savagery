@@ -62,6 +62,7 @@ func _initialize() -> void:
 	test_config()
 	test_gm_operations()
 	test_dilemma_config()
+	test_improvements()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1800,3 +1801,58 @@ func test_dilemma_config() -> void:
 	dl["overpop"]["options"][0]["label"] = "Found a colony"
 	check(sim.event_def("overpop")["options"][0]["label"] == "Found a colony", "editing config/dilemmas.json changes the dilemma")
 	dl["overpop"]["options"][0]["label"] = old
+
+func test_improvements() -> void:
+	print("\n== The village lays out improvements ==")
+	var sim = _new_sim()
+	var imp = sim.improve
+	sim.time = D.DAY_LEN * 0.3 # (by day)
+	sim.stock["wood"] = 200
+	sim.techs["pottery"] = true
+	sim.stock["food"] = sim.food_cap()
+	imp.update(100.0)
+	check(imp.open_sites() == 0, "without a Steward nobody plans (planner steward)")
+	var st = sim.living().filter(func(u): return u.role == "")[0]
+	sim.appoint(st, "steward")
+	check(imp.wanted().size() >= 1 and imp.wanted()[0]["structure"] == "granary", "full stores make a Granary the first want (%s)" % str(imp.wanted().map(func(r): return r["structure"])))
+	var n0: int = sim.structures.size()
+	var wood0: float = sim.stock["wood"]
+	imp.update(100.0) # no advisor connected: builds the first want at once
+	var g = sim.structures.back()
+	check(sim.structures.size() == n0 + 1 and g.type == "granary" and not g.built and g.paid, "the Steward lays out a paid Granary site")
+	check(is_equal_approx(wood0 - sim.stock["wood"], D.STRUCTURES["granary"]["wood"]), "its wood comes from the stockpile")
+	check(D.region_at(g.pos) == D.region_at(D.VILLAGE) and not D.is_water(g.pos) and g.pos.distance_to(D.VILLAGE) < 450, "on dry land by the village (%s)" % str(g.pos))
+	var clash: bool = sim.structures.any(func(s): return s != g and not D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(g.pos) < D.STRUCTURES[s.type]["r"] + D.STRUCTURES["granary"]["r"])
+	check(not clash, "not on top of another building")
+	imp.update(100.0)
+	check(sim.structures.size() == n0 + 1, "one site at a time (max_sites 1)")
+	# finish it: a second Granary only when the stores fill up again
+	g.built = true
+	g.progress = g.work
+	sim.stock["food"] = 10
+	imp.update(100.0)
+	check(not sim.structures.any(func(s): return s.type == "granary" and not s.built), "no new Granary while the stores have room")
+	for s in sim.structures: s.built = true # (whatever else was laid out meanwhile)
+	# several wants: the advisor is asked, and only its options can be chosen
+	sim.stock["food"] = sim.food_cap()
+	sim.stock["wood"] = 200
+	sim.techs["farming"] = true
+	var asked := []
+	sim.advice_wanted.connect(func(ctx): asked.append(ctx))
+	var opts: Array = imp.wanted().map(func(r): return r["structure"])
+	imp.update(100.0)
+	if opts.size() > 1:
+		check(asked.size() == 1 and asked[0]["options"].size() == opts.size() and not asked[0]["leader"].is_empty(), "with several wants the Steward's node is asked (%s)" % str(opts))
+		var n1: int = sim.structures.size()
+		imp.choose("smelter", "Bronze!") # not an option: the first one is built
+		check(sim.structures.size() == n1 + 1 and sim.structures.back().type == opts[0], "an answer outside the options falls back to the first want")
+	else:
+		check(false, "expected several wants, got %s" % str(opts))
+	# a game master's order and the summary
+	sim.structures.back().built = true
+	var why: String = imp.order("hut")
+	check(why == "", "a game master can order an improvement (no conditions) %s" % why)
+	check(imp.order("castle") == "Unknown structure", "unknown structures are refused")
+	var sm: Dictionary = imp.summary()
+	check(sm["on"] and sm["planner"] == st.name and sm.has("wanted"), "the planner's state is readable (%s)" % str(sm))
+	check("granary" in D.CONTRACT_STRUCTURES, "settlement contracts may build a Granary")
