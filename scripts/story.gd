@@ -14,7 +14,8 @@
 ##         {"give": {res: n}} (negative takes), {"reveal": at, "r"}, {"flag": name},
 ##         {"mood": n}, {"devotion": n}, {"insight": {tech: fraction}}, {"culture": {axis: n}},
 ##         {"invent": invention id}, {"boon": [effects]} (lasting, see D.EFFECT_STATS),
-##         {"remember": text, "who": "all"|"best:<skill>"}, {"feat": text},
+##         {"remember": text, "who": "all"|"best:<skill>"} ("%d" in it is the day), {"feat": text},
+##         {"xp": {skill: n}, "who"}, {"panic": seconds} (the people hide in their huts),
 ##         {"tale": tale id} (told now), {"join": person id} (a culture's people arrive)
 ## The culture system (culture.gd) runs its events and tales through holds() and run() too.
 ##   at:   "site" (the contract's), "village", a landmark id, or a Vector2
@@ -140,7 +141,18 @@ func run(actions: Array, c) -> void:
 			if who.begins_with("best:"):
 				var b = sim.best_unit(who.substr(5), false)
 				people = [b] if b else []
-			for u in people: sim.remember(u, tr(a["remember"]), int(a.get("impact", 6)))
+			var mem: String = tr(a["remember"])
+			if mem.contains("%d"): mem = mem % sim.day()
+			for u in people: sim.remember(u, mem, int(a.get("impact", 6)))
+		if a.has("xp"):
+			var who2: String = a.get("who", "all")
+			var crew: Array = sim.living().filter(func(u): return u.role != "child")
+			if who2.begins_with("best:"):
+				var b2 = sim.best_unit(who2.substr(5), false)
+				crew = [b2] if b2 else []
+			for u in crew:
+				for k in a["xp"]: sim.gain_xp(u, k, float(a["xp"][k]))
+		if a.has("panic"): sim.nat.panic_until = maxf(sim.nat.panic_until, sim.time + float(a["panic"]))
 		if a.has("feat"): sim.inv.feat("story", tr(a["feat"]))
 		if a.has("tale") and sim.cult: sim.cult.tell(a["tale"])
 		if a.has("join") and sim.cult: sim.cult.join(a["join"])

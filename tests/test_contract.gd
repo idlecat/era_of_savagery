@@ -59,6 +59,7 @@ func _initialize() -> void:
 	test_feat_details()
 	test_help_and_carry()
 	test_reactions()
+	test_config()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -315,6 +316,10 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
+	for cfg in ["events", "reactions"]: # the rule configs' texts
+		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
+			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
+			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
 	for s in Scenarios.LIST:
 		var sp: Dictionary = s.spec()
 		data_keys += [s.INFO["name"], s.INFO["desc"], s.INFO["brief"]] + s.INFO["intro"]
@@ -1579,7 +1584,7 @@ func test_help_and_carry() -> void:
 		if t.dead or t.fleeing: break
 	var on_it: Array = sim.units.filter(func(o): return o != v and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == t.id)
 	check(on_it.size() >= 2 or t.dead or t.fleeing, "when a beast attacks, the people nearby come to help (%d came)" % on_it.size())
-	check(on_it.size() <= sim.HELPERS + 1, "but not the whole tribe")
+	check(on_it.size() <= int(sim.react.responses("attacked")[0]["count"]) + 1, "but not the whole tribe")
 	check(sim.living().filter(func(o): return o.role == "child" and o.job.get("type", "") == "attack").is_empty(), "children stay out of it")
 	for i in 600:
 		sim.tick(0.05)
@@ -1640,3 +1645,33 @@ func test_reactions() -> void:
 		sim3.tick(0.05)
 		if sim3.nat.burning.is_empty(): break
 	check(sim3.nat.burning.is_empty() and sim3.nat.fire_size < 20, "the fire is beaten out before it spreads far (%d trees caught)" % sim3.nat.fire_size)
+
+func test_config() -> void:
+	print("\n== Events and reactions come from config ==")
+	var Config = preload("res://scripts/config.gd")
+	var R = preload("res://scripts/reactions.gd")
+	var ev: Dictionary = Config.load_cfg("events")
+	var re: Dictionary = Config.load_cfg("reactions")
+	check(not ev.is_empty() and not re.is_empty(), "config/events.json and config/reactions.json load")
+	check(R.problems(re).is_empty(), "every reaction names a known response and who (%s)" % str(R.problems(re)))
+	var sim = _new_sim()
+	check(sim.hz.WEATHER.has("blizzard") and sim.hz.SEASON_DAYS == int(ev["seasons"]["days"]), "the weather and seasons are read from the config")
+	# the numbers in the file are the ones the rules use
+	var w = sim.spawn_predator(D.VILLAGE + Vector2(900, 0), D.VILLAGE)
+	sim.hz.make_wolf(w)
+	check(is_equal_approx(w.max_hp, float(ev["wolves"]["hp"])) and is_equal_approx(w.spd, float(ev["wolves"]["spd"])), "a wolf's strength comes from the config")
+	# a user override merges over the game's file
+	var base := {"a": {"x": 1, "y": 2}, "b": [1]}
+	Config._merge(base, {"a": {"y": 5}, "c": true})
+	check(base["a"]["x"] == 1 and base["a"]["y"] == 5 and base["c"] == true, "a user://config file overrides only the keys it has")
+	# change the data, change the behaviour: with no earthquake reactions nobody takes cover
+	var saved: Array = re["on"]["earthquake"]
+	re["on"]["earthquake"] = []
+	var u = sim.unit_by_name("Bai")
+	sim.assign_gather(u, "wood")
+	sim.nat.quake()
+	check(u.job.get("type", "") == "gather", "an event with no reactions configured leaves people at their work")
+	re["on"]["earthquake"] = [{"do": "flee", "who": "all", "dist": 200}]
+	sim.nat.quake()
+	check(u.job.get("flee", false), "and a different reaction in the config is what they do")
+	re["on"]["earthquake"] = saved

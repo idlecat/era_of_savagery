@@ -1,0 +1,116 @@
+{
+ "_doc": "Forces of nature and hardships: when they happen, how strong they are, and what the tribe is told. Times are seconds unless named *_days (one day is 90 s). [a, b] pairs are random ranges. Texts are English translation keys. Read by hazards.gd and nature.gd; see docs/CONFIG.md.",
+
+ "seasons": {
+  "days": 2,
+  "news": [
+   {"alert": "Spring returns. The berries ripen again, and the herds come back.", "level": "info"},
+   {"alert": "Summer. Watch the food stores - they spoil faster in the heat.", "level": "info"},
+   {"alert": "Autumn. Winter comes in two days: gather food and wood, and keep the fires lit.", "level": "warn"},
+   {"alert": "Winter has come! No berries, no harvest, the herds have moved south, and the cold can kill.", "level": "danger"}
+  ]
+ },
+
+ "weather": {
+  "roll_every": [35, 60],
+  "kinds": {
+   "rain": {"name": "Rain", "chance": [0.35, 0.10, 0.25, 0.0], "dur": [40, 80],
+    "alert": "Rain. Work outdoors goes slower.", "level": "info"},
+   "storm": {"name": "Thunderstorm", "chance": [0.08, 0.10, 0.15, 0.0], "dur": [25, 45],
+    "alert": "A thunderstorm rolls over the land.", "level": "warn", "lightning": true},
+   "drought": {"name": "Drought", "chance": [0.0, 0.30, 0.05, 0.0], "dur": [120, 200],
+    "alert": "Drought: berries wither and the fields go dry.", "level": "warn", "done": "The drought breaks."},
+   "blizzard": {"name": "Blizzard", "chance": [0.0, 0.0, 0.04, 0.40], "dur": [35, 65],
+    "warn_ahead": 15, "warn": "The sky turns white-grey - a blizzard is coming! Get everyone to the fires.",
+    "alert": "Blizzard! Anyone far from a fire will freeze.", "level": "danger", "disaster": true}
+  }
+ },
+
+ "wolves": {
+  "from_day": 2, "chance_by_season": [0.15, 0.10, 0.45, 0.8],
+  "pack": [2, 3], "harsh_extra": 1, "winter_extra_chance": 0.5, "spawn_dist": [650, 1800],
+  "hp": 28, "harsh_hp_mult": 1.2, "atk": 3.5, "def": 1, "spd": 82, "give_up": 160, "leave_at_dawn": true,
+  "alert": "Wolves howl in the dark - a pack of %d is hunting near the village!"
+ },
+
+ "tiger_raids": {
+  "from_day": 3, "every_days": [2.5, 4.0], "winter_mult": 0.8, "length": 90,
+  "alert": "A hungry saber-tooth has left its den and is stalking toward the village!"
+ },
+
+ "sickness": {
+  "roll_every": 45, "base": 0.03, "winter": 0.10, "hungry": 0.08, "crowding": 0.4,
+  "spread_every": 2, "spread_radius": 70, "spread_chance": 0.035,
+  "alert": "%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.", "popup": "Sick!"
+ },
+
+ "famine": {
+  "alert": "FAMINE! The stores are empty and the tribe is starving. Hunt, fish, forage - now.",
+  "warn": "Food is running low - about a day's worth left for %d mouths.",
+  "remember": "went hungry in the famine of Year %d"
+ },
+
+ "lightning": {
+  "every": [10, 22], "hit_person": 0.12, "hit_building": 0.18, "person_damage": 0.6,
+  "ignite_dry": 0.6, "ignite_wet": 0.25, "tree_range": 1000, "devotion": 2, "stump_regrow": 200,
+  "popup": "Lightning!", "hit_popup": "Struck by lightning!",
+  "hit_alert": "Lightning strikes %s - and they live! The sky has touched them.",
+  "hit_remember": "was struck by lightning on Day %d and lived - touched by the sky",
+  "building_alert": "Lightning sets the %s on fire! It must be rebuilt."
+ },
+
+ "wildfire": {
+  "burn_time": 12, "wet_burn_mult": 1.8, "spread_every": 2, "spread_chance": 0.35,
+  "drought_mult": 1.6, "wet_mult": 0.3, "spread_radius": 75, "max_trees": 70,
+  "burn_radius": 55, "burn_damage": 4, "building_radius": 70, "berry_chance": 0.25, "regrow": 420,
+  "alert": "Wildfire! The forest is burning.", "building_alert": "The wildfire burns the %s!",
+  "log": "The wildfire burns out: %d trees are lost. In time, berries will sprout in the ashes."
+ },
+
+ "flood": {
+  "season": 0, "chance": 0.45, "warn_ahead": 15, "length": 45, "extra_width": 110,
+  "hit_radius": 130, "hit_damage": 0.2, "building_radius": 170, "crop_radius": 160,
+  "drown_rate": 3, "silt_days": 2,
+  "warn": "The river is rising! Get away from the banks.",
+  "alert": "The river floods its banks!%s%s",
+  "log": "The river falls back. The silt it left will feed the riverside fields.",
+  "remember": "saw the river flood in the spring of Year %d"
+ },
+
+ "volcano": {
+  "every_days": [9, 14], "tremor_lead": 30, "length": 25, "lava_radius": 460, "lava_damage": 0.5,
+  "ash_days": 0.8, "fertile_days": 3.5, "trees_ignited": 6, "obsidian": 4,
+  "warn": "The ground trembles. Black smoke pours from the Fire Mountain.",
+  "alert": "The Fire Mountain erupts! Fire runs down its slopes and ash darkens the sky.",
+  "remember": "saw the Fire Mountain erupt on Day %d"
+ },
+
+ "earthquake": {
+  "every_days": [10, 16], "shake": 3.0, "collapse": [1, 2], "crush_radius": 40, "crush_damage": 0.2,
+  "rockslide_dist": [400, 1600],
+  "alert": "The earth shakes!%s A rockslide bares new stone in the hills.",
+  "remember": "felt the earth shake on Day %d"
+ },
+
+ "eclipse": {
+  "every_days": [12, 20], "length": 30, "ask_after": 5,
+  "start_log": "A shadow bites into the sun...", "end_log": "The sun returns.",
+  "title": "The Sun Is Devoured",
+  "text": "At midday a black mouth eats the sun. Birds fall silent, the air turns cold, and stars come out in the day. The people cry out and look to you.",
+  "options": [
+   {"label": "Beat the drums", "desc": "Drive off the sky-beast with drums and shouting. (+devotion, the tribe grows more martial)",
+    "do": [{"devotion": 4}, {"culture": {"martial": 4}}, {"remember": "beat the drums to drive the sky-beast from the sun on Day %d", "who": "all", "impact": 5}],
+    "result": "The drums thunder and the people howl at the sky. Slowly, the beast spits out the sun."},
+   {"label": "Offer food to the sky", "desc": "Give 15 food to the hungry sky. (+devotion, the tribe grows more spiritual)",
+    "cost": {"food": 15},
+    "do": [{"devotion": 12}, {"culture": {"spiritual": 5}}, {"remember": "offered food to the devoured sun on Day %d", "who": "all", "impact": 5}],
+    "result": "The offering burns on the fire. The sky is fed, and gives the sun back."},
+   {"label": "Let %s read the omen", "desc": "Only a wise shaman (Lore 3+) or the knowledge of the Megalithic Totems can calm the people - otherwise they panic.",
+    "shaman": {"lore": 3, "or_tech": "totems"},
+    "do": [{"give": {"lore": 20}}, {"xp": {"lore": 15}, "who": "best:lore"}, {"remember": "read the omen of the devoured sun and calmed the tribe on Day %d", "who": "best:lore", "impact": 8}],
+    "result": "%s points to the old marks on the totems: \"The sun has been eaten before, and always it returns.\" The people grow calm, and learn.",
+    "else_do": [{"panic": 25}, {"devotion": -5}, {"remember": "hid in terror when the sun was devoured on Day %d", "who": "all", "impact": 5}],
+    "else_result": "%s has no answer. Panic! The people drop their work and hide in their huts until the light returns."}
+  ]
+ }
+}

@@ -1576,7 +1576,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			else:
 				var dmg := p.atk * randf_range(0.8, 1.2) * (10.0 / (10.0 + unit_def(prey)))
 				hurt_unit(prey, dmg, p)
-				_call_for_help(prey, p)
+				react.trigger("attacked", {"victim": prey, "attacker": p, "at": prey.pos})
 				popup(prey.pos + Vector2(0, -20), tr("-%d") % roundi(dmg), Color("#ff8080"))
 	elif p.goal != null:
 		if p.pos.distance_to(p.goal) > 30:
@@ -1606,34 +1606,6 @@ func update_predator(p: E.Predator, dt: float) -> void:
 					p.path = [np]
 					break
 		step_move(p, dt, p.spd * 0.35)
-
-## Someone is attacked: able grown-ups close by drop what they are doing and come to help
-## (the bold from farther away), up to HELPERS against each attacker; they go back to their
-## work when it is over. Children, the hurt and the sick keep away; so do contract crews,
-## scouts and people asleep in huts.
-const HELPERS := 3
-func _call_for_help(victim: E.Unit, p: E.Predator) -> void:
-	if p.kind == "hunter" or p.kind == "trader": return
-	var fighting := units.filter(func(o): return not o.dead and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == p.id).size()
-	if fighting >= HELPERS + 1: return
-	var near: Array = []
-	for o in units:
-		if o == victim or o.dead or o.role != "" or in_hut(o) or o.sick > 0 or o.hp < o.max_hp * 0.5: continue
-		var jt: String = o.job.get("type", "")
-		if jt in ["attack", "bury", "explore"] or o.job.get("flee", false): continue
-		var reach := 340.0 if o.has_trait("belligerent") else (180.0 if o.has_trait("lazy") else 260.0)
-		var d: float = o.pos.distance_to(victim.pos)
-		if d < reach and D.same_side(o.pos, victim.pos): near.append([d, o])
-	near.sort_custom(func(a, b): return a[0] < b[0])
-	for e in near.slice(0, HELPERS + 1 - maxi(fighting, 1)):
-		var o: E.Unit = e[1]
-		if o.resume_job.is_empty() and not o.job.is_empty():
-			o.resume_job = o.job
-			o.resume_key = o.job_key
-			o.resume_t = o.job_t
-		assign_attack(o, p, o.job_key)
-		o.sleeping = false
-		popup(o.pos + Vector2(0, -26), tr("To %s's aid!") % tr(victim.name), Color("#ffd36b"))
 
 ## Wolves pick off stragglers: never people by a fire, rarely people in a group.
 func _wolf_target(u: E.Unit) -> bool:

@@ -20,9 +20,13 @@ extends RefCounted
 
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
+const Config = preload("res://scripts/config.gd")
 
-const LAVA_R := 460.0
-const ECLIPSE_LEN := 30.0
+## Numbers and texts come from config/events.json (lightning, wildfire, flood, volcano,
+## earthquake, eclipse); the reactions of the people from config/reactions.json.
+var C: Dictionary = Config.load_cfg("events")
+var LAVA_R: float = float(C["volcano"]["lava_radius"])
+var ECLIPSE_LEN: float = float(C["eclipse"]["length"])
 
 var sim
 var pending := "" # an event for the chieftain ("eclipse")
@@ -122,16 +126,16 @@ func update(dt: float) -> void:
 	_ash_tick(dt)
 	if eclipse_t >= 0: _eclipse_tick(dt)
 	if not on(): return
-	if sim.hz.weather == "storm":
+	if sim.hz.WEATHER.get(sim.hz.weather, {}).get("lightning", false):
 		strike_t -= dt
 		if strike_t <= 0:
-			strike_t = randf_range(10.0, 22.0)
+			strike_t = Config.rand_in(C["lightning"]["every"])
 			strike()
 	_flood_tick(dt)
 	_volcano_tick(dt)
 	if eclipse_t < 0 and sim.time >= eclipse_at and not sim.rest_time(): _start_eclipse()
 	if sim.time >= quake_at:
-		quake_at = sim.time + D.DAY_LEN * randf_range(10.0, 16.0)
+		quake_at = sim.time + D.DAY_LEN * Config.rand_in(C["earthquake"]["every_days"])
 		if erupt_left <= 0: quake()
 
 ## Mark a natural disaster for Task Contracts working within `r` of `at` (r < 0: everywhere).
@@ -155,9 +159,10 @@ func _in_shelter(u: E.Unit) -> bool:
 
 # ------------------------------------------------------------ lightning
 func strike() -> void:
+	var cl: Dictionary = C["lightning"]
 	var r := randf()
 	var at := Vector2.ZERO
-	if r < 0.12:
+	if r < float(cl["hit_person"]):
 		var open: Array = sim.living().filter(func(u): return not _in_shelter(u))
 		if not open.is_empty():
 			var u: E.Unit = open.pick_random()
@@ -165,42 +170,44 @@ func strike() -> void:
 			_flash(at)
 			_hit_person(u)
 			return
-	if r < 0.3:
+	if r < float(cl["hit_person"]) + float(cl["hit_building"]):
 		var targets: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary", "totem_shrine", "weapon_rack", "aurochs_pen", "council_ring", "smelter"])
 		if not targets.is_empty():
 			var s: E.Structure = targets.pick_random()
 			_flash(s.pos)
 			s.built = false
 			s.progress = s.work * 0.5
-			sim.alert(tr("Lightning sets the %s on fire! It must be rebuilt.") % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
+			sim.alert(tr(cl["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
 			_sky_fire(s.pos)
 			return
-	var trees: Array = sim.nodes.filter(func(n): return n.kind == "tree" and (n.pos.distance_to(D.VILLAGE) < 1000 or sim.living().any(func(u): return u.pos.distance_to(n.pos) < 500)))
+	var reach: float = float(cl["tree_range"])
+	var trees: Array = sim.nodes.filter(func(n): return n.kind == "tree" and (n.pos.distance_to(D.VILLAGE) < reach or sim.living().any(func(u): return u.pos.distance_to(n.pos) < reach * 0.5)))
 	if trees.is_empty(): return
 	var n = trees.pick_random()
 	_flash(n.pos)
 	var dry: bool = sim.hz.weather == "drought" or sim.hz.season_idx() == 1
-	if randf() < (0.6 if dry else 0.25):
+	if randf() < float(cl["ignite_dry"] if dry else cl["ignite_wet"]):
 		ignite(n)
 	else:
 		n.kind = "stump"
-		n.regrow_t = 200
-		sim.popup(n.pos + Vector2(0, -40), tr("Lightning!"), Color("#fff6a0"), true)
+		n.regrow_t = float(cl["stump_regrow"])
+		sim.popup(n.pos + Vector2(0, -40), tr(cl["popup"]), Color("#fff6a0"), true)
 	_sky_fire(n.pos)
 
 func _flash(at: Vector2) -> void:
 	strikes.append({"pos": at, "t": 0.0})
-	sim.devotion = minf(100.0, sim.devotion + 2)
+	sim.devotion = minf(100.0, sim.devotion + float(C["lightning"]["devotion"]))
 
 func _hit_person(u: E.Unit) -> void:
+	var cl: Dictionary = C["lightning"]
 	sim.cult.on_event("lightning")
-	_hurt(u, u.max_hp * 0.6, tr("struck by lightning"))
+	_hurt(u, u.max_hp * float(cl["person_damage"]), tr("struck by lightning"))
 	if u.dead: return
-	sim.popup(u.pos + Vector2(0, -36), tr("Struck by lightning!"), Color("#fff6a0"), true)
-	sim.alert(tr("Lightning strikes %s - and they live! The sky has touched them.") % tr(u.name), u.pos, "warn", [u])
-	sim.remember(u, tr("was struck by lightning on Day %d and lived - touched by the sky") % sim.day(), 9)
+	sim.popup(u.pos + Vector2(0, -36), tr(cl["hit_popup"]), Color("#fff6a0"), true)
+	sim.alert(tr(cl["hit_alert"]) % tr(u.name), u.pos, "warn", [u])
+	sim.remember(u, tr(cl["hit_remember"]) % sim.day(), 9)
 	sim.gain_xp(u, "lore", 20)
-	sim.react.on_hurt(u)
+	sim.react.trigger("hurt", {"victim": u, "cause": "lightning", "at": u.pos})
 
 ## Before the tribe can make fire, a strike near people hands it to them.
 func _sky_fire(at: Vector2) -> void:
@@ -218,39 +225,42 @@ func _sky_fire(at: Vector2) -> void:
 func ignite(n) -> void:
 	sim.cult.on_event("wildfire")
 	if n == null or n.kind != "tree" or burning.has(n.id): return
+	var cw: Dictionary = C["wildfire"]
 	if burning.is_empty():
 		fire_size = 0
 		scorched.clear()
-		sim.alert(tr("Wildfire! The forest is burning."), n.pos, "danger")
+		sim.alert(tr(cw["alert"]), n.pos, "danger")
 		_disaster("wildfire", n.pos, 600.0)
-	burning[n.id] = 12.0
+	burning[n.id] = float(cw["burn_time"])
 	fire_size += 1
 
 func _fire_tick(dt: float) -> void:
 	if burning.is_empty(): return
+	var cw: Dictionary = C["wildfire"]
 	var wet: bool = sim.hz.weather in ["rain", "storm", "blizzard"]
 	for id in burning.keys():
-		burning[id] -= dt * (1.8 if wet else 1.0)
+		burning[id] -= dt * (float(cw["wet_burn_mult"]) if wet else 1.0)
 		if burning[id] <= 0:
 			burning.erase(id)
 			var n = sim.node_by_id(id)
 			if n:
 				n.kind = "burnt"
-				n.regrow_t = 420
-				if randf() < 0.25: # berries sprout in the ashes
+				n.regrow_t = float(cw["regrow"])
+				if randf() < float(cw["berry_chance"]): # berries sprout in the ashes
 					var b = sim._node("bush", "food", n.pos + Vector2(randf_range(-20, 20), randf_range(-14, 14)), 30)
 					b.amount = 0.0
 					b.regrow = 0.14
 	spread_t -= dt
-	if spread_t <= 0 and fire_size < 70:
-		spread_t = 2.0
-		var p := 0.35 * (1.6 if sim.hz.weather == "drought" else 1.0) * (0.3 if wet or sim.hz.winter() else 1.0)
+	if spread_t <= 0 and fire_size < int(cw["max_trees"]):
+		spread_t = float(cw["spread_every"])
+		var p: float = float(cw["spread_chance"]) * (float(cw["drought_mult"]) if sim.hz.weather == "drought" else 1.0) * (float(cw["wet_mult"]) if wet or sim.hz.winter() else 1.0)
+		var fresh: float = float(cw["burn_time"]) * 0.75
 		for id in burning.keys():
-			if burning[id] > 9.0: continue # just caught
+			if burning[id] > fresh: continue # just caught
 			var src = sim.node_by_id(id)
 			if src == null: continue
 			for o in sim.nodes:
-				if o.kind == "tree" and not burning.has(o.id) and o.pos.distance_to(src.pos) < 75 and randf() < p: ignite(o)
+				if o.kind == "tree" and not burning.has(o.id) and o.pos.distance_to(src.pos) < float(cw["spread_radius"]) and randf() < p: ignite(o)
 	burn_tick -= dt
 	if burn_tick <= 0:
 		burn_tick = 1.0
@@ -258,76 +268,78 @@ func _fire_tick(dt: float) -> void:
 			var n = sim.node_by_id(id)
 			if n == null: continue
 			for u in sim.living():
-				if u.pos.distance_to(n.pos) < 55:
-					_hurt(u, 4.0, tr("burned in the wildfire"))
-					if not u.dead and not u.job.get("flee", false) and u.role in ["", "child"]: sim.react.flee_from(u, n.pos, 260.0)
+				if u.pos.distance_to(n.pos) < float(cw["burn_radius"]):
+					_hurt(u, float(cw["burn_damage"]), tr("burned in the wildfire"))
+					if not u.dead: sim.react.trigger("burned", {"victim": u, "cause": "wildfire", "at": n.pos})
 			for s in sim.structures:
-				if s.built and sim.ours(s) and not scorched.has(s.id) and not (s.type in ["burial_ground", "farm_plot", "bonfire"]) and s.pos.distance_to(n.pos) < 70:
+				if s.built and sim.ours(s) and not scorched.has(s.id) and not (s.type in ["burial_ground", "farm_plot", "bonfire"]) and s.pos.distance_to(n.pos) < float(cw["building_radius"]):
 					scorched[s.id] = true
 					s.built = false
 					s.progress = s.work * 0.4
-					sim.alert(tr("The wildfire burns the %s!") % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
+					sim.alert(tr(cw["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
 	if burning.is_empty():
-		sim.add_log(tr("The wildfire burns out: %d trees are lost. In time, berries will sprout in the ashes.") % fire_size, "story")
+		sim.add_log(tr(cw["log"]) % fire_size, "story")
 
 # ------------------------------------------------------------ river flood (spring)
 func _flood_tick(dt: float) -> void:
-	if sim.hz.season_idx() == 0 and sim.day() != flood_day:
+	var cf: Dictionary = C["flood"]
+	var warn: float = float(cf["warn_ahead"])
+	if sim.hz.season_idx() == int(cf["season"]) and sim.day() != flood_day:
 		flood_day = sim.day()
-		if randf() < 0.45 * sim.hz.mult():
-			flood_at = sim.time + randf_range(20.0, D.DAY_LEN * 0.6)
+		if randf() < float(cf["chance"]) * sim.hz.mult():
+			flood_at = sim.time + randf_range(warn + 5.0, D.DAY_LEN * 0.6)
 			flood_warned = false
-	if flood_at > 0 and not flood_warned and sim.time >= flood_at - 15.0:
+	if flood_at > 0 and not flood_warned and sim.time >= flood_at - warn:
 		flood_warned = true
-		sim.alert(tr("The river is rising! Get away from the banks."), river_near_home(), "danger")
-		for u in sim.living():
-			var info := D.river_info(u.pos)
-			if info["d"] < 240 and u.job.get("type", "") != "attack":
-				sim.set_job(u, {"type": "move", "to": info["c"] + info["n"] * 380.0, "flee": true})
+		sim.alert(tr(cf["warn"]), river_near_home(), "danger")
+		sim.react.trigger("flood_warning", {"at": river_near_home()})
 	if flood_at > 0 and sim.time >= flood_at:
 		flood_at = -1.0
 		_flood_strike()
 	if flood_left > 0:
 		flood_left -= dt
 		for u in sim.living():
-			if D.in_river(u.pos): _hurt(u, 3.0 * dt, tr("swept away by the river"))
+			if D.in_river(u.pos): _hurt(u, float(cf["drown_rate"]) * dt, tr("swept away by the river"))
 		if flood_left <= 0:
-			silt_until = sim.time + D.DAY_LEN * 2.0
+			silt_until = sim.time + D.DAY_LEN * float(cf["silt_days"])
 			for n in sim.nodes:
 				if n.kind == "fish": n.amount = n.max_amount
-			sim.add_log(tr("The river falls back. The silt it left will feed the riverside fields."), "story")
+			sim.add_log(tr(cf["log"]), "story")
 
 func _flood_strike() -> void:
+	var cf: Dictionary = C["flood"]
 	sim.cult.on_event("spring_flood")
-	flood_left = 45.0
+	flood_left = float(cf["length"])
 	sim.flood_fx = maxf(sim.flood_fx, 0.5)
 	sim.flags["flood_active"] = sim.time
 	_disaster("flood", river_near_home(), -1.0)
 	var hurt := 0
 	for u in sim.living():
-		if D.river_dist(u.pos) < 130:
-			_hurt(u, u.max_hp * 0.2, tr("swept away by the river"))
+		if D.river_dist(u.pos) < float(cf["hit_radius"]):
+			_hurt(u, u.max_hp * float(cf["hit_damage"]), tr("swept away by the river"))
 			hurt += 1
+			if not u.dead: sim.react.trigger("hurt", {"victim": u, "cause": "flood", "at": u.pos})
 	var damaged: Array = []
 	for s in sim.structures:
-		if sim.ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < 170:
+		if sim.ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < float(cf["building_radius"]):
 			s.built = false
 			s.progress = s.work * 0.5
 			damaged.append(tr(D.STRUCTURES[s.type]["name"]))
 	for n in sim.nodes:
-		if n.kind in ["bush", "willow", "yarrow", "tubers", "grain"] and D.river_dist(n.pos) < 160: n.amount = 0.0
+		if n.kind in ["bush", "willow", "yarrow", "tubers", "grain"] and D.river_dist(n.pos) < float(cf["crop_radius"]): n.amount = 0.0
 	var what := (tr(" Damaged: %s.") % ", ".join(damaged)) if not damaged.is_empty() else ""
 	var caught := (tr(" %d caught by the water.") % hurt) if hurt > 0 else ""
-	sim.alert(tr("The river floods its banks!%s%s") % [caught, what], river_near_home(), "danger")
-	for u in sim.living(): sim.remember(u, tr("saw the river flood in the spring of Year %d") % sim.hz.year(), 3)
+	sim.alert(tr(cf["alert"]) % [caught, what], river_near_home(), "danger")
+	for u in sim.living(): sim.remember(u, tr(cf["remember"]) % sim.hz.year(), 3)
 
 ## How far from a river's centreline the water reaches now: wider while the spring flood
 ## rises, peaks and falls back (as drawn; deer keep out of it).
 func flood_half() -> float:
 	var k := 0.0
+	var warn: float = float(C["flood"]["warn_ahead"])
 	if flood_left > 0: k = 1.0 if flood_left >= 8.0 else flood_left / 8.0
-	elif flood_at > 0 and sim.time >= flood_at - 15.0: k = clampf(1.0 - (flood_at - sim.time) / 15.0, 0.0, 1.0) * 0.5
-	return D.RIVER_HALF + 110.0 * k
+	elif flood_at > 0 and sim.time >= flood_at - warn: k = clampf(1.0 - (flood_at - sim.time) / warn, 0.0, 1.0) * 0.5
+	return D.RIVER_HALF + float(C["flood"]["extra_width"]) * k
 
 ## The stretch of river nearest the village (where flood alerts point).
 func river_near_home() -> Vector2:
@@ -339,42 +351,44 @@ func _volcano_tick(dt: float) -> void:
 	if erupt_left > 0:
 		erupt_left -= dt
 		shake = maxf(shake, 0.6)
-	if not tremor_warned and sim.time >= erupt_at - 30.0:
+	var cv: Dictionary = C["volcano"]
+	if not tremor_warned and sim.time >= erupt_at - float(cv["tremor_lead"]):
 		tremor_warned = true
 		shake = 3.0
-		sim.alert(tr("The ground trembles. Black smoke pours from the Fire Mountain."), D.VOLCANO, "warn")
-		sim.react.on_volcano(LAVA_R * 1.8)
+		sim.alert(tr(cv["warn"]), D.VOLCANO, "warn")
+		sim.react.trigger("volcano_tremor", {"at": D.VOLCANO, "danger": D.VOLCANO})
 	if sim.time >= erupt_at:
-		erupt_at = sim.time + D.DAY_LEN * randf_range(9.0, 14.0)
+		erupt_at = sim.time + D.DAY_LEN * Config.rand_in(cv["every_days"])
 		tremor_warned = false
 		erupt()
 
 func erupt() -> void:
 	sim.cult.on_event("eruption")
 	if not D.has_volcano(): return
-	erupt_left = 25.0
+	var cv: Dictionary = C["volcano"]
+	erupt_left = float(cv["length"])
 	shake = 4.0
-	ash_until = sim.time + D.DAY_LEN * 0.8
-	fertile_until = sim.time + D.DAY_LEN * 3.5
+	ash_until = sim.time + D.DAY_LEN * float(cv["ash_days"])
+	fertile_until = sim.time + D.DAY_LEN * float(cv["fertile_days"])
 	sim.reveal(D.VOLCANO, 300)
-	sim.alert(tr("The Fire Mountain erupts! Fire runs down its slopes and ash darkens the sky."), D.VOLCANO, "danger")
+	sim.alert(tr(cv["alert"]), D.VOLCANO, "danger")
 	_disaster("eruption", D.VOLCANO, 1000.0)
 	var near: Array = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(D.VOLCANO) < LAVA_R)
 	near.shuffle()
-	for n in near.slice(0, 6): ignite(n)
+	for n in near.slice(0, int(cv["trees_ignited"])): ignite(n)
 	for u in sim.living():
-		if u.pos.distance_to(D.VOLCANO) < LAVA_R: _hurt(u, u.max_hp * 0.5, tr("burned by the Fire Mountain"))
-	sim.react.on_volcano(LAVA_R * 1.6)
+		if u.pos.distance_to(D.VOLCANO) < LAVA_R: _hurt(u, u.max_hp * float(cv["lava_damage"]), tr("burned by the Fire Mountain"))
+	sim.react.trigger("eruption", {"at": D.VOLCANO, "danger": D.VOLCANO})
 	for n in sim.nodes:
 		if n.kind == "deer" and n.pos.distance_to(D.VOLCANO) < LAVA_R * 1.5: n.vel = (n.pos - D.VOLCANO).normalized() * 30.0
 	# black glass on the slopes
 	var have: int = sim.nodes.filter(func(n): return n.kind == "obsidian").size()
-	for k in maxi(0, 4 - have):
+	for k in maxi(0, int(cv["obsidian"]) - have):
 		var p: Vector2 = D.VOLCANO + Vector2.from_angle(randf_range(1.6, 3.4)) * randf_range(220, 380)
 		p = Vector2(clampf(p.x, 40, D.W - 40), clampf(p.y, 40, D.H - 40))
 		var o = sim._node("obsidian", "stone", p, D.FINDS["obsidian"]["amount"])
 		o.bank = D.region_at(p)
-	for u in sim.living(): sim.remember(u, tr("saw the Fire Mountain erupt on Day %d") % sim.day(), 5)
+	for u in sim.living(): sim.remember(u, tr(cv["remember"]) % sim.day(), 5)
 
 func _ash_tick(dt: float) -> void:
 	if sim.time < ash_until: ash = minf(1.0, ash + dt * 0.08)
@@ -384,77 +398,77 @@ func _ash_tick(dt: float) -> void:
 func _start_eclipse() -> void:
 	eclipse_t = 0.0
 	eclipse_asked = false
-	sim.add_log(tr("A shadow bites into the sun..."), "story")
+	sim.add_log(tr(C["eclipse"]["start_log"]), "story")
 
 func _eclipse_tick(dt: float) -> void:
 	eclipse_t += dt
-	if not eclipse_asked and eclipse_t >= 5.0:
+	if not eclipse_asked and eclipse_t >= float(C["eclipse"]["ask_after"]):
 		eclipse_asked = true
 		pending = "eclipse"
 	if eclipse_t >= ECLIPSE_LEN:
 		eclipse_t = -1.0
-		eclipse_at = _midday(sim.time + D.DAY_LEN * randf_range(12.0, 20.0))
-		sim.add_log(tr("The sun returns."), "story")
+		eclipse_at = _midday(sim.time + D.DAY_LEN * Config.rand_in(C["eclipse"]["every_days"]))
+		sim.add_log(tr(C["eclipse"]["end_log"]), "story")
 
 func owns_event(id: String) -> bool: return id == "eclipse"
 
+## The eclipse dilemma comes from config/events.json "eclipse": options with a cost, the
+## actions they run (story.gd run()) and the result; an option with "shaman" needs the
+## best keeper of lore at that level (or the tech in "or_tech"), else "else_do" runs.
+## "%s" in an option's label and results is the shaman's name.
 func event_def(_id: String) -> Dictionary:
+	var ce: Dictionary = C["eclipse"]
 	var shaman: E.Unit = sim.best_unit("lore", false)
 	var sname: String = tr(shaman.name) if shaman else tr("The elders")
-	return {"title": tr("The Sun Is Devoured"),
-		"text": tr("At midday a black mouth eats the sun. Birds fall silent, the air turns cold, and stars come out in the day. The people cry out and look to you."),
-		"options": [
-			{"label": tr("Beat the drums"), "desc": tr("Drive off the sky-beast with drums and shouting. (+devotion, the tribe grows more martial)"), "enabled": true},
-			{"label": tr("Offer food to the sky"), "desc": tr("Give 15 food to the hungry sky. (+devotion, the tribe grows more spiritual)"), "enabled": sim.stock["food"] >= 15},
-			{"label": tr("Let %s read the omen") % sname, "desc": tr("Only a wise shaman (Lore 3+) or the knowledge of the Megalithic Totems can calm the people - otherwise they panic."), "enabled": shaman != null},
-		]}
+	var opts: Array = []
+	for o in ce["options"]:
+		var label: String = tr(o["label"])
+		if label.contains("%s"): label = label % sname
+		var ok := true
+		for r in o.get("cost", {}): ok = ok and sim.stock.get(r, 0.0) >= float(o["cost"][r])
+		if o.has("shaman"): ok = ok and shaman != null
+		opts.append({"label": label, "desc": tr(o["desc"]), "enabled": ok})
+	return {"title": tr(ce["title"]), "text": tr(ce["text"]), "options": opts}
+
+func _shaman_ok(o: Dictionary) -> bool:
+	var need: Dictionary = o["shaman"]
+	var shaman: E.Unit = sim.best_unit("lore", false)
+	return (shaman != null and shaman.lv("lore") >= int(need.get("lore", 0))) or (need.has("or_tech") and sim.has_tech(need["or_tech"]))
 
 func resolve(_id: String, idx: int) -> String:
+	var opts: Array = C["eclipse"]["options"]
+	var o: Dictionary = opts[clampi(idx, 0, opts.size() - 1)]
 	var shaman: E.Unit = sim.best_unit("lore", false)
-	match idx:
-		0:
-			sim.devotion = minf(100.0, sim.devotion + 4)
-			sim.evo.drift("martial", 4.0)
-			for u in sim.living(): sim.remember(u, tr("beat the drums to drive the sky-beast from the sun on Day %d") % sim.day(), 5)
-			return tr("The drums thunder and the people howl at the sky. Slowly, the beast spits out the sun.")
-		1:
-			sim.stock["food"] -= 15
-			sim.devotion = minf(100.0, sim.devotion + 12)
-			sim.evo.drift("spiritual", 5.0)
-			for u in sim.living(): sim.remember(u, tr("offered food to the devoured sun on Day %d") % sim.day(), 5)
-			return tr("The offering burns on the fire. The sky is fed, and gives the sun back.")
-	if shaman and (shaman.lv("lore") >= 3 or sim.has_tech("totems")):
-		sim.stock["lore"] += 20
-		sim.gain_xp(shaman, "lore", 15)
-		sim.remember(shaman, tr("read the omen of the devoured sun and calmed the tribe on Day %d") % sim.day(), 8)
-		return tr("%s points to the old marks on the totems: \"The sun has been eaten before, and always it returns.\" The people grow calm, and learn.") % tr(shaman.name)
-	panic_until = sim.time + 25.0
-	sim.devotion = maxf(0.0, sim.devotion - 5)
-	for u in sim.living(): sim.remember(u, tr("hid in terror when the sun was devoured on Day %d") % sim.day(), 5)
-	return tr("%s has no answer. Panic! The people drop their work and hide in their huts until the light returns.") % (tr(shaman.name) if shaman else tr("The shaman"))
+	var sname: String = tr(shaman.name) if shaman else tr("The shaman")
+	for r in o.get("cost", {}): sim.stock[r] -= float(o["cost"][r])
+	var good: bool = not o.has("shaman") or _shaman_ok(o)
+	sim.story.run(o["do"] if good else o.get("else_do", []), null)
+	var res: String = tr(o["result"] if good else o.get("else_result", o["result"]))
+	return res % sname if res.contains("%s") else res
 
 # ------------------------------------------------------------ earthquake
 func quake() -> void:
+	var cq: Dictionary = C["earthquake"]
 	sim.cult.on_event("earthquake")
-	shake = 3.0
-	sim.react.on_quake() # out from under the roofs (they tend the hurt once it stops)
+	shake = float(cq["shake"])
+	sim.react.trigger("earthquake", {"at": D.VILLAGE}) # (they tend the hurt once it stops)
 	var cands: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and not (s.type in ["bonfire", "burial_ground", "farm_plot", "palisade"]))
 	cands.shuffle()
 	var fallen: Array = []
-	for s in cands.slice(0, randi_range(1, 2)):
+	for s in cands.slice(0, randi_range(int(cq["collapse"][0]), int(cq["collapse"][1]))):
 		s.built = false
 		s.progress = s.work * 0.5
 		fallen.append(tr(D.STRUCTURES[s.type]["name"]))
 		for u in sim.living():
-			if u.pos.distance_to(s.pos) < 40: _hurt(u, u.max_hp * 0.2, tr("crushed when the earth shook"))
+			if u.pos.distance_to(s.pos) < float(cq["crush_radius"]): _hurt(u, u.max_hp * float(cq["crush_damage"]), tr("crushed when the earth shook"))
 	# a rockslide bares new stone
-	var c := D.VILLAGE + Vector2.from_angle(randf() * TAU) * randf_range(400, 1600)
+	var c := D.VILLAGE + Vector2.from_angle(randf() * TAU) * Config.rand_in(cq["rockslide_dist"])
 	c = Vector2(clampf(c.x, 200, D.W - 200), clampf(c.y, 200, D.H - 200))
 	if c.distance_to(D.VILLAGE) > 400 and D.home_side(c) and D.river_dist(c) > 120:
 		for k in 3: sim._node("boulder", "stone", c + Vector2(randf_range(-40, 40), randf_range(-30, 30)), 40)
 	_disaster("earthquake", D.VILLAGE, -1.0)
 	var what := (tr(" Fallen: %s.") % ", ".join(fallen)) if not fallen.is_empty() else ""
-	sim.alert(tr("The earth shakes!%s A rockslide bares new stone in the hills.") % what, D.VILLAGE, "danger")
-	for u in sim.living(): sim.remember(u, tr("felt the earth shake on Day %d") % sim.day(), 4)
+	sim.alert(tr(cq["alert"]) % what, D.VILLAGE, "danger")
+	for u in sim.living(): sim.remember(u, tr(cq["remember"]) % sim.day(), 4)
 
 func summary() -> Array: return status()

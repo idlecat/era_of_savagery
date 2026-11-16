@@ -1,0 +1,60 @@
+{
+ "_doc": "How people respond to what happens around them. 'on' maps a game happening (sent by the rules through sim.react.trigger) to a list of responses, run in order. Each response has a verb in 'do' (cover, aid, flee, firefight, defend: what the person does, coded in reactions.gd) and the numbers and texts for it. 'who' picks the people: all (everyone in the village), able (grown-ups fit to help: see 'able'), victim (the one it happened to), near (within 'reach' of the place), river (within 'reach' of a river), helpers (the nearest able people within 'reach' of the victim, at most 'count'). 'roles' limits who it applies to ('' = an ordinary villager). Texts are English translation keys. See docs/CONFIG.md.",
+
+ "able": {
+  "min_hp": 0.5,
+  "busy": ["attack", "bury", "explore", "trade_trip", "aid", "firefight", "cover"]
+ },
+
+ "on": {
+  "earthquake": [
+   {"do": "cover", "who": "all", "skip_roles": ["contract", "envoy", "trader"], "skip_jobs": ["attack"],
+    "wake": true, "clear": 110, "max_move": 160, "time": 7, "until_shake": 0.3,
+    "then": "hurt", "then_below": 0.8, "then_reach": 320,
+    "acts": ["Running into the open", "Crouching in the open"]}
+  ],
+
+  "hurt": [
+   {"do": "aid", "who": "helpers", "count": 2, "reach": 320, "below": 0.9, "time": 5, "heal": 0.2, "xp": {"lore": 3},
+    "popup": "Runs to help %s", "remember": "was tended by %s after being hurt on Day %d",
+    "acts": ["Running to help %s", "Tending %s"]}
+  ],
+
+  "burned": [
+   {"do": "flee", "who": "victim", "roles": ["", "child"], "dist": 260}
+  ],
+
+  "attacked": [
+   {"do": "defend", "who": "helpers", "count": 3, "reach": 260,
+    "reach_by_trait": {"belligerent": 340, "lazy": 180}, "skip_attackers": ["hunter", "trader"],
+    "popup": "To %s's aid!"}
+  ],
+
+  "flood_warning": [
+   {"do": "flee", "who": "river", "reach": 240, "dist": 380, "skip_jobs": ["attack"], "resume": false}
+  ],
+
+  "volcano_tremor": [
+   {"do": "flee", "who": "near", "reach": 828, "beyond": 200}
+  ],
+
+  "eruption": [
+   {"do": "flee", "who": "near", "reach": 736, "beyond": 200}
+  ],
+
+  "wildfire": [
+   {"do": "firefight", "who": "able", "count": 6, "reach": 420, "near_home": 700, "near_building": 200,
+    "stand_off": 62, "rate": 1.6, "xp": {"combat": 1}, "give_up": 630,
+    "popup": "Fights the fire!", "out_popup": "Put out!", "log": "The fire is beaten out. The tribe saved what it could.",
+    "acts": ["Running to the fire", "Beating out the flames"]},
+   {"do": "flee", "who": "near", "reach": 120, "dist": 260}
+  ],
+
+  "blizzard": [],
+  "storm": [],
+  "rain": [],
+  "drought": [],
+  "sickness": [],
+  "famine": []
+ }
+}

@@ -15,17 +15,16 @@ extends RefCounted
 
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
+const Config = preload("res://scripts/config.gd")
 
-const SEASON_DAYS := 2
 const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]
 const LEVELS := ["off", "normal", "harsh"]
-## weather -> {name, chance per roll by season [spring, summer, autumn, winter], duration range (s)}
-const WEATHER := {
-	"rain":     {"name": "Rain", "chance": [0.35, 0.10, 0.25, 0.0], "dur": [40.0, 80.0]},
-	"storm":    {"name": "Thunderstorm", "chance": [0.08, 0.10, 0.15, 0.0], "dur": [25.0, 45.0]},
-	"drought":  {"name": "Drought", "chance": [0.0, 0.30, 0.05, 0.0], "dur": [120.0, 200.0]},
-	"blizzard": {"name": "Blizzard", "chance": [0.0, 0.0, 0.04, 0.40], "dur": [35.0, 65.0]},
-}
+## All the numbers and texts come from config/events.json (seasons, weather, wolves,
+## tiger_raids, sickness, famine); WEATHER is its "weather.kinds": weather -> {name,
+## chance per roll by season [spring, summer, autumn, winter], dur range (s), texts}.
+var C: Dictionary = Config.load_cfg("events")
+var SEASON_DAYS: int = int(C["seasons"]["days"])
+var WEATHER: Dictionary = C["weather"]["kinds"]
 
 var sim
 var level := "normal"
@@ -137,14 +136,11 @@ func _season_news() -> void:
 	var first := season_seen < 0
 	season_seen = si
 	if first: return
+	var news: Dictionary = C["seasons"]["news"][season_idx()]
+	sim.alert(tr(news["alert"]), Vector2.ZERO, news.get("level", "info"))
 	match season_idx():
-		0:
-			sim.alert(tr("Spring returns. The berries ripen again, and the herds come back."), Vector2.ZERO, "info")
-			_herds_return()
-		1: sim.alert(tr("Summer. Watch the food stores - they spoil faster in the heat."), Vector2.ZERO, "info")
-		2: sim.alert(tr("Autumn. Winter comes in two days: gather food and wood, and keep the fires lit."), Vector2.ZERO, "warn")
+		0: _herds_return()
 		3:
-			sim.alert(tr("Winter has come! No berries, no harvest, the herds have moved south, and the cold can kill."), Vector2.ZERO, "danger")
 			_herds_leave()
 			for u in sim.living(): sim.remember(u, tr("faced the winter of Year %d") % year(), 3)
 
@@ -170,18 +166,19 @@ func _weather(dt: float) -> void:
 	if weather != "clear":
 		weather_left -= dt
 		if weather_left <= 0:
-			if weather == "drought": sim.alert(tr("The drought breaks."), Vector2.ZERO, "info")
+			if WEATHER[weather].has("done"): sim.alert(tr(WEATHER[weather]["done"]), Vector2.ZERO, "info")
 			weather = "clear"
 		return
 	weather_roll -= dt
 	if weather_roll > 0: return
-	weather_roll = randf_range(35.0, 60.0)
+	weather_roll = Config.rand_in(C["weather"]["roll_every"])
 	for w in WEATHER:
-		if randf() < WEATHER[w]["chance"][season_idx()] * mult():
-			if w == "blizzard":
+		var wk: Dictionary = WEATHER[w]
+		if randf() < float(wk["chance"][season_idx()]) * mult():
+			if wk.has("warn_ahead"): # announced before it arrives
 				incoming = w
-				incoming_t = 15.0
-				sim.alert(tr("The sky turns white-grey - a blizzard is coming! Get everyone to the fires."), Vector2.ZERO, "danger")
+				incoming_t = float(wk["warn_ahead"])
+				sim.alert(tr(wk["warn"]), Vector2.ZERO, "danger")
 			else:
 				_start(w)
 			return
@@ -190,93 +187,97 @@ func _start(w: String) -> void:
 	sim.cult.on_event(w) # (weather: blizzard, storm, drought...)
 	incoming = ""
 	weather = w
-	weather_left = randf_range(WEATHER[w]["dur"][0], WEATHER[w]["dur"][1])
-	match w:
-		"blizzard":
-			sim.flags["disaster_t"] = sim.time
-			sim.flags["disaster"] = "blizzard"
-			sim.alert(tr("Blizzard! Anyone far from a fire will freeze."), Vector2.ZERO, "danger")
-		"drought":
-			sim.alert(tr("Drought: berries wither and the fields go dry."), Vector2.ZERO, "warn")
-		"storm":
-			sim.alert(tr("A thunderstorm rolls over the land."), Vector2.ZERO, "warn")
-			sim.nat.strike()
-		"rain":
-			sim.alert(tr("Rain. Work outdoors goes slower."), Vector2.ZERO, "info")
+	var wk: Dictionary = WEATHER[w]
+	weather_left = Config.rand_in(wk["dur"])
+	if wk.get("disaster", false): # (Task Contracts out in it are interrupted)
+		sim.flags["disaster_t"] = sim.time
+		sim.flags["disaster"] = w
+	if wk.has("alert"): sim.alert(tr(wk["alert"]), Vector2.ZERO, wk.get("level", "info"))
+	if wk.get("lightning", false): sim.nat.strike()
+	sim.react.trigger(w, {"at": D.VILLAGE})
 
 # ------------------------------------------------------------ wild animals
 func _wolves() -> void:
 	var night: bool = sim.night_amt > 0.5
+	var cw: Dictionary = C["wolves"]
 	if night and not last_night:
-		var chance: float = [0.15, 0.10, 0.45, 0.8][season_idx()] * mult()
-		if sim.day() >= 2 and randf() < chance: spawn_wolf_pack()
-	if not night and last_night: # dawn: wolves slink away (except in winter)
+		var chance: float = float(cw["chance_by_season"][season_idx()]) * mult()
+		if sim.day() >= int(cw["from_day"]) and randf() < chance: spawn_wolf_pack()
+	if not night and last_night and cw.get("leave_at_dawn", true): # dawn: wolves slink away (except in winter)
 		for p in sim.predators:
 			if p.kind == "wolf" and not winter(): p.fleeing = true
 	last_night = night
 
 func spawn_wolf_pack() -> void:
-	var size := 2 + randi() % 2 + (1 if level == "harsh" else 0) + (1 if winter() and randf() < 0.5 else 0)
+	var cw: Dictionary = C["wolves"]
+	var size := randi_range(int(cw["pack"][0]), int(cw["pack"][1])) + (int(cw["harsh_extra"]) if level == "harsh" else 0) \
+		+ (1 if winter() and randf() < float(cw["winter_extra_chance"]) else 0)
 	var c := Vector2.ZERO
+	var near: float = float(cw["spawn_dist"][0])
 	for k in 40: # somewhere on the tribe's side of the water, away from the village
-		c = D.VILLAGE + Vector2.from_angle(randf() * TAU) * randf_range(650, 1800)
+		c = D.VILLAGE + Vector2.from_angle(randf() * TAU) * Config.rand_in(cw["spawn_dist"])
 		c = Vector2(clampf(c.x, 150, D.W - 150), clampf(c.y, 150, D.H - 150))
-		if D.home_side(c) and not D.in_river(c) and c.distance_to(D.VILLAGE) > 650: break
+		if D.home_side(c) and not D.in_river(c) and c.distance_to(D.VILLAGE) > near: break
 	for i in size:
 		var w = sim.spawn_predator(c + Vector2(randf_range(-40, 40), randf_range(-40, 40)), D.VILLAGE + Vector2(randf_range(-200, 200), randf_range(-150, 150)))
 		make_wolf(w)
-	sim.alert(tr("Wolves howl in the dark - a pack of %d is hunting near the village!") % size, c, "danger")
+	sim.alert(tr(cw["alert"]) % size, c, "danger")
 
 ## Turn a freshly spawned predator into a wolf of this season's pack.
 func make_wolf(w) -> void:
+	var cw: Dictionary = C["wolves"]
 	w.kind = "wolf"
 	w.name = "wolf"
-	w.hp = 28.0 * (1.2 if level == "harsh" else 1.0)
+	w.hp = float(cw["hp"]) * (float(cw["harsh_hp_mult"]) if level == "harsh" else 1.0)
 	w.max_hp = w.hp
-	w.atk = 3.5
-	w.def = 1.0
-	w.spd = 82.0
-	w.raid_t = 160.0 # the pack gives up after a while
+	w.atk = float(cw["atk"])
+	w.def = float(cw["def"])
+	w.spd = float(cw["spd"])
+	w.raid_t = float(cw["give_up"]) # the pack gives up after a while
 
 func _raids(dt: float) -> void:
-	if sim.day() < 3: return
+	var ct: Dictionary = C["tiger_raids"]
+	if sim.day() < int(ct["from_day"]): return
 	raid_t -= dt * mult()
 	if raid_t > 0: return
-	raid_t = D.DAY_LEN * randf_range(2.5, 4.0) * (0.8 if winter() else 1.0)
+	raid_t = D.DAY_LEN * Config.rand_in(ct["every_days"]) * (float(ct["winter_mult"]) if winter() else 1.0)
 	var tigers: Array = sim.predators.filter(func(p): return p.kind == "tiger" and p.den != null and not p.dead and not p.fleeing)
 	if tigers.is_empty(): return
 	var t = tigers.pick_random()
 	t.raid = true
-	t.raid_t = 90.0
+	t.raid_t = float(ct["length"])
 	t.goal = D.VILLAGE + Vector2(randf_range(-120, 120), randf_range(-100, 100))
 	t.path = []
-	sim.alert(tr("A hungry saber-tooth has left its den and is stalking toward the village!"), t.pos, "danger")
+	sim.alert(tr(ct["alert"]), t.pos, "danger")
 
 # ------------------------------------------------------------ sickness
 func _sickness(dt: float) -> void:
+	var cs: Dictionary = C["sickness"]
 	sick_roll -= dt
 	if sick_roll <= 0:
-		sick_roll = 45.0
+		sick_roll = float(cs["roll_every"])
 		var alive: Array = sim.living()
 		var crowd: float = maxf(0.0, float(alive.size()) / maxf(1.0, sim.pop_cap()) - 0.8)
-		var risk: float = 0.03 + (0.10 if winter() else 0.0) + (0.08 if sim.stock["food"] < alive.size() else 0.0) + crowd * 0.4 + sim.nat.sick_risk()
+		var risk: float = float(cs["base"]) + (float(cs["winter"]) if winter() else 0.0) + (float(cs["hungry"]) if sim.stock["food"] < alive.size() else 0.0) \
+			+ crowd * float(cs["crowding"]) + sim.nat.sick_risk()
 		if randf() < risk * mult():
 			var cands: Array = alive.filter(func(u): return u.sick <= 0 and sim.time > u.immune_t and u.role != "contract")
 			if not cands.is_empty():
 				var p0 = cands.pick_random()
 				p0.sick = 1.0
-				sim.alert(tr("%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.") % tr(p0.name), p0.pos, "warn", [p0])
+				sim.alert(tr(cs["alert"]) % tr(p0.name), p0.pos, "warn", [p0])
+				sim.react.trigger("sickness", {"victim": p0, "at": p0.pos})
 	spread_t -= dt
 	if spread_t > 0: return
-	spread_t = 2.0
+	spread_t = float(cs["spread_every"])
 	var alive2: Array = sim.living()
 	for u in alive2:
 		if u.sick <= 0: continue
 		for o in alive2:
 			if o == u or o.sick > 0 or sim.time < o.immune_t: continue
-			if o.pos.distance_to(u.pos) < 70 and randf() < 0.035 * mult():
+			if o.pos.distance_to(u.pos) < float(cs["spread_radius"]) and randf() < float(cs["spread_chance"]) * mult():
 				o.sick = 1.0
-				sim.popup(o.pos + Vector2(0, -30), tr("Sick!"), Color("#a8e07a"))
+				sim.popup(o.pos + Vector2(0, -30), tr(cs["popup"]), Color("#a8e07a"))
 
 ## Recovery per second for a sick person (sickness runs from 1 down to 0).
 func heal_rate(u: E.Unit, warm: bool) -> float:
@@ -300,11 +301,12 @@ func _famine(dt: float) -> void:
 	var pop: int = sim.living().size()
 	if sim.stock["food"] < 1 and sim.living().any(func(u): return u.hunger < 15):
 		famine_t = 45.0
-		sim.alert(tr("FAMINE! The stores are empty and the tribe is starving. Hunt, fish, forage - now."), Vector2.ZERO, "danger")
-		for u in sim.living(): sim.remember(u, tr("went hungry in the famine of Year %d") % year(), 5)
+		sim.alert(tr(C["famine"]["alert"]), Vector2.ZERO, "danger")
+		for u in sim.living(): sim.remember(u, tr(C["famine"]["remember"]) % year(), 5)
+		sim.react.trigger("famine", {"at": D.VILLAGE})
 	elif sim.stock["food"] < pop * 2:
 		famine_t = D.DAY_LEN * 0.75
-		sim.alert(tr("Food is running low - about a day's worth left for %d mouths.") % pop, Vector2.ZERO, "warn")
+		sim.alert(tr(C["famine"]["warn"]) % pop, Vector2.ZERO, "warn")
 	else:
 		famine_t = 10.0
 

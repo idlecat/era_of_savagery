@@ -59,11 +59,20 @@ const ACT_PREFIXES := ["Building ", "Renovating ", "Walking to ", "Hauling ", "E
 static func act(a: String) -> String:
 	var whole := t(a)
 	if whole != a: return whole
-	for p in ACT_PREFIXES:
+	for p in ACT_PREFIXES + _cfg_prefixes():
 		if a.begins_with(p): return t(p + "%s") % t(a.substr(p.length()))
 	if a.begins_with("No ") and a.ends_with(" nearby"):
 		return t("No %s nearby") % t(a.substr(3, a.length() - 10))
 	return a
+
+static var _cfg_pre = null
+## "Running to help %s"-style activities from config/reactions.json, as prefixes.
+static func _cfg_prefixes() -> Array:
+	if _cfg_pre == null:
+		_cfg_pre = []
+		for x in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg("reactions")):
+			if x.ends_with("%s") and x.count("%") == 1: _cfg_pre.append(x.trim_suffix("%s"))
+	return _cfg_pre
 
 ## English plural suffix; Chinese has none (an empty translation would count as "missing").
 static func plural_s() -> String:

@@ -204,6 +204,8 @@ People drop their work when something happens around them, and go back to it aft
 - **The Fire Mountain trembles or erupts:** everyone on its slopes flees.
 - **The dead** are carried across a bearer's shoulders to the burial ground.
 
+The weather, the hardships, the forces of nature and these reactions are all data in `config/events.json` and `config/reactions.json`; a file of the same name in the game's user folder (`user://config/`) overrides any part of them. See [docs/CONFIG.md](docs/CONFIG.md).
+
 ## Rival clans
 
 In the *River Ford* scenario six clans share the map (a random map draws its clans from a pool of ten, adding the Bear, Otter, Raven and Lynx clans). Near home are the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (south-west). Farther out live the martial **Tusk Clan** (north-west forests) and **Hawk Clan** (south-east hills), and the spiritual **Elk Clan** (north-east meadows) and **Willow Clan** (southern marshes). Their villages and peaceful hunters start hidden in the fog. Conquest and Unity victories need every clan.
