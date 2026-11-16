@@ -1,0 +1,716 @@
+{
+ "id": "minoan",
+ "order": 40,
+ "name": "Minoans",
+ "period": "c. 3000–1450 BCE",
+ "place": "Crete and the islands of the Aegean",
+ "desc": "Islanders of Crete who built great palaces without walls, painted them with dolphins, lilies and young people leaping over bulls, and wrote in a script, Linear A, that no one can yet read.",
+ "history": "real",
+ "source": "Excavations at Knossos by Arthur Evans (from 1900), Phaistos, Malia, Zakros and Akrotiri on Thera",
+ "tribe_names": [
+  "Adara",
+  "Danita",
+  "Idamate",
+  "Kiro",
+  "Kupa",
+  "Minia",
+  "Paito",
+  "Rhada",
+  "Sarru",
+  "Tinita",
+  "Udamu",
+  "Kuniso",
+  "Dameta",
+  "Sitaro",
+  "Aira",
+  "Kidaro"
+ ],
+ "birth_names": [
+  "Ami",
+  "Dipa",
+  "Ika",
+  "Kana",
+  "Mesa",
+  "Nira",
+  "Pita",
+  "Sara",
+  "Tama",
+  "Uri"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Leaper of Bulls"
+  ],
+  "devout": [
+   "Priestess of the Peak",
+   "Keeper of the Double Axe"
+  ],
+  "cautious": [
+   "Painter of Dolphins"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "somersaulted over the back of a charging bull in the palace court"
+  ],
+  "devout": [
+   "climbed to the peak shrine with clay offerings at midsummer"
+  ],
+  "cautious": [
+   "painted a wall of blue dolphins that seemed to swim"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "palace_drains",
+   "kind": "medicine",
+   "name": "Palace Drains",
+   "history": "real",
+   "source": "Knossos had terracotta water pipes, stone drains and a room with a flushed latrine, around 1700 BCE",
+   "practice": {
+    "build": 200,
+    "hearth": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Clay pipes that fit into each other and stone channels that carry the rain and waste away: the sick recover 15% faster, +1 mood.",
+   "hint": "Needs pottery, and builders.",
+   "words": [
+    "drains",
+    "pipes"
+   ]
+  },
+  {
+   "id": "pithos_store",
+   "kind": "goods",
+   "name": "Pithos Storerooms",
+   "history": "real",
+   "source": "The west magazines of Knossos held rows of giant jars, pithoi, for oil, wine and grain",
+   "practice": {
+    "build": 100,
+    "hearth": 150
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 35
+    }
+   ],
+   "desc": "Jars taller than a person, with rope patterns moulded on their sides: the stores hold 35 more food.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "kamares_ware",
+   "kind": "goods",
+   "name": "Kamares Ware",
+   "history": "real",
+   "source": "Eggshell-thin cups painted in white, red and orange on black, named after the cave where they were first found",
+   "practice": {
+    "hearth": 250,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Cups as thin as eggshell, swirling with painted flowers: +3 mood.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "labrys",
+   "kind": "tool",
+   "name": "The Double Axe",
+   "history": "real",
+   "source": "The labrys, a two-bladed axe, was a sacred symbol carved on the walls of Knossos; 'labyrinth' may mean 'house of the double axe'",
+   "practice": {
+    "chop": 200,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.15
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "An axe with two blades, a tool for the forest and a sign of the goddess: woodcutting 15% faster, rites bring 5% more devotion.",
+   "hint": "Needs Polished Stone Tools, and woodcutters who keep the rites."
+  },
+  {
+   "id": "frescoes",
+   "kind": "goods",
+   "name": "Painted Walls",
+   "history": "real",
+   "source": "True frescoes, painted on wet plaster: the Bull-Leaping fresco of Knossos, the Spring fresco of Akrotiri",
+   "practice": {
+    "build": 100,
+    "ritual": 150
+   },
+   "needs": {
+    "finds": [
+     "ochre"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Walls painted while the plaster is wet, with lilies, swallows, dolphins and bull games: +3 mood, rites bring 5% more devotion.",
+   "hint": "Needs red ochre and fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "octopus_stew",
+   "name": "Octopus Stew",
+   "history": "real",
+   "source": "The octopus was a favourite subject of Minoan 'Marine Style' pottery",
+   "practice": {
+    "hunt": 100,
+    "hearth": 120
+   },
+   "needs": {
+    "finds": [
+     "fish"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Octopus from the rocks stewed with wine and herbs: hunger grows 8% slower, +1 mood.",
+   "hint": "Needs fish."
+  },
+  {
+   "id": "cretan_oil",
+   "name": "Cretan Olive Oil",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "build": 50
+   },
+   "needs": {
+    "finds": [
+     "cretan_olive"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Golden oil pressed from the olives of the hills: +2 mood, the hurt heal 5% faster.",
+   "hint": "Needs olive trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "cretan_olive",
+   "name": "Olive Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking olives",
+   "desc": "Grey-leaved trees that live for centuries; their fruit is ripe in winter."
+  },
+  {
+   "id": "saffron_crocus",
+   "name": "Saffron Crocus",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "source": "The Saffron Gatherers fresco at Akrotiri shows young women picking crocuses for a goddess",
+   "amount": 12,
+   "rate": 0.6,
+   "regrow": 0.03,
+   "winter": false,
+   "needs": "lore",
+   "where": "hills_home",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Picking saffron",
+   "culture": {
+    "spiritual": 2
+   },
+   "desc": "Autumn crocuses whose red threads are a dye, a spice and a medicine."
+  }
+ ],
+ "people": [
+  {
+   "id": "eteoa",
+   "as": "founder",
+   "name": "Eteoa",
+   "epithet": "Priestess of the Peak",
+   "history": "invented",
+   "desc": "She leads the procession up the mountain to the goddess.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c060a0",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 0,
+     "lore": 4
+    }
+   },
+   "memory": [
+    "held up the snakes in the shrine at the spring rite"
+   ]
+  },
+  {
+   "id": "kaptaro",
+   "as": "founder",
+   "name": "Kaptaro",
+   "epithet": "Captain of the Ships",
+   "history": "invented",
+   "desc": "He has sailed to Egypt and back more times than he can count.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#3080c0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 2,
+     "lore": 0,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "brought a ship of oil and wine safely into an Egyptian harbour"
+   ]
+  },
+  {
+   "id": "minos",
+   "as": "ancestor",
+   "name": "Minos",
+   "epithet": "King of Knossos",
+   "history": "legend",
+   "source": "Homer, Thucydides; Arthur Evans named the whole civilisation after him",
+   "desc": "The legendary king who ruled the sea, kept the Minotaur in a labyrinth, and after death became a judge of the dead."
+  },
+  {
+   "id": "snake_priestess",
+   "as": "ancestor",
+   "name": "The Lady of the Snakes",
+   "epithet": "of the Temple Repositories",
+   "history": "real",
+   "source": "Faience figurines from Knossos, c. 1600 BCE (Heraklion Archaeological Museum)",
+   "desc": "A goddess or priestess with bare breasts and a snake in each raised hand, found buried in the floor of the palace."
+  },
+  {
+   "id": "europa",
+   "as": "wanderer",
+   "name": "Europa",
+   "epithet": "who Came on the Bull",
+   "history": "legend",
+   "source": "Moschus and Ovid; a Phoenician princess carried to Crete by Zeus as a white bull",
+   "when": {
+    "tech": "domestication",
+    "day": 5
+   },
+   "chance": 0.4,
+   "text": "a foreign princess who rode across the sea on the back of a white bull, and has nowhere else to go.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 56,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "color": "#f0e0f0",
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 5,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "was carried over the sea from Tyre by a white bull"
+   ],
+   "desc": "In legend, the mother of Minos, after whom a whole continent was named."
+  },
+  {
+   "id": "daedalus",
+   "as": "chosen",
+   "name": "Daedalus",
+   "epithet": "the Craftsman",
+   "label": "Daedalus the Craftsman",
+   "history": "legend",
+   "desc": "He builds the labyrinth and wings of wax and feathers. Crafting 9.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 62,
+    "atk": 5,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 9,
+     "combat": 1,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "ariadne",
+   "as": "chosen",
+   "name": "Ariadne",
+   "epithet": "Mistress of the Labyrinth",
+   "label": "Ariadne, Mistress of the Labyrinth",
+   "history": "legend",
+   "desc": "Her thread leads out of any maze. Lore 7, Foraging 5.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 5,
+    "def": 4,
+    "spd": 1.1,
+    "skills": {
+     "forage": 5,
+     "craft": 3,
+     "combat": 2,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "talos",
+   "as": "chosen",
+   "name": "Talos",
+   "epithet": "the Bronze Guardian",
+   "label": "Talos the Bronze Guardian",
+   "history": "legend",
+   "desc": "A giant of bronze who walks round the island three times a day. Combat 9, 100 HP.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#d4a050",
+    "hp": 100,
+    "atk": 12,
+    "def": 7,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 1,
+     "combat": 9,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "thera_eruption",
+   "title": "The Island Explodes",
+   "history": "real",
+   "source": "The eruption of Thera (Santorini), around 1600 BCE, buried the town of Akrotiri in ash; its people had already fled",
+   "when": {
+    "after": "eruption"
+   },
+   "text": "The fire mountain has torn itself apart. Ash falls like snow, and the sea has drawn back from the shore in a way the old fishermen have never seen.",
+   "options": [
+    {
+     "label": "Run for the high ground",
+     "do": [
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": -2
+      },
+      {
+       "remember": "ran for the hills the day the sea drew back",
+       "who": "all",
+       "impact": 7
+      }
+     ],
+     "result": "Everyone climbs the hills. Behind them a great wave sweeps the empty shore."
+    },
+    {
+     "label": "Make offerings at the peak shrine",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "culture": {
+        "spiritual": 5
+       }
+      }
+     ],
+     "result": "The smoke of the offerings rises into the ash cloud. The goddess must have heard; the town stands."
+    }
+   ]
+  },
+  {
+   "id": "bull_games",
+   "title": "The Bull Games",
+   "history": "real",
+   "source": "Frescoes and figurines from Knossos show young men and women grasping a charging bull's horns and vaulting over its back",
+   "when": {
+    "tech": "domestication",
+    "pop": 10
+   },
+   "chance": 0.4,
+   "text": "The young people want to hold the bull games in the court: grab the horns of a charging bull and leap over its back. The elders worry; the young are already practising.",
+   "options": [
+    {
+     "label": "Hold the games",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "mood": 5
+      },
+      {
+       "culture": {
+        "martial": 3,
+        "spiritual": 3
+       }
+      },
+      {
+       "feat": "Held the first bull games"
+      }
+     ],
+     "result": "The crowd roars as a girl somersaults clean over the bull. No one is hurt, this time."
+    },
+    {
+     "label": "Too dangerous",
+     "do": [
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The young people sulk, and practise in secret."
+    }
+   ]
+  },
+  {
+   "id": "palace_quake",
+   "title": "The Palace Falls",
+   "history": "real",
+   "source": "Earthquakes destroyed the first palaces around 1700 BCE; they were rebuilt larger and grander",
+   "when": {
+    "after": "earthquake",
+    "era": 2
+   },
+   "text": "The earthquake has brought down the great hall. The builders say: if we rebuild, let us build bigger, with light-wells and stairs to the sky.",
+   "options": [
+    {
+     "label": "Rebuild bigger",
+     "cost": {
+      "wood": 30,
+      "stone": 10
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "build",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "mood": 3
+      },
+      {
+       "culture": {
+        "settled": 5
+       }
+      }
+     ],
+     "result": "The new palace has three storeys and light falls down its stairwells."
+    },
+    {
+     "label": "Rebuild as it was",
+     "cost": {
+      "wood": 15
+     },
+     "do": [
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The hall stands again, the same as before."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "minotaur",
+   "name": "The Labyrinth and the Minotaur",
+   "history": "legend",
+   "source": "Plutarch, Life of Theseus; Apollodorus",
+   "when": {
+    "day": 2
+   },
+   "text": "In the palace of the king lived a monster, half man and half bull, shut in a maze so tangled that no one who entered ever came out. Every nine years young people were sent in to it. Then a prince came who would not be eaten, and the king's daughter gave him a ball of thread to unwind as he went, so he could find his way back.",
+   "moral": "a thread can lead you out of any maze",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "icarus",
+   "name": "Daedalus and Icarus",
+   "history": "legend",
+   "source": "Ovid, Metamorphoses book 8",
+   "when": {
+    "pop": 10
+   },
+   "text": "Shut in a tower by the king, the great craftsman made wings of feathers and wax for himself and his son. 'Fly in the middle,' he said, 'not too low, or the sea will soak the feathers, not too high, or the sun will melt the wax.' The boy, laughing, flew higher and higher.",
+   "moral": "keep to the middle way",
+   "do": [
+    {
+     "culture": {
+      "ranked": 2
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "europa_bull",
+   "name": "Europa and the White Bull",
+   "history": "legend",
+   "source": "Moschus, Europa; Ovid",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "A princess was picking flowers by the sea in Phoenicia when a white bull with gentle eyes knelt down beside her. She climbed onto its back, and it rose and walked into the sea, and swam all the way to Crete. There it turned out to be the king of the gods, and her son became the first king of the island.",
+   "moral": "strangers may bring a kingdom",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "peak_feast",
+   "name": "The Fires on the Peaks",
+   "history": "real",
+   "tell": "festival",
+   "source": "Minoan peak sanctuaries, with bonfires and clay figurines, as on Mount Juktas",
+   "text": "On the great night, fires are lit on every mountain top in sight, and the people climb with little clay figures of themselves, of their sheep, of a sick arm or leg, and throw them into the flames for the goddess to see and to heal.",
+   "moral": "show the goddess what needs healing",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "boon": [
+      {
+       "stat": "sick",
+       "mul": 1.03
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

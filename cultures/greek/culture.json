@@ -1,0 +1,699 @@
+{
+ "id": "greek",
+ "order": 42,
+ "name": "Archaic Greeks",
+ "period": "c. 800–480 BCE",
+ "place": "the city-states of Greece and the Aegean",
+ "desc": "Hundreds of small, quarrelsome city-states sharing one language and one set of gods, who borrowed the Phoenician letters and added vowels, held games at Olympia, sent colonies from Spain to the Black Sea, and began to ask what the world is made of.",
+ "history": "real",
+ "source": "Homer and Hesiod; Herodotus; inscriptions and excavations at Olympia, Delphi, Athens and Samos",
+ "tribe_names": [
+  "Alkaios",
+  "Demetria",
+  "Eudoros",
+  "Glaukon",
+  "Kallias",
+  "Lysandra",
+  "Melitta",
+  "Nikias",
+  "Philon",
+  "Sostratos",
+  "Theano",
+  "Timon",
+  "Aristea",
+  "Kleon",
+  "Myrto",
+  "Phaidon"
+ ],
+ "birth_names": [
+  "Agathe",
+  "Bion",
+  "Doros",
+  "Eirene",
+  "Hippon",
+  "Kleio",
+  "Lykos",
+  "Nysa",
+  "Phoibe",
+  "Zoe"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Hoplite of the Phalanx",
+   "Runner at Olympia"
+  ],
+  "devout": [
+   "Questioner of the Oracle"
+  ],
+  "cautious": [
+   "Lover of Wisdom"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "held the line in the phalanx while the shield beside me shook"
+  ],
+  "devout": [
+   "walked to Delphi to ask the god a question, and puzzled over the answer for a year"
+  ],
+  "cautious": [
+   "asked what everything is made of, and could not stop asking"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "greek_alphabet",
+   "kind": "goods",
+   "name": "Letters with Vowels",
+   "history": "real",
+   "source": "Around 800 BCE the Greeks adapted the Phoenician alphabet and used spare letters for vowels, creating the first full alphabet",
+   "practice": {
+    "lead": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.025
+    }
+   ],
+   "desc": "Every sound written, consonant and vowel, so a poem can be read exactly as it was sung: the tribe gathers much more lore.",
+   "hint": "Needs the Tribe & Agrarian Era.",
+   "words": [
+    "alphabet"
+   ]
+  },
+  {
+   "id": "phalanx",
+   "kind": "tool",
+   "name": "Hoplite Phalanx",
+   "history": "real",
+   "source": "From the 7th century BCE citizens fought shoulder to shoulder, each round shield covering the man to his left",
+   "practice": {
+    "lead": 100,
+    "hunt": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    },
+    {
+     "stat": "atk",
+     "add": 1
+    }
+   ],
+   "desc": "A wall of bronze shields and spears, each man trusting his neighbour: +2 defence, +1 attack.",
+   "hint": "Needs Bronze Metallurgy, and fighters who train together."
+  },
+  {
+   "id": "hippocratic",
+   "kind": "medicine",
+   "name": "Medicine Without Gods",
+   "history": "real",
+   "source": "The Hippocratic writings (5th century BCE) explained illness by natural causes, with careful notes of each case",
+   "practice": {
+    "ritual": 150,
+    "hunt": 80
+   },
+   "needs": {
+    "era": 2,
+    "finds": [
+     "willow"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Watch the patient, write down what you see, and help nature heal: the sick recover 20% faster, the hurt heal 10% faster.",
+   "hint": "Needs willow bark and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "theatre",
+   "kind": "goods",
+   "name": "The Theatre",
+   "history": "real",
+   "source": "Drama grew out of choruses for Dionysus; Thespis is said to have been the first actor, in Athens around 534 BCE",
+   "practice": {
+    "ritual": 150,
+    "hearth": 200
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 4
+    }
+   ],
+   "desc": "A hillside of seats around a round dancing floor, where the whole town laughs and weeps together: +4 mood.",
+   "hint": "Needs the Tribe & Agrarian Era, and songs at the rites."
+  },
+  {
+   "id": "eupalinos",
+   "kind": "tool",
+   "name": "Tunnel Through the Mountain",
+   "history": "real",
+   "source": "The tunnel of Eupalinos on Samos (6th century BCE), over 1 km long, was dug from both ends at once and met in the middle",
+   "practice": {
+    "quarry": 200,
+    "build": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 3
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A water tunnel dug from both sides of a hill by geometry alone: farm plots yield 15% more, +1 mood.",
+   "hint": "Needs Polished Stone Tools and the Bronze & Mythic Era."
+  }
+ ],
+ "foods": [
+  {
+   "id": "maza",
+   "name": "Barley Cake and Olive Oil",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Maza, kneaded barley meal, eaten with oil, olives and figs: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "symposium_wine",
+   "name": "Mixed Wine",
+   "history": "real",
+   "source": "Greeks drank wine mixed with water in a great bowl, the krater; drinking it neat was thought barbarous",
+   "practice": {
+    "hearth": 200,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Wine mixed with water in a painted bowl, shared with songs and arguments: +3 mood.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "finds": [
+  {
+   "id": "hymettus_honey",
+   "name": "Thyme Hives",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "The thyme honey of Mount Hymettus near Athens was praised throughout antiquity",
+   "amount": 20,
+   "rate": 0.8,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "hills_home",
+   "count": 3,
+   "practice": "hunt",
+   "look": "honey",
+   "act": "Taking thyme honey",
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Wild bees in the thyme of the hills, with honey that smells of the mountain. Once known, +1 mood."
+  },
+  {
+   "id": "greek_olive",
+   "name": "Olive Groves",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Beating the olives",
+   "desc": "The goddess's gift to her city: the olive tree, food, light and medicine at once."
+  }
+ ],
+ "people": [
+  {
+   "id": "kleobis",
+   "as": "founder",
+   "name": "Kleobis",
+   "epithet": "the Runner",
+   "history": "invented",
+   "desc": "He won the foot race and never lets anyone forget it.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.2,
+    "color": "#c06040",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "won the stadion race and was crowned with olive"
+   ]
+  },
+  {
+   "id": "hipparchia",
+   "as": "founder",
+   "name": "Hipparchia",
+   "epithet": "the Questioner",
+   "history": "invented",
+   "desc": "She asks questions until the elders run out of answers.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#8090c0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 4,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "argued all night at the symposium about whether the soul is fire or air"
+   ]
+  },
+  {
+   "id": "homer",
+   "as": "ancestor",
+   "name": "Homer",
+   "epithet": "the Blind Singer",
+   "history": "legend",
+   "source": "The Iliad and the Odyssey, set down around the 8th–7th century BCE",
+   "desc": "The poet to whom the Greeks gave their two great epics; whether he was one man, many, or none is still argued."
+  },
+  {
+   "id": "thales",
+   "as": "ancestor",
+   "name": "Thales",
+   "epithet": "of Miletus",
+   "history": "real",
+   "source": "Herodotus 1.74; Aristotle",
+   "desc": "The first to ask what everything is made of (water, he said), who is said to have predicted the eclipse of 585 BCE."
+  },
+  {
+   "id": "sappho",
+   "as": "ancestor",
+   "name": "Sappho",
+   "epithet": "the Tenth Muse",
+   "history": "real",
+   "source": "Fragments of her poems, from papyri and later quotations",
+   "desc": "A poet of Lesbos whose songs of love and longing survive only in fragments; Plato called her the tenth Muse."
+  },
+  {
+   "id": "herodotus",
+   "as": "wanderer",
+   "name": "Herodotus",
+   "epithet": "the Enquirer",
+   "history": "real",
+   "source": "His Histories, written in the 5th century BCE",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a curious traveller who asks everyone about their customs, gods and grandparents, and writes it all down.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#a0b0c0",
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 1,
+     "lore": 7,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "travelled from Egypt to Babylon asking questions"
+   ],
+   "desc": "The 'father of history', whose stories of distant peoples fill this game."
+  },
+  {
+   "id": "leonidas",
+   "as": "chosen",
+   "name": "Leonidas",
+   "epithet": "of the Narrow Pass",
+   "label": "Leonidas of the Narrow Pass",
+   "history": "real",
+   "desc": "A king who holds a pass against an empire. Combat 9, Defence.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 90,
+    "atk": 11,
+    "def": 7,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 9,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "hippocrates",
+   "as": "chosen",
+   "name": "Hippocrates",
+   "epithet": "the Healer of Kos",
+   "label": "Hippocrates, the Healer of Kos",
+   "history": "real",
+   "desc": "The father of medicine. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#9ff0c8",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 0,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "pythagoras",
+   "as": "chosen",
+   "name": "Pythagoras",
+   "epithet": "who Heard Numbers",
+   "label": "Pythagoras, who Heard Numbers",
+   "history": "real",
+   "desc": "He hears the harmony of numbers in the lyre and the stars. Lore 7, Crafting 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 6,
+     "combat": 1,
+     "lore": 7
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "olympic_games",
+   "title": "Games at the Sanctuary",
+   "history": "real",
+   "source": "The Olympic Games, traditionally first held in 776 BCE; a sacred truce let athletes travel safely",
+   "when": {
+    "pop": 11,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "Neighbouring villages propose a truce and a festival of games for the gods: races, wrestling, the javelin. The winners would be crowned with olive and remembered forever.",
+   "options": [
+    {
+     "label": "Hold the games",
+     "cost": {
+      "food": 25
+     },
+     "do": [
+      {
+       "mood": 6
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      },
+      {
+       "feat": "Held the first games"
+      }
+     ],
+     "result": "For five days no one fights. Our runner wins, and the olive crown hangs in the hut for good."
+    },
+    {
+     "label": "No time for games",
+     "do": [
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The others hold their games without us."
+    }
+   ]
+  },
+  {
+   "id": "ostracism",
+   "title": "Write a Name on a Potsherd",
+   "history": "real",
+   "source": "Athenian ostracism (from c. 487 BCE): citizens scratched a name on a potsherd, and the man with most votes was exiled for ten years",
+   "when": {
+    "pop": 13,
+    "culture": {
+     "ranked": 10
+    }
+   },
+   "chance": 0.4,
+   "text": "One leader has grown so powerful that people fear he will make himself king. Someone suggests a vote: everyone scratches a name on a broken pot, and whoever gets the most must leave for ten years.",
+   "options": [
+    {
+     "label": "Hold the vote",
+     "do": [
+      {
+       "culture": {
+        "ranked": -8
+       }
+      },
+      {
+       "mood": 2
+      },
+      {
+       "insight": {
+        "code": 0.15
+       }
+      }
+     ],
+     "result": "The potsherds are counted. The powerful man leaves, furious, and the assembly feels a little braver."
+    },
+    {
+     "label": "Leave him be",
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      }
+     ],
+     "result": "He grows more powerful still."
+    }
+   ]
+  },
+  {
+   "id": "found_colony",
+   "title": "A New City Over the Sea",
+   "history": "real",
+   "source": "Greek cities sent out colonies from Marseille to the Crimea; the founder (oikistes) often first asked the oracle at Delphi",
+   "when": {
+    "pop": 14,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "There are too many mouths and too little land. The oracle says: go west, over the sea, where a river meets a hill. Who will go?",
+   "options": [
+    {
+     "label": "Send settlers with the sacred fire",
+     "cost": {
+      "food": 30,
+      "wood": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": 3
+      },
+      {
+       "give": {
+        "goods": 4
+       }
+      },
+      {
+       "feat": "Sent settlers to found a city over the sea"
+      }
+     ],
+     "result": "Ships leave with fire from the home hearth. A year later the first gifts come back from the new city."
+    },
+    {
+     "label": "Make do with the land we have",
+     "do": [
+      {
+       "mood": -3
+      }
+     ],
+     "result": "The fields are divided again, smaller."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "prometheus",
+   "name": "Prometheus Steals Fire",
+   "history": "legend",
+   "source": "Hesiod, Theogony and Works and Days",
+   "when": {
+    "day": 2
+   },
+   "text": "The king of the gods hid fire from people. But the Titan Prometheus, who loved them, stole a spark from heaven in a hollow fennel stalk and brought it down to earth. For that he was chained to a mountain, where an eagle eats his liver every day.",
+   "moral": "knowledge has a price",
+   "do": [
+    {
+     "insight": {
+      "fire": 0.15
+     }
+    }
+   ]
+  },
+  {
+   "id": "persephone",
+   "name": "Demeter and Persephone",
+   "history": "legend",
+   "source": "The Homeric Hymn to Demeter",
+   "when": {
+    "season": "Autumn"
+   },
+   "text": "The lord of the dead carried off the grain goddess's daughter. In her grief Demeter let nothing grow. At last the girl was found, but because she had eaten six seeds of a pomegranate below, she must spend part of every year there. While she is gone, her mother mourns, and that is winter.",
+   "moral": "what is lost returns with the spring",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "farming": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "ant_grasshopper",
+   "name": "The Ant and the Grasshopper",
+   "history": "legend",
+   "source": "Aesop's Fables, 6th century BCE",
+   "when": {
+    "season": "Summer"
+   },
+   "text": "All summer the grasshopper sang while the ant carried grain to her nest. When winter came, the grasshopper, starving, begged the ant for food. 'You sang all summer,' said the ant. 'Now you can dance all winter.'",
+   "moral": "prepare for hard times",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "spoil",
+       "mul": 0.97
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dionysia",
+   "name": "The Festival of Dionysus",
+   "history": "real",
+   "tell": "festival",
+   "source": "The City Dionysia at Athens, where tragedies and comedies were staged in competition",
+   "text": "In spring the god of wine comes back to the city. His statue is carried in, a bull is sacrificed, and for days the whole town sits on the hillside watching masked actors and singing choruses tell the old stories, until the judges name the best.",
+   "moral": "the city that laughs and weeps together stays together",
+   "do": [
+    {
+     "mood": 5
+    }
+   ]
+  }
+ ]
+}

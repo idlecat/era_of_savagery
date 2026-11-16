@@ -1,0 +1,679 @@
+{
+ "id": "mycenaean",
+ "order": 41,
+ "name": "Mycenaeans",
+ "period": "c. 1600–1100 BCE",
+ "place": "Mycenae, Pylos and the citadels of mainland Greece",
+ "desc": "Bronze Age Greek warrior-kings in citadels walled with stones so huge that later Greeks thought giants had laid them. Their scribes kept palace accounts in Linear B, the oldest written Greek, and their world became the age of heroes in Homer.",
+ "history": "real",
+ "source": "Schliemann at Mycenae (1876); Linear B tablets from Pylos and Knossos, deciphered by Michael Ventris in 1952; the Griffin Warrior tomb at Pylos (2015)",
+ "tribe_names": [
+  "Alektryon",
+  "Eumedes",
+  "Amphimedes",
+  "Glaukos",
+  "Kerkios",
+  "Doriaios",
+  "Erithaia",
+  "Kokalos",
+  "Philaios",
+  "Thoas",
+  "Woinatas",
+  "Iphimedeia",
+  "Karpathia",
+  "Ekhemedes",
+  "Theodora",
+  "Kretheus"
+ ],
+ "birth_names": [
+  "Ainias",
+  "Dama",
+  "Ewa",
+  "Ipsia",
+  "Kudo",
+  "Lauo",
+  "Mena",
+  "Pero",
+  "Tiro",
+  "Wido"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Charioteer of the Wanax",
+   "Wearer of the Boar's Tusk Helmet"
+  ],
+  "cautious": [
+   "Scribe of the Tablets"
+  ],
+  "gluttonous": [
+   "Perfumer of the Palace"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "killed thirty boars to make one helmet of their tusks"
+  ],
+  "cautious": [
+   "counted every sheep and every bolt of cloth for the palace"
+  ],
+  "gluttonous": [
+   "boiled rose oil and sage for a whole season"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "linear_b",
+   "kind": "goods",
+   "name": "Linear B Tablets",
+   "history": "real",
+   "source": "Clay tablets from Pylos, Knossos and Mycenae, baked hard when the palaces burned, recording sheep, oil, bronze and workers",
+   "practice": {
+    "lead": 120,
+    "hearth": 80
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Syllable signs pressed into leaf-shaped tablets to account for everything the palace owns: more lore, and the stores hold 10 more.",
+   "hint": "Needs the Tribe & Agrarian Era, and someone to lead.",
+   "words": [
+    "writing"
+   ]
+  },
+  {
+   "id": "cyclopean_walls",
+   "kind": "tool",
+   "name": "Cyclopean Walls",
+   "history": "real",
+   "source": "The walls of Mycenae and Tiryns, of blocks weighing many tonnes; later Greeks said only the Cyclopes could have lifted them",
+   "practice": {
+    "build": 250,
+    "quarry": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 3
+    }
+   ],
+   "desc": "Walls of rough boulders so big that no ram can move them: +3 defence.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era, and quarrying builders."
+  },
+  {
+   "id": "boar_helmet",
+   "kind": "tool",
+   "name": "Boar's Tusk Helmet",
+   "history": "real",
+   "source": "Helmets covered in rows of boar's tusk plates are found in graves and described by Homer (Iliad 10.261)",
+   "practice": {
+    "hunt": 250
+   },
+   "needs": {
+    "techs": [
+     "hide"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 1
+    },
+    {
+     "stat": "atk",
+     "add": 1
+    }
+   ],
+   "desc": "A leather cap covered in slices of boar's tusk, the pride of a great hunter: +1 defence, +1 attack.",
+   "hint": "Needs Hide Tailoring, and many hunts."
+  },
+  {
+   "id": "perfumed_oil",
+   "kind": "goods",
+   "name": "Perfumed Oil",
+   "history": "real",
+   "source": "Linear B tablets from Pylos record a perfume industry boiling olive oil with rose, sage and cyperus for export",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Olive oil boiled with roses and herbs, in little stirrup jars: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "tholos",
+   "kind": "goods",
+   "name": "Beehive Tomb",
+   "history": "real",
+   "source": "The 'Treasury of Atreus' at Mycenae (c. 1250 BCE), a stone dome that was the largest in the world for over a thousand years",
+   "practice": {
+    "build": 200,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A great round tomb of stone rings, each a little narrower, closing to a dome: rites bring 10% more devotion, +1 mood.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  }
+ ],
+ "foods": [
+  {
+   "id": "kykeon",
+   "name": "Kykeon",
+   "history": "legend",
+   "source": "Homer's heroes drink kykeon of wine, barley meal and grated goat cheese (Iliad 11.638)",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Wine stirred with barley meal and grated cheese, food and drink for warriors: hunger grows 8% slower, +2 mood.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "roast_boar",
+   "name": "Roast Boar Feast",
+   "history": "real",
+   "source": "Feasting remains at the palace of Pylos include burnt cattle bones from great sacrificial banquets",
+   "practice": {
+    "hunt": 150,
+    "hearth": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "A whole boar roasted for the hall, the best cuts for the bravest: +3 mood.",
+   "hint": "Comes from hunting and feasting."
+  }
+ ],
+ "finds": [
+  {
+   "id": "cypress",
+   "name": "Cypress Grove",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "amount": 40,
+   "rate": 0.9,
+   "regrow": 0.03,
+   "winter": true,
+   "where": "hills_home",
+   "count": 3,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Felling cypress",
+   "desc": "Tall dark trees whose sweet-smelling wood never rots: the best timber for halls and ships."
+  },
+  {
+   "id": "laurel",
+   "name": "Bay Laurel",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "needs": "lore",
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Cutting laurel",
+   "desc": "Aromatic leaves for stews, wreaths and medicine."
+  }
+ ],
+ "people": [
+  {
+   "id": "kessandra",
+   "as": "founder",
+   "name": "Kessandra",
+   "epithet": "Keeper of the Tablets",
+   "history": "invented",
+   "desc": "Every sheep and every jar of oil is in her tablets.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a090b0",
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 4,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "wrote the last tablet the night the palace burned"
+   ]
+  },
+  {
+   "id": "areios",
+   "as": "founder",
+   "name": "Areios",
+   "epithet": "the Boar-Hunter",
+   "history": "invented",
+   "desc": "He wears a helmet made of the tusks of thirty boars he killed himself.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 58,
+    "atk": 6,
+    "def": 4,
+    "spd": 1.1,
+    "color": "#c06040",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "faced a wounded boar alone in the thicket"
+   ]
+  },
+  {
+   "id": "griffin_warrior",
+   "as": "ancestor",
+   "name": "The Griffin Warrior",
+   "epithet": "of Pylos",
+   "history": "real",
+   "source": "A shaft grave near the palace of Pylos, c. 1450 BCE, found in 2015",
+   "desc": "A warrior buried with a bronze sword, gold rings, a comb and an ivory plaque of a griffin, and a tiny sealstone carved with a battle in astonishing detail."
+  },
+  {
+   "id": "ekhelawon",
+   "as": "ancestor",
+   "name": "Ekhelawon",
+   "epithet": "the Great Landholder of Pylos",
+   "history": "real",
+   "source": "Named in Linear B tablets from Pylos; some scholars think he was the king himself",
+   "desc": "A man of Pylos with huge estates, whose name the palace scribes wrote again and again."
+  },
+  {
+   "id": "uluburun",
+   "as": "wanderer",
+   "name": "Shipili",
+   "epithet": "Survivor of the Wreck",
+   "history": "invented",
+   "source": "The Uluburun shipwreck (c. 1320 BCE) carried ten tonnes of copper, a tonne of tin, glass ingots, ivory and a gold scarab of Nefertiti",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a sailor washed up on the shore, the only one left of a ship loaded with copper, tin and glass from every land.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#3080a0",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 1,
+     "lore": 2,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "clung to a plank for two days after the ship went down off the cape"
+   ],
+   "desc": "A sailor of the kind whose ship sank at Uluburun with the richest cargo of the Bronze Age."
+  },
+  {
+   "id": "agamemnon",
+   "as": "chosen",
+   "name": "Agamemnon",
+   "epithet": "Lord of Men",
+   "label": "Agamemnon, Lord of Men",
+   "history": "legend",
+   "desc": "The high king who leads a thousand ships. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 6,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 8,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "odysseus",
+   "as": "chosen",
+   "name": "Odysseus",
+   "epithet": "of the Many Wiles",
+   "label": "Odysseus of the Many Wiles",
+   "history": "legend",
+   "desc": "The cleverest of the heroes. Lore 7, Foraging 6, Combat 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 75,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 6,
+     "craft": 4,
+     "combat": 6,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "penelope",
+   "as": "chosen",
+   "name": "Penelope",
+   "epithet": "the Faithful Weaver",
+   "label": "Penelope, the Faithful Weaver",
+   "history": "legend",
+   "desc": "She weaves by day and unweaves by night. Crafting 7, Lore 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 7,
+     "combat": 1,
+     "lore": 6,
+     "trade": 3
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "ten_year_war",
+   "title": "The Call to War Across the Sea",
+   "history": "legend",
+   "source": "The Iliad; the Hittite letters mention trouble at Wilusa (Troy) and the Ahhiyawa (Achaeans)",
+   "when": {
+    "era": 2,
+    "culture": {
+     "martial": 15
+    }
+   },
+   "chance": 0.4,
+   "text": "The high king calls every chief to join a great expedition across the sea against a rich city. It may take years.",
+   "options": [
+    {
+     "label": "Join the expedition",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "martial": 6
+       }
+      },
+      {
+       "give": {
+        "goods": 6
+       }
+      },
+      {
+       "remember": "sailed with the thousand ships",
+       "who": "best:combat",
+       "impact": 9
+      }
+     ],
+     "result": "The warriors sail. Years later they come home with treasure, and stories that will be sung forever."
+    },
+    {
+     "label": "Pretend to be mad",
+     "do": [
+      {
+       "culture": {
+        "martial": -4
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The chief ploughs the beach with an ox and a donkey and sows salt. The envoys leave, unconvinced."
+    }
+   ]
+  },
+  {
+   "id": "palace_burns",
+   "title": "The Palace Burns",
+   "history": "real",
+   "source": "Around 1200 BCE the palaces of Pylos, Mycenae and Thebes were destroyed by fire; the blaze baked the clay tablets that tell us about them",
+   "when": {
+    "era": 3,
+    "pop": 12
+   },
+   "chance": 0.3,
+   "text": "Fire breaks out in the storerooms by night and spreads to the archive. By morning the halls are black. The tablets, though, have been baked hard.",
+   "options": [
+    {
+     "label": "Rebuild the halls",
+     "cost": {
+      "wood": 30
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 5,
+        "ranked": 3
+       }
+      }
+     ],
+     "result": "The halls rise again, though not as grand."
+    },
+    {
+     "label": "Scatter to the villages",
+     "do": [
+      {
+       "culture": {
+        "settled": -5,
+        "ranked": -6
+       }
+      },
+      {
+       "insight": {
+        "code": 0.05
+       }
+      }
+     ],
+     "result": "The palace is abandoned. The people go back to the villages, and only the songs remember the kings."
+    }
+   ]
+  },
+  {
+   "id": "counting_sheep",
+   "title": "Every Sheep Counted",
+   "history": "real",
+   "source": "Linear B tablets from Knossos record about 100,000 sheep, flock by flock and shepherd by shepherd",
+   "when": {
+    "invention": "linear_b",
+    "tech": "domestication"
+   },
+   "text": "The scribes have counted every flock, every shepherd and every missing sheep. For the first time the chief knows exactly how rich the tribe is, and who owes what.",
+   "do": [
+    {
+     "give": {
+      "food": 15
+     }
+    },
+    {
+     "culture": {
+      "ranked": 4
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "perseus",
+   "name": "Perseus and the Gorgon",
+   "history": "legend",
+   "source": "Hesiod; Apollodorus; Perseus was said to have founded Mycenae",
+   "when": {
+    "day": 2
+   },
+   "text": "The young hero was sent to bring back the head of the Gorgon, whose gaze turned men to stone. He never looked at her, only at her reflection in his polished shield, and cut off her head as she slept. On his way home he founded a city, and its walls were raised by the Cyclopes.",
+   "moral": "do not face danger head-on when you can outwit it",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "trojan_horse",
+   "name": "The Wooden Horse",
+   "history": "legend",
+   "source": "Homer, Odyssey book 8; Virgil, Aeneid book 2",
+   "when": {
+    "culture": {
+     "martial": 10
+    }
+   },
+   "text": "After ten years the city still stood. So the cleverest of the kings had a great wooden horse built and left on the beach, and the ships sailed away. The people of the city dragged the gift inside their walls. That night, warriors climbed out of its belly and opened the gates.",
+   "moral": "beware of gifts from enemies",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "culture": {
+      "martial": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "cyclops",
+   "name": "Nobody and the Cyclops",
+   "history": "legend",
+   "source": "Homer, Odyssey book 9",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "Trapped in the cave of a one-eyed giant, the hero told him his name was Nobody, made him drunk on strong wine, and put out his eye with a burning stake. When the giant howled for help, his brothers asked who was hurting him. 'Nobody!' he cried, and they went away. The men escaped clinging under the bellies of his sheep.",
+   "moral": "a clever word is a weapon",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "funeral_games",
+   "name": "The Funeral Games",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Homer, Iliad book 23",
+   "text": "When a great warrior falls, his friends do not only weep. They hold games in his honour: a chariot race, boxing, wrestling, a foot race, spear-throwing and archery, with prizes of cauldrons, horses, women's work and iron. The dead man, the old ones say, likes to watch.",
+   "moral": "honour the dead with strength and joy",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "culture": {
+      "martial": 2
+     }
+    }
+   ]
+  }
+ ]
+}
