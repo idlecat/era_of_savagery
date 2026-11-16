@@ -60,6 +60,7 @@ func _initialize() -> void:
 	test_help_and_carry()
 	test_reactions()
 	test_config()
+	test_gm_operations()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1675,3 +1676,70 @@ func test_config() -> void:
 	sim.nat.quake()
 	check(u.job.get("flee", false), "and a different reaction in the config is what they do")
 	re["on"]["earthquake"] = saved
+
+func test_gm_operations() -> void:
+	print("\n== Reactions, weather and dilemmas as operations ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	# freezing: the "freezing" reaction sends them to the fire, then back to work
+	sim.hz.level = "normal"
+	sim.hz.set_weather("blizzard")
+	var u = sim.unit_by_name("Bai")
+	sim.assign_gather(u, "wood")
+	u.pos = D.VILLAGE + Vector2(700, 300)
+	u.hp = u.max_hp * 0.4
+	sim.tick(0.05)
+	check(u.job.get("type", "") == "warm" and u.resume_job.get("type", "") == "gather", "someone freezing in a blizzard goes to the fire (and keeps their work)")
+	sim.hz.set_weather("clear")
+	u.hp = u.max_hp
+	for i in 400:
+		sim.tick(0.05)
+		if u.job.get("type", "") == "gather": break
+	check(u.job.get("type", "") == "gather", "warm again, they go back to work")
+	# weather effects are data
+	sim.hz.set_weather("rain")
+	var rain: Dictionary = sim.hz.WEATHER["rain"]
+	check(is_equal_approx(sim.hz.speed_mult(), float(rain["speed"])) and sim.hz.wet(), "rain slows walking by its configured amount, and is wet")
+	var old: float = rain["speed"]
+	rain["speed"] = 0.5
+	check(is_equal_approx(sim.hz.speed_mult(), 0.5), "change the config and the rain changes")
+	rain["speed"] = old
+	sim.hz.set_weather("clear")
+	check(not sim.hz.set_weather("hailstorm"), "an unknown weather is refused")
+	# a scout backs off from a beast, then scouts on
+	var sim2 = _new_sim()
+	var sc = sim2.unit_by_name("Tuo")
+	sim2.assign_explore(sc)
+	var tiger = sim2.predators.filter(func(p): return p.kind == "tiger")[0]
+	tiger.fled = false
+	tiger.fleeing = false
+	tiger.pos = sc.pos + Vector2(150, 0)
+	sim2.tick(0.05)
+	check(sc.job.get("flee", false) and sc.resume_job.get("type", "") == "explore", "a scout who sees a beast backs away (beast_seen)")
+	# panic: people hide in their huts until it passes
+	var sim3 = _new_sim()
+	var w = sim3.unit_by_name("Yan")
+	sim3.assign_gather(w, "wood")
+	sim3.story.run([{"panic": 8}], null)
+	check(w.job.get("type", "") == "shelter", "a panic sends people to hide (reaction \"panic\")")
+	for i in 120: sim3.tick(0.05)
+	check(sim3.living().any(func(o): return o.act == "Hiding in a hut" and sim3.in_hut(o)), "they hide inside the huts")
+	for i in 200: sim3.tick(0.05)
+	check(w.job.get("type", "") == "gather" and not sim3.in_hut(w), "when the panic is over they come out and go back to work")
+	# weather and reactions are actions too (scenarios, packs, a game master)
+	sim3.hz.level = "normal"
+	sim3.story.run([{"weather": "storm"}], null)
+	check(sim3.hz.weather == "storm", "an action can bring a storm")
+	sim3.story.run([{"react": "earthquake"}], null)
+	check(sim3.living().any(func(o): return o.job.get("type", "") == "cover"), "and an action can set off a reaction")
+	# posing a dilemma from outside: checked, then queued and run like any other
+	var bad: Array = sim3.story.pose("x", {"title": "T", "text": "t", "options": [{"label": "a", "do": [{"spawn": "dragon"}]}, {"label": "b"}]})
+	check(not bad.is_empty(), "a bad dilemma is refused with the reasons (%s)" % (bad[0] if bad else ""))
+	var food0: float = sim3.stock["food"]
+	var ok: Array = sim3.story.pose("gift", {"title": "A Gift", "text": "Strangers leave a basket at the fire.", "speaker": "best:lore",
+		"options": [{"label": "Keep it", "do": [{"give": {"food": 10}}], "result": "%s shares out the food."}, {"label": "Leave it", "result": "The basket stays."}]})
+	check(ok.is_empty() and "posed:gift" in sim3.story.pending, "a good one is queued (%s)" % str(ok))
+	sim3._check_events()
+	check(sim3.pending_event == "posed:gift" and sim3.event_def("posed:gift")["options"].size() == 2, "it comes up as a dilemma")
+	var res: Dictionary = sim3.resolve_event("posed:gift", 0)
+	check(sim3.stock["food"] >= food0 + 10 and res["text"].ends_with("shares out the food."), "and choosing runs its actions (%s)" % res["text"])

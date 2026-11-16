@@ -68,53 +68,52 @@ func weather_name() -> String:
 	return WEATHER[weather]["name"]
 
 # ------------------------------------------------------------ effects queried by the simulation
+## The current weather's settings (config/events.json weather.kinds; {} when clear).
+func wk() -> Dictionary: return WEATHER.get(weather, {}) if on() else {}
+
 func berry_mult() -> float:
 	if not on(): return 1.0
-	if season_idx() == 3: return 0.0
-	if weather == "drought": return 0.15
-	return [1.5, 1.0, 1.2, 0.0][season_idx()]
+	var m: float = float(C["seasons"]["berries"][season_idx()])
+	if m <= 0.0: return 0.0
+	return float(wk().get("berries", m))
 
 func food_mult(type: String) -> float:
 	if not on(): return 1.0
 	var m := 1.0
-	match type:
-		"farm_plot": m = [1.0, 1.2, 1.5, 0.0][season_idx()]
-		"fishing_dock": m = [1.0, 1.0, 1.0, 0.5][season_idx()]
-		"aurochs_pen": m = [1.0, 1.0, 1.0, 0.7][season_idx()]
-	if weather == "drought" and type != "aurochs_pen": m *= 0.5
+	var y: Dictionary = C["seasons"]["yields"]
+	if y.has(type): m = float(y[type][season_idx()])
+	if wk().has("crops") and not (type in wk().get("crops_spare", [])): m *= float(wk()["crops"])
 	return m
 
 func spoil_mult() -> float:
-	return 1.5 if on() and season_idx() == 1 else 1.0
+	return float(C["seasons"]["spoil"][season_idx()]) if on() else 1.0
 
 func hunger_mult() -> float:
-	return 1.25 if winter() else 1.0
+	return float(C["seasons"]["hunger"][season_idx()])
 
-func speed_mult() -> float:
-	return {"blizzard": 0.7, "rain": 0.9, "storm": 0.85}.get(weather, 1.0) if on() else 1.0
-
-func work_mult() -> float:
-	return {"rain": 0.85, "storm": 0.75, "blizzard": 0.6}.get(weather, 1.0) if on() else 1.0
-
-func sight_mult() -> float:
-	return {"blizzard": 0.55, "rain": 0.85, "storm": 0.75}.get(weather, 1.0) if on() else 1.0
+func speed_mult() -> float: return float(wk().get("speed", 1.0))
+func work_mult() -> float: return float(wk().get("work", 1.0))
+func sight_mult() -> float: return float(wk().get("sight", 1.0))
+func wet() -> bool: return wk().get("wet", false)
+func dry() -> bool: return wk().get("dry", false)
 
 ## Cold damage per second for someone (0 = fine). Away from a fire, without furs, nights
 ## sting; in winter they can kill, and a blizzard freezes even the well-dressed.
 func cold_rate(u: E.Unit, warm: bool) -> float:
 	if warm: return 0.0
+	var cc: Dictionary = C["cold"]
 	var hide: bool = sim.has_tech("hide")
 	var night: bool = sim.night_amt > 0.5
 	var r := 0.0
-	if night and not hide: r += 0.3
+	if night and not hide: r += float(cc["night"])
 	if winter():
-		r += (0.25 if hide else 0.6) * (1.0 if night else 0.35)
-	if weather == "blizzard": r += 0.55 if hide else 0.9
+		r += float(cc["winter_hide"] if hide else cc["winter"]) * (1.0 if night else float(cc["winter_day"]))
+	r += float(WEATHER.get(weather, {}).get("cold_hide" if hide else "cold", 0.0))
 	return r * (mult() if on() else 1.0) * sim.inv.cold_mult()
 
 ## Outside winter and blizzards the cold only weakens (never below 35% HP).
 func cold_can_kill() -> bool:
-	return winter() or weather == "blizzard"
+	return winter() or WEATHER.get(weather, {}).get("deadly_cold", false)
 
 # ------------------------------------------------------------ tick
 func update(dt: float) -> void:
@@ -173,27 +172,38 @@ func _weather(dt: float) -> void:
 	if weather_roll > 0: return
 	weather_roll = Config.rand_in(C["weather"]["roll_every"])
 	for w in WEATHER:
-		var wk: Dictionary = WEATHER[w]
-		if randf() < float(wk["chance"][season_idx()]) * mult():
-			if wk.has("warn_ahead"): # announced before it arrives
+		var kind: Dictionary = WEATHER[w]
+		if randf() < float(kind["chance"][season_idx()]) * mult():
+			if kind.has("warn_ahead"): # announced before it arrives
 				incoming = w
-				incoming_t = float(wk["warn_ahead"])
-				sim.alert(tr(wk["warn"]), Vector2.ZERO, "danger")
+				incoming_t = float(kind["warn_ahead"])
+				sim.alert(tr(kind["warn"]), Vector2.ZERO, "danger")
 			else:
 				_start(w)
 			return
+
+## Make the weather w (a weather.kinds id, or "clear") now: an operation for scenario
+## actions and a game master. Returns false for an unknown kind.
+func set_weather(w: String) -> bool:
+	if w == "clear":
+		weather = "clear"
+		incoming = ""
+		return true
+	if not WEATHER.has(w): return false
+	_start(w)
+	return true
 
 func _start(w: String) -> void:
 	sim.cult.on_event(w) # (weather: blizzard, storm, drought...)
 	incoming = ""
 	weather = w
-	var wk: Dictionary = WEATHER[w]
-	weather_left = Config.rand_in(wk["dur"])
-	if wk.get("disaster", false): # (Task Contracts out in it are interrupted)
+	var kind: Dictionary = WEATHER[w]
+	weather_left = Config.rand_in(kind["dur"])
+	if kind.get("disaster", false): # (Task Contracts out in it are interrupted)
 		sim.flags["disaster_t"] = sim.time
 		sim.flags["disaster"] = w
-	if wk.has("alert"): sim.alert(tr(wk["alert"]), Vector2.ZERO, wk.get("level", "info"))
-	if wk.get("lightning", false): sim.nat.strike()
+	if kind.has("alert"): sim.alert(tr(kind["alert"]), Vector2.ZERO, kind.get("level", "info"))
+	if kind.get("lightning", false): sim.nat.strike()
 	sim.react.trigger(w, {"at": D.VILLAGE})
 
 # ------------------------------------------------------------ wild animals
@@ -281,17 +291,21 @@ func _sickness(dt: float) -> void:
 
 ## Recovery per second for a sick person (sickness runs from 1 down to 0).
 func heal_rate(u: E.Unit, warm: bool) -> float:
-	var r := 1.0 / 70.0
-	if warm: r *= 1.5
-	if sim._struct_near("totem_shrine", u.pos, 160) or sim._struct_near("grand_altar", u.pos, 160): r *= 1.4
+	var cr: Dictionary = C["sickness"]["recover"]
+	var r := 1.0 / float(cr["time"])
+	if warm: r *= float(cr["warm"])
+	for st in cr["shrines"]:
+		if sim._struct_near(st, u.pos, float(cr["shrine_radius"])):
+			r *= float(cr["shrine"])
+			break
 	for o in sim.living():
-		if o != u and o.lv("lore") >= 3 and o.pos.distance_to(u.pos) < 140:
-			r *= 1.5
+		if o != u and o.lv("lore") >= int(cr["healer_lore"]) and o.pos.distance_to(u.pos) < float(cr["healer_radius"]):
+			r *= float(cr["healer"])
 			break
 	for lm in sim.landmarks:
-		if lm["kind"] == "spring" and lm["found"]: r *= 1.3
-	if sim.time < u.herb_t: r *= 2.5 # willow-bark tea
-	if u.hunger < 20: r *= 0.5
+		if lm["kind"] == "spring" and lm["found"]: r *= float(cr["spring"])
+	if sim.time < u.herb_t: r *= float(cr["herbs"]) # willow-bark tea
+	if u.hunger < float(cr["hungry_below"]): r *= float(cr["hungry"])
 	return r
 
 # ------------------------------------------------------------ famine

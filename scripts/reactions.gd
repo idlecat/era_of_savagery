@@ -11,6 +11,8 @@
 ##   flee      - run directly away from the danger (or from the river)
 ##   firefight - beat out a fire threatening home (a tree put out in time survives)
 ##   defend    - come and fight a beast or raider that attacks someone
+##   warm      - someone freezing goes to the nearest fire and stays until warm again
+##   shelter   - hide in one's hut (or cower outdoors) until ctx "until"
 ##
 ## Wildfire is not a one-off: while anything burns, update() runs the "wildfire" responses
 ## once a second for everyone near a fire (the first one that takes a person wins).
@@ -20,7 +22,7 @@ const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const Config = preload("res://scripts/config.gd")
 
-const VERBS := ["cover", "aid", "flee", "firefight", "defend"]
+const VERBS := ["cover", "aid", "flee", "firefight", "defend", "warm", "shelter"]
 const WHO := ["all", "able", "victim", "near", "river", "helpers"]
 
 var C: Dictionary = Config.load_cfg("reactions")
@@ -38,6 +40,12 @@ static func problems(cfg: Dictionary) -> Array:
 			if not r is Dictionary or not r.get("do", "") in VERBS: out.append("%s: unknown response %s" % [ev, str(r)])
 			elif not r.get("who", "all") in WHO: out.append("%s: unknown who '%s'" % [ev, r["who"]])
 	return out
+
+## The farthest "reach" of an event's responses (0 if none): how far the rules need look.
+func reach_of(event: String) -> float:
+	var m := 0.0
+	for r in responses(event): m = maxf(m, float(r.get("reach", 0)))
+	return m
 
 ## The responses configured for an event ([] if none).
 func responses(event: String) -> Array:
@@ -76,8 +84,9 @@ func _pick(r: Dictionary, ctx: Dictionary) -> Array:
 	var reach: float = float(r.get("reach", INF))
 	var out: Array = []
 	match r.get("who", "all"):
-		"victim":
-			if ctx.get("victim") != null and not ctx["victim"].dead: out = [ctx["victim"]]
+		"victim": # (within "reach" of the danger, if both are given)
+			var v = ctx.get("victim")
+			if v != null and not v.dead and (not ctx.has("danger") or v.pos.distance_to(ctx["danger"]) < reach): out = [v]
 		"near": out = sim.living().filter(func(u): return u.pos.distance_to(at) < reach)
 		"river": out = sim.living().filter(func(u): return D.river_dist(u.pos) < reach)
 		"able": out = sim.living().filter(func(u): return able(u) and u.pos.distance_to(at) < reach)
@@ -113,6 +122,8 @@ func _respond(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 		"flee": return _start_flee(r, u, ctx)
 		"firefight": return _start_firefight(r, u, ctx)
 		"defend": return _start_defend(r, u, ctx)
+		"warm": return _start_warm(r, u)
+		"shelter": return _start_shelter(r, u, ctx)
 	push_warning("reactions.json: unknown response '%s'" % r.get("do", ""))
 	return false
 
@@ -204,6 +215,7 @@ func _start_flee(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var dist: float = float(r.get("dist", 260))
 	if r.has("beyond"): dist = float(r.get("reach", 0)) - u.pos.distance_to(danger) + float(r["beyond"])
 	flee_from(u, danger, dist)
+	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#ff9b7a"))
 	return true
 
 func flee_from(u: E.Unit, danger: Vector2, dist: float) -> void:
@@ -294,3 +306,46 @@ func do_firefight(u: E.Unit, j: Dictionary, dt: float) -> void:
 		for k in r.get("xp", {}): sim.gain_xp(u, k, float(r["xp"][k]))
 		if r.has("out_popup"): sim.popup(best.pos + Vector2(0, -40), tr(r["out_popup"]), Color("#a8d8ff"))
 		if nat.burning.is_empty() and r.has("log"): sim.add_log(tr(r["log"]), "story")
+
+# ------------------------------------------------------------ warm (freezing)
+func _start_warm(r: Dictionary, u: E.Unit) -> bool:
+	if u.job.get("type", "") == "warm" or u.hp >= u.max_hp * float(r.get("below", 0.55)) or sim.near_warmth(u): return false
+	var fire = sim._nearest_fire(u.pos)
+	if fire == null: return false
+	interrupt(u, {"type": "warm", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "r": r})
+	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
+	return true
+
+func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var r: Dictionary = j.get("r", {})
+	if u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill():
+		sim._end_errand(u) # (warm again, or the cold is over)
+		return
+	if not sim.approach(u, j["to"], 4, dt):
+		u.act = _act(r, 0)
+		return
+	u.act = _act(r, 1)
+
+# ------------------------------------------------------------ shelter (panic)
+func _start_shelter(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
+	var jt: String = u.job.get("type", "")
+	if jt == "shelter" or u.job.get("react", false) or u.job.get("flee", false): return false
+	interrupt(u, {"type": "shelter", "until": float(ctx.get("until", sim.time + float(r.get("time", 25)))), "r": r})
+	return true
+
+func do_shelter(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var r: Dictionary = j.get("r", {})
+	if sim.time >= float(j["until"]):
+		sim.wake(u)
+		sim._end_errand(u)
+		return
+	if u.sleeping: return
+	if u.bed_pos == null: sim._pick_bed(u)
+	if not sim.approach(u, u.bed_pos, 5, dt):
+		u.act = _act(r, 0)
+		return
+	if u.bed_id >= 0:
+		u.sleeping = true # (in_hut: hidden, out of reach of beasts)
+		u.act = _act(r, 1)
+	else:
+		u.act = _act(r, 2)

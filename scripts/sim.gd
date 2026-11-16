@@ -553,16 +553,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		u.xp_acc = 0
 		u.xp_flush_t = 1.6
 
-	# Freezing people stop what they are doing and go to the nearest fire.
-	if hz.cold_can_kill() and u.hp < u.max_hp * 0.55 and not near_warmth(u) and not u.job.get("warm", false):
-		var fire := _nearest_fire(u.pos)
-		if fire != null:
-			if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "explore":
-				u.resume_job = u.job
-				u.resume_key = u.job_key
-				u.resume_t = u.job_t
-			set_job(u, {"type": "move", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "flee": true, "warm": true}, u.job_key)
-			popup(u.pos + Vector2(0, -30), tr("Seeking warmth"), Color("#a8d8ff"))
+	# Freezing: the "freezing" reactions (go to the nearest fire).
+	if hz.cold_can_kill() and u.job.get("type", "") != "warm" and not in_hut(u): react.trigger("freezing", {"victim": u, "at": u.pos})
 	if u.role == "envoy" and u.job.get("type", "") != "envoy" and u.resume_job.get("type", "") != "envoy":
 		u.role = "" # recalled: the mission is off
 		# Self-defense or flight when attacked
@@ -608,14 +600,6 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					u.job_t = u.resume_t
 				elif j.get("react", false): # (out of danger: back to work)
 					_end_errand(u)
-				elif j.get("warm", false) and not u.resume_job.is_empty():
-					if u.hp < u.max_hp * 0.8:
-						u.act = "Warming by the fire"
-						return # stay by the fire until warm again
-					var rj := u.resume_job
-					u.resume_job = {}
-					set_job(u, rj, u.resume_key)
-					u.job_t = u.resume_t # back to the old job: not a new (night) order
 				else:
 					set_job(u, {})
 		"gather":
@@ -628,6 +612,10 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			react.do_cover(u, j, dt)
 		"aid":
 			react.do_aid(u, j, dt)
+		"warm":
+			react.do_warm(u, j, dt)
+		"shelter":
+			react.do_shelter(u, j, dt)
 		"firefight":
 			react.do_firefight(u, j, dt)
 		"art":
@@ -698,15 +686,12 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				u.act = "Walking to the workshop"
 		"explore":
 			u.act = "Scouting"
-			var threat := active_predators_near(u.pos, 240)
-			if not threat.is_empty(): # scouts keep their distance from beasts they can see
-				var away: Vector2 = (u.pos - threat[0].pos).normalized()
-				j["to"] = null
-				set_job(u, {"type": "move", "to": u.pos + away * 260, "flee": true})
-				u.resume_job = {"type": "explore", "to": null}
-				u.resume_t = u.job_t
-				popup(u.pos + Vector2(0, -30), tr("Beast! Scout backs off"), Color("#ff9b7a"))
-				return
+			var threat := active_predators_near(u.pos, react.reach_of("beast_seen"))
+			if not threat.is_empty(): # scouts and beasts: the "beast_seen" reactions
+				threat.sort_custom(func(a, b): return a.pos.distance_to(u.pos) < b.pos.distance_to(u.pos))
+				j["to"] = null # (a fresh scouting target afterwards)
+				react.trigger("beast_seen", {"victim": u, "danger": threat[0].pos, "attacker": threat[0]})
+				if u.job.get("type", "") != "explore": return
 			var tgt: Variant = j.get("to")
 			if tgt == null or is_explored(tgt):
 				tgt = explore_target(u)
@@ -1271,10 +1256,11 @@ func in_hut(u: E.Unit) -> bool: return u.sleeping and u.bed_id >= 0
 ## woods does not count: people in huts are safe from it, and outdoor sleepers watch for
 ## themselves (`_night_rest`).
 func _danger_near() -> bool:
-	if time - flags.get("flood_active", -99.0) < 20.0 or nat.alarm(): return true
-	if not active_predators_near(D.VILLAGE, 500).is_empty(): return true
+	var nw: Dictionary = react.C.get("night_watch", {})
+	if time - flags.get("flood_active", -99.0) < float(nw.get("flood_recent", 20)) or nat.alarm(): return true
+	if not active_predators_near(D.VILLAGE, float(nw.get("beasts_at_village", 500))).is_empty(): return true
 	for u in units:
-		if not u.dead and time - u.last_hit_t < 4.0 and u.attacker_id >= 0: return true
+		if not u.dead and time - u.last_hit_t < float(nw.get("hit_recent", 4)) and u.attacker_id >= 0: return true
 	return false
 
 func _night_watch() -> void:
@@ -1284,7 +1270,7 @@ func _night_watch() -> void:
 	if not rest:
 		night_alarm = false
 		return
-	if _danger_near(): alarm_until = time + 6.0
+	if _danger_near(): alarm_until = time + float(react.C.get("night_watch", {}).get("alarm", 6))
 	var alarm := time < alarm_until
 	if alarm and not night_alarm and units.any(func(u): return u.sleeping):
 		add_log(tr("Danger in the night! The camp is roused."), "danger")
@@ -1328,7 +1314,8 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	var crew: bool = u.role != ""
 	var duty: bool = jt == "attack" or jt == "bury" or u.job.get("flee", false) or u.job.get("react", false) \
 		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start())
-	if not (rest_time() or nat.panicking()) or duty:
+	if jt == "shelter": return false # (hiding: the reaction keeps them in the hut)
+	if not rest_time() or duty:
 		if u.sleeping or u.bed_pos != null: wake(u)
 		return false
 	if u.bed_pos == null: _pick_bed(u)
@@ -1336,13 +1323,13 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	if outdoors and D.river_dist(u.bed_pos) < _wet_reach() - 10.0: # the water is rising: move the bed out
 		u.sleeping = false
 		u.bed_pos = _dry(u.bed_pos)
-	var danger: bool = night_alarm or (outdoors and not active_predators_near(u.pos, 300).is_empty())
+	var danger: bool = night_alarm or (outdoors and not active_predators_near(u.pos, float(react.C.get("night_watch", {}).get("outdoor_beasts", 300))).is_empty())
 	if u.sleeping:
 		if danger and outdoors:
 			u.sleeping = false
 			u.act = "Keeping watch"
 		elif not outdoors:
-			u.act = "Hiding in a hut" if nat.panicking() else ("Sheltering in a hut" if danger else "Sleeping in a hut")
+			u.act = "Sheltering in a hut" if danger else "Sleeping in a hut"
 		else:
 			u.act = "Sleeping"
 		return true
@@ -1983,6 +1970,7 @@ func event_def(id: String) -> Dictionary:
 	if nat.owns_event(id): return nat.event_def(id)
 	if folk.owns_event(id): return folk.event_def(id)
 	if cult.owns_event(id): return cult.event_def(id)
+	if story.owns_event(id): return story.event_def(id)
 	var shaman := best_unit("lore", false)
 	var sname: String = shaman.name if shaman else "The elders"
 	match id:
@@ -2027,6 +2015,10 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		var ct: String = cult.resolve(id, idx)
 		add_log(ct, "story")
 		return {"text": ct, "open_contract": false}
+	if story.owns_event(id):
+		var st: String = story.resolve(id, idx)
+		add_log(st, "story")
+		return {"text": st, "open_contract": false}
 	if legacy.owns_event(id):
 		var lr: Dictionary = legacy.resolve(id, idx)
 		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}

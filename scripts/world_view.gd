@@ -643,7 +643,7 @@ func _draw_season_ground() -> void:
 	var world := Rect2(0, 0, D.W, D.H)
 	if hz.snow > 0.01: ci.draw_rect(world, Color(0.93, 0.96, 1.0, 0.6 * hz.snow))
 	if hz.season_idx() == 2: ci.draw_rect(world, Color(0.85, 0.5, 0.15, 0.13))
-	if hz.weather == "drought": ci.draw_rect(world, Color(0.85, 0.7, 0.35, 0.2))
+	if hz.dry(): ci.draw_rect(world, Color(0.85, 0.7, 0.35, 0.2))
 
 ## Rain, snow and blizzards are drawn over the visible screen area only.
 func _draw_weather() -> void:

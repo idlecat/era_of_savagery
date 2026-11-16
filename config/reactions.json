@@ -3,7 +3,12 @@
 
  "able": {
   "min_hp": 0.5,
-  "busy": ["attack", "bury", "explore", "trade_trip", "aid", "firefight", "cover"]
+  "busy": ["attack", "bury", "explore", "trade_trip", "aid", "firefight", "cover", "warm", "shelter"]
+ },
+
+ "night_watch": {
+  "_doc": "What rouses the sleeping camp: beasts or raiders this close to the village, someone hit in a fight in the last hit_recent seconds, a flood in the last flood_recent seconds, or a force of nature (nature.alarm). The alarm lasts alarm seconds; people sleeping outdoors also wake for beasts within outdoor_beasts.",
+  "beasts_at_village": 500, "hit_recent": 4, "flood_recent": 20, "alarm": 6, "outdoor_beasts": 300
  },
 
  "on": {
@@ -48,6 +53,20 @@
     "popup": "Fights the fire!", "out_popup": "Put out!", "log": "The fire is beaten out. The tribe saved what it could.",
     "acts": ["Running to the fire", "Beating out the flames"]},
    {"do": "flee", "who": "near", "reach": 120, "dist": 260}
+  ],
+
+  "freezing": [
+   {"do": "warm", "who": "victim", "below": 0.55, "until": 0.8, "popup": "Seeking warmth",
+    "acts": ["Seeking warmth", "Warming by the fire"]}
+  ],
+
+  "beast_seen": [
+   {"do": "flee", "who": "victim", "reach": 240, "dist": 260, "popup": "Beast! Scout backs off"}
+  ],
+
+  "panic": [
+   {"do": "shelter", "who": "all", "skip_roles": ["contract", "envoy", "trader"], "skip_jobs": ["attack", "bury"],
+    "acts": ["Running to hide", "Hiding in a hut", "Cowering in fear"]}
   ],
 
   "blizzard": [],

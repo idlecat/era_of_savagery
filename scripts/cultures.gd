@@ -140,12 +140,12 @@ const FIND_KEYS := ["group", "res", "amount", "rate", "regrow", "winter", "needs
 	"practice", "practice_x", "look", "effects", "seed", "culture"]
 const PERSON_KEYS := ["epithet", "as", "stats", "memory", "when", "label", "chance", "text"]
 const EVENT_KEYS := ["title", "text", "when", "chance", "options", "do"]
-const OPTION_KEYS := ["label", "desc", "cost", "do", "result"]
+const OPTION_KEYS := ["label", "desc", "cost", "needs", "do", "result", "else_do", "else_result"]
 const TALE_KEYS := ["text", "when", "tell", "do", "moral"]
 const WHEN_KEYS := ["time", "day", "pop", "flag", "found", "met", "tech", "invention", "find", "era", "season", "built",
 	"devotion", "mood", "deaths", "culture", "after", "told", "joined", "happened"]
 const DO_KEYS := ["log", "kind", "alert", "at", "level", "give", "reveal", "r", "flag", "mood", "devotion", "insight", "spawn", "offsets",
-	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join", "xp", "panic"]
+	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join", "xp", "panic", "weather", "react"]
 const PERSON_AS := ["chosen", "founder", "wanderer", "ancestor"]
 const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods"]
 const WHERE := ["forest", "forest_edge", "meadow", "river", "riverbank", "hills_home", "hills_far"]
@@ -305,7 +305,10 @@ static func _check_event(e, w: String, refs: Dictionary, err: Callable) -> void:
 	if not e.has("when"): err.call(w, "needs 'when' (the conditions for it to happen)")
 	_check_when(e.get("when", {}), w + ".when", refs, err)
 	_check_chance(e, w, err)
-	var opts = e.get("options", [])
+	_check_options(e.get("options", []), w, refs, err)
+	_check_do(e.get("do", []), w + ".do", refs, err)
+
+static func _check_options(opts, w: String, refs: Dictionary, err: Callable) -> void:
 	if not opts is Array or opts.size() > 4: err.call(w, "'options' must be a list of up to 4 choices")
 	elif opts.size() == 1: err.call(w, "a dilemma needs at least 2 options (or none for a chronicle event)")
 	else:
@@ -319,8 +322,27 @@ static func _check_event(e, w: String, refs: Dictionary, err: Callable) -> void:
 				if k not in OPTION_KEYS: err.call(ow, "unknown key '%s'" % k)
 			for r in o.get("cost", {}):
 				if r not in RESOURCES: err.call(ow, "cost: unknown resource '%s'" % r)
+			var nd = o.get("needs", {})
+			if not nd is Dictionary or (nd.has("best") and nd["best"] not in D.SKILLS) or (nd.has("or_tech") and nd["or_tech"] not in refs["tech"]):
+				err.call(ow, "needs must be {\"best\": skill, \"lv\": n, \"or_tech\": tech}")
 			_check_do(o.get("do", []), ow + ".do", refs, err)
-	_check_do(e.get("do", []), w + ".do", refs, err)
+			_check_do(o.get("else_do", []), ow + ".else_do", refs, err)
+
+## Problems in a dilemma posed from outside (story.pose()), against what the game has now.
+static func check_dilemma(e) -> Array:
+	var errs: Array = []
+	var err := func(where: String, msg: String): errs.append("%s: %s" % [where, msg])
+	if not e is Dictionary: return ["the dilemma must be an object"]
+	var cult: Dictionary = D.CULTURE if D.CULTURE is Dictionary else {}
+	var ids := func(sec): return cult.get(sec, []).map(func(x): return str(x.get("id", "")))
+	var refs := {"inv": D.INVENTIONS.map(func(d): return d["id"]), "find": D.FINDS.keys(), "tech": D.TECHS.map(func(t): return t["id"]),
+		"tale": ids.call("tales"), "person": ids.call("people"), "event": ids.call("events")}
+	_keys(e, ["title", "text", "speaker", "speaker_default", "options"], "dilemma", err)
+	if not e.get("title") is String or not e.get("text") is String: err.call("dilemma", "needs a 'title' and a 'text'")
+	if str(e.get("speaker", "best:lore")).trim_prefix("best:") not in D.SKILLS: err.call("dilemma", "speaker must be \"best:<skill>\"")
+	if e.get("options", []).is_empty(): err.call("dilemma", "needs 'options'")
+	else: _check_options(e["options"], "dilemma", refs, err)
+	return errs
 
 static func _check_tale(e, w: String, refs: Dictionary, err: Callable) -> void:
 	if not e is Dictionary: return
@@ -377,6 +399,9 @@ static func _check_do(list, w: String, refs: Dictionary, err: Callable) -> void:
 		for k in a:
 			if k not in DO_KEYS: err.call(aw, "unknown action '%s' (one of %s)" % [k, ", ".join(DO_KEYS)])
 		if a.has("event"): err.call(aw, "culture actions can't start built-in events")
+		if a.has("weather") and not preload("res://scripts/config.gd").load_cfg("events")["weather"]["kinds"].has(a["weather"]): err.call(aw, "unknown weather '%s'" % a["weather"])
+		if a.has("react") and not preload("res://scripts/config.gd").load_cfg("reactions")["on"].has(a["react"]): err.call(aw, "unknown reaction event '%s'" % a["react"])
+		if a.has("panic") and not (a["panic"] is float or a["panic"] is int): err.call(aw, "panic must be a number of seconds")
 		if a.has("spawn") and a["spawn"] not in ["wolf", "tiger"]: err.call(aw, "spawn must be \"wolf\" or \"tiger\"")
 		for off in a.get("offsets", []):
 			if not off is Array or off.size() != 2: err.call(aw, "offsets must be a list of [x, y] pairs")

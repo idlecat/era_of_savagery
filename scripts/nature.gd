@@ -76,30 +76,30 @@ func on() -> bool: return sim.hz.on()
 # ------------------------------------------------------------ queries used by the sim
 ## 0..1 extra darkness (eclipse; a little under thick ash).
 func darkness() -> float:
-	var d := ash * 0.3
+	var d: float = ash * float(C["volcano"]["ash_dark"])
 	if eclipse_t >= 0:
 		d = maxf(d, clampf(minf(eclipse_t / 5.0, (ECLIPSE_LEN - eclipse_t) / 5.0), 0.0, 1.0))
 	return d
 
 ## Growth of berries and crops (ash smothers them).
-func grow_mult() -> float: return 1.0 - 0.5 * ash
+func grow_mult() -> float: return 1.0 - float(C["volcano"]["ash_growth"]) * ash
 
 ## Food from a building: rich silt by the river after a flood, fertile ash after an eruption.
 func food_mult(s: E.Structure) -> float:
 	var m := grow_mult()
 	if s.type == "farm_plot":
-		if sim.time < silt_until and D.river_dist(s.pos) < 500: m *= 1.4
-		if sim.time < fertile_until and ash < 0.2: m *= 1.3
+		if sim.time < silt_until and D.river_dist(s.pos) < float(C["flood"]["silt_radius"]): m *= float(C["flood"]["silt"])
+		if sim.time < fertile_until and ash < 0.2: m *= float(C["volcano"]["fertile"])
 	return m
 
-func sight_mult() -> float: return 1.0 - 0.3 * ash
-func sick_risk() -> float: return 0.08 * ash
+func sight_mult() -> float: return 1.0 - float(C["volcano"]["ash_sight"]) * ash
+func sick_risk() -> float: return float(C["volcano"]["ash_sickness"]) * ash
 func panicking() -> bool: return sim.time < panic_until
 func flooding() -> bool: return flood_left > 0.0
 
 ## Something that should wake the sleeping camp.
 func alarm() -> bool:
-	if flood_left > 0 or (flood_at > 0 and sim.time >= flood_at - 15.0): return true
+	if flood_left > 0 or (flood_at > 0 and sim.time >= flood_at - float(C["flood"]["warn_ahead"])): return true
 	if erupt_left > 0 or shake > 0.5: return true
 	for id in burning:
 		var n = sim.node_by_id(id)
@@ -185,7 +185,7 @@ func strike() -> void:
 	if trees.is_empty(): return
 	var n = trees.pick_random()
 	_flash(n.pos)
-	var dry: bool = sim.hz.weather == "drought" or sim.hz.season_idx() == 1
+	var dry: bool = sim.hz.dry() or cl["dry_seasons"].any(func(x): return int(x) == sim.hz.season_idx())
 	if randf() < float(cl["ignite_dry"] if dry else cl["ignite_wet"]):
 		ignite(n)
 	else:
@@ -237,7 +237,7 @@ func ignite(n) -> void:
 func _fire_tick(dt: float) -> void:
 	if burning.is_empty(): return
 	var cw: Dictionary = C["wildfire"]
-	var wet: bool = sim.hz.weather in ["rain", "storm", "blizzard"]
+	var wet: bool = sim.hz.wet()
 	for id in burning.keys():
 		burning[id] -= dt * (float(cw["wet_burn_mult"]) if wet else 1.0)
 		if burning[id] <= 0:
@@ -253,7 +253,7 @@ func _fire_tick(dt: float) -> void:
 	spread_t -= dt
 	if spread_t <= 0 and fire_size < int(cw["max_trees"]):
 		spread_t = float(cw["spread_every"])
-		var p: float = float(cw["spread_chance"]) * (float(cw["drought_mult"]) if sim.hz.weather == "drought" else 1.0) * (float(cw["wet_mult"]) if wet or sim.hz.winter() else 1.0)
+		var p: float = float(cw["spread_chance"]) * (float(cw["drought_mult"]) if sim.hz.dry() else 1.0) * (float(cw["wet_mult"]) if wet or sim.hz.winter() else 1.0)
 		var fresh: float = float(cw["burn_time"]) * 0.75
 		for id in burning.keys():
 			if burning[id] > fresh: continue # just caught
@@ -412,39 +412,11 @@ func _eclipse_tick(dt: float) -> void:
 
 func owns_event(id: String) -> bool: return id == "eclipse"
 
-## The eclipse dilemma comes from config/events.json "eclipse": options with a cost, the
-## actions they run (story.gd run()) and the result; an option with "shaman" needs the
-## best keeper of lore at that level (or the tech in "or_tech"), else "else_do" runs.
-## "%s" in an option's label and results is the shaman's name.
-func event_def(_id: String) -> Dictionary:
-	var ce: Dictionary = C["eclipse"]
-	var shaman: E.Unit = sim.best_unit("lore", false)
-	var sname: String = tr(shaman.name) if shaman else tr("The elders")
-	var opts: Array = []
-	for o in ce["options"]:
-		var label: String = tr(o["label"])
-		if label.contains("%s"): label = label % sname
-		var ok := true
-		for r in o.get("cost", {}): ok = ok and sim.stock.get(r, 0.0) >= float(o["cost"][r])
-		if o.has("shaman"): ok = ok and shaman != null
-		opts.append({"label": label, "desc": tr(o["desc"]), "enabled": ok})
-	return {"title": tr(ce["title"]), "text": tr(ce["text"]), "options": opts}
+## The eclipse dilemma is config/events.json "eclipse", in the shared dilemma format
+## (story.dilemma_view/dilemma_choose).
+func event_def(_id: String) -> Dictionary: return sim.story.dilemma_view(C["eclipse"])
 
-func _shaman_ok(o: Dictionary) -> bool:
-	var need: Dictionary = o["shaman"]
-	var shaman: E.Unit = sim.best_unit("lore", false)
-	return (shaman != null and shaman.lv("lore") >= int(need.get("lore", 0))) or (need.has("or_tech") and sim.has_tech(need["or_tech"]))
-
-func resolve(_id: String, idx: int) -> String:
-	var opts: Array = C["eclipse"]["options"]
-	var o: Dictionary = opts[clampi(idx, 0, opts.size() - 1)]
-	var shaman: E.Unit = sim.best_unit("lore", false)
-	var sname: String = tr(shaman.name) if shaman else tr("The shaman")
-	for r in o.get("cost", {}): sim.stock[r] -= float(o["cost"][r])
-	var good: bool = not o.has("shaman") or _shaman_ok(o)
-	sim.story.run(o["do"] if good else o.get("else_do", []), null)
-	var res: String = tr(o["result"] if good else o.get("else_result", o["result"]))
-	return res % sname if res.contains("%s") else res
+func resolve(_id: String, idx: int) -> String: return sim.story.dilemma_choose(C["eclipse"], idx)["text"]
 
 # ------------------------------------------------------------ earthquake
 func quake() -> void:

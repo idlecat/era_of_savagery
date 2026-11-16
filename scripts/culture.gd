@@ -149,33 +149,15 @@ func owns_event(id: String) -> bool: return id.begins_with("culture:")
 func event_def(id: String) -> Dictionary:
 	var ev := entry("events", id.trim_prefix("culture:"))
 	if ev.is_empty(): return {}
-	return {"title": tr(ev["title"]), "text": tr(ev["text"]),
-		"options": ev.get("options", []).map(func(o): return {"label": tr(o["label"]), "desc": _opt_desc(o), "enabled": _affords(o)})}
-
-func _opt_desc(o: Dictionary) -> String:
-	var parts: Array = []
-	if o.has("desc"): parts.append(tr(o["desc"]))
-	var cost: Dictionary = o.get("cost", {})
-	if not cost.is_empty():
-		parts.append(tr("Costs %s.") % ", ".join(cost.keys().map(func(r): return "%d %s" % [int(cost[r]), tr(r)])))
-	return " ".join(parts)
-
-func _affords(o: Dictionary) -> bool:
-	for r in o.get("cost", {}):
-		if sim.stock.get(r, 0.0) < float(o["cost"][r]): return false
-	return true
+	return sim.story.dilemma_view(ev)
 
 func resolve(id: String, idx: int) -> String:
 	var ev := entry("events", id.trim_prefix("culture:"))
-	var opts: Array = ev.get("options", [])
-	if opts.is_empty(): return ""
-	var o: Dictionary = opts[clampi(idx, 0, opts.size() - 1)]
-	if not _affords(o): o = opts.back() # (can't pay: the last choice, usually "do nothing")
-	for r in o.get("cost", {}): sim.stock[r] -= float(o["cost"][r])
-	sim.story.run(o.get("do", []), null)
-	sim.inv.feat("story", "%s: %s" % [tr(ev["title"]), tr(o["label"])], null,
-		{"desc": tr(o["result"]) if o.has("result") else tr(ev["text"]), "source": ev.get("source", ""), "history": ev.get("history", "")})
-	return tr(o["result"]) if o.has("result") else tr("The tribe chose: %s.") % tr(o["label"])
+	if ev.get("options", []).is_empty(): return ""
+	var out: Dictionary = sim.story.dilemma_choose(ev, idx)
+	sim.inv.feat("story", "%s: %s" % [tr(ev["title"]), tr(out["option"]["label"])], null,
+		{"desc": out["text"] if out["option"].has("result") else tr(ev["text"]), "source": ev.get("source", ""), "history": ev.get("history", "")})
+	return out["text"]
 
 # ------------------------------------------------------------ what the tribe knows
 ## Is this culture entry known to the tribe yet? (Ancestors are known from the start.)

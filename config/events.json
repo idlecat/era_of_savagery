@@ -8,21 +8,36 @@
    {"alert": "Summer. Watch the food stores - they spoil faster in the heat.", "level": "info"},
    {"alert": "Autumn. Winter comes in two days: gather food and wood, and keep the fires lit.", "level": "warn"},
    {"alert": "Winter has come! No berries, no harvest, the herds have moved south, and the cold can kill.", "level": "danger"}
-  ]
+  ],
+  "_doc": "Per season [spring, summer, autumn, winter]: berries (bush yield), yields (food from each building), spoil (rot speed of stored food), hunger.",
+  "berries": [1.5, 1.0, 1.2, 0.0],
+  "yields": {"farm_plot": [1.0, 1.2, 1.5, 0.0], "fishing_dock": [1.0, 1.0, 1.0, 0.5], "aurochs_pen": [1.0, 1.0, 1.0, 0.7]},
+  "spoil": [1.0, 1.5, 1.0, 1.0],
+  "hunger": [1.0, 1.0, 1.0, 1.25]
+ },
+
+ "cold": {
+  "_doc": "Damage per second away from a fire: night (without furs), winter (by day it is winter * day), weather adds its own 'cold'/'cold_hide'. Hide = the Hide Tailoring tech.",
+  "night": 0.3, "winter": 0.6, "winter_hide": 0.25, "winter_day": 0.35
  },
 
  "weather": {
   "roll_every": [35, 60],
+  "_doc": "Effects while a weather lasts: speed, work, sight (multipliers), wet (puts out fires faster, slows their spread), dry (fires and lightning catch more easily), berries (bush yield instead of the season's), crops (multiplies building food, except crops_spare), cold/cold_hide (extra cold damage), deadly_cold (the cold can kill).",
   "kinds": {
    "rain": {"name": "Rain", "chance": [0.35, 0.10, 0.25, 0.0], "dur": [40, 80],
-    "alert": "Rain. Work outdoors goes slower.", "level": "info"},
+    "alert": "Rain. Work outdoors goes slower.", "level": "info",
+    "speed": 0.9, "work": 0.85, "sight": 0.85, "wet": true},
    "storm": {"name": "Thunderstorm", "chance": [0.08, 0.10, 0.15, 0.0], "dur": [25, 45],
-    "alert": "A thunderstorm rolls over the land.", "level": "warn", "lightning": true},
+    "alert": "A thunderstorm rolls over the land.", "level": "warn", "lightning": true,
+    "speed": 0.85, "work": 0.75, "sight": 0.75, "wet": true},
    "drought": {"name": "Drought", "chance": [0.0, 0.30, 0.05, 0.0], "dur": [120, 200],
-    "alert": "Drought: berries wither and the fields go dry.", "level": "warn", "done": "The drought breaks."},
+    "alert": "Drought: berries wither and the fields go dry.", "level": "warn", "done": "The drought breaks.",
+    "dry": true, "berries": 0.15, "crops": 0.5, "crops_spare": ["aurochs_pen"]},
    "blizzard": {"name": "Blizzard", "chance": [0.0, 0.0, 0.04, 0.40], "dur": [35, 65],
     "warn_ahead": 15, "warn": "The sky turns white-grey - a blizzard is coming! Get everyone to the fires.",
-    "alert": "Blizzard! Anyone far from a fire will freeze.", "level": "danger", "disaster": true}
+    "alert": "Blizzard! Anyone far from a fire will freeze.", "level": "danger", "disaster": true,
+    "speed": 0.7, "work": 0.6, "sight": 0.55, "wet": true, "cold": 0.9, "cold_hide": 0.55, "deadly_cold": true}
   }
  },
 
@@ -41,6 +56,9 @@
  "sickness": {
   "roll_every": 45, "base": 0.03, "winter": 0.10, "hungry": 0.08, "crowding": 0.4,
   "spread_every": 2, "spread_radius": 70, "spread_chance": 0.035,
+  "recover": {"_doc": "A sickness lasts 'time' seconds, sped up or slowed by each factor.",
+   "time": 70, "warm": 1.5, "shrine": 1.4, "shrines": ["totem_shrine", "grand_altar"], "shrine_radius": 160,
+   "healer_lore": 3, "healer_radius": 140, "healer": 1.5, "spring": 1.3, "herbs": 2.5, "hungry_below": 20, "hungry": 0.5},
   "alert": "%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.", "popup": "Sick!"
  },
 
@@ -52,7 +70,7 @@
 
  "lightning": {
   "every": [10, 22], "hit_person": 0.12, "hit_building": 0.18, "person_damage": 0.6,
-  "ignite_dry": 0.6, "ignite_wet": 0.25, "tree_range": 1000, "devotion": 2, "stump_regrow": 200,
+  "ignite_dry": 0.6, "ignite_wet": 0.25, "dry_seasons": [1], "tree_range": 1000, "devotion": 2, "stump_regrow": 200,
   "popup": "Lightning!", "hit_popup": "Struck by lightning!",
   "hit_alert": "Lightning strikes %s - and they live! The sky has touched them.",
   "hit_remember": "was struck by lightning on Day %d and lived - touched by the sky",
@@ -70,7 +88,7 @@
  "flood": {
   "season": 0, "chance": 0.45, "warn_ahead": 15, "length": 45, "extra_width": 110,
   "hit_radius": 130, "hit_damage": 0.2, "building_radius": 170, "crop_radius": 160,
-  "drown_rate": 3, "silt_days": 2,
+  "drown_rate": 3, "silt_days": 2, "silt": 1.4, "silt_radius": 500,
   "warn": "The river is rising! Get away from the banks.",
   "alert": "The river floods its banks!%s%s",
   "log": "The river falls back. The silt it left will feed the riverside fields.",
@@ -79,7 +97,7 @@
 
  "volcano": {
   "every_days": [9, 14], "tremor_lead": 30, "length": 25, "lava_radius": 460, "lava_damage": 0.5,
-  "ash_days": 0.8, "fertile_days": 3.5, "trees_ignited": 6, "obsidian": 4,
+  "ash_days": 0.8, "fertile_days": 3.5, "ash_dark": 0.3, "ash_growth": 0.5, "ash_sight": 0.3, "ash_sickness": 0.08, "fertile": 1.3, "trees_ignited": 6, "obsidian": 4,
   "warn": "The ground trembles. Black smoke pours from the Fire Mountain.",
   "alert": "The Fire Mountain erupts! Fire runs down its slopes and ash darkens the sky.",
   "remember": "saw the Fire Mountain erupt on Day %d"
@@ -95,18 +113,18 @@
  "eclipse": {
   "every_days": [12, 20], "length": 30, "ask_after": 5,
   "start_log": "A shadow bites into the sun...", "end_log": "The sun returns.",
-  "title": "The Sun Is Devoured",
+  "title": "The Sun Is Devoured", "speaker": "best:lore", "speaker_default": "The elders",
   "text": "At midday a black mouth eats the sun. Birds fall silent, the air turns cold, and stars come out in the day. The people cry out and look to you.",
   "options": [
    {"label": "Beat the drums", "desc": "Drive off the sky-beast with drums and shouting. (+devotion, the tribe grows more martial)",
     "do": [{"devotion": 4}, {"culture": {"martial": 4}}, {"remember": "beat the drums to drive the sky-beast from the sun on Day %d", "who": "all", "impact": 5}],
     "result": "The drums thunder and the people howl at the sky. Slowly, the beast spits out the sun."},
-   {"label": "Offer food to the sky", "desc": "Give 15 food to the hungry sky. (+devotion, the tribe grows more spiritual)",
+   {"label": "Offer food to the sky", "desc": "Feed the hungry sky. (+devotion, the tribe grows more spiritual)",
     "cost": {"food": 15},
     "do": [{"devotion": 12}, {"culture": {"spiritual": 5}}, {"remember": "offered food to the devoured sun on Day %d", "who": "all", "impact": 5}],
     "result": "The offering burns on the fire. The sky is fed, and gives the sun back."},
    {"label": "Let %s read the omen", "desc": "Only a wise shaman (Lore 3+) or the knowledge of the Megalithic Totems can calm the people - otherwise they panic.",
-    "shaman": {"lore": 3, "or_tech": "totems"},
+    "needs": {"best": "lore", "lv": 3, "or_tech": "totems"},
     "do": [{"give": {"lore": 20}}, {"xp": {"lore": 15}, "who": "best:lore"}, {"remember": "read the omen of the devoured sun and calmed the tribe on Day %d", "who": "best:lore", "impact": 8}],
     "result": "%s points to the old marks on the totems: \"The sun has been eaten before, and always it returns.\" The people grow calm, and learn.",
     "else_do": [{"panic": 25}, {"devotion": -5}, {"remember": "hid in terror when the sun was devoured on Day %d", "who": "all", "impact": 5}],

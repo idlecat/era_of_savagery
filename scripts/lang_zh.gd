@@ -844,7 +844,7 @@ const STRINGS := {
 	"Beat the drums": "击鼓驱兽",
 	"Drive off the sky-beast with drums and shouting. (+devotion, the tribe grows more martial)": "用鼓声和呐喊赶走天上的野兽。（虔诚 +，部落更尚武）",
 	"Offer food to the sky": "向上天献食",
-	"Give 15 food to the hungry sky. (+devotion, the tribe grows more spiritual)": "献给饥饿的上天 15 份食物。（虔诚 +，部落更崇尚灵性）",
+	"Feed the hungry sky. (+devotion, the tribe grows more spiritual)": "供养饥饿的上天。（虔诚 +，部落更崇尚灵性）",
 	"Let %s read the omen": "让%s解读征兆",
 	"Only a wise shaman (Lore 3+) or the knowledge of the Megalithic Totems can calm the people - otherwise they panic.": "只有睿智的巫师（学识 3 级以上）或巨石图腾的知识能安抚众人——否则人们会陷入恐慌。",
 	"beat the drums to drive the sky-beast from the sun on Day %d": "击鼓把天上的野兽从太阳边赶走（第%d天）",
@@ -1707,6 +1707,8 @@ const STRINGS := {
 	"Crouching in the open": "在空旷处蹲伏",
 	"Running to help %s": "跑去帮助%s",
 	"Tending %s": "照料%s",
+	"Running to hide": "跑去躲藏",
+	"Cowering in fear": "惊恐地蜷缩着",
 	"Running to the fire": "奔向火场",
 	"Beating out the flames": "扑打火焰",
 }
