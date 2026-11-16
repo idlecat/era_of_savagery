@@ -193,6 +193,17 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
   - Floods, eruptions, earthquakes and nearby wildfires count as natural disasters for Task Contracts (abort `natural_disaster`), and the leader's emergency speech names the disaster.
   - The top bar shows what is happening, e.g. *River in flood · Ashfall*, and LLM prompts receive it as `omens`.
 
+## How people react
+
+People drop their work when something happens around them, and go back to it afterwards:
+
+- **A beast or raider attacks someone:** up to three able grown-ups nearby run to fight it (the bold come from farther away); children, the hurt and the sick keep away.
+- **Earthquake:** everyone runs out of the huts and away from buildings and crouches in the open until the shaking stops, then sees to anyone who was hurt.
+- **Hurt by lightning, a falling building or other forces of nature:** one or two neighbours come and dress the wound.
+- **Wildfire near the village:** grown-ups beat out the flames (a tree put out in time is saved); children and anyone close to the fire run away from it.
+- **The Fire Mountain trembles or erupts:** everyone on its slopes flees.
+- **The dead** are carried across a bearer's shoulders to the burial ground.
+
 ## Rival clans
 
 In the *River Ford* scenario six clans share the map (a random map draws its clans from a pool of ten, adding the Bear, Otter, Raven and Lynx clans). Near home are the martial **Red Ochre Clan** (east bank, behind a palisade) and the spiritual **Heron Clan** (south-west). Farther out live the martial **Tusk Clan** (north-west forests) and **Hawk Clan** (south-east hills), and the spiritual **Elk Clan** (north-east meadows) and **Willow Clan** (southern marshes). Their villages and peaceful hunters start hidden in the fog. Conquest and Unity victories need every clan.

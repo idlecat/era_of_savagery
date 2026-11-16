@@ -200,6 +200,7 @@ func _hit_person(u: E.Unit) -> void:
 	sim.alert(tr("Lightning strikes %s - and they live! The sky has touched them.") % tr(u.name), u.pos, "warn", [u])
 	sim.remember(u, tr("was struck by lightning on Day %d and lived - touched by the sky") % sim.day(), 9)
 	sim.gain_xp(u, "lore", 20)
+	sim.react.on_hurt(u)
 
 ## Before the tribe can make fire, a strike near people hands it to them.
 func _sky_fire(at: Vector2) -> void:
@@ -259,7 +260,7 @@ func _fire_tick(dt: float) -> void:
 			for u in sim.living():
 				if u.pos.distance_to(n.pos) < 55:
 					_hurt(u, 4.0, tr("burned in the wildfire"))
-					if not u.dead and not u.job.get("flee", false) and u.role == "": sim.assign_flee(u)
+					if not u.dead and not u.job.get("flee", false) and u.role in ["", "child"]: sim.react.flee_from(u, n.pos, 260.0)
 			for s in sim.structures:
 				if s.built and sim.ours(s) and not scorched.has(s.id) and not (s.type in ["burial_ground", "farm_plot", "bonfire"]) and s.pos.distance_to(n.pos) < 70:
 					scorched[s.id] = true
@@ -342,6 +343,7 @@ func _volcano_tick(dt: float) -> void:
 		tremor_warned = true
 		shake = 3.0
 		sim.alert(tr("The ground trembles. Black smoke pours from the Fire Mountain."), D.VOLCANO, "warn")
+		sim.react.on_volcano(LAVA_R * 1.8)
 	if sim.time >= erupt_at:
 		erupt_at = sim.time + D.DAY_LEN * randf_range(9.0, 14.0)
 		tremor_warned = false
@@ -362,6 +364,7 @@ func erupt() -> void:
 	for n in near.slice(0, 6): ignite(n)
 	for u in sim.living():
 		if u.pos.distance_to(D.VOLCANO) < LAVA_R: _hurt(u, u.max_hp * 0.5, tr("burned by the Fire Mountain"))
+	sim.react.on_volcano(LAVA_R * 1.6)
 	for n in sim.nodes:
 		if n.kind == "deer" and n.pos.distance_to(D.VOLCANO) < LAVA_R * 1.5: n.vel = (n.pos - D.VOLCANO).normalized() * 30.0
 	# black glass on the slopes
@@ -434,6 +437,7 @@ func resolve(_id: String, idx: int) -> String:
 func quake() -> void:
 	sim.cult.on_event("earthquake")
 	shake = 3.0
+	sim.react.on_quake() # out from under the roofs (they tend the hurt once it stops)
 	var cands: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and not (s.type in ["bonfire", "burial_ground", "farm_plot", "palisade"]))
 	cands.shuffle()
 	var fallen: Array = []

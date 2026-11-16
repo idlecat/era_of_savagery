@@ -1454,10 +1454,26 @@ func _draw_clan_banner(c: Dictionary) -> void:
 	_draw_label(fp + Vector2(12, -72), tr(c["name"]).to_upper(), 15, col.lightened(0.5), true)
 	if c["met"]: _draw_label(fp + Vector2(12, -88), tr(st), 12, scol, true)
 
+## A body on its way to the burial ground on someone's shoulders.
+func _carried(u) -> bool:
+	if u.carrier_id < 0: return false
+	var c = sim.unit_by_id(u.carrier_id)
+	return c != null and not c.dead and c.job.get("phase", "") in ["carry"] and c.job.get("body_id", -1) == u.id
+
 func _draw_unit(u) -> void:
 	var b := iso(u.pos)
 	_scale_about(b, FIG_SCALE)
 	if u.buried: return
+	if u.dead and _carried(u): # across the bearer's shoulders, crosswise to the way they walk
+		var cb := b + Vector2(0, -30)
+		if art and art.has("man_dead_0_0"):
+			var cn := "man_dead_%d_0" % ((_dir_index("u%d" % u.id) + 2) % 8)
+			_sprite(cn, cb, 0.8)
+			_sprite(cn + "_cloth", cb, 0.8, u.color)
+		else:
+			ci.draw_line(cb + Vector2(-10, 2), cb + Vector2(8, -2), u.color, 5)
+			ci.draw_circle(cb + Vector2(11, -2), 3.5, Color(0.85, 0.7, 0.55))
+		return
 	if u.dead and art and art.has("man_dead_0_0"):
 		var dn := "man_dead_%d_0" % _dir_index("u%d" % u.id)
 		_sprite(dn, b, 0.95, Color(1, 1, 1, 0.85))

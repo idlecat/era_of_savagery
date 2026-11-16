@@ -1696,4 +1696,17 @@ const STRINGS := {
 	"Celebrate achievements as they happen": "成就达成时弹出庆祝",
 	"Next (%d more)": "下一个（还有%d个）",
 	"Achievement": "成就",
+	"To %s's aid!": "去救%s！",
+	# ---- reactions
+	"Runs to help %s": "跑去帮助%s",
+	"was tended by %s after being hurt on Day %d": "受伤后得到了%s的照料（第%d天）",
+	"Fights the fire!": "去灭火！",
+	"Put out!": "扑灭了！",
+	"The fire is beaten out. The tribe saved what it could.": "大火被扑灭了。部落尽力保住了能保住的一切。",
+	"Running into the open": "跑到空旷处",
+	"Crouching in the open": "在空旷处蹲伏",
+	"Running to help %s": "跑去帮助%s",
+	"Tending %s": "照料%s",
+	"Running to the fire": "奔向火场",
+	"Beating out the flames": "扑打火焰",
 }

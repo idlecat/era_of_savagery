@@ -55,7 +55,7 @@ static func t(s: String) -> String:
 
 ## Activity strings are compared by game logic, so they stay English internally and are
 ## translated only for display (including the ones built from a prefix + a name).
-const ACT_PREFIXES := ["Building ", "Renovating ", "Walking to ", "Hauling ", "Experimenting: ", "Fetching the body of ", "Carrying the body of ", "Burying ", "Watching ", "Going to trade with the ", "Trading with the "]
+const ACT_PREFIXES := ["Building ", "Renovating ", "Walking to ", "Hauling ", "Experimenting: ", "Fetching the body of ", "Carrying the body of ", "Burying ", "Watching ", "Going to trade with the ", "Trading with the ", "Running to help ", "Tending "]
 static func act(a: String) -> String:
 	var whole := t(a)
 	if whole != a: return whole

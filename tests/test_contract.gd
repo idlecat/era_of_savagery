@@ -57,6 +57,8 @@ func _initialize() -> void:
 	test_flood_deer()
 	test_dry_beds()
 	test_feat_details()
+	test_help_and_carry()
+	test_reactions()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -893,7 +895,8 @@ func test_nature() -> void:
 	for p in sim.predators: p.fled = true
 	var nat = sim.nat
 	# wildfire
-	var tree = sim.nodes.filter(func(n): return n.kind == "tree" and sim.nodes.filter(func(o): return o.kind == "tree" and o.pos.distance_to(n.pos) < 60).size() >= 3)[0]
+	# (far from home: nobody comes to fight it, so it burns out by itself)
+	var tree = sim.nodes.filter(func(n): return n.kind == "tree" and n.pos.distance_to(D.VILLAGE) > 1000 and sim.nodes.filter(func(o): return o.kind == "tree" and o.pos.distance_to(n.pos) < 60).size() >= 3)[0]
 	nat.ignite(tree)
 	check(nat.burning.has(tree.id) and "Wildfire" in nat.status() or nat.status().has(sim.tr("Wildfire")), "a tree catches fire: wildfire")
 	var u = sim.unit_by_name("Tuo")
@@ -1563,3 +1566,77 @@ func test_feat_details() -> void:
 	sim.evo.adopt("peaceful_ways")
 	check(got.back()["kind"] == "tradition" and got.back()["at"] == D.VILLAGE and got.back()["desc"] != "", "a tribe-wide first is pictured at the village")
 	check(sim.inv.feats.size() == got.size(), "and every one is kept for the Achievements panel")
+
+func test_help_and_carry() -> void:
+	print("\n== Neighbours help; the dead are carried ==")
+	var sim = _new_sim()
+	var v = sim.unit_by_name("Tuo")
+	var helpers: Array = sim.living().filter(func(o): return o != v and o.role == "")
+	for i in helpers.size(): helpers[i].pos = v.pos + Vector2(60 + i * 15, 30)
+	var t = sim.spawn_predator(v.pos + Vector2(12, 0), v.pos)
+	for i in 60:
+		sim.tick(0.05)
+		if t.dead or t.fleeing: break
+	var on_it: Array = sim.units.filter(func(o): return o != v and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == t.id)
+	check(on_it.size() >= 2 or t.dead or t.fleeing, "when a beast attacks, the people nearby come to help (%d came)" % on_it.size())
+	check(on_it.size() <= sim.HELPERS + 1, "but not the whole tribe")
+	check(sim.living().filter(func(o): return o.role == "child" and o.job.get("type", "") == "attack").is_empty(), "children stay out of it")
+	for i in 600:
+		sim.tick(0.05)
+		if t.dead or t.fled: break
+	check(t.dead or t.fleeing or t.fled, "together they drive it off or kill it")
+	# a burial: the body rides on the bearer's shoulders
+	var sim2 = _new_sim()
+	var dead = sim2.unit_by_name("Mo'er")
+	sim2.kill_unit(dead, null)
+	var carried := false
+	for i in 4000:
+		sim2.tick(0.05)
+		var c = sim2.unit_by_id(dead.carrier_id) if dead.carrier_id >= 0 else null
+		if c and c.job.get("phase", "") == "carry":
+			for k in 10: sim2.tick(0.05) # (on its way)
+			carried = c.job.get("phase", "") != "carry" or dead.pos.distance_to(c.pos) < 3.0
+			break
+	check(carried, "the body is carried by the bearer, not dragged behind")
+
+func test_reactions() -> void:
+	print("\n== People react to the world around them ==")
+	# an earthquake: out from under the roofs, crouch, then back to work
+	var sim = _new_sim()
+	var u = sim.unit_by_name("Bai")
+	var hut = sim.structures.filter(func(s): return s.type == "hut")[0]
+	u.pos = hut.pos + Vector2(10, 10)
+	sim.assign_gather(u, "wood")
+	sim.nat.quake()
+	check(u.job.get("type", "") == "cover" and u.resume_job.get("type", "") == "gather", "when the earth shakes, work stops: everyone takes cover (and remembers the work)")
+	for i in 80: sim.tick(0.05)
+	var clear: bool = sim.structures.filter(func(s): return s.built and s.type in sim.SHELTERS).all(func(s): return s.pos.distance_to(u.pos) > 60)
+	check(clear and u.act == "Crouching in the open", "they run into the open, away from the huts (%s)" % u.act)
+	for i in 300: sim.tick(0.05)
+	check(u.job.get("type", "") == "gather", "when the shaking stops they go back to work (%s)" % u.job.get("type", ""))
+	# lightning hurts someone: a neighbour comes to tend them
+	var sim2 = _new_sim()
+	var v = sim2.unit_by_name("Yan")
+	for o in sim2.living():
+		if o != v and o.role == "": o.pos = v.pos + Vector2(80, 40)
+	sim2.nat._hit_person(v)
+	var aiders: Array = sim2.units.filter(func(o): return o.job.get("type", "") == "aid" and o.job.get("victim", -1) == v.id)
+	check(aiders.size() >= 1 and aiders.size() <= 2, "someone struck by lightning gets help (%d come)" % aiders.size())
+	var hp0: float = v.hp
+	for i in 300: sim2.tick(0.05)
+	check(v.hp > hp0 + v.max_hp * 0.1, "and their wound is dressed")
+	# a wildfire near the village: grown-ups fight it, children run from it
+	var sim3 = _new_sim()
+	var trees: Array = sim3.nodes.filter(func(n): return n.kind == "tree")
+	trees.sort_custom(func(a, b): return a.pos.distance_to(D.VILLAGE) < b.pos.distance_to(D.VILLAGE))
+	var t = trees[0]
+	var kid = sim3.living().filter(func(o): return o.role == "child")[0]
+	kid.pos = t.pos + Vector2(50, 20)
+	sim3.nat.ignite(t)
+	for i in 30: sim3.tick(0.05)
+	check(sim3.units.any(func(o): return o.job.get("type", "") == "firefight"), "a fire near home brings people running to beat it out")
+	check(kid.job.get("type", "") != "firefight" and kid.job.get("flee", false), "children run away from it")
+	for i in 400:
+		sim3.tick(0.05)
+		if sim3.nat.burning.is_empty(): break
+	check(sim3.nat.burning.is_empty() and sim3.nat.fire_size < 20, "the fire is beaten out before it spreads far (%d trees caught)" % sim3.nat.fire_size)
