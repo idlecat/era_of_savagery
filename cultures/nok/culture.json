@@ -1,0 +1,666 @@
+{
+ "id": "nok",
+ "order": 34,
+ "name": "Nok",
+ "period": "c. 1500 BCE–1 CE",
+ "place": "the hills of central Nigeria",
+ "desc": "Farmers of pearl millet in West Africa, among the first south of the Sahara to smelt iron, who modelled life-size clay figures with grand hairstyles and pierced triangular eyes, the oldest large sculptures of sub-Saharan Africa.",
+ "history": "real",
+ "source": "Terracottas found by tin miners near Nok village from 1943 and studied by Bernard Fagg; the Goethe University Nok project (from 2005)",
+ "tribe_names": [
+  "Adu",
+  "Bala",
+  "Danja",
+  "Ezi",
+  "Gado",
+  "Hassa",
+  "Ina",
+  "Jalo",
+  "Kunda",
+  "Ladi",
+  "Mairo",
+  "Nupe",
+  "Oba",
+  "Saki",
+  "Tanko",
+  "Yaro"
+ ],
+ "birth_names": [
+  "Abi",
+  "Dumi",
+  "Fati",
+  "Gani",
+  "Kemi",
+  "Lami",
+  "Nana",
+  "Sabo",
+  "Tani",
+  "Zuma"
+ ],
+ "epithets": {
+  "cautious": [
+   "Shaper of Clay Heads",
+   "Keeper of the Furnace"
+  ],
+  "gluttonous": [
+   "Sower of Millet"
+  ],
+  "devout": [
+   "Speaker for the Ancestors"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "shaped a clay head with seven braids and fired it without a crack"
+  ],
+  "gluttonous": [
+   "sowed millet on the hilltop the day the first rain fell"
+  ],
+  "devout": [
+   "set a clay figure at the shrine to speak for a grandmother who had died"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "terracotta_heads",
+   "kind": "goods",
+   "name": "Terracotta Figures",
+   "history": "real",
+   "source": "Nok terracottas, up to life size, with elaborate hair, jewellery and triangular eyes with pierced pupils",
+   "practice": {
+    "hearth": 250,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Hollow figures of clay, built up coil by coil and fired in great bonfires: rites bring 10% more devotion, +2 mood.",
+   "hint": "Needs pottery and fire, and rites."
+  },
+  {
+   "id": "nok_iron",
+   "kind": "tool",
+   "name": "Shaft Furnace Iron",
+   "history": "real",
+   "source": "Iron-smelting furnaces at Nok sites such as Taruga date to around the middle of the 1st millennium BCE, among the earliest in West Africa",
+   "practice": {
+    "quarry": 150,
+    "hearth": 150
+   },
+   "needs": {
+    "techs": [
+     "tools",
+     "fire"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.1
+    }
+   ],
+   "desc": "A clay shaft furnace that turns ironstone into blooms for hoes, knives and spears: +2 attack, woodcutting 10% faster.",
+   "hint": "Needs Polished Stone Tools, fire and the Tribe & Agrarian Era.",
+   "words": [
+    "iron"
+   ]
+  },
+  {
+   "id": "grinding_stones",
+   "kind": "tool",
+   "name": "Grinding Stones",
+   "history": "real",
+   "source": "Grinding stones for millet and nuts are among the commonest finds at Nok sites",
+   "practice": {
+    "berry": 150,
+    "quarry": 50
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    }
+   ],
+   "desc": "A flat stone and a round one to grind grain to flour: hunger grows 8% slower.",
+   "hint": "Comes from foraging, and from working stone."
+  },
+  {
+   "id": "hilltop_terraces",
+   "kind": "tool",
+   "name": "Hilltop Fields",
+   "history": "real",
+   "source": "Many Nok settlements sat on hilltops and plateaus, with fields on the slopes below",
+   "practice": {
+    "build": 150,
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "Villages on the hilltops, safe and cool, with millet fields on the slopes: farm plots yield 15% more, +1 defence.",
+   "hint": "Needs farming."
+  }
+ ],
+ "foods": [
+  {
+   "id": "millet_tuwo",
+   "name": "Pearl Millet Porridge",
+   "history": "real",
+   "source": "Charred pearl millet from Nok sites is among the earliest evidence of farming in the region",
+   "practice": {
+    "hearth": 150,
+    "berry": 120
+   },
+   "needs": {
+    "finds": [
+     "pearl_millet"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Millet flour stirred into a stiff porridge, eaten with a sauce of leaves: hunger grows 10% slower.",
+   "hint": "Needs pearl millet."
+  },
+  {
+   "id": "canarium_oil",
+   "name": "Canarium Nut Oil",
+   "history": "real",
+   "source": "Shells of Canarium schweinfurthii nuts, rich in oil, are common at Nok sites",
+   "practice": {
+    "berry": 120,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "canarium"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Oil pressed from the fruit of the canarium tree: +2 mood, the hurt heal 5% faster.",
+   "hint": "Needs canarium trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "pearl_millet",
+   "name": "Wild Pearl Millet",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.08,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 1.5,
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Cutting millet heads",
+   "desc": "Tall grass with long candle-shaped heads of seed that ripens in dry heat. Gathering it brings farming closer."
+  },
+  {
+   "id": "canarium",
+   "name": "Canarium Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "forest",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Gathering canarium fruit",
+   "desc": "Tall forest trees with purple oily fruit."
+  }
+ ],
+ "people": [
+  {
+   "id": "danladi",
+   "as": "founder",
+   "name": "Danladi",
+   "epithet": "the Clay-Shaper",
+   "history": "invented",
+   "desc": "His figures look so alive that children talk to them.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 2,
+    "spd": 1.0,
+    "color": "#c06030",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "modelled the face of the old chief so well that his widow wept"
+   ]
+  },
+  {
+   "id": "yalwa",
+   "as": "founder",
+   "name": "Yalwa",
+   "epithet": "the Millet Mother",
+   "history": "invented",
+   "desc": "She knows when the rains will come by the smell of the wind.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a08040",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "saved the seed millet through a year when the rains failed"
+   ]
+  },
+  {
+   "id": "taruga_smith",
+   "as": "ancestor",
+   "name": "The Smiths of Taruga",
+   "epithet": "first of the iron-workers",
+   "history": "real",
+   "source": "Furnaces at Taruga, excavated in the 1960s",
+   "desc": "The nameless smiths whose furnace bases still stand on the hill of Taruga, among the first in West Africa to draw iron from stone."
+  },
+  {
+   "id": "nok_sculptors",
+   "as": "ancestor",
+   "name": "The Sculptors of the Hills",
+   "epithet": "who made the clay people",
+   "history": "real",
+   "source": "Nok terracottas, c. 900 BCE to the turn of the era",
+   "desc": "Artists whose names are lost, whose clay figures with lifted eyes have outlived everything else of their people."
+  },
+  {
+   "id": "trader_saharan",
+   "as": "wanderer",
+   "name": "Agalla",
+   "epithet": "Trader from the North",
+   "history": "invented",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader who has walked from the edge of the great desert with salt and shining stone beads.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#d0b080",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "crossed the dry country with only the stars to guide"
+   ],
+   "desc": "A trader of the routes that would one day cross the Sahara."
+  },
+  {
+   "id": "first_smith",
+   "as": "chosen",
+   "name": "Kanta",
+   "epithet": "the First Smith",
+   "label": "Kanta, the First Smith",
+   "history": "invented",
+   "desc": "She draws iron from stone and fire. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 3,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "hill_warrior",
+   "as": "chosen",
+   "name": "Dogo",
+   "epithet": "the Tall Spear",
+   "label": "Dogo, the Tall Spear",
+   "history": "invented",
+   "desc": "A hunter who guards the hilltop villages. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  },
+  {
+   "id": "clay_seer",
+   "as": "chosen",
+   "name": "Asabe",
+   "epithet": "who Speaks Through Clay",
+   "label": "Asabe, who Speaks Through Clay",
+   "history": "invented",
+   "desc": "She gives the ancestors faces of clay and listens to them. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "furnace_rite",
+   "title": "The Furnace Must Be Fed",
+   "history": "real",
+   "source": "In many West African smelting traditions, iron-making is surrounded by rites, songs and taboos, the furnace treated like a body giving birth",
+   "when": {
+    "invention": "nok_iron"
+   },
+   "text": "The smiths say the new furnace will not give good iron unless it is blessed, sung to, and kept away from anyone who has quarrelled that day.",
+   "options": [
+    {
+     "label": "Bless the furnace",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 8
+      },
+      {
+       "boon": [
+        {
+         "stat": "gather",
+         "of": "quarry",
+         "mul": 1.1
+        }
+       ]
+      }
+     ],
+     "result": "Songs are sung through the night of the first smelt, and the bloom comes out heavy and clean."
+    },
+    {
+     "label": "Just fire it",
+     "do": [
+      {
+       "devotion": -4
+      },
+      {
+       "culture": {
+        "spiritual": -3
+       }
+      }
+     ],
+     "result": "The iron comes out, cracked and spongy. The smiths shake their heads."
+    }
+   ]
+  },
+  {
+   "id": "move_uphill",
+   "title": "Up to the Hilltop",
+   "history": "real",
+   "when": {
+    "pop": 11,
+    "day": 5
+   },
+   "chance": 0.5,
+   "text": "Raiders have been seen on the plain. The elders say the village should move to the hilltop, where the wind is cool and no one can come up unseen.",
+   "options": [
+    {
+     "label": "Move up the hill",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 1
+        },
+        {
+         "stat": "sight",
+         "add": 20
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": 3
+       }
+      }
+     ],
+     "result": "Huts go up among the boulders. From the top, you can see three valleys."
+    },
+    {
+     "label": "Stay by the fields",
+     "do": [
+      {
+       "culture": {
+        "martial": 3
+       }
+      }
+     ],
+     "result": "The young men keep watch by night instead."
+    }
+   ]
+  },
+  {
+   "id": "rains_late",
+   "title": "The Rains Are Late",
+   "history": "real",
+   "when": {
+    "after": "drought",
+    "find": "pearl_millet"
+   },
+   "chance": 0.7,
+   "text": "The millet seed is in the ground but the rain has not come. The rainmakers want a great dance; the farmers want to dig water holes.",
+   "options": [
+    {
+     "label": "Dance for rain",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 10
+      },
+      {
+       "mood": 3
+      }
+     ],
+     "result": "The drums go all night. Three days later, clouds gather."
+    },
+    {
+     "label": "Dig water holes",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "mood": -1
+      }
+     ],
+     "result": "Hard work in the heat, but the seedlings live."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "pierced_eyes",
+   "name": "Why the Clay People Have Open Eyes",
+   "history": "invented",
+   "source": "A story made up around the pierced eyes of Nok terracottas",
+   "when": {
+    "day": 2
+   },
+   "text": "The first sculptor made a head of her mother with closed eyes, and the spirit inside could not see out, and wept all night. So she took a stick and opened the eyes through, and the spirit could look out at her children again. Since then every clay person has eyes that are open right through.",
+   "moral": "the ancestors watch over us",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "first_smith_tale",
+   "name": "How Iron Came Out of the Hill",
+   "history": "invented",
+   "source": "A story in the manner of West African smith legends",
+   "when": {
+    "tech": "tools"
+   },
+   "text": "Long ago a woman cooking on a hilltop noticed that the red stones under her pot had melted into something grey and hard. She told the hunters, and they built a clay chimney over the fire and fed it with bellows of goatskin. That is why our smiths sing to the furnace like a mother.",
+   "moral": "great things begin by accident",
+   "do": [
+    {
+     "insight": {
+      "bronze": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "millet_and_rain",
+   "name": "Millet and the Rain",
+   "history": "invented",
+   "source": "A story in the manner of savanna folk tales",
+   "when": {
+    "find": "pearl_millet"
+   },
+   "text": "Millet and Rain were sisters. Rain liked to travel, and Millet liked to stay at home. Every year Rain goes away for half the year, and Millet waits for her, thin and thirsty; and every year Rain comes back, and Millet grows tall with joy.",
+   "moral": "those who wait are rewarded",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "millet_harvest",
+   "name": "The Millet Harvest Dance",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the harvest festivals of the savanna",
+   "text": "When the millet heads are heavy, the whole village goes out to cut them, and the young people dance between the rows. The first basket is set before the clay figures of the ancestors, so they can see that their children have eaten well this year too.",
+   "moral": "share the first fruits with the ancestors",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  }
+ ]
+}

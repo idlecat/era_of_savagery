@@ -1,0 +1,684 @@
+{
+ "id": "carthage",
+ "order": 33,
+ "name": "Carthaginians",
+ "period": "c. 814–146 BCE",
+ "place": "Carthage on the coast of North Africa",
+ "desc": "A colony of Tyre that became the queen of the western sea: merchant princes with a great round harbour, farmers whose handbook Rome translated, explorers who sailed past Gibraltar, and the generals who marched elephants over the Alps.",
+ "history": "real",
+ "source": "Polybius, Livy and Justin; the Periplus of Hanno; excavations at Carthage and the Punic town of Kerkouane",
+ "tribe_names": [
+  "Hasdrubal",
+  "Hamilcar",
+  "Bodashtart",
+  "Adonibaal",
+  "Bomilcar",
+  "Gisco",
+  "Maharbal",
+  "Adherbal",
+  "Bostar",
+  "Carthalo",
+  "Sapanibal",
+  "Elishat",
+  "Abdmelqart",
+  "Safot",
+  "Imilce",
+  "Arisham"
+ ],
+ "birth_names": [
+  "Bodo",
+  "Gisgo",
+  "Hanna",
+  "Magon",
+  "Sapo",
+  "Tabni",
+  "Arish",
+  "Mutun",
+  "Baric",
+  "Imilk"
+ ],
+ "epithets": {
+  "gluttonous": [
+   "Merchant of the Round Harbour"
+  ],
+  "cautious": [
+   "Keeper of Mago's Book",
+   "Shipwright"
+  ],
+  "belligerent": [
+   "Elephant-Rider"
+  ]
+ },
+ "memories": {
+  "gluttonous": [
+   "sold a shipload of purple cloth in Gades for its weight in silver"
+  ],
+  "cautious": [
+   "planted a vineyard exactly as the old book said, and it never failed"
+  ],
+  "belligerent": [
+   "calmed a frightened elephant in the middle of a battle"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "cothon",
+   "kind": "tool",
+   "name": "The Round Harbour",
+   "history": "real",
+   "source": "Carthage's circular naval harbour, the cothon, had sheds for some 220 warships around an island headquarters (Appian)",
+   "practice": {
+    "build": 250,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.25
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "A dug harbour, safe from every storm, with a ship-shed for each boat: fishing yields 25% more, everyone carries 1 more.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era.",
+   "words": [
+    "harbours"
+   ]
+  },
+  {
+   "id": "mago_book",
+   "kind": "tool",
+   "name": "Mago's Book of Farming",
+   "history": "real",
+   "source": "Mago wrote 28 books on agriculture; after Carthage fell, the Roman Senate ordered them translated into Latin",
+   "practice": {
+    "berry": 250,
+    "lead": 60
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.25
+    }
+   ],
+   "desc": "Everything known about vines, olives, bees and cattle, written down field by field: farm plots yield 25% more.",
+   "hint": "Needs farming and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "war_elephants",
+   "kind": "tool",
+   "name": "War Elephants",
+   "history": "real",
+   "source": "Carthage tamed the now-extinct North African forest elephant; Hannibal took 37 across the Alps in 218 BCE",
+   "practice": {
+    "hunt": 250,
+    "lead": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ],
+    "era": 3
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 3
+    }
+   ],
+   "desc": "Great beasts that trample the enemy line, if they can be kept from trampling yours: +3 attack.",
+   "hint": "Needs Beast Domestication and the Bronze & Mythic Era.",
+   "words": [
+    "elephants"
+   ]
+  },
+  {
+   "id": "punic_baths",
+   "kind": "medicine",
+   "name": "Household Baths",
+   "history": "real",
+   "source": "Nearly every house at Kerkouane (4th–3rd century BCE) had its own little sit-bath with a seat and armrests",
+   "practice": {
+    "build": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A small plastered bath in every house: the sick recover 15% faster, +1 mood.",
+   "hint": "Needs pottery, and builders at home."
+  },
+  {
+   "id": "lettered_ships",
+   "kind": "tool",
+   "name": "Ships Built by Letters",
+   "history": "real",
+   "source": "The Punic warship of Marsala (3rd century BCE) had its timbers marked with painted letters for fast assembly",
+   "practice": {
+    "build": 200,
+    "chop": 100
+   },
+   "needs": {
+    "inventions": [
+     "cothon"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Every plank cut to a pattern and marked with a letter, so a ship goes together like a puzzle: building is 10% faster.",
+   "hint": "Needs the round harbour, and woodcutters who build."
+  }
+ ],
+ "foods": [
+  {
+   "id": "puls_punica",
+   "name": "Punic Porridge",
+   "history": "real",
+   "source": "Cato the Elder gives a recipe for puls punica: spelt, fresh cheese, honey and an egg",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Grain porridge with fresh cheese, honey and egg: hunger grows 10% slower, +2 mood.",
+   "hint": "Needs farming and Beast Domestication."
+  },
+  {
+   "id": "salted_tuna",
+   "name": "Salted Tuna",
+   "history": "real",
+   "source": "Punic fish-salting works along the coasts of Spain and Morocco sent salted tuna across the Mediterranean",
+   "practice": {
+    "hunt": 120,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "tuna"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.85
+    }
+   ],
+   "desc": "Great fish cut up and packed in salt in clay jars: food spoils 15% slower.",
+   "hint": "Needs tuna shoals."
+  }
+ ],
+ "finds": [
+  {
+   "id": "tuna",
+   "name": "Tuna Shoals",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 30,
+   "rate": 1.0,
+   "regrow": 0.1,
+   "winter": false,
+   "where": "river",
+   "count": 3,
+   "practice": "hunt",
+   "look": "fish",
+   "act": "Netting tuna",
+   "desc": "Huge silver fish that pass along the coast each year in their thousands."
+  },
+  {
+   "id": "esparto",
+   "name": "Esparto Grass",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "source": "Tough esparto grass of Spain and North Africa was twisted into the ropes and rigging of Punic ships",
+   "amount": 26,
+   "rate": 1.0,
+   "regrow": 0.08,
+   "winter": true,
+   "where": "meadow",
+   "count": 3,
+   "practice": "chop",
+   "look": "grain",
+   "act": "Pulling esparto",
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "Wiry grass for ropes, baskets and sandals. Once known, everyone carries 1 more."
+  }
+ ],
+ "people": [
+  {
+   "id": "abibaal_merchant",
+   "as": "founder",
+   "name": "Yadamilk",
+   "epithet": "the Ship-Owner",
+   "history": "invented",
+   "desc": "He owns three ships and has an opinion about every harbour.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#7040a0",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 1,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "brought a ship home from Gades loaded with silver"
+   ]
+  },
+  {
+   "id": "ammat",
+   "as": "founder",
+   "name": "Ammat",
+   "epithet": "the Vine-Grower",
+   "history": "invented",
+   "desc": "She learned Mago's book by heart from her grandmother.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#80a050",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "grafted a hundred vines in a single spring"
+   ]
+  },
+  {
+   "id": "mago_agronomist",
+   "as": "ancestor",
+   "name": "Mago",
+   "epithet": "the Agronomist",
+   "history": "real",
+   "source": "Columella called him 'the father of husbandry'",
+   "desc": "A Carthaginian landowner whose farming manual was so good that the Romans saved it when they burned his city."
+  },
+  {
+   "id": "himilco",
+   "as": "ancestor",
+   "name": "Himilco",
+   "epithet": "the Navigator",
+   "history": "real",
+   "source": "Pliny and Avienus: Himilco sailed north from Gibraltar along the Atlantic coast, around 500 BCE",
+   "desc": "An explorer who sailed into the northern ocean toward the tin islands, and told of seaweed, sea monsters and fog."
+  },
+  {
+   "id": "masinissa",
+   "as": "wanderer",
+   "name": "Masinissa",
+   "epithet": "Prince of the Numidians",
+   "history": "real",
+   "source": "Livy and Polybius; he fought for Carthage in Spain, then for Rome, and ruled Numidia until he was ninety",
+   "when": {
+    "tech": "domestication",
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a young prince of the horse peoples inland, who rides without a bridle and is looking for allies.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 64,
+    "atk": 8,
+    "def": 4,
+    "spd": 1.3,
+    "color": "#c08040",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 6,
+     "lore": 2,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "rode a hundred miles in a day with his horsemen"
+   ],
+   "desc": "The Numidian king whose light cavalry decided great battles."
+  },
+  {
+   "id": "elissa",
+   "as": "chosen",
+   "name": "Elissa",
+   "epithet": "the Founder Queen",
+   "label": "Elissa, the Founder Queen",
+   "history": "legend",
+   "desc": "The princess of Tyre who founds a city with a cut-up oxhide. Lore 6, Trade 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 2,
+     "lore": 6,
+     "trade": 6
+    }
+   }
+  },
+  {
+   "id": "hannibal",
+   "as": "chosen",
+   "name": "Hannibal",
+   "epithet": "who Crossed the Alps",
+   "label": "Hannibal, who Crossed the Alps",
+   "history": "real",
+   "desc": "The greatest general of his age. Combat 9.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 12,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 9,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "hanno",
+   "as": "chosen",
+   "name": "Hanno",
+   "epithet": "the Navigator",
+   "label": "Hanno the Navigator",
+   "history": "real",
+   "desc": "He sails sixty ships down the coast of Africa. Foraging 7, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.2,
+    "skills": {
+     "forage": 7,
+     "craft": 3,
+     "combat": 3,
+     "lore": 5,
+     "trade": 3
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "oxhide",
+   "title": "As Much Land as an Oxhide",
+   "history": "legend",
+   "source": "Justin and Virgil: the local king sold Elissa as much land as an oxhide could cover; she cut it into thin strips and circled a whole hill, the Byrsa",
+   "when": {
+    "day": 2,
+    "pop": 8
+   },
+   "text": "The people of this land will sell us only as much ground as one oxhide covers. The chief takes a knife and starts cutting the hide into the thinnest strips anyone has ever seen.",
+   "do": [
+    {
+     "culture": {
+      "settled": 4
+     }
+    },
+    {
+     "mood": 3
+    },
+    {
+     "feat": "Bought a hill with one oxhide"
+    }
+   ]
+  },
+  {
+   "id": "mercenaries",
+   "title": "The Mercenaries Want Their Pay",
+   "history": "real",
+   "source": "The Mercenary War (241–237 BCE): unpaid soldiers from the war with Rome rose against Carthage",
+   "when": {
+    "era": 2,
+    "culture": {
+     "martial": 10
+    },
+    "pop": 12
+   },
+   "chance": 0.4,
+   "text": "The hired fighters who guarded our camp through the last war are camped outside, armed, and demanding their wages. The stores are low.",
+   "options": [
+    {
+     "label": "Pay them in full",
+     "cost": {
+      "food": 30,
+      "goods": 4
+     },
+     "do": [
+      {
+       "mood": 2
+      }
+     ],
+     "result": "They take their pay and go home, and some stay on as settlers."
+    },
+    {
+     "label": "Refuse",
+     "do": [
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         260,
+         200
+        ],
+        [
+         300,
+         160
+        ],
+        [
+         220,
+         240
+        ]
+       ]
+      },
+      {
+       "culture": {
+        "martial": 3
+       }
+      },
+      {
+       "mood": -3
+      }
+     ],
+     "result": "They do not go home. They come for what they are owed."
+    }
+   ]
+  },
+  {
+   "id": "hairy_people",
+   "title": "The Hairy People",
+   "history": "real",
+   "source": "The Periplus of Hanno: on an island far down the African coast, the sailors met wild 'hairy people' whom their guides called gorillas",
+   "when": {
+    "invention": "cothon",
+    "era": 2
+   },
+   "chance": 0.3,
+   "text": "Sailors back from the far south swear they met people covered in hair, who threw stones and could not be caught. The guides called them gorillai.",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "culture": {
+      "settled": -2
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "dido_pyre",
+   "name": "Elissa's Pyre",
+   "history": "legend",
+   "source": "Justin, Epitome 18",
+   "when": {
+    "day": 3
+   },
+   "text": "When the African king demanded Elissa as his wife and threatened war if she refused, she asked for three months to mourn her first husband. Then she built a great pyre at the edge of the city, climbed it with a sword, and told her people she was going to her husband, as they wished. The city honoured her as a goddess.",
+   "moral": "a founder belongs to her city",
+   "do": [
+    {
+     "devotion": 5
+    },
+    {
+     "culture": {
+      "settled": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "hannibal_oath",
+   "name": "The Boy at the Altar",
+   "history": "real",
+   "source": "Polybius 3.11",
+   "when": {
+    "culture": {
+     "martial": 10
+    }
+   },
+   "text": "Before leaving for Spain, the general offered sacrifice and asked his nine-year-old son if he wanted to come. The boy begged to. So his father led him to the altar, laid his hand on the victim, and made him swear never to be a friend to Rome. He kept the oath all his life.",
+   "moral": "an oath can shape a life",
+   "do": [
+    {
+     "culture": {
+      "martial": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "chariot_gods",
+   "name": "The Chariot of the Gods",
+   "history": "real",
+   "source": "The Periplus of Hanno",
+   "when": {
+    "invention": "cothon"
+   },
+   "text": "Sailing far to the south, the sailors saw the land at night full of fire, with streams of flame running down to the sea, and above them one great fire that seemed to touch the stars. Their guides called it the Chariot of the Gods. Afraid, the sailors turned for home.",
+   "moral": "the world is larger than our fears",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "settled": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "tanit_feast",
+   "name": "The Feast of Tanit",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around Tanit, the great goddess of Carthage",
+   "text": "Tanit, the Face of Baal, watches over every ship that leaves the harbour and every mother who gives birth. On her feast the women carry lamps down to the sea at dusk, and the harbour shines as if the stars had come down to float on it.",
+   "moral": "light guides the way home",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  }
+ ]
+}

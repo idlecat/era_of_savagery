@@ -1,0 +1,753 @@
+{
+ "id": "egypt",
+ "order": 30,
+ "name": "Egyptians",
+ "period": "c. 3100–30 BCE",
+ "place": "the Nile valley, from the Delta to the First Cataract",
+ "desc": "The people of the black land along the Nile, whose year turned on the river's flood. They wrote on papyrus, counted 365 days to the year, set bones and dressed wounds with honey, and raised the pyramids with crews paid in bread and beer.",
+ "history": "real",
+ "source": "Hieroglyphic inscriptions, papyri (the Edwin Smith and Ebers papyri, the diary of Merer), and the excavated workers' towns of Giza and Deir el-Medina",
+ "tribe_names": [
+  "Ankhu",
+  "Bebi",
+  "Henut",
+  "Ipi",
+  "Kagemni",
+  "Merit",
+  "Nebet",
+  "Nefer",
+  "Paser",
+  "Renseneb",
+  "Satet",
+  "Wennefer",
+  "Iuny",
+  "Hesy",
+  "Tjeti",
+  "Senbi"
+ ],
+ "birth_names": [
+  "Ati",
+  "Baket",
+  "Iry",
+  "Kai",
+  "Nakht",
+  "Ruiu",
+  "Sit",
+  "Tama",
+  "Wab",
+  "Yuya"
+ ],
+ "epithets": {
+  "cautious": [
+   "Scribe of the Granary",
+   "Watcher of the Nilometer"
+  ],
+  "gluttonous": [
+   "Baker of the Work-Gang"
+  ],
+  "devout": [
+   "Servant of Thoth"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "marked the height of the flood on the stone steps by the river"
+  ],
+  "gluttonous": [
+   "baked bread for a whole gang of haulers at dawn"
+  ],
+  "devout": [
+   "copied a spell for the dead onto a fresh roll of papyrus"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "papyrus_scroll",
+   "kind": "goods",
+   "name": "Papyrus Scrolls",
+   "history": "real",
+   "source": "The oldest inked papyri, from Wadi al-Jarf (c. 2560 BCE), include the logbook of Merer, who shipped stone for the Great Pyramid",
+   "practice": {
+    "lead": 100,
+    "ritual": 100
+   },
+   "needs": {
+    "finds": [
+     "papyrus"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.025
+    }
+   ],
+   "desc": "Strips of reed pith pressed into sheets and rolled, light enough to carry a library: the tribe gathers much more lore.",
+   "hint": "Needs papyrus and the Tribe & Agrarian Era.",
+   "words": [
+    "papyrus",
+    "scrolls"
+   ]
+  },
+  {
+   "id": "nile_calendar",
+   "kind": "tool",
+   "name": "Nilometer and Calendar",
+   "history": "real",
+   "source": "A civil year of 12 months of 30 days plus 5 extra days; nilometers measured the flood to set the year's taxes",
+   "practice": {
+    "ritual": 150,
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.2
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Steps cut down to the river to read the flood, and a year of 365 days to know when to sow: farm plots yield 20% more.",
+   "hint": "Needs farming, and long watching at the rites.",
+   "words": [
+    "calendar"
+   ]
+  },
+  {
+   "id": "surgical_papyrus",
+   "kind": "medicine",
+   "name": "The Book of Wounds",
+   "history": "real",
+   "source": "The Edwin Smith Papyrus (c. 1600 BCE, copied from older texts): 48 cases of injuries, each examined, judged and treated",
+   "practice": {
+    "hunt": 100,
+    "ritual": 150
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "heal",
+     "mul": 1.25
+    }
+   ],
+   "desc": "Wounds sewn, splinted and dressed with honey and lint, case by case: the hurt heal 25% faster.",
+   "hint": "Needs the Tribe & Agrarian Era, and healers' rites after the hunt."
+  },
+  {
+   "id": "kohl",
+   "kind": "medicine",
+   "name": "Kohl Eye Paint",
+   "history": "real",
+   "source": "Green malachite and black galena eye paint was worn by men and women alike; it repels flies and has been shown to fight eye infections",
+   "practice": {
+    "ritual": 120,
+    "quarry": 40
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Ground green and black stone around the eyes, against the glare and the flies: the sick recover 10% faster, +1 mood.",
+   "hint": "Comes from the rites, and from grinding stone."
+  },
+  {
+   "id": "senet",
+   "kind": "goods",
+   "name": "Senet",
+   "history": "real",
+   "source": "A board game of 30 squares played from about 3000 BCE; later it stood for the soul's journey through the underworld",
+   "practice": {
+    "hearth": 250
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "A board of thirty squares and throwing sticks, for passing the hot afternoons: +3 mood.",
+   "hint": "Comes from long evenings at home."
+  }
+ ],
+ "foods": [
+  {
+   "id": "bread_beer",
+   "name": "Bread and Beer Rations",
+   "history": "real",
+   "source": "The bakeries of the workers' town at Giza; pyramid crews were paid in loaves and jars of beer",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Loaves baked in clay moulds and thick barley beer, the wage of every worker: hunger grows 10% slower, +2 mood.",
+   "hint": "Needs farming and pottery."
+  },
+  {
+   "id": "onions_radishes",
+   "name": "Onions and Radishes",
+   "history": "real",
+   "source": "Herodotus 2.125 says an inscription on the Great Pyramid recorded what was spent on radishes, onions and garlic for the workers",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.05
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Strings of onions and garlic that keep well and keep the workers healthy: the sick recover 5% faster, food spoils 5% slower.",
+   "hint": "Needs farming."
+  }
+ ],
+ "finds": [
+  {
+   "id": "papyrus",
+   "name": "Papyrus Marsh",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "amount": 30,
+   "rate": 1.0,
+   "regrow": 0.08,
+   "winter": true,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Cutting papyrus",
+   "seed": {
+    "code": 0.05
+   },
+   "desc": "Tall reeds with tufted heads: for boats, sandals, mats, rope, and something to write on."
+  },
+  {
+   "id": "natron",
+   "name": "Natron Lake",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "source": "Natron from the Wadi Natrun was used to dry the bodies of the dead and to make faience and glass",
+   "amount": 18,
+   "rate": 0.7,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "meadow",
+   "count": 2,
+   "practice": "ritual",
+   "look": "salt",
+   "act": "Scraping natron",
+   "culture": {
+    "spiritual": 3
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "White salts on a dry lake bed, used to preserve the dead and the stores: each load is lore."
+  }
+ ],
+ "people": [
+  {
+   "id": "iunet",
+   "as": "founder",
+   "name": "Iunet",
+   "epithet": "Weaver of Fine Linen",
+   "history": "invented",
+   "desc": "Her linen is so fine you can see through ten layers of it.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0d8c0",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "wove the linen that wrapped the old chief for his journey west"
+   ]
+  },
+  {
+   "id": "seneb",
+   "as": "founder",
+   "name": "Seneb",
+   "epithet": "the Boatman",
+   "history": "invented",
+   "desc": "He can sail north with the current and south with the wind.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#c09060",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 1,
+     "lore": 0,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "sailed a barge of grain from the Delta to the cataract"
+   ]
+  },
+  {
+   "id": "merer",
+   "as": "ancestor",
+   "name": "Merer",
+   "epithet": "Inspector of the Boats",
+   "history": "real",
+   "source": "The Diary of Merer, papyri from Wadi al-Jarf, c. 2560 BCE",
+   "desc": "An official whose logbook records, day by day, his crew ferrying limestone down the Nile for the Great Pyramid of Khufu."
+  },
+  {
+   "id": "narmer",
+   "as": "ancestor",
+   "name": "Narmer",
+   "epithet": "Uniter of the Two Lands",
+   "history": "real",
+   "source": "The Narmer Palette, c. 3100 BCE (Egyptian Museum, Cairo)",
+   "desc": "The king shown wearing the white crown of the south on one side of his palette and the red crown of the north on the other."
+  },
+  {
+   "id": "harkhuf",
+   "as": "wanderer",
+   "name": "Harkhuf",
+   "epithet": "Leader of Caravans",
+   "history": "real",
+   "source": "His tomb at Aswan quotes a letter from the boy-king Pepi II, delighted at the dancer Harkhuf was bringing from the south",
+   "when": {
+    "era": 2,
+    "day": 6,
+    "tech": "domestication"
+   },
+   "chance": 0.4,
+   "text": "a caravan leader back from the far south with three hundred donkeys of incense, ebony and ivory.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 56,
+    "atk": 5,
+    "def": 4,
+    "spd": 1.1,
+    "color": "#8b5a2b",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 3,
+     "lore": 2,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "went four times to the land of Yam and came back each time"
+   ],
+   "desc": "An expedition leader of the Old Kingdom, famous for the letter a child pharaoh wrote him."
+  },
+  {
+   "id": "hatshepsut",
+   "as": "chosen",
+   "name": "Hatshepsut",
+   "epithet": "the Female Pharaoh",
+   "label": "Hatshepsut, the Female Pharaoh",
+   "history": "real",
+   "desc": "She rules as king and sends ships to Punt. Lore 6, Trade 6, Crafting 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 5,
+     "combat": 2,
+     "lore": 6,
+     "trade": 6
+    }
+   }
+  },
+  {
+   "id": "imhotep",
+   "as": "chosen",
+   "name": "Imhotep",
+   "epithet": "Builder and Healer",
+   "label": "Imhotep, Builder and Healer",
+   "history": "real",
+   "desc": "The architect of the first great stone building, later worshipped as a god of medicine. Crafting 7, Lore 7.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#6bd3ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 7,
+     "combat": 1,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "ahmose",
+   "as": "chosen",
+   "name": "Ahmose",
+   "epithet": "who Drove Out the Hyksos",
+   "label": "Ahmose, who Drove Out the Hyksos",
+   "history": "real",
+   "desc": "A warrior king who takes up the chariot of the invaders and turns it against them. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "inundation",
+   "title": "The Gift of the River",
+   "history": "real",
+   "source": "The yearly flood of the Nile laid fresh black silt on the fields; Herodotus called Egypt 'the gift of the river'",
+   "when": {
+    "after": "spring_flood"
+   },
+   "text": "The river has spread over the fields and gone back, leaving black mud behind. The old farmers smile: this is how it should be.",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "yield",
+       "of": "farm_plot",
+       "mul": 1.05
+      }
+     ]
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "workers_strike",
+   "title": "The Workers Lay Down Their Tools",
+   "history": "real",
+   "source": "The Turin Strike Papyrus: in year 29 of Ramesses III (c. 1157 BCE) the tomb-builders of Deir el-Medina stopped work because their rations were late",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "The builders sit down at the edge of the village and refuse to work. 'We are hungry,' they say. 'Eighteen days have passed and our grain has not come.'",
+   "options": [
+    {
+     "label": "Pay their grain at once",
+     "cost": {
+      "food": 25
+     },
+     "do": [
+      {
+       "mood": 4
+      },
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The grain comes, the builders go back to work, and the scribe writes it all down."
+    },
+    {
+     "label": "Order them back",
+     "do": [
+      {
+       "mood": -5
+      },
+      {
+       "culture": {
+        "ranked": 5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "build",
+         "mul": 0.95
+        }
+       ]
+      }
+     ],
+     "result": "They go back, slowly and sullenly. Work drags for weeks."
+    }
+   ]
+  },
+  {
+   "id": "seven_lean_years",
+   "title": "Seven Lean Years",
+   "history": "legend",
+   "source": "The Famine Stele on Sehel Island tells how King Djoser ended a seven-year famine by honouring Khnum, god of the river's source",
+   "when": {
+    "after": "drought",
+    "day": 5
+   },
+   "chance": 0.6,
+   "text": "For the third year the river has risen too little. The granaries are emptying. The priests say the god of the river's source has been forgotten.",
+   "options": [
+    {
+     "label": "Give land to the god's temple",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "The temple gets its fields. The next flood is a good one."
+    },
+    {
+     "label": "Store every grain",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "spoil",
+         "mul": 0.9
+        }
+       ]
+      },
+      {
+       "mood": -3
+      }
+     ],
+     "result": "Granaries are sealed and guarded. People tighten their belts."
+    }
+   ]
+  },
+  {
+   "id": "punt_expedition",
+   "title": "Ships to Punt",
+   "history": "real",
+   "source": "Hatshepsut's temple at Deir el-Bahari shows her expedition bringing back living incense trees, ebony, gold and baboons from Punt",
+   "when": {
+    "era": 2,
+    "pop": 12
+   },
+   "chance": 0.4,
+   "text": "Sailors speak of a land far to the south, Punt, where incense grows on trees and the people live in houses on stilts. The chief could send ships, if the tribe can spare them.",
+   "options": [
+    {
+     "label": "Send the ships",
+     "cost": {
+      "wood": 25,
+      "food": 20
+     },
+     "do": [
+      {
+       "give": {
+        "herbs": 10,
+        "goods": 6
+       }
+      },
+      {
+       "devotion": 6
+      },
+      {
+       "feat": "Sent ships to the land of Punt"
+      }
+     ],
+     "result": "Months later the ships return with incense trees in baskets, ebony, gold and a very angry baboon."
+    },
+    {
+     "label": "Not this year",
+     "result": "The sailors go back to fishing."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "osiris_isis",
+   "name": "Osiris and Isis",
+   "history": "legend",
+   "source": "Pyramid Texts; told in full by Plutarch, On Isis and Osiris",
+   "when": {
+    "day": 2
+   },
+   "text": "Osiris taught the people to farm, and his jealous brother Set tricked him into a chest, threw it into the Nile and later cut his body into pieces. Faithful Isis searched the whole land, gathered every piece, and breathed life into him long enough to conceive their son Horus. Osiris became king of the dead, and every year the grain rises from the earth as he did.",
+   "moral": "love gathers what was scattered",
+   "do": [
+    {
+     "devotion": 5
+    },
+    {
+     "insight": {
+      "farming": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "weighing_heart",
+   "name": "The Weighing of the Heart",
+   "history": "legend",
+   "source": "The Book of the Dead, spell 125",
+   "when": {
+    "deaths": 1
+   },
+   "text": "In the Hall of the Two Truths, the heart of the dead is laid on one pan of the scales, and the feather of Maat, truth, on the other. Thoth writes down the result. If the heart is heavy with wrongs, the Devourer eats it; if it is light as the feather, the dead go on to the Field of Reeds.",
+   "moral": "live so your heart is light",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "shipwrecked_sailor",
+   "name": "The Shipwrecked Sailor",
+   "history": "legend",
+   "source": "Middle Kingdom papyrus, c. 2000 BCE (Hermitage Museum)",
+   "when": {
+    "find": "fish"
+   },
+   "text": "A sailor's ship sank in a storm and he alone was washed up on an island of plenty. There he met a great golden serpent, who told him its own sorrow: a star had fallen and burned all its family. 'If you are brave,' said the serpent, 'you will hold your children again.' And a ship came, and the sailor went home.",
+   "moral": "telling of a misfortune helps you bear it",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "eloquent_peasant",
+   "name": "The Eloquent Peasant",
+   "history": "legend",
+   "source": "Middle Kingdom tale, c. 1850 BCE",
+   "when": {
+    "pop": 11
+   },
+   "text": "A peasant was robbed of his donkeys by an official's servant. He went to the high steward and pleaded for justice so beautifully that the steward kept him waiting just to hear him speak again, nine times, while secretly sending food to his family. At last justice was done, and the speeches were written down for the king.",
+   "moral": "justice is owed even to the poorest",
+   "do": [
+    {
+     "culture": {
+      "ranked": -2
+     }
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "opet",
+   "name": "The Festival of Opet",
+   "history": "real",
+   "tell": "festival",
+   "source": "Reliefs of the Opet procession at Luxor temple",
+   "text": "When the river is high, the god leaves his temple in a golden boat carried on the shoulders of priests and sails up the river to his southern house. The whole city follows along the bank with music and dancing, and bread and beer are shared out to everyone.",
+   "moral": "the gods walk among the people",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  }
+ ]
+}

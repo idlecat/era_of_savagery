@@ -1,0 +1,689 @@
+{
+ "id": "kush",
+ "order": 32,
+ "name": "Kushites",
+ "period": "c. 780 BCE–350 CE",
+ "place": "Napata and Meroë on the middle Nile",
+ "desc": "The kingdom of the black pharaohs, whose kings ruled Egypt for a century, whose queens, the kandakes, led armies against Rome, and whose city of Meroë smelted so much iron that its slag heaps still stand. They built more pyramids than Egypt.",
+ "history": "real",
+ "source": "The victory stela of Piye; Meroitic inscriptions (readable, but the language is still barely understood); excavations at Meroë, Naqa and Jebel Barkal",
+ "tribe_names": [
+  "Arkamani",
+  "Teriteqas",
+  "Akinidad",
+  "Kashta",
+  "Aspelta",
+  "Harsiyotef",
+  "Nastasen",
+  "Talakhamani",
+  "Pelekh",
+  "Nawidemak",
+  "Tabiry",
+  "Adikhalamani",
+  "Shorkaror",
+  "Malowiamani",
+  "Yesbokheamani",
+  "Kadimalo"
+ ],
+ "birth_names": [
+  "Amani",
+  "Bari",
+  "Kadi",
+  "Lakhi",
+  "Mali",
+  "Nata",
+  "Sabi",
+  "Tari",
+  "Wosa",
+  "Yeto"
+ ],
+ "epithets": {
+  "cautious": [
+   "Keeper of the Furnace",
+   "Digger of the Hafir"
+  ],
+  "belligerent": [
+   "Archer of the Kandake"
+  ],
+  "devout": [
+   "Priest of the Lion God"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "kept the iron furnace burning for three days and nights"
+  ],
+  "belligerent": [
+   "marched north with the queen against the soldiers of Rome"
+  ],
+  "devout": [
+   "sang to the lion god at his temple in the desert"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "meroe_iron",
+   "kind": "tool",
+   "name": "Iron of Meroë",
+   "history": "real",
+   "source": "Meroë smelted iron on a large scale from about the 5th century BCE; heaps of slag still surround the city",
+   "practice": {
+    "quarry": 200,
+    "hearth": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ],
+    "finds": [
+     "iron_ore"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.15
+    }
+   ],
+   "desc": "Furnaces fed with charcoal and bellows turn red stone into iron for axes and spears: +2 attack, woodcutting 15% faster.",
+   "hint": "Needs Bronze Metallurgy and iron ore.",
+   "words": [
+    "iron"
+   ]
+  },
+  {
+   "id": "meroitic_script",
+   "kind": "goods",
+   "name": "Meroitic Script",
+   "history": "real",
+   "source": "From about 200 BCE the Kushites wrote their own language in a cursive script of 23 signs; it can be read aloud but not yet fully understood",
+   "practice": {
+    "lead": 100,
+    "ritual": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    }
+   ],
+   "desc": "An alphabet of their own instead of borrowed hieroglyphs: the tribe gathers more lore.",
+   "hint": "Needs the Tribe & Agrarian Era.",
+   "words": [
+    "writing"
+   ]
+  },
+  {
+   "id": "hafir",
+   "kind": "tool",
+   "name": "Hafir Reservoir",
+   "history": "real",
+   "source": "Great earthen basins dug in the Butana plain to catch the summer rains, like the Great Hafir at Musawwarat es-Sufra",
+   "practice": {
+    "build": 200,
+    "berry": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.97
+    }
+   ],
+   "desc": "A great round basin dug to hold the rain through the dry months: farm plots yield 15% more.",
+   "hint": "Needs farming, and builders."
+  },
+  {
+   "id": "steep_pyramids",
+   "kind": "goods",
+   "name": "Steep Pyramids",
+   "history": "real",
+   "source": "Over 200 small, steep-sided pyramids stand at Meroë, el-Kurru and Nuri, more than in all of Egypt",
+   "practice": {
+    "build": 250,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 3
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Narrow, steep pyramids of sandstone over the tombs of kings and queens: rites bring 15% more devotion, +2 mood.",
+   "hint": "Needs Polished Stone Tools and the Bronze & Mythic Era."
+  },
+  {
+   "id": "meroe_cotton",
+   "kind": "goods",
+   "name": "Cotton Cloth",
+   "history": "real",
+   "source": "Cotton was spun and woven at Meroë in the early centuries CE, among the earliest in Africa",
+   "practice": {
+    "hearth": 250,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_cotton"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "cold",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Soft white cloth spun from cotton bolls: the cold bites 10% less, +1 mood.",
+   "hint": "Needs wild cotton."
+  }
+ ],
+ "foods": [
+  {
+   "id": "merissa",
+   "name": "Sorghum Beer",
+   "history": "real",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.97
+    }
+   ],
+   "desc": "Thick sorghum beer brewed in great jars, food and drink at once: +3 mood.",
+   "hint": "Needs pottery and farming."
+  },
+  {
+   "id": "dom_palm",
+   "name": "Dom Palm Bread",
+   "history": "real",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.92
+    }
+   ],
+   "desc": "The hard fruit of the doum palm, ground into a sweet flour that keeps: food spoils 8% slower.",
+   "hint": "Comes from foraging."
+  }
+ ],
+ "finds": [
+  {
+   "id": "iron_ore",
+   "name": "Red Iron Stone",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "amount": 28,
+   "rate": 0.6,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_home",
+   "count": 3,
+   "practice": "quarry",
+   "look": "ochre",
+   "act": "Digging iron stone",
+   "seed": {
+    "bronze": 0.1
+   },
+   "desc": "Heavy red-brown sandstone full of iron, for the furnaces."
+  },
+  {
+   "id": "wild_cotton",
+   "name": "Wild Cotton",
+   "group": "food",
+   "res": "goods",
+   "history": "real",
+   "amount": 18,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "yarrow",
+   "act": "Picking cotton bolls",
+   "desc": "Bushes whose seed pods burst into white fluff."
+  }
+ ],
+ "people": [
+  {
+   "id": "tanwetamani_smith",
+   "as": "founder",
+   "name": "Dekarkhe",
+   "epithet": "Master of the Furnace",
+   "history": "invented",
+   "desc": "He can tell the heat of a furnace by the colour of its smoke.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#703020",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 2,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "drew the first bloom of iron out of the furnace"
+   ]
+  },
+  {
+   "id": "kandake_mother",
+   "as": "founder",
+   "name": "Nawidi",
+   "epithet": "Mother of the Chief",
+   "history": "invented",
+   "desc": "In Kush the chief's mother chooses the next chief, and she chooses carefully.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a07060",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 4,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "chose the young chief from among four brothers"
+   ]
+  },
+  {
+   "id": "piye",
+   "as": "ancestor",
+   "name": "Piye",
+   "epithet": "who Loved Horses",
+   "history": "real",
+   "source": "The Victory Stela of Piye, c. 728 BCE (Egyptian Museum, Cairo)",
+   "desc": "The Kushite king who conquered Egypt and was angrier that a defeated prince had starved his horses than at anything else he did."
+  },
+  {
+   "id": "alara",
+   "as": "ancestor",
+   "name": "Alara",
+   "epithet": "the Founder",
+   "history": "real",
+   "source": "Remembered in later Kushite inscriptions as the first of the royal line",
+   "desc": "The first king of Napata, who gave his sister to the god Amun so that her descendants would rule."
+  },
+  {
+   "id": "nero_centurion",
+   "as": "wanderer",
+   "name": "Celer",
+   "epithet": "Centurion of the South",
+   "history": "real",
+   "source": "Seneca (Natural Questions 6.8) and Pliny record two centurions Nero sent up the Nile to find its source, about 61 CE",
+   "when": {
+    "era": 3,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "a soldier from the far north, looking for where the river begins, who says his king wants to know.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 60,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.05,
+    "color": "#b03030",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 5,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "followed the river south until the marshes swallowed it"
+   ],
+   "desc": "One of Nero's explorers; the game names him, since the sources do not."
+  },
+  {
+   "id": "taharqa",
+   "as": "chosen",
+   "name": "Taharqa",
+   "epithet": "Pharaoh of Two Lands",
+   "label": "Taharqa, Pharaoh of Two Lands",
+   "history": "real",
+   "desc": "A Kushite pharaoh who builds from Napata to Memphis. Crafting 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 78,
+    "atk": 9,
+    "def": 6,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 7,
+     "combat": 6,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "amanirenas",
+   "as": "chosen",
+   "name": "Amanirenas",
+   "epithet": "the One-Eyed Kandake",
+   "label": "Amanirenas, the One-Eyed Kandake",
+   "history": "real",
+   "desc": "A queen who fights Rome to a treaty. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "amanishakheto",
+   "as": "chosen",
+   "name": "Amanishakheto",
+   "epithet": "Queen of Gold",
+   "label": "Amanishakheto, Queen of Gold",
+   "history": "real",
+   "desc": "A kandake whose gold jewels fill museum cases. Trade 7, Lore 5.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#e0c040",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 4,
+     "combat": 2,
+     "lore": 5,
+     "trade": 7
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "head_under_steps",
+   "title": "The Head Under the Steps",
+   "history": "real",
+   "source": "In 24 BCE the Kushites sacked Roman Aswan; a bronze head of Augustus they carried off was found buried beneath the steps of a temple at Meroë in 1910",
+   "when": {
+    "era": 3,
+    "culture": {
+     "martial": 10
+    }
+   },
+   "chance": 0.4,
+   "text": "The war party has come back from the north with the bronze head of the enemy's ruler, torn from his statue.",
+   "options": [
+    {
+     "label": "Bury it under the temple steps",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "mood": 3
+      },
+      {
+       "feat": "Buried the enemy's head under the temple steps"
+      }
+     ],
+     "result": "Now everyone who climbs to the god treads on the enemy's face."
+    },
+    {
+     "label": "Send it back with an offer of peace",
+     "do": [
+      {
+       "culture": {
+        "martial": -4
+       }
+      },
+      {
+       "give": {
+        "food": 20
+       }
+      }
+     ],
+     "result": "The enemy is surprised, and agrees to a treaty that asks no tribute."
+    }
+   ]
+  },
+  {
+   "id": "piye_horses",
+   "title": "The Starved Horses",
+   "history": "real",
+   "source": "Piye's stela: 'That my horses should be hungered pains me more than any crime you have done.' His horses were buried near his pyramid at el-Kurru",
+   "when": {
+    "tech": "domestication",
+    "pop": 11,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "Men from a beaten village are brought in. In their stables the chief finds horses so thin their ribs show. The chief is furious.",
+   "options": [
+    {
+     "label": "Punish them, feed the horses",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "speed",
+         "mul": 1.03
+        }
+       ]
+      }
+     ],
+     "result": "The horses are taken into the chief's own stables and fattened."
+    },
+    {
+     "label": "Forgive, and teach them",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The herders are shown how to keep horses. Their village joins ours."
+    }
+   ]
+  },
+  {
+   "id": "furnace_smoke",
+   "title": "Smoke over the City",
+   "history": "real",
+   "when": {
+    "invention": "meroe_iron"
+   },
+   "text": "The furnaces burn day and night now. Black slag is piling up into hills around the village, and the acacia groves are being cut for charcoal.",
+   "do": [
+    {
+     "give": {
+      "stone": 10
+     }
+    },
+    {
+     "mood": -1
+    },
+    {
+     "culture": {
+      "settled": 3
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "apedemak",
+   "name": "Apedemak the Lion God",
+   "history": "legend",
+   "source": "The Lion Temple at Naqa, 1st century CE",
+   "when": {
+    "day": 2
+   },
+   "text": "Our god of war has the head of a lion. On the temple wall he is carved with three lion heads and four arms, and a snake's body rising from a lotus. He leads the queen's archers, and he lets the lions eat the enemies of Kush.",
+   "moral": "courage has a lion's face",
+   "do": [
+    {
+     "culture": {
+      "martial": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "table_sun",
+   "name": "The Table of the Sun",
+   "history": "legend",
+   "source": "Herodotus 3.17–18",
+   "when": {
+    "pop": 10
+   },
+   "text": "In a meadow outside the city there is a table always covered with roasted meat. The magistrates fill it by night, and by day anyone who wishes may come and eat. The people say the earth itself gives it.",
+   "moral": "plenty is to be shared",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "culture": {
+      "ranked": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "piye_stela",
+   "name": "Piye Goes North",
+   "history": "real",
+   "source": "The Victory Stela of Piye",
+   "when": {
+    "era": 2
+   },
+   "text": "When the king heard that the princes of the north were at war, he sent his army with a command: purify yourselves in the river before battle, and fight by day, never by night like thieves. Then he went north himself, and every city opened its gates to him, and he gave thanks in the temple of Amun.",
+   "moral": "fight with honour",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  },
+  {
+   "id": "kandake_choose",
+   "name": "How the Queen Mother Chooses",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the role of the king's mother in Kushite succession",
+   "text": "When the old king dies, his brothers and sons stand before the queen mother. She does not ask who is strongest. She asks each of them to feed the hungry for a day, and watches. The one the people bless is the one she names.",
+   "moral": "a ruler is chosen by the people's blessing",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "culture": {
+      "ranked": -2
+     }
+    }
+   ]
+  }
+ ]
+}
