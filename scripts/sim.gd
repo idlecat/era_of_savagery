@@ -1321,6 +1321,9 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 		return false
 	if u.bed_pos == null: _pick_bed(u)
 	var outdoors: bool = u.bed_id < 0
+	if outdoors and D.river_dist(u.bed_pos) < _wet_reach() - 10.0: # the water is rising: move the bed out
+		u.sleeping = false
+		u.bed_pos = _dry(u.bed_pos)
 	var danger: bool = night_alarm or (outdoors and not active_predators_near(u.pos, 300).is_empty())
 	if u.sleeping:
 		if danger and outdoors:
@@ -1358,9 +1361,23 @@ func _pick_bed(u: E.Unit) -> void:
 	var fire := _nearest_fire(u.pos)
 	if fire and D.region_at(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
 		var a := float(u.id) * 2.39996 # golden angle: spread the sleepers round the fire
-		u.bed_pos = fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0)
+		u.bed_pos = _dry(fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0))
 	else:
-		u.bed_pos = u.pos # camp in the open
+		u.bed_pos = _dry(u.pos) # camp in the open, but not at the water's edge
+
+## How far from a river's centreline the ground is wet: the river, a margin of bank, and
+## the spring flood while it is up.
+func _wet_reach() -> float:
+	return maxf(nat.flood_half(), D.RIVER_HALF) + 40.0
+
+## A spot near p that is out of the water's reach (on the same side of the river), for
+## sleeping in the open.
+func _dry(p: Vector2) -> Vector2:
+	var reach := _wet_reach()
+	var info := D.river_info(p)
+	if info["d"] >= reach or info["n"] == Vector2.ZERO: return p
+	var out: Vector2 = info["c"] + info["n"] * (reach + 10.0)
+	return out if D.region_at(out) == D.region_at(p) else p
 
 func unit_idle(u: E.Unit, dt: float) -> void:
 	u.act = "Resting (sick)" if u.sick > 0 else "Idle"

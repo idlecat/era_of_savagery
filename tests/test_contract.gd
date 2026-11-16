@@ -55,6 +55,7 @@ func _initialize() -> void:
 	test_inventions()
 	test_cultures()
 	test_flood_deer()
+	test_dry_beds()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1529,3 +1530,20 @@ func test_flood_deer() -> void:
 	var far: Array = sim.nodes.filter(func(n): return n.kind == "deer" and D.river_dist(n.pos) < INF)
 	for i in 200: sim.tick(0.05)
 	check(far.all(func(n): return D.river_dist(n.pos) >= sim.nat.flood_half() - 1.0), "no deer wades into the flood")
+
+func test_dry_beds() -> void:
+	print("\n== Nobody sleeps in the water ==")
+	var sim = _new_sim()
+	sim.structures = sim.structures.filter(func(st): return not st.type in sim.SHELTERS and st.type != "bonfire") # (no beds: camp in the open)
+	var u = sim.unit_by_name("Tuo")
+	var c: Vector2 = D.nearest_river_point(D.VILLAGE + Vector2(0, 400))
+	var out: Vector2 = (D.VILLAGE + Vector2(0, 400) - c).normalized()
+	u.pos = c + out * (D.RIVER_HALF + 8.0)
+	u.job = {}
+	sim.time = floor(sim.time / D.DAY_LEN) * D.DAY_LEN + D.DAY_LEN * 0.8
+	for i in 200: sim.update_unit(u, 0.05)
+	check(D.river_dist(u.pos) >= D.RIVER_HALF + 30.0, "someone caught at the riverbank at night beds down away from the water (%d)" % D.river_dist(u.pos))
+	sim.nat.flood_left = 40.0
+	for i in 400: sim.update_unit(u, 0.05)
+	check(D.river_dist(u.pos) >= sim.nat.flood_half(), "when the flood rises, the sleeper gets up and moves out of it (%d, water to %d)" % [D.river_dist(u.pos), sim.nat.flood_half()])
+	check(u.sleeping or u.act == "Keeping watch" or u.act == "Going to sleep", "and settles down again (%s)" % u.act)
