@@ -1,0 +1,723 @@
+{
+ "id": "sumer",
+ "order": 10,
+ "name": "Sumerians",
+ "period": "c. 4500–2000 BCE",
+ "place": "the marshes and river plains of southern Mesopotamia",
+ "desc": "The people of Eridu, Uruk and Ur, who dug canals between the Tigris and Euphrates, built the first cities, and pressed the first writing into clay.",
+ "history": "real",
+ "source": "Excavations at Uruk (from 1912), Ur (Leonard Woolley, 1922–34) and Eridu; Sumerian literature from Nippur",
+ "tribe_names": [
+  "Abba",
+  "Dada",
+  "Lu-Utu",
+  "Ur-Nanna",
+  "Nin-kala",
+  "Geme-Enlil",
+  "Shara",
+  "Lugal-ki",
+  "Inim",
+  "Ku-Ningal",
+  "Ama-e",
+  "Ur-Bau",
+  "Nin-ana",
+  "Lu-Girsu",
+  "Mesh",
+  "Bara"
+ ],
+ "birth_names": [
+  "Tur",
+  "Dumu",
+  "Banda",
+  "Sig",
+  "Nunu",
+  "Kiri",
+  "Usa",
+  "Ezi",
+  "Lala",
+  "Ada"
+ ],
+ "epithets": {
+  "cautious": [
+   "Digger of Canals",
+   "Keeper of the Seal"
+  ],
+  "devout": [
+   "Servant of the Moon God",
+   "Reader of the Clay"
+  ],
+  "gluttonous": [
+   "Brewer of Barley"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "cleared the silt from the great canal before the flood season"
+  ],
+  "devout": [
+   "climbed the steps of the temple terrace to watch the new moon"
+  ],
+  "gluttonous": [
+   "brewed a beer so good the whole village sang to Ninkasi"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "clay_tokens",
+   "kind": "goods",
+   "name": "Counting Tokens",
+   "history": "real",
+   "source": "Small clay tokens for counting goods appear across the Near East from about 8000 BCE; at Uruk they were sealed in clay envelopes",
+   "practice": {
+    "lead": 80,
+    "hearth": 120
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Little clay shapes, one for each jar of oil or sheep: the tribe gathers a little more lore, and the stores hold 10 more food.",
+   "hint": "Comes from leading others, and evenings of keeping count.",
+   "words": [
+    "tokens"
+   ]
+  },
+  {
+   "id": "cylinder_seal",
+   "kind": "goods",
+   "name": "Cylinder Seal",
+   "history": "real",
+   "source": "Carved stone cylinders rolled across wet clay, from the Uruk period (c. 3500 BCE) on",
+   "practice": {
+    "quarry": 60,
+    "ritual": 80
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A carved stone rolled over the clay that seals a jar: no one opens it unseen, and food spoils 10% slower.",
+   "hint": "Needs Polished Stone Tools, and carvers who keep the rites.",
+   "words": [
+    "seals"
+   ]
+  },
+  {
+   "id": "potters_wheel",
+   "kind": "tool",
+   "name": "Potter's Wheel",
+   "history": "real",
+   "source": "Slow wheels for turning pots were in use in Mesopotamia by about 4500–3500 BCE",
+   "practice": {
+    "hearth": 250,
+    "build": 60
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 20
+    },
+    {
+     "stat": "build",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A heavy disc turned by hand while the potter shapes the clay: the stores hold 20 more food, and building is 5% faster.",
+   "hint": "Needs pottery, and many evenings at the clay.",
+   "words": [
+    "wheels"
+   ]
+  },
+  {
+   "id": "irrigation_canals",
+   "kind": "tool",
+   "name": "Irrigation Canals",
+   "history": "real",
+   "source": "Canals from the Euphrates fed the fields of Eridu and Uruk; keeping them clear was the first public work",
+   "practice": {
+    "build": 150,
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.3
+    }
+   ],
+   "desc": "Ditches that lead the river to the fields: farm plots yield 30% more.",
+   "hint": "Needs farming, and builders who work the fields.",
+   "words": [
+    "canals"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "ninkasi_beer",
+   "name": "Barley Beer",
+   "history": "real",
+   "source": "The Hymn to Ninkasi (c. 1800 BCE) is both a prayer and a brewing recipe; workers at Uruk were paid in beer",
+   "practice": {
+    "hearth": 250,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 4
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Barley bread soaked and left to work in a jar, drunk through reed straws: +4 mood, and hunger grows 5% slower.",
+   "hint": "Needs pottery and farming, and grain left by the fire."
+  },
+  {
+   "id": "date_cakes",
+   "name": "Date Cakes",
+   "history": "real",
+   "source": "The date palm was grown in southern Mesopotamia from at least the 4th millennium BCE",
+   "practice": {
+    "berry": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "date_palms"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.85
+    }
+   ],
+   "desc": "Dates pressed into cakes that keep for a year: food spoils 15% slower.",
+   "hint": "Needs date palms."
+  }
+ ],
+ "finds": [
+  {
+   "id": "date_palms",
+   "name": "Date Palms",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking dates",
+   "desc": "Tall palms heavy with sweet dates along the water."
+  },
+  {
+   "id": "reed_beds",
+   "name": "Reed Beds",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "source": "Marsh Arabs still build arched reed houses (mudhif) like those shown on Uruk seals",
+   "amount": 30,
+   "rate": 1.1,
+   "regrow": 0.08,
+   "winter": true,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Cutting reeds",
+   "desc": "Tall marsh reeds, bundled for houses, boats and baskets: each load is wood."
+  }
+ ],
+ "people": [
+  {
+   "id": "nin_sumu",
+   "as": "founder",
+   "name": "Ninsumu",
+   "epithet": "Mother of the Canal",
+   "history": "invented",
+   "desc": "She knows how the water must run for every field.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#c8a060",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "cut the first ditch from the river to the barley field"
+   ]
+  },
+  {
+   "id": "ur_engur",
+   "as": "founder",
+   "name": "Urengur",
+   "epithet": "Temple Steward",
+   "history": "invented",
+   "desc": "He counts the barley, the sheep and the days.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 46,
+    "atk": 3,
+    "def": 2,
+    "spd": 1.0,
+    "color": "#a090c0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 4,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "counted every sheep of the temple flock with clay tokens"
+   ]
+  },
+  {
+   "id": "kubaba",
+   "as": "ancestor",
+   "name": "Kubaba",
+   "epithet": "the Tavern-Keeper Queen",
+   "history": "legend",
+   "source": "Sumerian King List: the only woman listed as ruling in her own right",
+   "desc": "A woman who kept a tavern in Kish and became its queen, said to have reigned a hundred years."
+  },
+  {
+   "id": "puabi",
+   "as": "ancestor",
+   "name": "Puabi",
+   "epithet": "Queen of Ur",
+   "history": "real",
+   "source": "Royal Tomb PG 800 at Ur, c. 2600 BCE",
+   "desc": "A queen buried in a headdress of gold leaves and lapis beads, with her name rolled on a cylinder seal."
+  },
+  {
+   "id": "ur_nammu",
+   "as": "ancestor",
+   "name": "Ur-Nammu",
+   "epithet": "the Law-Giver",
+   "history": "real",
+   "source": "Code of Ur-Nammu, c. 2100–2050 BCE, the oldest law code known",
+   "desc": "The king who built the great ziggurat of Ur and wrote down laws that fined, rather than maimed, those who did wrong."
+  },
+  {
+   "id": "ea_nasir",
+   "as": "wanderer",
+   "name": "Ea-nasir",
+   "epithet": "the Copper Trader",
+   "history": "real",
+   "source": "Letter of Nanni to Ea-nasir (c. 1750 BCE), British Museum: the oldest known written complaint",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a merchant just back from Dilmun with copper ingots, followed by a trail of angry customers.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 48,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c08850",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 1,
+     "lore": 1,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "sold copper to Nanni that Nanni swore was bad"
+   ],
+   "desc": "A copper merchant of Ur, remembered because a customer's furious letter about his poor copper survives."
+  },
+  {
+   "id": "gilgamesh",
+   "as": "chosen",
+   "name": "Gilgamesh",
+   "epithet": "Two-Thirds a God",
+   "label": "Gilgamesh, Two-Thirds a God",
+   "history": "legend",
+   "desc": "A king who wrestles giants. Combat 8, 85 HP.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "ziusudra",
+   "as": "chosen",
+   "name": "Ziusudra",
+   "epithet": "the Boat-Builder",
+   "label": "Ziusudra the Boat-Builder",
+   "history": "legend",
+   "desc": "Warned by the gods, he builds the boat that outlasts the flood. Crafting 7, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 65,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 7,
+     "combat": 1,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "lugalbanda",
+   "as": "chosen",
+   "name": "Lugalbanda",
+   "epithet": "the Swift",
+   "label": "Lugalbanda the Swift",
+   "history": "legend",
+   "desc": "Given swiftness by the Anzud bird. Foraging 7, fast as the wind.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff9f6b",
+    "hp": 65,
+    "atk": 7,
+    "def": 4,
+    "spd": 1.4,
+    "skills": {
+     "forage": 7,
+     "craft": 1,
+     "combat": 5,
+     "lore": 2
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "river_moves",
+   "title": "The River Changes Its Bed",
+   "history": "real",
+   "source": "The Euphrates shifted its course many times; cities like Ur and Eridu were left far from water",
+   "when": {
+    "after": "spring_flood",
+    "era": 2
+   },
+   "chance": 0.7,
+   "text": "After the flood the river runs in a new channel, far from the fields. The old canals stand dry.",
+   "options": [
+    {
+     "label": "Dig a new canal to the river",
+     "cost": {
+      "food": 20,
+      "wood": 15
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "feat": "Dug a canal to the moving river"
+      }
+     ],
+     "result": "A whole season of digging. When the water flows again, the fields are greener than before."
+    },
+    {
+     "label": "Follow the river",
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The people pack up and drift toward the new water, grumbling."
+    }
+   ]
+  },
+  {
+   "id": "first_writing",
+   "title": "Signs Pressed in Clay",
+   "history": "real",
+   "source": "Proto-cuneiform tablets from the Eanna precinct at Uruk, c. 3300–3100 BCE, are among the earliest writing",
+   "when": {
+    "invention": "clay_tokens",
+    "era": 2,
+    "pop": 10
+   },
+   "text": "A steward tires of carrying tokens and simply presses their shapes into a flat piece of clay with a reed. The marks stay, and anyone who knows them can read the count.",
+   "do": [
+    {
+     "insight": {
+      "code": 0.35
+     }
+    },
+    {
+     "remember": "pressed the first signs into clay",
+     "who": "best:lore",
+     "impact": 8
+    }
+   ]
+  },
+  {
+   "id": "boundary_stone",
+   "title": "The Edge of the Plain",
+   "history": "real",
+   "source": "Lagash and Umma fought for generations over the fields of the Gu-edena; the Stele of the Vultures (c. 2450 BCE) records it",
+   "when": {
+    "pop": 12,
+    "era": 2,
+    "day": 8
+   },
+   "chance": 0.5,
+   "text": "Herders from a neighbouring town have moved the stone that marks where our fields end. The young men are already sharpening spears.",
+   "options": [
+    {
+     "label": "March on them",
+     "do": [
+      {
+       "culture": {
+        "martial": 6
+       }
+      },
+      {
+       "remember": "marched to put the boundary stone back by force",
+       "who": "best:combat",
+       "impact": 7
+      }
+     ],
+     "result": "The stone goes back, and a few of theirs come home bleeding. They will remember."
+    },
+    {
+     "label": "Swear an oath before the gods",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "devotion": 8
+      }
+     ],
+     "result": "Both sides swear by the gods at a new stone, carved with the oath. The fields are quiet, for now."
+    },
+    {
+     "label": "Let them have the field",
+     "do": [
+      {
+       "mood": -3
+      },
+      {
+       "culture": {
+        "martial": -4
+       }
+      }
+     ],
+     "result": "The field is lost. Some call it wisdom, some cowardice."
+    }
+   ]
+  },
+  {
+   "id": "royal_burial",
+   "title": "A Tomb for a Great One",
+   "history": "real",
+   "source": "The Royal Tombs of Ur held lyres, gold, lapis and the Standard of Ur",
+   "when": {
+    "deaths": 3,
+    "era": 2
+   },
+   "text": "One of our greatest has died. The elders say a great one should go below with music and gold, as the old kings did.",
+   "options": [
+    {
+     "label": "Bury them with treasures",
+     "cost": {
+      "goods": 5,
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "culture": {
+        "ranked": 6
+       }
+      }
+     ],
+     "result": "A lyre with a bull's head is laid in the tomb. People speak of the burial for years."
+    },
+    {
+     "label": "Keep the treasures for the living",
+     "do": [
+      {
+       "culture": {
+        "ranked": -4
+       }
+      }
+     ],
+     "result": "The dead one goes below in a reed mat, as the poor do."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "flood_ziusudra",
+   "name": "The Flood and the Boat",
+   "history": "legend",
+   "source": "The Eridu Genesis; Tablet XI of the Epic of Gilgamesh",
+   "when": {
+    "day": 2
+   },
+   "text": "The gods decided to drown the noisy people. But wise Enki whispered to a reed wall, so that the good man behind it would hear: tear down your house, build a boat. For seven days and nights the flood swept the land. Then the boat came to rest on a mountain, and the man sent out a dove, a swallow and a raven.",
+   "moral": "the wise prepare before the water rises",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "enmerkar_aratta",
+   "name": "Enmerkar and the Lord of Aratta",
+   "history": "legend",
+   "source": "Sumerian epic poem, copied c. 1800 BCE",
+   "when": {
+    "era": 2
+   },
+   "text": "The king of Uruk sent his messenger over seven mountains to Aratta again and again, until the message grew too long to remember. So the king patted some clay and set words on it like a tablet. Before that day, the poem says, no one had ever put words on clay.",
+   "moral": "words outlast the messenger",
+   "do": [
+    {
+     "insight": {
+      "code": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "inanna_me",
+   "name": "Inanna Carries the Gifts to Uruk",
+   "history": "legend",
+   "source": "Inanna and Enki, Sumerian poem",
+   "when": {
+    "pop": 11
+   },
+   "text": "Inanna went to drink with Enki in Eridu. Merry with beer, he gave her the gifts of the gods: kingship, the arts of the scribe, the craft of the smith, music, wisdom. When he woke he wanted them back, but Inanna had already sailed home to Uruk with her boat full.",
+   "moral": "a city is made of many gifts",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "culture": {
+      "settled": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "ninkasi_hymn",
+   "name": "The Hymn to Ninkasi",
+   "history": "real",
+   "tell": "festival",
+   "source": "Sumerian hymn, c. 1800 BCE",
+   "text": "Ninkasi, you are the one who handles the dough with a big shovel, who soaks the malt in a jar, who spreads the cooked mash on reed mats. When you pour out the beer, it is like the rush of the Tigris and the Euphrates.",
+   "moral": "joy is worth brewing",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,695 @@
+{
+ "id": "media",
+ "order": 20,
+ "name": "Medes",
+ "period": "c. 700–549 BCE",
+ "place": "Ecbatana in the Zagros, western Iran",
+ "desc": "Iranian horsemen of the Zagros valleys, breeders of the great Nisaean horses, who united under a judge-king, helped bring down Assyria, and whose priestly tribe, the Magi, gave their name to magic.",
+ "history": "real",
+ "source": "Herodotus, Histories book 1; Assyrian annals; the Babylonian Chronicle of the fall of Nineveh (612 BCE)",
+ "tribe_names": [
+  "Bagadata",
+  "Datis",
+  "Farnaka",
+  "Mithradata",
+  "Arshti",
+  "Hufrava",
+  "Vahyazdata",
+  "Spitama",
+  "Aryana",
+  "Vindafarna",
+  "Arsama",
+  "Raga",
+  "Tigra",
+  "Amuta",
+  "Gaubaruva",
+  "Parna"
+ ],
+ "birth_names": [
+  "Ama",
+  "Baga",
+  "Dari",
+  "Farna",
+  "Huva",
+  "Mitra",
+  "Raxa",
+  "Spita",
+  "Vaya",
+  "Zara"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Horse-Archer",
+   "Rider of the Nisaean Plain"
+  ],
+  "devout": [
+   "Magus of the Fire"
+  ],
+  "cautious": [
+   "Judge of the Village"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "shot three arrows from the saddle at full gallop and hit with all three"
+  ],
+  "devout": [
+   "kept the sacred fire alight through a whole winter of storms"
+  ],
+  "cautious": [
+   "settled a feud between two villages that had lasted three generations"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "nisaean_horses",
+   "kind": "tool",
+   "name": "Nisaean Horses",
+   "history": "real",
+   "source": "Herodotus and later writers praised the great horses of the Nisaean plain in Media, fed on 'Median grass' (alfalfa)",
+   "practice": {
+    "hunt": 150,
+    "explore": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ],
+    "finds": [
+     "alfalfa"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.08
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "Big, strong horses bred on alfalfa: everyone travels 8% faster and carries 1 more.",
+   "hint": "Needs Beast Domestication and alfalfa.",
+   "words": [
+    "horses",
+    "riding"
+   ]
+  },
+  {
+   "id": "horse_archery",
+   "kind": "tool",
+   "name": "Mounted Archery",
+   "history": "real",
+   "source": "Cyaxares reorganised the Median army into spearmen, archers and cavalry (Herodotus 1.103)",
+   "practice": {
+    "hunt": 200,
+    "lead": 60
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    }
+   ],
+   "desc": "Archers who shoot from horseback and ride away: +2 attack.",
+   "hint": "Needs Beast Domestication, and hunters led well."
+  },
+  {
+   "id": "seven_walls",
+   "kind": "tool",
+   "name": "The Seven Walls",
+   "history": "legend",
+   "source": "Herodotus 1.98: Ecbatana had seven rings of walls, each painted a different colour, the innermost silver and gold",
+   "practice": {
+    "build": 250,
+    "lead": 60
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Rings of walls rising up the hill, white, black, purple, blue, orange, silver and gold: +2 defence, +1 mood.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "fire_altar",
+   "kind": "goods",
+   "name": "Fire Altar of the Magi",
+   "history": "real",
+   "source": "The Magi were a Median tribe of priests (Herodotus 1.101); fire altars appear at Median sites such as Nush-i Jan",
+   "practice": {
+    "ritual": 250
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    }
+   ],
+   "desc": "A fire that is never allowed to go out, tended by the priestly clan: rites bring 15% more devotion.",
+   "hint": "Needs fire, and long rites.",
+   "words": [
+    "magi"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "kashk",
+   "name": "Dried Curd Balls",
+   "history": "real",
+   "practice": {
+    "hunt": 100,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Soured milk dried into hard balls that keep for a year on the march: food spoils 10% slower, hunger grows 5% slower.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "saffron_broth",
+   "name": "Saffron Broth",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "ritual": 50
+   },
+   "needs": {
+    "finds": [
+     "saffron"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A golden broth coloured with crocus threads: +2 mood, the hurt heal 5% faster.",
+   "hint": "Needs saffron crocus."
+  }
+ ],
+ "finds": [
+  {
+   "id": "alfalfa",
+   "name": "Median Grass",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Alfalfa came to Greece from the Persian Wars, and the Greeks called it 'Median grass' (medike)",
+   "amount": 26,
+   "rate": 1.0,
+   "regrow": 0.1,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "look": "grain",
+   "seed": {
+    "domestication": 0.2
+   },
+   "act": "Cutting alfalfa",
+   "desc": "Deep-rooted purple-flowered fodder that makes horses grow big. Finding it brings domestication closer."
+  },
+  {
+   "id": "saffron",
+   "name": "Saffron Crocus",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 12,
+   "rate": 0.6,
+   "regrow": 0.03,
+   "winter": false,
+   "needs": "lore",
+   "where": "meadow",
+   "count": 2,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Picking saffron threads",
+   "desc": "Autumn crocuses whose red threads colour food gold and ease pain."
+  }
+ ],
+ "people": [
+  {
+   "id": "mitraka",
+   "as": "founder",
+   "name": "Mitraka",
+   "epithet": "Breeder of Horses",
+   "history": "invented",
+   "desc": "She can tell a foal's worth by the way it stands.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a07850",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 1,
+     "lore": 1,
+     "trade": 1
+    }
+   },
+   "memory": [
+    "raised a colt that grew taller than any horse in the valley"
+   ]
+  },
+  {
+   "id": "varaza",
+   "as": "founder",
+   "name": "Varaza",
+   "epithet": "the Bowman",
+   "history": "invented",
+   "desc": "He sleeps with his bow strung and his horse saddled.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#b05040",
+    "skills": {
+     "forage": 3,
+     "craft": 0,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "drove off raiders from the hills with nothing but a bow and a fast horse"
+   ]
+  },
+  {
+   "id": "mandane",
+   "as": "ancestor",
+   "name": "Mandane",
+   "epithet": "Mother of Cyrus",
+   "history": "legend",
+   "source": "Herodotus 1.107–108",
+   "desc": "A Median princess whose father dreamed a vine grew from her and covered all Asia, and so married her to a quiet Persian. Her son was Cyrus."
+  },
+  {
+   "id": "zarathustra",
+   "as": "ancestor",
+   "name": "Zarathustra",
+   "epithet": "the Prophet",
+   "history": "legend",
+   "source": "The Gathas of the Avesta; his date and homeland are still argued over",
+   "desc": "The prophet who taught that the world is a struggle between truth and the lie, and that each person must choose good thoughts, good words and good deeds."
+  },
+  {
+   "id": "madyes",
+   "as": "wanderer",
+   "name": "Madyes",
+   "epithet": "the Scythian",
+   "history": "legend",
+   "source": "Herodotus 1.103–106: the Scythians under Madyes ruled Asia for 28 years",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a wild rider from the northern steppe, with a gold-covered quiver and a cup made from a skull.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 64,
+    "atk": 8,
+    "def": 3,
+    "spd": 1.25,
+    "color": "#c0a040",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 6,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "rode from the frozen north to the borders of Egypt"
+   ],
+   "desc": "A Scythian chief whose riders, Herodotus says, swept across the Near East."
+  },
+  {
+   "id": "deioces",
+   "as": "chosen",
+   "name": "Deioces",
+   "epithet": "the Judge",
+   "label": "Deioces the Judge",
+   "history": "legend",
+   "desc": "So fair a judge that the villages make him king. Lore 7.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 64,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 2,
+     "lore": 7,
+     "trade": 3
+    }
+   }
+  },
+  {
+   "id": "cyaxares",
+   "as": "chosen",
+   "name": "Cyaxares",
+   "epithet": "who Took Nineveh",
+   "label": "Cyaxares, who Took Nineveh",
+   "history": "real",
+   "desc": "He gives the Medes an army and brings down Assyria. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "harpagus",
+   "as": "chosen",
+   "name": "Harpagus",
+   "epithet": "the General",
+   "label": "Harpagus the General",
+   "history": "real",
+   "desc": "A general who never forgets a wrong. Combat 6, Lore 4.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 72,
+    "atk": 8,
+    "def": 6,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 6,
+     "lore": 4
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "judge_king",
+   "title": "The Judge Who Would Be King",
+   "history": "legend",
+   "source": "Herodotus 1.96–101: Deioces won fame as a fair judge, then refused to judge unless the Medes made him king",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "Quarrels between families are getting out of hand. The best judge among us says he will no longer settle them unless we give him a guard, a house on the hill, and the right to be seen only through messengers.",
+   "options": [
+    {
+     "label": "Make him king",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 8
+       }
+      },
+      {
+       "mood": 2
+      },
+      {
+       "insight": {
+        "code": 0.2
+       }
+      },
+      {
+       "feat": "Chose a king"
+      }
+     ],
+     "result": "A house rises on the hill, and the quarrels stop. Hardly anyone sees the judge any more."
+    },
+    {
+     "label": "Find another judge",
+     "do": [
+      {
+       "culture": {
+        "ranked": -4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The quarrels go on, but no one has to bow."
+    }
+   ]
+  },
+  {
+   "id": "scythian_years",
+   "title": "The Riders from the North",
+   "history": "legend",
+   "source": "Herodotus 1.106: Cyaxares invited the Scythian chiefs to a feast, made them drunk and killed them",
+   "when": {
+    "era": 2,
+    "pop": 10,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "Riders from the steppe have come down on the valleys. They take a share of every harvest and ride off laughing.",
+   "options": [
+    {
+     "label": "Pay the tribute",
+     "cost": {
+      "food": 25
+     },
+     "do": [
+      {
+       "mood": -3
+      }
+     ],
+     "result": "The riders take their share and leave us in peace, for now."
+    },
+    {
+     "label": "Invite them to a feast",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "martial": 6
+       }
+      },
+      {
+       "devotion": -6
+      },
+      {
+       "remember": "poured the wine at the feast where the riders' chiefs fell",
+       "who": "best:combat",
+       "impact": 8
+      }
+     ],
+     "result": "The wine flows, and the riders' chiefs never ride home. It is not a deed to be proud of."
+    },
+    {
+     "label": "Fight them in the open",
+     "do": [
+      {
+       "culture": {
+        "martial": 4
+       }
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         260,
+         260
+        ],
+        [
+         300,
+         220
+        ],
+        [
+         240,
+         300
+        ]
+       ]
+      }
+     ],
+     "result": "The warriors ride out. The steppe riders are already circling."
+    }
+   ]
+  },
+  {
+   "id": "fall_of_nineveh",
+   "title": "The Great City Falls",
+   "history": "real",
+   "source": "In 612 BCE the Medes and Babylonians sacked Nineveh, the capital of Assyria",
+   "when": {
+    "era": 3,
+    "culture": {
+     "martial": 15
+    }
+   },
+   "text": "The great city of our old oppressors has fallen to our warriors and their allies. Its palaces burn; its carvings of kings lie smashed.",
+   "do": [
+    {
+     "give": {
+      "goods": 6,
+      "food": 20
+     }
+    },
+    {
+     "culture": {
+      "martial": 4
+     }
+    },
+    {
+     "feat": "Brought down the great city"
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "vine_dream",
+   "name": "The Dream of the Vine",
+   "history": "legend",
+   "source": "Herodotus 1.107–108",
+   "when": {
+    "day": 3
+   },
+   "text": "The old king dreamed that a vine grew from his daughter's womb and spread its leaves over all of Asia. The Magi told him: her son will rule in your place. So he married her far beneath her, and when the child was born he ordered it left on the mountain. But the herdsman's wife had just lost her own baby, and she kept the prince.",
+   "moral": "fate finds a way",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "magi_fire",
+   "name": "Why the Fire Must Not Die",
+   "history": "legend",
+   "source": "Iranian fire worship, later Zoroastrian tradition",
+   "when": {
+    "invention": "fire_altar"
+   },
+   "text": "Fire is the son of the Wise Lord, the brightest of all things, and the lie cannot bear its light. As long as one fire burns in the land, the darkness cannot win. So the Magi feed it day and night, and cover their mouths so that even their breath cannot defile it.",
+   "moral": "keep the light burning",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "culture": {
+      "spiritual": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "good_thoughts",
+   "name": "Good Thoughts, Good Words, Good Deeds",
+   "history": "legend",
+   "source": "The Avestan creed humata, hukhta, hvarshta",
+   "when": {
+    "era": 2
+   },
+   "text": "Two spirits were there from the beginning, twins: the better and the bad, in thought, in word, in deed. Between them the wise choose rightly, the foolish do not. Every person, every day, chooses which one to walk with.",
+   "moral": "every day is a choice",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "spiritual": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "seven_colours",
+   "name": "The City of Seven Colours",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Herodotus 1.98",
+   "text": "On the hill of Ecbatana the walls rise one inside the other, each higher than the last: white, then black, then purple, blue and orange, and the two innermost covered in silver and in gold. From the plain, at sunset, the whole hill shines like a rainbow.",
+   "moral": "beauty is a kind of strength",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

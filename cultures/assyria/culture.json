@@ -1,0 +1,648 @@
+{
+ "id": "assyria",
+ "order": 14,
+ "name": "Assyrians",
+ "period": "c. 2025–609 BCE",
+ "place": "Ashur and Nineveh on the upper Tigris",
+ "desc": "Traders first, whose donkey caravans carried tin and cloth into Anatolia, then builders of the largest empire the world had seen, with stone-lined aqueducts, carved palaces guarded by winged bulls, and the great library of Nineveh.",
+ "history": "real",
+ "source": "The Old Assyrian letters from Kanesh (Kültepe), about 23,000 tablets; Ashurbanipal's library and palace reliefs (British Museum)",
+ "tribe_names": [
+  "Ashur-idi",
+  "Enlil-bani",
+  "Imdi-ilum",
+  "Innaya",
+  "Pilah-Ishtar",
+  "Shalim-ahum",
+  "Taram-Kubi",
+  "Waqartum",
+  "Ahaha",
+  "Ishtar-bashti",
+  "Shuli",
+  "Amur-Ishtar",
+  "Iddin-Suen",
+  "Kulumaya",
+  "Ali-ahum",
+  "Buzazu"
+ ],
+ "birth_names": [
+  "Idi",
+  "Hata",
+  "Tamu",
+  "Nuhi",
+  "Saba",
+  "Lulu",
+  "Ashi",
+  "Zizi",
+  "Bibi",
+  "Elali"
+ ],
+ "epithets": {
+  "gluttonous": [
+   "Master of the Caravan"
+  ],
+  "belligerent": [
+   "Lion-Spear",
+   "Charioteer of Ashur"
+  ],
+  "cautious": [
+   "Mixer of Perfumes"
+  ]
+ },
+ "memories": {
+  "gluttonous": [
+   "led two hundred donkeys loaded with tin across the mountains to Kanesh"
+  ],
+  "belligerent": [
+   "speared a lion that had broken into the sheepfold"
+  ],
+  "cautious": [
+   "distilled a scent of myrrh and calamus for the palace"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "donkey_caravan",
+   "kind": "tool",
+   "name": "Donkey Caravans",
+   "history": "real",
+   "source": "Old Assyrian merchants sent black donkeys with about 65 kg of tin and textiles each the 1,000 km from Ashur to Kanesh",
+   "practice": {
+    "explore": 120,
+    "hunt": 60
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 2
+    }
+   ],
+   "desc": "Strings of pack donkeys with balanced loads: everyone carries 2 more.",
+   "hint": "Needs Beast Domestication, and long journeys.",
+   "words": [
+    "caravans"
+   ]
+  },
+  {
+   "id": "perfume_still",
+   "kind": "goods",
+   "name": "Perfume Still",
+   "history": "real",
+   "source": "A tablet of about 1200 BCE names Tapputi-Belatekallim, a palace perfumer who distilled flowers, oil and calamus: the first chemist known by name",
+   "practice": {
+    "hearth": 200,
+    "ritual": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "sick",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Flowers and resins boiled and their vapour caught in a clay lid: +2 mood, and the sick recover 10% faster.",
+   "hint": "Needs pottery, and rites at the hearth."
+  },
+  {
+   "id": "aqueduct",
+   "kind": "tool",
+   "name": "Stone Aqueduct",
+   "history": "real",
+   "source": "Sennacherib's aqueduct at Jerwan (c. 690 BCE), built of some two million stones, carried water 80 km to Nineveh",
+   "practice": {
+    "build": 250,
+    "quarry": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.2
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A stone channel that brings mountain water down to the gardens: farm plots yield 20% more, +1 mood.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era, and builders who quarry."
+  },
+  {
+   "id": "tablet_library",
+   "kind": "goods",
+   "name": "Tablet Library",
+   "history": "real",
+   "source": "Ashurbanipal (r. 669–631 BCE) gathered over 30,000 tablets at Nineveh, including the Epic of Gilgamesh",
+   "practice": {
+    "ritual": 200,
+    "lead": 100
+   },
+   "needs": {
+    "techs": [
+     "code"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.025
+    }
+   ],
+   "desc": "Shelves of tablets, copied from every town and catalogued: the tribe gathers much more lore.",
+   "hint": "Needs the Tribal Code, and long years of rites and leadership.",
+   "words": [
+    "library"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "mersu",
+   "name": "Mersu Cakes",
+   "history": "real",
+   "source": "Mersu, a sweet of dates, pistachios and butter, appears in palace and temple records",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Dates pounded with nuts and butter into little cakes for feasts: +3 mood.",
+   "hint": "Needs Beast Domestication (for butter)."
+  },
+  {
+   "id": "grilled_locusts",
+   "name": "Skewered Locusts",
+   "history": "real",
+   "source": "A relief from Sennacherib's palace shows servants carrying skewers of locusts to a banquet",
+   "practice": {
+    "hunt": 60,
+    "hearth": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Locusts caught in the fields and roasted on sticks: hunger grows 5% slower.",
+   "hint": "Comes from hunting, and from cooking at the hearth."
+  }
+ ],
+ "finds": [
+  {
+   "id": "pomegranate",
+   "name": "Pomegranate Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking pomegranates",
+   "desc": "Red fruit full of seeds, the sign of plenty in every palace garden."
+  },
+  {
+   "id": "alabaster",
+   "name": "Mosul Alabaster",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "source": "The palace reliefs of Nineveh and Nimrud were carved on slabs of local gypsum alabaster",
+   "amount": 28,
+   "rate": 0.8,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "hills_home",
+   "count": 2,
+   "practice": "quarry",
+   "look": "salt",
+   "needs": "tools",
+   "act": "Cutting alabaster",
+   "culture": {
+    "ranked": 2
+   },
+   "desc": "Soft white stone that takes a fine carving: each load is stone."
+  }
+ ],
+ "people": [
+  {
+   "id": "lamassi",
+   "as": "founder",
+   "name": "Lamassi",
+   "epithet": "Weaver of Ashur",
+   "history": "invented",
+   "source": "Wives of Kanesh merchants ran the looms at Ashur and wrote to their husbands about cloth, prices and debts",
+   "desc": "She weaves the cloth the caravans carry, and writes sharp letters to whoever owes her.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c08070",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "wove twelve fine cloths in one winter for the caravan"
+   ]
+  },
+  {
+   "id": "ennam_ashur",
+   "as": "founder",
+   "name": "Ennam-Ashur",
+   "epithet": "the Caravan Leader",
+   "history": "invented",
+   "desc": "He knows every pass to Kanesh and every toll along the way.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a07850",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 2,
+     "lore": 1,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "brought the caravan home through a snowstorm with every donkey alive"
+   ]
+  },
+  {
+   "id": "tapputi",
+   "as": "ancestor",
+   "name": "Tapputi-Belatekallim",
+   "epithet": "the Perfumer",
+   "history": "real",
+   "source": "Middle Assyrian tablet, c. 1200 BCE",
+   "desc": "Overseer of the palace perfumers, who distilled and filtered her scents: the first chemist whose name survives."
+  },
+  {
+   "id": "ashurbanipal",
+   "as": "ancestor",
+   "name": "Ashurbanipal",
+   "epithet": "the Scholar King",
+   "history": "real",
+   "source": "His own inscriptions; the library of Nineveh, excavated from 1849",
+   "desc": "A king who boasted he could read stones from before the Flood, and sent scribes across the empire to copy every tablet they found."
+  },
+  {
+   "id": "pushu_ken",
+   "as": "wanderer",
+   "name": "Pushu-ken",
+   "epithet": "Merchant of Kanesh",
+   "history": "real",
+   "source": "One of the best-documented merchants of the Kanesh archives, c. 1900 BCE",
+   "when": {
+    "tech": "domestication",
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a merchant with a string of black donkeys and a bundle of letters from his wife.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#b08040",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "paid the toll at every town between Ashur and Kanesh, and argued at every one"
+   ],
+   "desc": "An Assyrian trader in Anatolia whose business letters, with his wife Lamassi back home, survive by the dozen."
+  },
+  {
+   "id": "sammuramat",
+   "as": "chosen",
+   "name": "Sammu-ramat",
+   "epithet": "the Queen Regent",
+   "label": "Sammu-ramat the Queen Regent",
+   "history": "real",
+   "desc": "A queen who ruled for her son and became the legend of Semiramis. Lore 6, Combat 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 5,
+     "lore": 6,
+     "trade": 2
+    }
+   }
+  },
+  {
+   "id": "sennacherib",
+   "as": "chosen",
+   "name": "Sennacherib",
+   "epithet": "the Water-Bringer",
+   "label": "Sennacherib the Water-Bringer",
+   "history": "real",
+   "desc": "He brings mountain water to a garden city. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 4,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "tiglath_pileser",
+   "as": "chosen",
+   "name": "Tiglath-Pileser",
+   "epithet": "the Conqueror",
+   "label": "Tiglath-Pileser the Conqueror",
+   "history": "real",
+   "desc": "A king who makes the army a standing force. Combat 8, 85 HP.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "lion_raid",
+   "title": "Lions at the Sheepfold",
+   "history": "real",
+   "source": "Assyrian kings hunted lions as a royal duty: the lion hunt reliefs of Ashurbanipal",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.3,
+   "text": "A great beast has been taking sheep at night. The young hunters beg to go after it; the elders want a higher wall.",
+   "options": [
+    {
+     "label": "Hunt it down",
+     "do": [
+      {
+       "spawn": "tiger",
+       "at": "village",
+       "offsets": [
+        [
+         260,
+         -180
+        ]
+       ]
+      },
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "alert": "The beast is out there. Gather the spears!"
+      }
+     ],
+     "result": "The hunters go out with torches. The beast is waiting."
+    },
+    {
+     "label": "Raise the fold walls",
+     "cost": {
+      "wood": 15
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 1
+        }
+       ]
+      }
+     ],
+     "result": "Thorns and stones go up around the fold. The losses stop."
+    }
+   ]
+  },
+  {
+   "id": "banquet",
+   "title": "Ten Days of Feasting",
+   "history": "real",
+   "source": "The Banquet Stele of Ashurnasirpal II (879 BCE) records 69,574 guests fed for ten days at the opening of Kalhu",
+   "when": {
+    "era": 2,
+    "pop": 14
+   },
+   "text": "The new village is finished. The chief wants a feast that will be remembered in every camp around: ten days of bread, beer and meat for anyone who comes.",
+   "options": [
+    {
+     "label": "Hold the feast",
+     "cost": {
+      "food": 50
+     },
+     "do": [
+      {
+       "mood": 8
+      },
+      {
+       "culture": {
+        "ranked": 5
+       }
+      },
+      {
+       "feat": "Held a feast of ten days"
+      }
+     ],
+     "result": "They come from every valley. For years afterwards strangers greet our people by the name of that feast."
+    },
+    {
+     "label": "A modest meal",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The people eat together quietly and go back to work."
+    }
+   ]
+  },
+  {
+   "id": "locust_cloud",
+   "title": "The Locusts Come",
+   "history": "real",
+   "source": "Letters to Assyrian kings report locust swarms and the efforts to destroy their eggs",
+   "when": {
+    "season": "Summer",
+    "era": 2
+   },
+   "chance": 0.3,
+   "text": "A brown cloud comes over the hills and settles on the fields. By evening the barley is stubble. The children, at least, have discovered that locusts roasted on a stick are good to eat.",
+   "do": [
+    {
+     "give": {
+      "food": -15
+     }
+    },
+    {
+     "invent": "grilled_locusts"
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "etana",
+   "name": "Etana Rides the Eagle",
+   "history": "legend",
+   "source": "The Myth of Etana; copies from Ashurbanipal's library",
+   "when": {
+    "day": 3
+   },
+   "text": "King Etana had no son. He rescued an eagle from a pit where a snake had thrown it, and the eagle carried him up toward heaven to find the plant of birth. Higher they flew, until the land was a garden plot and the sea a water trough, and Etana grew afraid.",
+   "moral": "kindness repaid can lift you high",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "descent_ishtar",
+   "name": "Ishtar Goes Down to the Underworld",
+   "history": "legend",
+   "source": "The Descent of Ishtar, Neo-Assyrian version",
+   "when": {
+    "deaths": 2
+   },
+   "text": "Ishtar went down to the land of no return. At each of the seven gates she gave up a jewel or a garment, until she stood bare before her sister, queen of the dead. While she lay below, no bull mounted a cow and no seed sprouted on the earth, until the gods sent for her.",
+   "moral": "life returns after loss",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "apkallu",
+   "name": "The Seven Sages from the Sea",
+   "history": "legend",
+   "source": "Apkallu sages, carved on the palace reliefs of Nimrud; Berossus",
+   "when": {
+    "era": 2
+   },
+   "text": "Before the Flood, seven sages came up out of the sea, wearing cloaks of fish skin. They taught people to build cities and temples, to write, to measure fields and to make laws. Then they went back into the water, and the carvers still put them at the palace doors to keep out evil.",
+   "moral": "wisdom is a gift to be passed on",
+   "do": [
+    {
+     "insight": {
+      "code": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "ashur_feast",
+   "name": "Ashurbanipal's Boast",
+   "history": "real",
+   "tell": "festival",
+   "source": "Ashurbanipal's own inscription, 7th century BCE",
+   "text": "I learned the art of the sage, says the king. I can solve problems of division and multiplication that have no answer. I have read the artful script of Sumer and the obscure Akkadian, and I have read stones from before the Flood. Then he went lion hunting.",
+   "moral": "learning is worth boasting of",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  }
+ ]
+}

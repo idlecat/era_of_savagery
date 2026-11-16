@@ -144,7 +144,7 @@ const OPTION_KEYS := ["label", "desc", "cost", "do", "result"]
 const TALE_KEYS := ["text", "when", "tell", "do", "moral"]
 const WHEN_KEYS := ["time", "day", "pop", "flag", "found", "met", "tech", "invention", "find", "era", "season", "built",
 	"devotion", "mood", "deaths", "culture", "after", "told", "joined", "happened"]
-const DO_KEYS := ["log", "kind", "alert", "at", "level", "give", "reveal", "r", "flag", "mood", "devotion", "insight",
+const DO_KEYS := ["log", "kind", "alert", "at", "level", "give", "reveal", "r", "flag", "mood", "devotion", "insight", "spawn", "offsets",
 	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join"]
 const PERSON_AS := ["chosen", "founder", "wanderer", "ancestor"]
 const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods"]
@@ -377,6 +377,9 @@ static func _check_do(list, w: String, refs: Dictionary, err: Callable) -> void:
 		for k in a:
 			if k not in DO_KEYS: err.call(aw, "unknown action '%s' (one of %s)" % [k, ", ".join(DO_KEYS)])
 		if a.has("event"): err.call(aw, "culture actions can't start built-in events")
+		if a.has("spawn") and a["spawn"] not in ["wolf", "tiger"]: err.call(aw, "spawn must be \"wolf\" or \"tiger\"")
+		for off in a.get("offsets", []):
+			if not off is Array or off.size() != 2: err.call(aw, "offsets must be a list of [x, y] pairs")
 		for r in a.get("give", {}):
 			if r not in RESOURCES: err.call(aw, "give: unknown resource '%s'" % r)
 		for t in a.get("insight", {}):

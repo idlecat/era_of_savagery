@@ -1,0 +1,663 @@
+{
+ "id": "persia",
+ "order": 22,
+ "name": "Persians",
+ "period": "c. 700–330 BCE",
+ "place": "Pars, the highlands of south-western Iran",
+ "desc": "Herders of Pars who, under Cyrus, built the largest empire yet seen, governed it with roads, couriers and many tongues, let conquered peoples keep their gods, and laid out walled gardens they called paradise.",
+ "history": "real",
+ "source": "The Cyrus Cylinder (British Museum); the Bisotun inscription of Darius; the Persepolis Fortification Tablets; Herodotus",
+ "tribe_names": [
+  "Arshama",
+  "Bagabukhsha",
+  "Gaubaruva",
+  "Hutautha",
+  "Ashazana",
+  "Mardunya",
+  "Parmida",
+  "Rtakhshara",
+  "Tanuvazarka",
+  "Utana",
+  "Vidarna",
+  "Ardumanish",
+  "Dadarshi",
+  "Bakabana",
+  "Radushdukka",
+  "Artystone"
+ ],
+ "birth_names": [
+  "Arta",
+  "Baga",
+  "Dara",
+  "Farna",
+  "Mitra",
+  "Nisa",
+  "Pari",
+  "Ruxi",
+  "Spanta",
+  "Vahu"
+ ],
+ "epithets": {
+  "cautious": [
+   "Digger of Qanats",
+   "Gardener of Paradise"
+  ],
+  "belligerent": [
+   "One of the Immortals"
+  ],
+  "gluttonous": [
+   "Royal Courier"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "followed the underground channel by lamplight for a whole day"
+  ],
+  "belligerent": [
+   "took the place of a fallen man in the ranks so the ten thousand stayed ten thousand"
+  ],
+  "gluttonous": [
+   "rode the king's message from station to station without stopping"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "qanat",
+   "kind": "tool",
+   "name": "Qanat",
+   "history": "real",
+   "source": "Gently sloping tunnels that bring groundwater from the foot of the hills to the fields; spread across the empire under the Achaemenids",
+   "practice": {
+    "build": 200,
+    "quarry": 100
+   },
+   "needs": {
+    "techs": [
+     "tools",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.25
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.97
+    }
+   ],
+   "desc": "A tunnel dug from the hills under the dry plain, so water flows to the fields without evaporating: farm plots yield 25% more.",
+   "hint": "Needs Polished Stone Tools and farming, and builders who dig.",
+   "words": [
+    "qanats",
+    "tunnels"
+   ]
+  },
+  {
+   "id": "royal_road",
+   "kind": "tool",
+   "name": "The Royal Road",
+   "history": "real",
+   "source": "Herodotus 8.98: 'Neither snow nor rain nor heat nor gloom of night' stops the Persian couriers riding from station to station",
+   "practice": {
+    "explore": 200,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.08
+    },
+    {
+     "stat": "sight",
+     "add": 25
+    }
+   ],
+   "desc": "A road with a fresh horse waiting at every station: everyone travels 8% faster and sees farther.",
+   "hint": "Needs Beast Domestication and the Tribe & Agrarian Era.",
+   "words": [
+    "roads"
+   ]
+  },
+  {
+   "id": "pairidaeza",
+   "kind": "goods",
+   "name": "Walled Paradise Garden",
+   "history": "real",
+   "source": "Old Persian pairidaeza, 'walled enclosure', gave Greek paradeisos and our word paradise; Cyrus' garden at Pasargadae had stone water channels",
+   "practice": {
+    "berry": 200,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 4
+    }
+   ],
+   "desc": "Fruit trees and flowing water inside a wall, in four quarters: +4 mood.",
+   "hint": "Needs farming, and builders who garden."
+  },
+  {
+   "id": "ration_tablets",
+   "kind": "goods",
+   "name": "Ration Tablets",
+   "history": "real",
+   "source": "The Persepolis Fortification Tablets (c. 509–493 BCE) record rations for thousands of workers, with extra for women who had just given birth",
+   "practice": {
+    "lead": 150,
+    "build": 50
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Every worker's share of grain, wine and beer written down, with more for new mothers: hunger grows 5% slower, +1 mood.",
+   "hint": "Needs the Tribe & Agrarian Era, and someone to lead."
+  }
+ ],
+ "foods": [
+  {
+   "id": "kings_table",
+   "name": "The King's Table",
+   "history": "real",
+   "source": "Polyaenus preserved a list of what was supplied for the Persian king's dinner each day: flour, birds, sheep, dates, raisins, pickled capers",
+   "practice": {
+    "hearth": 250,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Lamb, fowl, dates and raisins shared out to everyone in the household: +3 mood, hunger grows 5% slower.",
+   "hint": "Needs Beast Domestication and pottery."
+  },
+  {
+   "id": "almond_trail",
+   "name": "Almond and Raisin Rations",
+   "history": "real",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {
+    "finds": [
+     "wild_almond"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Nuts and dried fruit carried in a bag on the march: food spoils 10% slower.",
+   "hint": "Needs wild almonds."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_almond",
+   "name": "Wild Almonds",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Gathering almonds",
+   "desc": "Trees that flower pink before any other, with nuts that must be chosen carefully: the bitter ones are poison."
+  },
+  {
+   "id": "rhubarb",
+   "name": "Wild Rhubarb",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "needs": "lore",
+   "where": "hills_home",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Digging rhubarb root",
+   "desc": "A mountain plant whose root purges sickness. The old stories say the first man and woman grew from one."
+  }
+ ],
+ "people": [
+  {
+   "id": "bagapana",
+   "as": "founder",
+   "name": "Bagapana",
+   "epithet": "the Qanat-Digger",
+   "history": "invented",
+   "desc": "He can find water under a dry hill by the plants that grow on it.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#a08060",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "dug a well-shaft forty men deep and struck water"
+   ]
+  },
+  {
+   "id": "radushnamuya",
+   "as": "founder",
+   "name": "Radushnamuya",
+   "epithet": "Steward of the Workers",
+   "history": "invented",
+   "desc": "She writes down every worker's ration and never forgets a name.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a080b0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 4,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "fed six hundred workers through a winter without one going hungry"
+   ]
+  },
+  {
+   "id": "irdabama",
+   "as": "ancestor",
+   "name": "Irdabama",
+   "epithet": "Mistress of Workshops",
+   "history": "real",
+   "source": "Persepolis Fortification Tablets, c. 500 BCE",
+   "desc": "A noblewoman who ran her own estates and workshops with hundreds of workers, sealing orders with her own seal."
+  },
+  {
+   "id": "achaemenes",
+   "as": "ancestor",
+   "name": "Achaemenes",
+   "epithet": "the First Ancestor",
+   "history": "legend",
+   "source": "Named by Darius at Bisotun as the founder of his line",
+   "desc": "The forefather of the royal clan, of whom nothing is known but his name, which the kings repeated with pride."
+  },
+  {
+   "id": "scylax",
+   "as": "wanderer",
+   "name": "Scylax",
+   "epithet": "of Caryanda",
+   "history": "real",
+   "source": "Herodotus 4.44: Darius sent Scylax down the Indus to the sea and around Arabia to Egypt",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a Greek sea captain who has sailed down a great river of the east and around the deserts of Arabia.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#4080c0",
+    "skills": {
+     "forage": 4,
+     "craft": 3,
+     "combat": 2,
+     "lore": 4,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "sailed thirty months from the mouth of the Indus to Egypt"
+   ],
+   "desc": "An explorer in the service of Darius."
+  },
+  {
+   "id": "cyrus",
+   "as": "chosen",
+   "name": "Cyrus",
+   "epithet": "the Great",
+   "label": "Cyrus the Great",
+   "history": "real",
+   "desc": "A king who conquers and lets the conquered go home. Combat 7, Lore 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 82,
+    "atk": 10,
+    "def": 6,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 7,
+     "lore": 6,
+     "trade": 2
+    }
+   }
+  },
+  {
+   "id": "darius",
+   "as": "chosen",
+   "name": "Darius",
+   "epithet": "the Organiser",
+   "label": "Darius the Organiser",
+   "history": "real",
+   "desc": "He gives the empire roads, coins and laws. Lore 7, Crafting 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 6,
+     "combat": 4,
+     "lore": 7,
+     "trade": 3
+    }
+   }
+  },
+  {
+   "id": "artemisia",
+   "as": "chosen",
+   "name": "Artemisia",
+   "epithet": "Queen of the Ships",
+   "label": "Artemisia, Queen of the Ships",
+   "history": "real",
+   "desc": "A queen who commands her own ships in battle. Combat 7, Lore 4.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 76,
+    "atk": 10,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 7,
+     "lore": 4
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "captives_home",
+   "title": "Let Them Go Home",
+   "history": "real",
+   "source": "The Cyrus Cylinder (539 BCE): Cyrus returned the gods of conquered cities to their shrines and let deported peoples go home",
+   "when": {
+    "era": 2,
+    "pop": 13
+   },
+   "chance": 0.4,
+   "text": "Among us live families taken long ago from a beaten clan, with the images of their gods. They work hard, but they still sing of home.",
+   "options": [
+    {
+     "label": "Let them go, gods and all",
+     "do": [
+      {
+       "culture": {
+        "martial": -5
+       }
+      },
+      {
+       "mood": 4
+      },
+      {
+       "devotion": 6
+      },
+      {
+       "feat": "Sent the captives home with their gods"
+      }
+     ],
+     "result": "They leave singing. Their clan sends gifts every year after, and calls our chief their shepherd."
+    },
+    {
+     "label": "They stay and work",
+     "do": [
+      {
+       "give": {
+        "food": 15
+       }
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The fields are well tended. The singing gets quieter."
+    }
+   ]
+  },
+  {
+   "id": "cliff_inscription",
+   "title": "Words on the Cliff",
+   "history": "real",
+   "source": "Darius carved his deeds at Bisotun, 100 m up a cliff, in Old Persian, Elamite and Babylonian; it became the key to reading cuneiform",
+   "when": {
+    "era": 3,
+    "pop": 12
+   },
+   "text": "The chief wants the tribe's story carved high on a cliff above the road, in every tongue that passes by, so that no one can ever say it was otherwise.",
+   "options": [
+    {
+     "label": "Carve it",
+     "cost": {
+      "wood": 20,
+      "food": 15
+     },
+     "do": [
+      {
+       "insight": {
+        "code": 0.2
+       }
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "feat": "Carved the tribe's story on a cliff"
+      }
+     ],
+     "result": "Carvers hang on ropes for a whole summer. The cliff will speak for us long after we are gone."
+    },
+    {
+     "label": "Let the songs remember",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      },
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The story stays in the mouths of the singers."
+    }
+   ]
+  },
+  {
+   "id": "new_mothers",
+   "title": "A Share for the Mothers",
+   "history": "real",
+   "source": "Persepolis tablets give women who had just given birth extra rations, more for a boy, but given to both",
+   "when": {
+    "invention": "ration_tablets",
+    "pop": 12
+   },
+   "text": "The steward proposes that every woman who has just borne a child get an extra share of grain and wine for a month.",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "give": {
+      "food": -8
+     }
+    },
+    {
+     "culture": {
+      "ranked": -2
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "mashya",
+   "name": "The First Two from the Rhubarb",
+   "history": "legend",
+   "source": "The Bundahishn, a Zoroastrian creation text written down in the 9th century CE from older tradition",
+   "when": {
+    "day": 2
+   },
+   "text": "When the first man died, his seed fell to earth, and after forty years a rhubarb plant grew from it with two stems so close together that no one could tell them apart. The stems became a man and a woman, Mashya and Mashyana, the parents of all people.",
+   "moral": "we grew from one root",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "cyrus_herdsman",
+   "name": "The Herdsman's Son",
+   "history": "legend",
+   "source": "Herodotus 1.110–121",
+   "when": {
+    "pop": 10
+   },
+   "text": "A boy raised by a cowherd played king with the village children, and gave them orders like a real king. When a nobleman's son refused, the boy had him beaten. Brought before the king, he answered so proudly that the king recognised his own grandson, whom he had ordered left to die.",
+   "moral": "nature will out",
+   "do": [
+    {
+     "culture": {
+      "ranked": 2
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "horse_chooses",
+   "name": "The Horse That Chose a King",
+   "history": "legend",
+   "source": "Herodotus 3.84–87",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "Six nobles agreed that whoever's horse neighed first at sunrise would be king. Darius' groom let his master's stallion smell a mare at that very spot the night before. In the morning the stallion neighed, lightning flashed from a clear sky, and the others bowed.",
+   "moral": "fortune favours the prepared",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "nowruz",
+   "name": "The New Day",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Nowruz, the Iranian new year at the spring equinox; later tradition ties it to the legendary king Jamshid",
+   "text": "When the day and the night are equal and spring begins, the people light fires, jump over them, wash, and wear new clothes. The legendary king Jamshid first sat on his jewelled throne on this day, and the sun shone on it so brightly that the people called it the New Day.",
+   "moral": "every year can begin anew",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  }
+ ]
+}

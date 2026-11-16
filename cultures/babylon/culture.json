@@ -1,0 +1,645 @@
+{
+ "id": "babylon",
+ "order": 13,
+ "name": "Babylonians",
+ "period": "c. 1894–539 BCE",
+ "place": "Babylon on the Euphrates",
+ "desc": "The city of Hammurabi's laws and Nebuchadnezzar's blue gate, where scribes counted in sixties, watched the stars for omens night after night, and wrote down the oldest recipes and medical handbooks we have.",
+ "history": "real",
+ "source": "The Code of Hammurabi (Louvre); the Ishtar Gate (Pergamon Museum); clay tablets from Babylon, Sippar and Nippur",
+ "tribe_names": [
+  "Apil-Sin",
+  "Awil-Adad",
+  "Ibbi",
+  "Iltani",
+  "Lamassi",
+  "Nidnusha",
+  "Ribam",
+  "Shamash-nasir",
+  "Tarish",
+  "Ummi-waqrat",
+  "Warad",
+  "Erish",
+  "Belessunu",
+  "Mannum",
+  "Huzalum",
+  "Nur-ilishu"
+ ],
+ "birth_names": [
+  "Etel",
+  "Kuzi",
+  "Simti",
+  "Taram",
+  "Napsha",
+  "Zimri",
+  "Bitti",
+  "Ahati",
+  "Iqish",
+  "Ruttum"
+ ],
+ "epithets": {
+  "devout": [
+   "Watcher of the Stars",
+   "Reader of the Liver"
+  ],
+  "cautious": [
+   "Scribe of the Sixties"
+  ],
+  "gluttonous": [
+   "Cook of the Seven Stews"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "sat on the roof all night writing down where the planets stood"
+  ],
+  "cautious": [
+   "reckoned the area of a field to the last finger-breadth"
+  ],
+  "gluttonous": [
+   "cooked a broth of lamb, leek and garlic for the whole household"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "base_sixty",
+   "kind": "goods",
+   "name": "Reckoning in Sixties",
+   "history": "real",
+   "source": "Babylonian place-value numbers in base 60; the tablet YBC 7289 gives the square root of 2 to six decimal places",
+   "practice": {
+    "lead": 100,
+    "build": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    },
+    {
+     "stat": "build",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Numbers that divide into halves, thirds, quarters and fifths alike: more lore, and building is 5% faster.",
+   "hint": "Needs the Tribe & Agrarian Era, and builders who lead.",
+   "words": [
+    "mathematics"
+   ]
+  },
+  {
+   "id": "shaduf",
+   "kind": "tool",
+   "name": "Shaduf",
+   "history": "real",
+   "source": "A counterweighted pole for lifting water, shown on an Akkadian seal and still used along the Nile",
+   "practice": {
+    "build": 80,
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    },
+    {
+     "stat": "work",
+     "mul": 1.02
+    }
+   ],
+   "desc": "A long pole with a bucket and a stone weight lifts water with half the effort: farm plots yield 15% more.",
+   "hint": "Needs farming, and builders who water the fields."
+  },
+  {
+   "id": "star_diaries",
+   "kind": "goods",
+   "name": "Star Diaries",
+   "history": "real",
+   "source": "Babylonian astronomers kept nightly diaries from at least 652 BCE and learned to predict eclipses",
+   "practice": {
+    "ritual": 250,
+    "hearth": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "lore",
+     "add": 0.01
+    }
+   ],
+   "desc": "Every night, the moon, the planets and the weather written down: rites bring 10% more devotion, and a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and long night rites.",
+   "words": [
+    "astronomy"
+   ]
+  },
+  {
+   "id": "diagnostic_handbook",
+   "kind": "medicine",
+   "name": "The Diagnostic Handbook",
+   "history": "real",
+   "source": "Sakikku, compiled by the scholar Esagil-kin-apli around 1050 BCE: symptoms listed from head to foot",
+   "practice": {
+    "ritual": 200,
+    "hunt": 60
+   },
+   "needs": {
+    "finds": [
+     "licorice"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Signs of sickness listed head to foot, each with its cure: the sick recover 20% faster, the hurt heal 10% faster.",
+   "hint": "Needs wild licorice, and healers' rites."
+  }
+ ],
+ "foods": [
+  {
+   "id": "yale_stew",
+   "name": "Lamb and Leek Stew",
+   "history": "real",
+   "source": "The Yale Culinary Tablets, c. 1750 BCE: twenty-five stew recipes, the oldest written recipes known",
+   "practice": {
+    "hearth": 200,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Meat simmered with leek, garlic and onion, thickened with crumbs: hunger grows 10% slower, +2 mood.",
+   "hint": "Needs pottery, and meat cooked at the hearth."
+  },
+  {
+   "id": "date_syrup",
+   "name": "Date Syrup",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Dates boiled down to a dark sweet syrup that keeps all year: food spoils 10% slower, +1 mood.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "finds": [
+  {
+   "id": "licorice",
+   "name": "Wild Licorice",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "source": "Licorice root appears in Mesopotamian medical recipes",
+   "amount": 14,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "needs": "lore",
+   "where": "meadow",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Digging licorice root",
+   "desc": "A sweet root that soothes the throat and the belly: herbs for the sick."
+  },
+  {
+   "id": "euphrates_poplar",
+   "name": "Euphrates Poplars",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "amount": 30,
+   "rate": 1.0,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Cutting poplar poles",
+   "desc": "Hardy poplars along the river, the only good timber on the plain."
+  }
+ ],
+ "people": [
+  {
+   "id": "ina_esagil",
+   "as": "founder",
+   "name": "Ina-Esagil",
+   "epithet": "the Scribe",
+   "history": "invented",
+   "desc": "He can reckon a field, a debt or the date of the next new moon.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 46,
+    "atk": 3,
+    "def": 2,
+    "spd": 1.0,
+    "color": "#7090c0",
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 4,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "copied the old list of kings onto a fresh tablet"
+   ]
+  },
+  {
+   "id": "beltu",
+   "as": "founder",
+   "name": "Beltu",
+   "epithet": "the Brewer of Sippar",
+   "history": "invented",
+   "desc": "Her tavern is where every quarrel is settled and every rumour starts.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#c09050",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "kept the tavern open the whole night of the flood"
+   ]
+  },
+  {
+   "id": "sin_leqi",
+   "as": "ancestor",
+   "name": "Sin-leqi-unninni",
+   "epithet": "who set down Gilgamesh",
+   "history": "real",
+   "source": "Named on a later catalogue of texts and authors as the scholar of the standard Epic of Gilgamesh, c. 1200 BCE",
+   "desc": "The scholar-priest who shaped the old Gilgamesh poems into the epic of twelve tablets: 'He who saw the deep'."
+  },
+  {
+   "id": "esagil_kin_apli",
+   "as": "ancestor",
+   "name": "Esagil-kin-apli",
+   "epithet": "Physician of the King",
+   "history": "real",
+   "source": "Colophon of the Diagnostic Handbook, c. 1050 BCE",
+   "desc": "A scholar of Borsippa who gathered the signs of every sickness into one ordered book."
+  },
+  {
+   "id": "buriash",
+   "as": "wanderer",
+   "name": "Buriash",
+   "epithet": "the Horse-Breeder",
+   "history": "invented",
+   "source": "The Kassites, who came from the Zagros and ruled Babylon for four centuries, were famed for their horses",
+   "when": {
+    "tech": "domestication",
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a man from the eastern hills leading two strange swift beasts, taller than any donkey.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 54,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.25,
+    "color": "#a07040",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 3,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "broke a wild stallion to the bridle in a single spring"
+   ],
+   "desc": "A Kassite herder, one of the people who brought horses to Babylon."
+  },
+  {
+   "id": "hammurabi",
+   "as": "chosen",
+   "name": "Hammurabi",
+   "epithet": "the Lawgiver",
+   "label": "Hammurabi the Lawgiver",
+   "history": "real",
+   "desc": "A king who writes justice on stone. Lore 6, Combat 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 5,
+     "lore": 6
+    }
+   }
+  },
+  {
+   "id": "nebuchadnezzar",
+   "as": "chosen",
+   "name": "Nebuchadnezzar",
+   "epithet": "Builder of the Blue Gate",
+   "label": "Nebuchadnezzar, Builder of the Blue Gate",
+   "history": "real",
+   "desc": "He rebuilds the city in glazed brick. Crafting 8, Combat 5.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#6b9fff",
+    "hp": 75,
+    "atk": 8,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 8,
+     "combat": 5,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "ennigaldi",
+   "as": "chosen",
+   "name": "Ennigaldi-Nanna",
+   "epithet": "Keeper of Old Things",
+   "label": "Ennigaldi-Nanna, Keeper of Old Things",
+   "history": "real",
+   "desc": "A priestess who kept the first museum. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 58,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 8,
+     "trade": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "law_stone",
+   "title": "Laws on a Stone",
+   "history": "real",
+   "source": "The Code of Hammurabi, 282 laws on a black basalt stele set up so the wronged could read it",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "A quarrel over a broken dyke has split the camp. The chief asks: should the rules be carved on a stone for all to see, so no judge can bend them?",
+   "options": [
+    {
+     "label": "Carve the laws",
+     "cost": {
+      "stone": 10
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 6
+       }
+      },
+      {
+       "mood": 3
+      },
+      {
+       "insight": {
+        "code": 0.25
+       }
+      },
+      {
+       "feat": "Carved the first laws on stone"
+      }
+     ],
+     "result": "'If a man neglects his dyke and the water floods his neighbour's field, he shall replace the grain.' Everyone can point to the words now."
+    },
+    {
+     "label": "Let the elders judge",
+     "do": [
+      {
+       "culture": {
+        "ranked": -4
+       }
+      }
+     ],
+     "result": "The elders talk until sunset and find a middle way."
+    }
+   ]
+  },
+  {
+   "id": "substitute_king",
+   "title": "A King for a Hundred Days",
+   "history": "real",
+   "source": "When an eclipse threatened the king, Assyrian and Babylonian courts set a substitute king on the throne to take the evil upon himself",
+   "when": {
+    "after": "eclipse",
+    "era": 2
+   },
+   "text": "The diviners say the eclipse was aimed at our chief. They advise crowning a stand-in, someone of no account, so the evil falls on him while the real chief hides as a farmer.",
+   "options": [
+    {
+     "label": "Crown a stand-in",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "A gardener sits on the chief's mat for a hundred days, eating well and enjoying it enormously. Then the danger is over."
+    },
+    {
+     "label": "Laugh it off",
+     "do": [
+      {
+       "devotion": -6
+      },
+      {
+       "culture": {
+        "spiritual": -4
+       }
+      }
+     ],
+     "result": "The chief carries on. The diviners shake their heads."
+    }
+   ]
+  },
+  {
+   "id": "hanging_garden",
+   "title": "A Garden for a Homesick Bride",
+   "history": "legend",
+   "source": "The priest Berossus (3rd century BCE) told that Nebuchadnezzar built terraced gardens for his Median queen; no trace has been found at Babylon",
+   "when": {
+    "era": 3,
+    "built": "farm_plot"
+   },
+   "text": "A bride from the green hills pines for her mountains on this flat brown plain. The builders raise terraces of earth and plant them with trees until a green hill stands by the river.",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "feat": "Raised a garden on terraces"
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "enuma_elish",
+   "name": "Marduk and Tiamat",
+   "history": "legend",
+   "source": "Enuma Elish, the Babylonian creation epic",
+   "when": {
+    "day": 2
+   },
+   "text": "In the beginning the sweet water and the salt water mingled, and the gods were born. Tiamat, the salt sea, raged against her noisy children and made monsters. Young Marduk alone would face her: he caught her in his net, drove the winds into her mouth, and split her body in two to make the sky and the earth.",
+   "moral": "order is won from chaos",
+   "do": [
+    {
+     "culture": {
+      "martial": 2,
+      "spiritual": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "atrahasis",
+   "name": "Why People Were Made",
+   "history": "legend",
+   "source": "The Epic of Atrahasis, c. 1700 BCE",
+   "when": {
+    "pop": 10
+   },
+   "text": "Once the lesser gods dug the canals, and they grew so tired that they burned their tools and surrounded the house of Enlil. So the gods made people from clay and blood to do the work. But people multiplied and made such a noise that Enlil could not sleep, and he sent plague, then drought, then the flood.",
+   "moral": "work and rest must be in balance",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "etemenanki",
+   "name": "The Tower That Touched Heaven",
+   "history": "legend",
+   "source": "The ziggurat Etemenanki, 'House of the Foundation of Heaven and Earth'; Genesis 11",
+   "when": {
+    "era": 3
+   },
+   "text": "In the middle of Babylon stood a tower of seven stages, its top in the sky. Travellers said every tongue on earth could be heard at its foot. Some say the gods confused the builders' speech so that they could never finish; the people of Babylon said it was finished, and that their god slept in the room at the top.",
+   "moral": "many tongues, one city",
+   "do": [
+    {
+     "insight": {
+      "code": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "akitu",
+   "name": "The Slap at the New Year",
+   "history": "real",
+   "tell": "festival",
+   "source": "The Akitu festival ritual, known from tablets of the 1st millennium BCE",
+   "text": "At the new year the king comes before the god without his crown. The high priest strikes his cheek, hard. If tears come to the king's eyes, the god is pleased and the year will be good; if not, the enemy will rise. Then the crown is given back.",
+   "moral": "even the mighty must be humbled",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "devotion": 5
+    }
+   ]
+  }
+ ]
+}

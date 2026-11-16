@@ -1,0 +1,679 @@
+{
+ "id": "hittite",
+ "order": 15,
+ "name": "Hittites",
+ "period": "c. 1650–1180 BCE",
+ "place": "Hattusa on the Anatolian plateau",
+ "desc": "Rulers of the 'land of a thousand gods' in central Anatolia, who fought Egypt to a standstill at Kadesh and then signed the oldest peace treaty that survives. They wrote the oldest Indo-European language on record.",
+ "history": "real",
+ "source": "The royal archives of Hattusa (Boğazköy), excavated from 1906; the language deciphered by Bedřich Hrozný in 1915",
+ "tribe_names": [
+  "Ammuna",
+  "Hantili",
+  "Zita",
+  "Kuwatalla",
+  "Piyassili",
+  "Halpasulupi",
+  "Kantuzili",
+  "Walwa",
+  "Tarhunna",
+  "Hapalla",
+  "Ishputta",
+  "Kassu",
+  "Anna",
+  "Huzziya",
+  "Mashuiluwa",
+  "Ura-Tarhunta"
+ ],
+ "birth_names": [
+  "Arma",
+  "Hutu",
+  "Kili",
+  "Nana",
+  "Tiya",
+  "Wiya",
+  "Zuwa",
+  "Mita",
+  "Pala",
+  "Duddu"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Chariot-Warrior",
+   "Shield-Bearer of the Storm God"
+  ],
+  "devout": [
+   "Old Woman of the Rites"
+  ],
+  "cautious": [
+   "Keeper of the Great Silo"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "drove a chariot of three men through the enemy line"
+  ],
+  "devout": [
+   "performed the rite that sends a sickness away on a donkey"
+  ],
+  "cautious": [
+   "sealed the grain silo with clay before the long winter"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "three_man_chariot",
+   "kind": "tool",
+   "name": "Three-Man Chariot",
+   "history": "real",
+   "source": "Egyptian reliefs of Kadesh (1274 BCE) show Hittite chariots carrying a driver, a spearman and a shield-bearer",
+   "practice": {
+    "hunt": 150,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "speed",
+     "mul": 1.03
+    }
+   ],
+   "desc": "A heavy chariot with a driver, a spearman and a shield-man: +2 attack, and everyone moves 3% faster.",
+   "hint": "Needs Beast Domestication and Polished Stone Tools, in the Tribe & Agrarian Era.",
+   "words": [
+    "chariots"
+   ]
+  },
+  {
+   "id": "iron_blades",
+   "kind": "tool",
+   "name": "Iron Blades",
+   "history": "real",
+   "source": "Hittite smiths worked iron, still rare and precious; a letter of Hattusili III to an Assyrian king says good iron is not to be had just now",
+   "practice": {
+    "quarry": 200,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "A few precious blades of the black metal, harder than bronze: +2 attack, +1 defence.",
+   "hint": "Needs Bronze Metallurgy, and long work at the furnace.",
+   "words": [
+    "iron"
+   ]
+  },
+  {
+   "id": "great_silo",
+   "kind": "goods",
+   "name": "Sealed Grain Silos",
+   "history": "real",
+   "source": "An underground silo complex at Hattusa (16th century BCE) could hold several thousand tonnes of grain",
+   "practice": {
+    "build": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 40
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.92
+    }
+   ],
+   "desc": "Deep chambers sealed airtight with clay keep grain for years: the stores hold 40 more food, and food spoils 8% slower.",
+   "hint": "Needs pottery and the Tribe & Agrarian Era, and builders who harvest."
+  },
+  {
+   "id": "stag_rhyton",
+   "kind": "goods",
+   "name": "Stag Rhyton",
+   "history": "real",
+   "source": "Silver drinking vessels shaped as a stag or a fist, used to pour offerings to the gods",
+   "practice": {
+    "ritual": 200,
+    "hearth": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A vessel shaped like a stag, for pouring wine to the thousand gods: rites bring 10% more devotion, +1 mood.",
+   "hint": "Comes from the rites."
+  }
+ ],
+ "foods": [
+  {
+   "id": "honey_bread",
+   "name": "Thick Honey Bread",
+   "history": "real",
+   "source": "Hittite texts list dozens of kinds of offering bread; the Hittite laws set prices for beehives",
+   "practice": {
+    "hearth": 200,
+    "berry": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Thick loaves sweetened with honey, for the table and the gods: hunger grows 8% slower, +1 mood.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "hittite_wine",
+   "name": "Libation Wine",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "ritual": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Wine from the vineyards of the plateau, poured first to the gods and then to the guests: +3 mood.",
+   "hint": "Needs pottery, and rites at the hearth."
+  }
+ ],
+ "finds": [
+  {
+   "id": "sky_iron",
+   "name": "Fallen Sky-Iron",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "source": "The earliest iron objects were made from meteorites; Hittite texts speak of 'iron of heaven'",
+   "amount": 12,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 1,
+   "practice": "quarry",
+   "look": "obsidian",
+   "act": "Digging out sky-iron",
+   "seed": {
+    "bronze": 0.15
+   },
+   "culture": {
+    "spiritual": 3
+   },
+   "desc": "A heavy black stone that fell burning from the sky. It is holy, and it can be hammered."
+  },
+  {
+   "id": "hazel",
+   "name": "Hazel Groves",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest",
+   "count": 3,
+   "practice": "berry",
+   "look": "mushroom",
+   "act": "Gathering hazelnuts",
+   "desc": "Thickets of hazel under the oaks, full of nuts in autumn."
+  }
+ ],
+ "people": [
+  {
+   "id": "hasusara",
+   "as": "founder",
+   "name": "Hasusara",
+   "epithet": "Keeper of the Granary",
+   "history": "invented",
+   "desc": "Her name means 'queen', and she rules the stores like one.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#b09060",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "counted the jars in the great silo and found not one missing"
+   ]
+  },
+  {
+   "id": "tarhuntapiya",
+   "as": "founder",
+   "name": "Tarhunta-piya",
+   "epithet": "the Charioteer",
+   "history": "invented",
+   "desc": "He breaks horses to the yoke and talks to them like brothers.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#c06040",
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "drove a team of horses across the river in flood"
+   ]
+  },
+  {
+   "id": "anitta",
+   "as": "ancestor",
+   "name": "Anitta",
+   "epithet": "King of Kussara",
+   "history": "real",
+   "source": "The Anitta Text, the oldest known text in the Hittite language",
+   "desc": "An early king who took Hattusa, sowed weeds on its ruins and cursed whoever would settle there again. The Hittites later made it their capital."
+  },
+  {
+   "id": "mursili",
+   "as": "ancestor",
+   "name": "Mursili II",
+   "epithet": "who prayed against the plague",
+   "history": "real",
+   "source": "The Plague Prayers of Mursili II, late 14th century BCE",
+   "desc": "A king who searched the old tablets for the sin that brought twenty years of plague, and confessed his father's broken oath to the gods."
+  },
+  {
+   "id": "tawagalawa",
+   "as": "wanderer",
+   "name": "Tawagalawa",
+   "epithet": "of the Ahhiyawa",
+   "history": "real",
+   "source": "The Tawagalawa letter, c. 1250 BCE, names him as the brother of the king of Ahhiyawa, probably a Mycenaean Greek",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a lord from across the western sea, who arrives in a chariot and speaks the court tongue with a strange accent.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 60,
+    "atk": 7,
+    "def": 4,
+    "spd": 1.1,
+    "color": "#4080c0",
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 5,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "crossed the sea with ships full of bronze and wine"
+   ],
+   "desc": "A Mycenaean lord, perhaps called Eteocles in Greek, who appears in Hittite letters."
+  },
+  {
+   "id": "suppiluliuma",
+   "as": "chosen",
+   "name": "Suppiluliuma",
+   "epithet": "the Great King",
+   "label": "Suppiluliuma the Great King",
+   "history": "real",
+   "desc": "He makes the Hittites an empire. Combat 8, 85 HP.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 10,
+    "def": 6,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 8,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "puduhepa",
+   "as": "chosen",
+   "name": "Puduhepa",
+   "epithet": "the Priestess Queen",
+   "label": "Puduhepa the Priestess Queen",
+   "history": "real",
+   "desc": "A queen who sealed treaties and wrote to the queen of Egypt. Lore 7, Trade 4.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 1,
+     "lore": 7,
+     "trade": 4
+    }
+   }
+  },
+  {
+   "id": "hattusili",
+   "as": "chosen",
+   "name": "Hattusili",
+   "epithet": "the Peacemaker",
+   "label": "Hattusili the Peacemaker",
+   "history": "real",
+   "desc": "He signs an eternal peace with Egypt. Combat 5, Lore 5, Crafting 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 70,
+    "atk": 7,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 5,
+     "combat": 5,
+     "lore": 5,
+     "trade": 3
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "plague_years",
+   "title": "The Plague That Will Not Leave",
+   "history": "real",
+   "source": "Mursili II blamed a twenty-year plague on prisoners brought from Egypt and on his father's broken oath",
+   "when": {
+    "deaths": 3,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "Death keeps visiting the huts. The diviners say an old oath was broken and the gods are angry. The chief must decide what to do.",
+   "options": [
+    {
+     "label": "Confess and make amends",
+     "cost": {
+      "goods": 4,
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.1
+        }
+       ]
+      }
+     ],
+     "result": "The chief stands before the gods and names the wrong. Gifts are sent to those who were wronged. The sickness slackens."
+    },
+    {
+     "label": "Send the sickness away on a donkey",
+     "do": [
+      {
+       "devotion": 5
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "A donkey decked with ribbons is driven toward the enemy's land, carrying the plague with it."
+    },
+    {
+     "label": "Keep the sick apart",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "mood": -3
+      }
+     ],
+     "result": "The sick are carried to huts outside the camp. It is hard, but fewer fall ill."
+    }
+   ]
+  },
+  {
+   "id": "eternal_peace",
+   "title": "An Eternal Peace",
+   "history": "real",
+   "source": "The treaty between Hattusili III and Ramesses II (c. 1259 BCE), written in Akkadian on silver tablets; a copy hangs at the United Nations",
+   "when": {
+    "era": 2,
+    "pop": 12,
+    "culture": {
+     "martial": 15
+    }
+   },
+   "chance": 0.4,
+   "text": "After years of raids back and forth, the rival chief sends word: let us swear peace forever, return each other's runaways, and help each other against any enemy.",
+   "options": [
+    {
+     "label": "Swear the peace",
+     "do": [
+      {
+       "culture": {
+        "martial": -8,
+        "ranked": 3
+       }
+      },
+      {
+       "mood": 4
+      },
+      {
+       "feat": "Swore an eternal peace"
+      }
+     ],
+     "result": "The oath is cut into a tablet of silver and set before the gods of both peoples."
+    },
+    {
+     "label": "Fight on",
+     "do": [
+      {
+       "culture": {
+        "martial": 4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The envoy is sent home. The raids go on."
+    }
+   ]
+  },
+  {
+   "id": "thousand_gods",
+   "title": "A Thousand Gods",
+   "history": "real",
+   "source": "The Hittites welcomed the gods of every land they met into their own pantheon, and called themselves the land of a thousand gods",
+   "when": {
+    "era": 2,
+    "pop": 10
+   },
+   "text": "The newcomers have brought their own gods with them. Instead of throwing them out, the priests give them a place in the shrine beside ours, and a share of the offerings.",
+   "do": [
+    {
+     "devotion": 8
+    },
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "telipinu",
+   "name": "The God Who Went Away",
+   "history": "legend",
+   "source": "The Myth of Telipinu",
+   "when": {
+    "after": "drought"
+   },
+   "text": "Telipinu flew into a rage, put his left shoe on his right foot, and walked away into the steppe. Mist filled the windows, the barley stopped growing, cows and sheep turned away their young. Even the gods went hungry. At last a little bee found him asleep in a meadow and stung him awake, and the healers soothed his anger.",
+   "moral": "anger starves the land",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  },
+  {
+   "id": "illuyanka",
+   "name": "The Storm God and the Serpent",
+   "history": "legend",
+   "source": "The Illuyanka myth, recited at the spring festival of Purulli",
+   "when": {
+    "season": "Spring"
+   },
+   "text": "The serpent Illuyanka beat the Storm God. So the goddess Inara laid out a great feast, and the serpent and its children ate and drank until they could not crawl back into their hole. Then a mortal tied the serpent with a rope, and the Storm God came and killed it.",
+   "moral": "cunning wins where strength fails",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "ullikummi",
+   "name": "The Stone Giant Ullikummi",
+   "history": "legend",
+   "source": "The Song of Ullikummi, a Hurrian myth in Hittite",
+   "when": {
+    "era": 2
+   },
+   "text": "The old god Kumarbi made a son of stone to overthrow the Storm God. Planted on a giant's shoulder in the sea, it grew until it reached the sky. No weapon could hurt it, until the wise god Ea took the ancient copper knife that once cut heaven from earth, and cut the stone giant from the shoulder it stood on.",
+   "moral": "find the root of a problem",
+   "do": [
+    {
+     "insight": {
+      "bronze": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "purulli",
+   "name": "The Purulli Festival",
+   "history": "real",
+   "tell": "festival",
+   "source": "Purulli, the spring festival at Nerik, when the year was renewed",
+   "text": "When the earth wakes, the king and queen travel to the holy city. The old story of the serpent is told again, the races are run, and the gods are given new bread and wine, so that the land may live another year.",
+   "moral": "the year must be renewed",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  }
+ ]
+}

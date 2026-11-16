@@ -1,0 +1,707 @@
+{
+ "id": "lydia",
+ "order": 19,
+ "name": "Lydians",
+ "period": "c. 1200–546 BCE",
+ "place": "Sardis and the gold-bearing Pactolus, western Anatolia",
+ "desc": "The people of Sardis, said by Herodotus to be the first to strike coins of gold and silver and the first shopkeepers. Their last king, Croesus, was so rich that his name still means wealth.",
+ "history": "real",
+ "source": "Herodotus, Histories book 1; excavations at Sardis (from 1910 and 1958), including its gold refinery",
+ "tribe_names": [
+  "Manes",
+  "Kotys",
+  "Moxos",
+  "Tylos",
+  "Myrsilos",
+  "Bakivalis",
+  "Karos",
+  "Mitridastas",
+  "Artimas",
+  "Timles",
+  "Nanas",
+  "Sakardas",
+  "Atrastas",
+  "Kumlis",
+  "Alikrenas",
+  "Lalis"
+ ],
+ "birth_names": [
+  "Ati",
+  "Bakis",
+  "Dida",
+  "Kana",
+  "Mlis",
+  "Nali",
+  "Pela",
+  "Siwa",
+  "Tarus",
+  "Uvi"
+ ],
+ "epithets": {
+  "gluttonous": [
+   "Shopkeeper of the Agora"
+  ],
+  "cautious": [
+   "Washer of Gold",
+   "Weigher of Coins"
+  ],
+  "devout": [
+   "Weaver of Fine Wool"
+  ]
+ },
+ "memories": {
+  "gluttonous": [
+   "sold bread, oil and ribbons from a stall in the market"
+  ],
+  "cautious": [
+   "washed a fleece full of gold dust out of the Pactolus"
+  ],
+  "devout": [
+   "wove a cloth so fine the goddess's priestesses asked for it"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "electrum_coins",
+   "kind": "goods",
+   "name": "Stamped Coins",
+   "history": "real",
+   "source": "Electrum coins stamped with a lion's head, Sardis, c. 630–600 BCE: among the first coins anywhere",
+   "practice": {
+    "lead": 100,
+    "build": 60
+   },
+   "needs": {
+    "finds": [
+     "pactolus_gold"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "store",
+     "add": 15
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Lumps of gold-silver of a set weight, stamped with a lion so no one need weigh them: +2 mood, the stores hold 15 more, a little more lore.",
+   "hint": "Needs the gold of the river, and someone who leads the trading.",
+   "words": [
+    "coins",
+    "money"
+   ]
+  },
+  {
+   "id": "gold_refinery",
+   "kind": "goods",
+   "name": "Gold Refinery",
+   "history": "real",
+   "source": "A 6th-century BCE workshop at Sardis separated pure gold from electrum with salt in clay pots",
+   "practice": {
+    "hearth": 200,
+    "quarry": 100
+   },
+   "needs": {
+    "finds": [
+     "pactolus_gold",
+     "salt"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Pale gold heated with salt until the silver is drawn out and only pure gold is left: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs river gold, salt and fire."
+  },
+  {
+   "id": "knucklebones",
+   "kind": "goods",
+   "name": "Dice and Knucklebones",
+   "history": "legend",
+   "source": "Herodotus 1.94: the Lydians claimed to have invented dice, knucklebones and ball games to forget hunger in a long famine",
+   "practice": {
+    "hearth": 300
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.97
+    }
+   ],
+   "desc": "Games of bone and chance to pass the long evenings: +3 mood, and hunger is felt a little less.",
+   "hint": "Comes from many evenings by the fire."
+  },
+  {
+   "id": "lydian_lyre",
+   "kind": "goods",
+   "name": "The Lydian Mode",
+   "history": "real",
+   "source": "Greek writers named a musical mode after Lydia, and Plato thought it too soft for warriors",
+   "practice": {
+    "ritual": 150,
+    "hearth": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "atk",
+     "add": -0.5
+    }
+   ],
+   "desc": "Sweet, slow songs for the feast: +3 mood, though the warriors grow a little soft.",
+   "hint": "Comes from rites and evenings by the fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "kandaulos",
+   "name": "Kandaulos",
+   "history": "real",
+   "source": "A rich Lydian dish described by Athenaeus: boiled meat with bread, cheese, dill and broth",
+   "practice": {
+    "hearth": 200,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Meat, breadcrumbs, cheese and dill in a rich broth: hunger grows 10% slower, +2 mood.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "honeyed_figs",
+   "name": "Honeyed Figs",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "wild_figs"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Figs dried in the sun and kept in honey: +2 mood, food spoils 5% slower.",
+   "hint": "Needs wild figs."
+  }
+ ],
+ "finds": [
+  {
+   "id": "pactolus_gold",
+   "name": "Gold Sands of the River",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "source": "The Pactolus carried electrum dust down from Mount Tmolus, the source of Lydia's wealth",
+   "amount": 16,
+   "rate": 0.5,
+   "regrow": 0.01,
+   "winter": true,
+   "where": "riverbank",
+   "count": 2,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Panning for gold",
+   "desc": "Glittering flakes in the river gravel, caught on fleeces laid in the stream."
+  },
+  {
+   "id": "wild_figs",
+   "name": "Wild Figs",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking figs",
+   "desc": "Soft sweet fruit from trees that grow out of rock and wall."
+  }
+ ],
+ "people": [
+  {
+   "id": "sandas",
+   "as": "founder",
+   "name": "Sandas",
+   "epithet": "the Gold-Washer",
+   "history": "invented",
+   "desc": "He knows which bend of the river hides the most gold.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#d0b040",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 1,
+     "lore": 1,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "found a nugget the size of a thumb in the river"
+   ]
+  },
+  {
+   "id": "kawa",
+   "as": "founder",
+   "name": "Kawa",
+   "epithet": "Keeper of the Stall",
+   "history": "invented",
+   "desc": "She was selling in the market before markets had a name.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c08070",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 0,
+     "lore": 1,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "sold out a whole cart of bread before noon"
+   ]
+  },
+  {
+   "id": "gyges",
+   "as": "ancestor",
+   "name": "Gyges",
+   "epithet": "Founder of the Mermnads",
+   "history": "real",
+   "source": "Herodotus 1.8–14; Assyrian records name him 'Gugu of Luddi'",
+   "desc": "A bodyguard who became king of Lydia; the Greeks told that he did it with a ring that made him invisible."
+  },
+  {
+   "id": "alyattes",
+   "as": "ancestor",
+   "name": "Alyattes",
+   "epithet": "who Stopped for the Eclipse",
+   "history": "real",
+   "source": "Herodotus 1.74; his huge burial mound at Bin Tepe",
+   "desc": "The king who was fighting the Medes when the day turned to night, and made peace on the spot. His burial mound is one of the largest ever raised."
+  },
+  {
+   "id": "solon",
+   "as": "wanderer",
+   "name": "Solon",
+   "epithet": "the Wise Man of Athens",
+   "history": "legend",
+   "source": "Herodotus 1.29–33 tells of his visit to Croesus; the dates make it doubtful",
+   "when": {
+    "era": 2,
+    "day": 8,
+    "pop": 10
+   },
+   "chance": 0.3,
+   "text": "a grey-bearded traveller from across the sea, who looks at our treasures and seems unimpressed.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0e0d0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 1,
+     "lore": 7,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "told a king that no man can be called happy until he is dead"
+   ],
+   "desc": "The Athenian lawgiver, who in Herodotus' story warned Croesus that wealth is not happiness."
+  },
+  {
+   "id": "croesus",
+   "as": "chosen",
+   "name": "Croesus",
+   "epithet": "the Richest of Kings",
+   "label": "Croesus, the Richest of Kings",
+   "history": "real",
+   "desc": "Gold flows to him. Trade 8, Lore 4.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 4,
+     "combat": 3,
+     "lore": 4,
+     "trade": 8
+    }
+   }
+  },
+  {
+   "id": "arachne",
+   "as": "chosen",
+   "name": "Arachne",
+   "epithet": "the Weaver Who Challenged a Goddess",
+   "label": "Arachne the Weaver",
+   "history": "legend",
+   "desc": "No loom in the world is finer. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 1,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "gyges_ring",
+   "as": "chosen",
+   "name": "Gugu",
+   "epithet": "of the Hidden Ring",
+   "label": "Gugu of the Hidden Ring",
+   "history": "legend",
+   "desc": "A shepherd who finds a ring of invisibility. Combat 7, Foraging 5.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff9f6b",
+    "hp": 75,
+    "atk": 10,
+    "def": 4,
+    "spd": 1.2,
+    "skills": {
+     "forage": 5,
+     "craft": 1,
+     "combat": 7,
+     "lore": 2
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "eclipse_battle",
+   "title": "The Battle of the Eclipse",
+   "history": "real",
+   "source": "Herodotus 1.74: in the sixth year of war between Lydia and Media, day turned to night during a battle (28 May 585 BCE), and both sides made peace",
+   "when": {
+    "after": "eclipse",
+    "culture": {
+     "martial": 5
+    }
+   },
+   "text": "The war party was face to face with the enemy when the sun went black. Both sides stand frozen in the strange twilight, spears lowered.",
+   "options": [
+    {
+     "label": "Make peace under the dark sun",
+     "do": [
+      {
+       "culture": {
+        "martial": -6
+       }
+      },
+      {
+       "devotion": 8
+      },
+      {
+       "mood": 3
+      },
+      {
+       "feat": "Made peace when the sun went dark"
+      }
+     ],
+     "result": "The chiefs swear peace, and seal it with a marriage."
+    },
+    {
+     "label": "Charge while they are afraid",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "devotion": -8
+      }
+     ],
+     "result": "The warriors charge into the twilight. Some say the gods will remember it."
+    }
+   ]
+  },
+  {
+   "id": "long_famine",
+   "title": "Eighteen Years of Hunger",
+   "history": "legend",
+   "source": "Herodotus 1.94: in a long famine the Lydians ate only every other day and played games on the rest; at last half of them sailed west under Tyrrhenus and became the Etruscans",
+   "when": {
+    "after": "drought",
+    "pop": 12,
+    "day": 6
+   },
+   "chance": 0.6,
+   "text": "The harvests keep failing. The chief proposes: eat one day, play games the next to forget hunger. If that is not enough, half the people must go and find a new land.",
+   "options": [
+    {
+     "label": "Eat one day, play the next",
+     "do": [
+      {
+       "invent": "knucklebones"
+      },
+      {
+       "boon": [
+        {
+         "stat": "hunger",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "Bones rattle in every hut. The hunger is still there, but it passes more quickly."
+    },
+    {
+     "label": "Send the young to find a new land",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "give": {
+        "food": 20
+       }
+      },
+      {
+       "mood": -4
+      }
+     ],
+     "result": "A band of young people sets out to the west and does not come back. Those who stay have more to eat."
+    }
+   ]
+  },
+  {
+   "id": "oracle",
+   "title": "Ask the Oracle",
+   "history": "legend",
+   "source": "Herodotus 1.53: told that if he attacked Persia 'he would destroy a great empire', Croesus attacked, and destroyed his own",
+   "when": {
+    "era": 2,
+    "culture": {
+     "martial": 10
+    },
+    "pop": 11
+   },
+   "chance": 0.4,
+   "text": "Before a great raid, the chief sends gifts to a famous seer. The answer comes back: 'If you march, a great people will fall.' The warriors cheer. The seer's messenger does not smile.",
+   "options": [
+    {
+     "label": "March!",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "mood": -3
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         320,
+         120
+        ],
+        [
+         340,
+         80
+        ]
+       ]
+      }
+     ],
+     "result": "The warriors march. Behind them, something circles the undefended camp."
+    },
+    {
+     "label": "Think again about which people",
+     "do": [
+      {
+       "culture": {
+        "martial": -3
+       }
+      },
+      {
+       "insight": {
+        "code": 0.05
+       }
+      }
+     ],
+     "result": "The chief stays home. Years later people still argue about what the seer meant."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "ring_gyges",
+   "name": "The Ring of Gyges",
+   "history": "legend",
+   "source": "Plato, Republic book 2",
+   "when": {
+    "day": 2
+   },
+   "text": "A shepherd sheltering from a storm found a crack in the earth, and inside a bronze horse, and inside the horse a dead giant wearing a gold ring. When the shepherd turned the ring on his finger, he vanished from sight. He went to the palace unseen, and made himself king.",
+   "moral": "would you be just if no one could see you?",
+   "do": [
+    {
+     "culture": {
+      "ranked": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "midas_pactolus",
+   "name": "Midas Washes Away the Gold",
+   "history": "legend",
+   "source": "Ovid, Metamorphoses book 11",
+   "when": {
+    "find": "pactolus_gold"
+   },
+   "text": "King Midas wished that everything he touched would turn to gold, and his bread and wine turned to gold in his mouth. Starving, he begged the god to take the gift back, and was told to wash in the spring of the Pactolus. The gold flowed off him into the river, and its sands have glittered ever since.",
+   "moral": "gold is not bread",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "settled": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "arachne_tale",
+   "name": "Arachne and the Goddess",
+   "history": "legend",
+   "source": "Ovid, Metamorphoses book 6: Arachne was a girl of Lydia",
+   "when": {
+    "tech": "hide"
+   },
+   "text": "A Lydian girl wove so well that she said even the goddess of weaving could not beat her. The goddess came and they wove side by side. Arachne's cloth was perfect, and it mocked the gods. In anger the goddess turned her into a spider, and she weaves still.",
+   "moral": "skill without humility is dangerous",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "work",
+       "mul": 1.02
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "call_no_man_happy",
+   "name": "Call No Man Happy",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Herodotus 1.30–33, 1.86",
+   "text": "The richest king showed a wise traveller all his gold and asked who was the happiest man alive. The traveller named a poor Athenian who died bravely for his city. Years later, on the pyre of his conqueror, the king cried out the traveller's name, and so his life was spared.",
+   "moral": "fortune turns",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "ranked": -2
+     }
+    }
+   ]
+  }
+ ]
+}

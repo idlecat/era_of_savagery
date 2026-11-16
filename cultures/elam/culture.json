@@ -1,0 +1,676 @@
+{
+ "id": "elam",
+ "order": 12,
+ "name": "Elamites",
+ "period": "c. 3200–539 BCE",
+ "place": "the lowlands of Susa and the highlands of Anshan",
+ "desc": "A people of two worlds, the hot plain of Susa and the high valleys of the Zagros, who wrote in scripts of their own, traded tin and stone from the east, and fought Sumer, Akkad and Babylon for two thousand years.",
+ "history": "real",
+ "source": "Excavations at Susa (from 1897), Anshan (Tal-e Malyan) and Chogha Zanbil; Linear Elamite, deciphered by François Desset and colleagues in 2022",
+ "tribe_names": [
+  "Atta",
+  "Kuk",
+  "Temti",
+  "Shilha",
+  "Pala",
+  "Siwe",
+  "Tata",
+  "Kutir",
+  "Hupan",
+  "Ruhu",
+  "Tepti",
+  "Unta",
+  "Eparti",
+  "Humba",
+  "Sirkuh",
+  "Naki"
+ ],
+ "birth_names": [
+  "Ishni",
+  "Lili",
+  "Mana",
+  "Pipi",
+  "Rasha",
+  "Simma",
+  "Tiru",
+  "Uri",
+  "Zana",
+  "Hani"
+ ],
+ "epithets": {
+  "cautious": [
+   "Walker of the Mountain Paths"
+  ],
+  "devout": [
+   "Keeper of the Snake Throne",
+   "Reader of the Old Signs"
+  ],
+  "belligerent": [
+   "Archer of Anshan"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "drove the goats up to the summer pastures through the snow pass"
+  ],
+  "devout": [
+   "carved a snake coiled into a throne on a stone bowl"
+  ],
+  "belligerent": [
+   "shot a wild goat across the gorge"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "elamite_signs",
+   "kind": "goods",
+   "name": "Proto-Elamite Signs",
+   "history": "real",
+   "source": "Proto-Elamite tablets, c. 3100–2900 BCE, from Susa to Shahr-i Sokhta: still undeciphered",
+   "practice": {
+    "lead": 80,
+    "ritual": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    }
+   ],
+   "desc": "A script of their own, for counting grain, workers and sheep: the tribe gathers a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and the rites and leading of others.",
+   "words": [
+    "writing",
+    "script"
+   ]
+  },
+  {
+   "id": "bitumen_carving",
+   "kind": "goods",
+   "name": "Bitumen-Compound Carving",
+   "history": "real",
+   "source": "Susa artisans mixed bitumen with ground stone into a paste that could be carved and polished like stone",
+   "practice": {
+    "hearth": 200,
+    "quarry": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Black paste carved into lion-headed bowls and sealed jars: +2 mood, and the stores hold 10 more food.",
+   "hint": "Comes from evenings at the hearth, and from working stone."
+  },
+  {
+   "id": "glazed_bricks",
+   "kind": "goods",
+   "name": "Glazed Bricks",
+   "history": "real",
+   "source": "Glazed tiles and knobs adorned the ziggurat of Chogha Zanbil (c. 1250 BCE); Susa's glazed-brick archers came later",
+   "practice": {
+    "hearth": 300,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "fire"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Bricks fired with a shining blue-green skin for the shrines: rites bring 10% more devotion, +2 mood.",
+   "hint": "Needs pottery and fire, and builders at the kiln."
+  },
+  {
+   "id": "transhumance",
+   "kind": "tool",
+   "name": "Highland Herding Routes",
+   "history": "real",
+   "source": "Herders moved between the plain of Susiana in winter and the Zagros valleys in summer, as the Bakhtiari still do",
+   "practice": {
+    "explore": 150,
+    "hunt": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.05
+    },
+    {
+     "stat": "gather",
+     "of": "hunt",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Paths that follow the grass up the mountains and down again: everyone walks 5% faster, and hunting is 10% faster.",
+   "hint": "Comes from scouting, and from hunting in the hills."
+  }
+ ],
+ "foods": [
+  {
+   "id": "goat_cheese",
+   "name": "Goat Cheese",
+   "history": "real",
+   "source": "Goats were domesticated in the Zagros around 8000 BCE (Ganj Dareh)",
+   "practice": {
+    "hunt": 120,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Milk soured and pressed into cheese that keeps: hunger grows 8% slower, food spoils 5% slower.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "dried_pistachios",
+   "name": "Roasted Pistachios",
+   "history": "real",
+   "practice": {
+    "berry": 120,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "pistachio"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.92
+    }
+   ],
+   "desc": "Nuts roasted over the fire and stored for winter: +2 mood, food spoils 8% slower.",
+   "hint": "Needs wild pistachio trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "pistachio",
+   "name": "Wild Pistachio Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Shaking pistachios",
+   "desc": "Hardy little trees of the Zagros slopes, heavy with nuts in autumn."
+  },
+  {
+   "id": "chlorite",
+   "name": "Chlorite Stone",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "source": "Carved chlorite vessels of the 'intercultural style' from Jiroft and Tepe Yahya were traded from the Indus to Sumer",
+   "amount": 18,
+   "rate": 0.6,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_home",
+   "count": 2,
+   "practice": "quarry",
+   "look": "flint",
+   "act": "Cutting chlorite",
+   "culture": {
+    "spiritual": 2
+   },
+   "desc": "Soft green-black stone that carves like wood: each load is lore."
+  }
+ ],
+ "people": [
+  {
+   "id": "shilhina",
+   "as": "founder",
+   "name": "Shilhina",
+   "epithet": "Mistress of the Flocks",
+   "history": "invented",
+   "desc": "She knows every pass between the plain and the high pastures.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a07850",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "led the flocks through the pass the winter it closed early"
+   ]
+  },
+  {
+   "id": "kutirru",
+   "as": "founder",
+   "name": "Kutirru",
+   "epithet": "Carver of Black Stone",
+   "history": "invented",
+   "desc": "His hands turn pitch and stone into lions.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 46,
+    "atk": 3,
+    "def": 2,
+    "spd": 0.95,
+    "color": "#706080",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "carved a lion-headed bowl for the shrine of Inshushinak"
+   ]
+  },
+  {
+   "id": "puzur_inshushinak",
+   "as": "ancestor",
+   "name": "Puzur-Inshushinak",
+   "epithet": "King of Awan",
+   "history": "real",
+   "source": "Bilingual inscriptions in Akkadian and Linear Elamite, c. 2100 BCE (Louvre)",
+   "desc": "The king who freed Elam from Akkad and wrote in Linear Elamite, the script that helped crack it four thousand years later."
+  },
+  {
+   "id": "hita",
+   "as": "ancestor",
+   "name": "Hita",
+   "epithet": "who swore with Naram-Sin",
+   "history": "real",
+   "source": "The 'Treaty of Naram-Sin', c. 2250 BCE, the oldest known text in the Elamite language",
+   "desc": "A king of Awan who made a treaty with Akkad: 'The enemy of Naram-Sin is my enemy, the friend of Naram-Sin is my friend.'"
+  },
+  {
+   "id": "golden_eye",
+   "as": "wanderer",
+   "name": "Golden-Eye",
+   "epithet": "of the Burnt City",
+   "history": "real",
+   "source": "A woman buried at Shahr-i Sokhta, c. 2900–2800 BCE, wore an artificial eyeball of bitumen paste with gold lines",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a tall woman from the far eastern city by the lake, with one eye that shines gold.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0c060",
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 4,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "crossed the great salt desert with a caravan of tin"
+   ],
+   "desc": "A woman of Shahr-i Sokhta, buried with the oldest known artificial eye; her name is lost, so the game names her."
+  },
+  {
+   "id": "untash_napirisha",
+   "as": "chosen",
+   "name": "Untash-Napirisha",
+   "epithet": "Builder of the Ziggurat",
+   "label": "Untash-Napirisha, Builder of the Ziggurat",
+   "history": "real",
+   "desc": "He raises a holy city in a single reign. Crafting 8, Lore 4.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#6bd3ff",
+    "hp": 64,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 8,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "shutruk_nahhunte",
+   "as": "chosen",
+   "name": "Shutruk-Nahhunte",
+   "epithet": "the Plunderer of Babylon",
+   "label": "Shutruk-Nahhunte the Plunderer",
+   "history": "real",
+   "desc": "He carries the treasures of Babylon home to Susa. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "napir_asu",
+   "as": "chosen",
+   "name": "Napir-Asu",
+   "epithet": "the Bronze Queen",
+   "label": "Napir-Asu, the Bronze Queen",
+   "history": "real",
+   "desc": "A queen whose life-size bronze statue weighs as much as two oxen. Lore 6, Crafting 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#d4a050",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 5,
+     "combat": 2,
+     "lore": 6,
+     "trade": 2
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "two_worlds",
+   "title": "Plain or Mountain",
+   "history": "real",
+   "when": {
+    "season": "Summer",
+    "day": 3
+   },
+   "chance": 0.6,
+   "text": "The plain bakes in the summer heat and the grass is gone. The herders want to drive the flocks up to the cool valleys, as their fathers did. Others want to stay by the fields.",
+   "options": [
+    {
+     "label": "Go up to the mountains",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "speed",
+         "mul": 1.03
+        }
+       ]
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The flocks climb into the green valleys. The children come back brown and strong."
+    },
+    {
+     "label": "Stay by the fields",
+     "do": [
+      {
+       "culture": {
+        "settled": 6
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "The people dig deeper wells and wait out the heat."
+    }
+   ]
+  },
+  {
+   "id": "treaty_oath",
+   "title": "Your Enemy Is My Enemy",
+   "history": "real",
+   "source": "The treaty between Naram-Sin of Akkad and a king of Awan, sworn before Elamite and Akkadian gods",
+   "when": {
+    "pop": 11,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "An envoy comes from the great king of the lowlands. He offers an oath: his friends will be our friends and his enemies our enemies.",
+   "options": [
+    {
+     "label": "Swear the oath",
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "devotion": 6
+      },
+      {
+       "give": {
+        "goods": 3
+       }
+      }
+     ],
+     "result": "Gifts are exchanged and the oath is written in two tongues."
+    },
+    {
+     "label": "We bow to no one",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      }
+     ],
+     "result": "The envoy leaves without a word. The young warriors cheer."
+    }
+   ]
+  },
+  {
+   "id": "trophy_stone",
+   "title": "A Trophy from the Enemy",
+   "history": "real",
+   "source": "Shutruk-Nahhunte carried the stele of Naram-Sin and the Code of Hammurabi to Susa, where they were found in 1898–1901",
+   "when": {
+    "era": 3,
+    "pop": 12
+   },
+   "text": "The war party comes back with a great carved stone from an enemy town, covered in the boasts of their old king.",
+   "options": [
+    {
+     "label": "Set it up before our god",
+     "do": [
+      {
+       "devotion": 10
+      },
+      {
+       "culture": {
+        "martial": 4
+       }
+      }
+     ],
+     "result": "Under the old king's boasts, a new line is carved: it was brought here by us."
+    },
+    {
+     "label": "Send it back as a gift",
+     "do": [
+      {
+       "culture": {
+        "martial": -4
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The stone goes home. The enemy is puzzled, and quieter."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "inshushinak_judge",
+   "name": "Inshushinak Weighs the Dead",
+   "history": "legend",
+   "source": "Akkadian-language funerary tablets from Susa, early 2nd millennium BCE",
+   "when": {
+    "deaths": 1
+   },
+   "text": "When we die, two guides take us by the hand to the house of Inshushinak, lord of Susa. There Ishmekarab and Lagamal stand at the scales, and the god looks at what our lives weighed, and says where we shall go.",
+   "moral": "every life is weighed",
+   "do": [
+    {
+     "devotion": 6
+    }
+   ]
+  },
+  {
+   "id": "snake_throne",
+   "name": "The God on the Snake Throne",
+   "history": "legend",
+   "source": "Rock relief at Kurangun, Fars, c. 1600 BCE",
+   "when": {
+    "day": 3
+   },
+   "text": "High on the cliff above the river, Napirisha sits on a great snake coiled into a throne, and from the vessel in his hands the waters of life flow out to the people kneeling below. That is why our rivers never fail.",
+   "moral": "the waters are a gift",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "spiritual": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "golden_eye_tale",
+   "name": "The Woman Who Saw with Gold",
+   "history": "invented",
+   "source": "A story made up around the Shahr-i Sokhta burial",
+   "when": {
+    "joined": "golden_eye"
+   },
+   "text": "In the city by the eastern lake a woman lost an eye. The healers made her a new one of pitch, and drew on it a golden sun. Afterwards she could see things the rest of us cannot: which caravans would come home, and which would be lost in the salt.",
+   "moral": "loss can become a gift",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  },
+  {
+   "id": "kiririsha_feast",
+   "name": "The Feast of Kiririsha",
+   "history": "invented",
+   "tell": "festival",
+   "source": "Kiririsha, 'great lady', was the mother goddess of the Elamite coast",
+   "text": "Once a year the great mother Kiririsha comes up from the sea to see whether her children are fed. Wherever she finds a full table and a song, she leaves the next harvest heavier; wherever she finds a locked door, she walks on.",
+   "moral": "open doors bring plenty",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "yield",
+       "of": "farm_plot",
+       "mul": 1.03
+      }
+     ]
+    },
+    {
+     "mood": 3
+    }
+   ]
+  }
+ ]
+}

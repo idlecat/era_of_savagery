@@ -1,0 +1,657 @@
+{
+ "id": "mitanni",
+ "order": 16,
+ "name": "Mitanni",
+ "period": "c. 1550–1260 BCE",
+ "place": "the Khabur river lands of northern Syria",
+ "desc": "A Hurrian kingdom ruled by chariot lords whose kings bore Indo-Aryan names and swore by Mitra, Varuna and Indra. Their horse-trainers wrote the oldest horse manual, and their singers left the oldest written melody.",
+ "history": "real",
+ "source": "Amarna letters of King Tushratta; the Mitanni–Hittite treaty (c. 1380 BCE); the Nuzi archives; the capital Washukanni has never been firmly located",
+ "tribe_names": [
+  "Akiya",
+  "Arip-sharri",
+  "Ehli",
+  "Hutip",
+  "Kipali",
+  "Pai-tilla",
+  "Shurki",
+  "Tarmiya",
+  "Unap",
+  "Wullu",
+  "Zike",
+  "Hanaya",
+  "Kizzuk",
+  "Akkuya",
+  "Tulpun",
+  "Ithiya"
+ ],
+ "birth_names": [
+  "Ari",
+  "Elli",
+  "Hali",
+  "Kuli",
+  "Mina",
+  "Pura",
+  "Tae",
+  "Uni",
+  "Zili",
+  "Wantiya"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Maryannu of the Chariot"
+  ],
+  "cautious": [
+   "Trainer of Horses",
+   "Keeper of the Tablets of Nuzi"
+  ],
+  "devout": [
+   "Singer of the Lyre"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "won a chariot and a pair of horses in the king's service"
+  ],
+  "cautious": [
+   "walked the horses through the river at dawn for a hundred days"
+  ],
+  "devout": [
+   "sang the hymn to Nikkal with the lyre tuned in the new way"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "kikkuli_training",
+   "kind": "tool",
+   "name": "Kikkuli's Horse Training",
+   "history": "real",
+   "source": "The Kikkuli text (c. 1400 BCE), written for the Hittites by a horse-trainer 'of the land of Mitanni': a 214-day programme",
+   "practice": {
+    "hunt": 120,
+    "explore": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.08
+    }
+   ],
+   "desc": "Horses walked, trotted, swum and fed by the day for seven months: everyone travels 8% faster.",
+   "hint": "Needs Beast Domestication, and long days of riding out.",
+   "words": [
+    "horses",
+    "riding"
+   ]
+  },
+  {
+   "id": "spoked_chariot",
+   "kind": "tool",
+   "name": "Light Spoked Chariot",
+   "history": "real",
+   "source": "The maryannu, a chariot-owning warrior class, are named in Mitanni and Nuzi texts",
+   "practice": {
+    "build": 120,
+    "hunt": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    }
+   ],
+   "desc": "A light car on spoked wheels, quick enough to circle an enemy and shoot: +2 attack.",
+   "hint": "Needs Beast Domestication and Polished Stone Tools.",
+   "words": [
+    "chariots"
+   ]
+  },
+  {
+   "id": "nuzi_ware",
+   "kind": "goods",
+   "name": "Nuzi Ware",
+   "history": "real",
+   "source": "Fine cups painted white on a dark ground, typical of the Mitanni kingdom",
+   "practice": {
+    "hearth": 250,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Tall cups painted with white birds and flowers on black: +2 mood, the stores hold 10 more food.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "hurrian_notation",
+   "kind": "goods",
+   "name": "Written Melodies",
+   "history": "real",
+   "source": "Hurrian Hymn no. 6, to the goddess Nikkal, from Ugarit (c. 1400 BCE): the oldest substantially complete written music",
+   "practice": {
+    "ritual": 200,
+    "hearth": 150
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "lore",
+     "add": 0.01
+    }
+   ],
+   "desc": "Songs for the lyre written down with the tuning and the notes: +3 mood, and a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and songs at the rites and the fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "lentil_pottage",
+   "name": "Lentil Pottage",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 120
+   },
+   "needs": {
+    "finds": [
+     "wild_lentils"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Lentils and barley stewed thick with onions: hunger grows 10% slower.",
+   "hint": "Needs wild lentils."
+  },
+  {
+   "id": "raisin_cakes",
+   "name": "Raisin Cakes",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "wild_vines"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Grapes dried in the sun and pressed into cakes: +2 mood, food spoils 5% slower.",
+   "hint": "Needs wild vines."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_lentils",
+   "name": "Wild Lentils",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "grain",
+   "seed": {
+    "farming": 0.1
+   },
+   "act": "Picking lentil pods",
+   "desc": "Low plants with flat seed pods, one of the first crops of the Fertile Crescent."
+  },
+  {
+   "id": "wild_vines",
+   "name": "Wild Vines",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking grapes",
+   "desc": "Vines climbing the trees at the forest edge, with small dark grapes."
+  }
+ ],
+ "people": [
+  {
+   "id": "ehli_teshup",
+   "as": "founder",
+   "name": "Ehli-Teshup",
+   "epithet": "Horse-Master",
+   "history": "invented",
+   "desc": "He knows each horse by its gait in the dark.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#a07850",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 2,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "caught a wild mare on the steppe and gentled her"
+   ]
+  },
+  {
+   "id": "ashte",
+   "as": "founder",
+   "name": "Ashte",
+   "epithet": "the Lyre-Singer",
+   "history": "invented",
+   "desc": "Her songs are the tribe's memory.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 46,
+    "atk": 3,
+    "def": 2,
+    "spd": 1.0,
+    "color": "#a080c0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 4,
+     "trade": 1
+    }
+   },
+   "memory": [
+    "sang the old songs at three weddings in one moon"
+   ]
+  },
+  {
+   "id": "tushratta",
+   "as": "ancestor",
+   "name": "Tushratta",
+   "epithet": "who asked Egypt for gold",
+   "history": "real",
+   "source": "Amarna letters EA 17–29",
+   "desc": "A king of Mitanni whose letters to Pharaoh ask, again and again, for gold 'as plentiful as dust', and who sent the healing statue of Shaushka to Egypt."
+  },
+  {
+   "id": "tadu_heba",
+   "as": "ancestor",
+   "name": "Tadu-Heba",
+   "epithet": "Bride to Egypt",
+   "history": "real",
+   "source": "Amarna letters; she married Amenhotep III and perhaps later Akhenaten",
+   "desc": "Tushratta's daughter, sent to Egypt with a long list of dowry gifts to seal a peace."
+  },
+  {
+   "id": "tehip_tilla",
+   "as": "wanderer",
+   "name": "Tehip-tilla",
+   "epithet": "the Adopted Son of Many",
+   "history": "real",
+   "source": "The family archive of Tehip-tilla at Nuzi, 15th–14th century BCE",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a wealthy man who has been 'adopted' by a dozen families, each time inheriting a field.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#c0a050",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "was adopted by more fathers than any man in Nuzi"
+   ],
+   "desc": "A Nuzi landholder who got around the ban on selling family land by having the sellers adopt him."
+  },
+  {
+   "id": "kikkuli",
+   "as": "chosen",
+   "name": "Kikkuli",
+   "epithet": "the Horse-Trainer",
+   "label": "Kikkuli the Horse-Trainer",
+   "history": "real",
+   "desc": "A master of horses. Foraging 7, fast as a chariot.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 6,
+    "def": 4,
+    "spd": 1.35,
+    "skills": {
+     "forage": 7,
+     "craft": 3,
+     "combat": 4,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "saushtatar",
+   "as": "chosen",
+   "name": "Saushtatar",
+   "epithet": "who Plundered Ashur",
+   "label": "Saushtatar, who Plundered Ashur",
+   "history": "real",
+   "desc": "A chariot king who carries Ashur's silver doors home. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "nikkal_singer",
+   "as": "chosen",
+   "name": "Ammiya",
+   "epithet": "Singer for Nikkal",
+   "label": "Ammiya, Singer for Nikkal",
+   "history": "invented",
+   "desc": "Her songs are copied from Ugarit to Hattusa. Lore 7, mood of the whole tribe.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 58,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 0,
+     "lore": 7,
+     "trade": 2
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "royal_bride",
+   "title": "A Daughter for a Distant King",
+   "history": "real",
+   "source": "Mitanni princesses married Egyptian pharaohs to seal alliances; their dowry lists survive in the Amarna letters",
+   "when": {
+    "era": 2,
+    "pop": 12
+   },
+   "chance": 0.4,
+   "text": "A powerful neighbour asks for a bride from the chief's family, with a proper dowry, to bind our peoples together.",
+   "options": [
+    {
+     "label": "Send her with gifts",
+     "cost": {
+      "goods": 5,
+      "food": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "martial": -5,
+        "ranked": 4
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "She leaves with a long train of gifts and a lyre. Raids from that side stop."
+    },
+    {
+     "label": "Refuse",
+     "do": [
+      {
+       "culture": {
+        "martial": 3
+       }
+      }
+     ],
+     "result": "The envoy leaves offended."
+    }
+   ]
+  },
+  {
+   "id": "adopt_for_land",
+   "title": "Adopt Me, and I Will Pay",
+   "history": "real",
+   "source": "Nuzi 'sale-adoption' contracts: family land could not be sold, so buyers were adopted as heirs",
+   "when": {
+    "pop": 11,
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "A rich stranger offers silver and grain to any family that will adopt him as a son and leave him a field. The old law forbids selling land, but says nothing about sons.",
+   "options": [
+    {
+     "label": "Adopt him",
+     "do": [
+      {
+       "give": {
+        "food": 25,
+        "goods": 3
+       }
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      }
+     ],
+     "result": "The family has a new 'son' older than the father, and a full granary."
+    },
+    {
+     "label": "Land stays in the family",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      },
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The stranger goes to the next village to try again."
+    }
+   ]
+  },
+  {
+   "id": "healing_statue",
+   "title": "Send the Goddess to Heal Him",
+   "history": "real",
+   "source": "Tushratta sent the statue of Shaushka of Nineveh to Egypt when Amenhotep III was ill (Amarna letter EA 23)",
+   "when": {
+    "era": 2,
+    "built": "totem_shrine"
+   },
+   "chance": 0.3,
+   "text": "A friendly chief far away has fallen sick. His people beg us to lend them our shrine's holy image, so that our goddess may heal him.",
+   "options": [
+    {
+     "label": "Lend the image",
+     "do": [
+      {
+       "devotion": -4
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      },
+      {
+       "give": {
+        "goods": 4
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The goddess travels with an escort and comes home months later, with gifts. The chief lived."
+    },
+    {
+     "label": "She stays with us",
+     "do": [
+      {
+       "devotion": 4
+      }
+     ],
+     "result": "The image stays in its place."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "kingship_heaven",
+   "name": "Kingship in Heaven",
+   "history": "legend",
+   "source": "The Hurrian Kumarbi cycle, preserved in Hittite",
+   "when": {
+    "day": 2
+   },
+   "text": "Alalu was king in heaven for nine years, until Anu threw him down. Anu ruled nine years, until Kumarbi bit him and swallowed his seed. From that seed, inside Kumarbi, grew the Storm God Teshub, who burst out and became king of the gods.",
+   "moral": "every reign gives way to the next",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "teshub_bulls",
+   "name": "The Bulls of the Storm God",
+   "history": "legend",
+   "source": "Hurrian religion: Teshub's bulls Sheri and Hurri, 'Day' and 'Night'",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "Teshub's chariot is drawn by two bulls, Sheri and Hurri, Day and Night. When they run, thunder rolls. When the storm god wants to rest, the bulls graze on the mountains of Hazzi and Nanni, and the sky is clear.",
+   "moral": "even storms must rest",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "nikkal_hymn",
+   "name": "The Hymn to Nikkal",
+   "history": "real",
+   "tell": "festival",
+   "source": "Hurrian Hymn no. 6, Ugarit, c. 1400 BCE",
+   "text": "The singer tunes the nine-stringed lyre and sings to Nikkal, goddess of the orchards: a woman who could not bear a child brings her an offering of sesame oil, and asks. The words are partly lost, but the notes were written down, and three thousand years later they were played again.",
+   "moral": "a song can outlive its words",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  },
+  {
+   "id": "oath_gods",
+   "name": "The Gods of the Oath",
+   "history": "real",
+   "source": "The Mitanni–Hittite treaty, c. 1380 BCE, invoking Mitra, Varuna, Indra and the Nasatyas",
+   "when": {
+    "era": 2
+   },
+   "text": "When our kings swear, they call on the gods of their fathers, who came long ago from the far east: Mitra who keeps the oath, Varuna who sees every lie, Indra the warrior, and the twin horsemen. Whoever breaks the oath, these gods will hunt down.",
+   "moral": "an oath binds even kings",
+   "do": [
+    {
+     "culture": {
+      "ranked": 2
+     }
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  }
+ ]
+}

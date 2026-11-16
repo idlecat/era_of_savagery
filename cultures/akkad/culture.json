@@ -1,0 +1,708 @@
+{
+ "id": "akkad",
+ "order": 11,
+ "name": "Akkadians",
+ "period": "c. 2334–2154 BCE",
+ "place": "Agade and the middle Euphrates",
+ "desc": "Semitic-speaking people of northern Sumer whose king Sargon united the city-states into the first empire. Their tongue, Akkadian, became the language of diplomacy for two thousand years.",
+ "history": "real",
+ "source": "Royal inscriptions of Sargon and Naram-Sin; the Victory Stele of Naram-Sin (Louvre); the city of Agade itself has never been found",
+ "tribe_names": [
+  "Sharru",
+  "Ishme",
+  "Ilum",
+  "Iddin",
+  "Belum",
+  "Ahhutum",
+  "Tabni",
+  "Ea-bani",
+  "Abi-ili",
+  "Ummi",
+  "Amat-Shamash",
+  "Beltani",
+  "Ishtar-ummi",
+  "Dannum",
+  "Kubi",
+  "Ilshu"
+ ],
+ "birth_names": [
+  "Ahu",
+  "Sabi",
+  "Tappi",
+  "Amtum",
+  "Ili",
+  "Mannum",
+  "Shubi",
+  "Atta",
+  "Nidi",
+  "Kalbu"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Captain of the Bowmen",
+   "Who Eats Before the King"
+  ],
+  "devout": [
+   "Singer of Hymns"
+  ],
+  "cautious": [
+   "Weigher of Silver"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "marched with the army from the Lower Sea to the Upper Sea"
+  ],
+  "devout": [
+   "sang the hymn of Inanna at the new moon"
+  ],
+  "cautious": [
+   "weighed out a merchant's silver with stones shaped like ducks"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "duck_weights",
+   "kind": "goods",
+   "name": "Duck Weights",
+   "history": "real",
+   "source": "Polished stone weights shaped like sleeping ducks, standardised across Mesopotamia in the 3rd millennium BCE",
+   "practice": {
+    "quarry": 60,
+    "lead": 60
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Stones of a fixed weight, so that no one is cheated: +2 mood, and the stores hold 10 more food.",
+   "hint": "Needs Polished Stone Tools, and someone who leads the trading.",
+   "words": [
+    "weights",
+    "scales"
+   ]
+  },
+  {
+   "id": "royal_couriers",
+   "kind": "tool",
+   "name": "Royal Runners",
+   "history": "real",
+   "source": "Akkad and later the kings of Ur kept runners and road stations; King Shulgi boasted he ran from Nippur to Ur in a day",
+   "practice": {
+    "explore": 150,
+    "lead": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.05
+    },
+    {
+     "stat": "sight",
+     "add": 20
+    }
+   ],
+   "desc": "Runners who carry word between the camps: everyone walks 5% faster and sees a little farther.",
+   "hint": "Comes from long scouting, and from leading others."
+  },
+  {
+   "id": "hymn_tablets",
+   "kind": "goods",
+   "name": "Temple Hymns",
+   "history": "real",
+   "source": "The Temple Hymns and the Exaltation of Inanna, by Enheduanna, high priestess at Ur",
+   "practice": {
+    "ritual": 200,
+    "lead": 40
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "lore",
+     "add": 0.01
+    }
+   ],
+   "desc": "Songs for every temple, written down so they are sung the same everywhere: rites bring 15% more devotion, and a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and long rites."
+  },
+  {
+   "id": "bitumen_boats",
+   "kind": "tool",
+   "name": "Bitumen-Coated Boats",
+   "history": "real",
+   "source": "Sargon boasted that ships from Meluhha, Magan and Dilmun moored at the quay of Agade",
+   "practice": {
+    "hunt": 80,
+    "build": 80
+   },
+   "needs": {
+    "finds": [
+     "bitumen"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.2
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "Reed boats sealed with black pitch: fishing yields 20% more, and everyone carries 1 more.",
+   "hint": "Needs a bitumen seep."
+  }
+ ],
+ "foods": [
+  {
+   "id": "sesame_oil",
+   "name": "Sesame Oil",
+   "history": "real",
+   "source": "Sesame was grown in Mesopotamia from the later 3rd millennium BCE, for food, lamps and anointing",
+   "practice": {
+    "berry": 150,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "heal",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Oil pressed from small seeds, for cooking, lamps and soothing skin: the hurt heal 10% faster, +1 mood.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "tinuru_bread",
+   "name": "Oven Bread",
+   "history": "real",
+   "source": "The tinuru, a domed clay oven still used as the tannur across the Middle East",
+   "practice": {
+    "hearth": 200,
+    "build": 40
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    }
+   ],
+   "desc": "Flat loaves slapped onto the hot inside wall of a clay oven: hunger grows 8% slower.",
+   "hint": "Needs pottery, and a builder at the hearth."
+  }
+ ],
+ "finds": [
+  {
+   "id": "bitumen",
+   "name": "Bitumen Seep",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "source": "Natural bitumen from seeps near Hit on the Euphrates was used for mortar, boats and inlay",
+   "amount": 24,
+   "rate": 0.7,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "riverbank",
+   "count": 2,
+   "practice": "quarry",
+   "look": "obsidian",
+   "act": "Scooping bitumen",
+   "seed": {
+    "pottery": 0.1
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Black pitch oozing from the ground: it seals jars, boats and walls. Once known, food spoils 5% slower."
+  },
+  {
+   "id": "wild_onion",
+   "name": "Wild Onions",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "tubers",
+   "act": "Digging onions",
+   "desc": "Sharp little bulbs that make any stew worth eating."
+  }
+ ],
+ "people": [
+  {
+   "id": "ahassunu",
+   "as": "founder",
+   "name": "Ahassunu",
+   "epithet": "Weaver of Wool",
+   "history": "invented",
+   "desc": "She runs the looms and knows the worth of every bale.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c09070",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "wove a cloak that a chieftain traded a whole donkey for"
+   ]
+  },
+  {
+   "id": "iddin_ea",
+   "as": "founder",
+   "name": "Iddin-Ea",
+   "epithet": "Spear-Captain",
+   "history": "invented",
+   "desc": "A hunter who drills the young with the spear.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#c06040",
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "held the ford alone until the others came"
+   ]
+  },
+  {
+   "id": "lugalzagesi",
+   "as": "ancestor",
+   "name": "Lugalzagesi",
+   "epithet": "King of Uruk",
+   "history": "real",
+   "source": "Royal inscriptions; Sargon's victory inscription at Nippur",
+   "desc": "The last Sumerian king before Sargon, who claimed the land from the Lower Sea to the Upper Sea and was brought to Nippur in a neck-stock."
+  },
+  {
+   "id": "naram_sin",
+   "as": "ancestor",
+   "name": "Naram-Sin",
+   "epithet": "King of the Four Quarters",
+   "history": "real",
+   "source": "Victory Stele of Naram-Sin (Louvre); the Curse of Agade",
+   "desc": "Sargon's grandson, who called himself a god and climbed the mountains of the Lullubi; later poets blamed his pride for the fall of Agade."
+  },
+  {
+   "id": "shu_ilishu",
+   "as": "wanderer",
+   "name": "Shu-ilishu",
+   "epithet": "Interpreter of Meluhha",
+   "history": "real",
+   "source": "His cylinder seal (Louvre, Akkadian period) names him 'interpreter of the Meluhhan language'",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a man who speaks the tongue of the far land of Meluhha, where ships bring carnelian beads.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 46,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#b06050",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 1,
+     "lore": 3,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "translated for the traders of Meluhha at the quay of Agade"
+   ],
+   "desc": "The only interpreter of the Indus language whose name we know."
+  },
+  {
+   "id": "sargon",
+   "as": "chosen",
+   "name": "Sargon",
+   "epithet": "the Cupbearer King",
+   "label": "Sargon the Cupbearer King",
+   "history": "real",
+   "desc": "A foundling who becomes king of the four quarters. Combat 7, Lore 3.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 80,
+    "atk": 10,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 7,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "enheduanna",
+   "as": "chosen",
+   "name": "Enheduanna",
+   "epithet": "High Priestess of the Moon",
+   "label": "Enheduanna, High Priestess of the Moon",
+   "history": "real",
+   "desc": "The first author known by name. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 58,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "manishtushu",
+   "as": "chosen",
+   "name": "Manishtushu",
+   "epithet": "the Builder",
+   "label": "Manishtushu the Builder",
+   "history": "real",
+   "desc": "A king who bought land fairly and raised temples. Crafting 7, Trade 4.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 7,
+     "combat": 3,
+     "lore": 3,
+     "trade": 4
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "standing_army",
+   "title": "Men Who Eat Before the King",
+   "history": "real",
+   "source": "Sargon's inscriptions: 5,400 men ate daily before him, perhaps the first standing army",
+   "when": {
+    "pop": 13,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "The war chief proposes that some young men stop farming altogether. They would train every day and be fed from the common store.",
+   "options": [
+    {
+     "label": "Feed a band of warriors",
+     "cost": {
+      "food": 30
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "atk",
+         "add": 1
+        },
+        {
+         "stat": "def",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "culture": {
+        "martial": 6,
+        "ranked": 4
+       }
+      }
+     ],
+     "result": "The warriors drill at dawn. Neighbours begin to send gifts instead of raiders."
+    },
+    {
+     "label": "Everyone works the land",
+     "do": [
+      {
+       "culture": {
+        "martial": -3,
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "Every hand stays in the fields."
+    }
+   ]
+  },
+  {
+   "id": "great_drought",
+   "title": "The Years Without Rain",
+   "history": "real",
+   "source": "The '4.2 kiloyear event', a century-long drought around 2200 BCE, coincides with the fall of Akkad",
+   "when": {
+    "after": "drought",
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.6,
+   "text": "Another dry year. The northern fields are dust, and hungry herders press down from the hills. The stores will not last if nothing changes.",
+   "options": [
+    {
+     "label": "Ration the stores",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "hunger",
+         "mul": 0.95
+        }
+       ]
+      },
+      {
+       "mood": -4
+      },
+      {
+       "culture": {
+        "ranked": 3
+       }
+      }
+     ],
+     "result": "Every family gets a measured share. There is grumbling, but no one starves."
+    },
+    {
+     "label": "Build a wall against the herders",
+     "cost": {
+      "wood": 25
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": 4
+       }
+      }
+     ],
+     "result": "A long wall rises against the hills. It will not bring rain."
+    },
+    {
+     "label": "Pray at the temple",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 12
+      }
+     ],
+     "result": "The priests promise rain. The sky does not answer yet."
+    }
+   ]
+  },
+  {
+   "id": "temple_omen",
+   "title": "The Omen Says No",
+   "history": "legend",
+   "source": "The Curse of Agade: Naram-Sin sought omens to rebuild the Ekur, was refused, and tore it down anyway",
+   "when": {
+    "built": "totem_shrine",
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.3,
+   "text": "The chief wants a bigger shrine on the site of the old one. Twice the diviner reads the sheep's liver, and twice the omen says no.",
+   "options": [
+    {
+     "label": "Heed the omen",
+     "do": [
+      {
+       "devotion": 8
+      },
+      {
+       "culture": {
+        "spiritual": 4
+       }
+      }
+     ],
+     "result": "The old shrine stands. The diviner is quietly pleased."
+    },
+    {
+     "label": "Build it anyway",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "build",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "devotion": -12
+      },
+      {
+       "culture": {
+        "spiritual": -5
+       }
+      }
+     ],
+     "result": "The new shrine is splendid. Old people make the sign against evil when they pass it."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "sargon_basket",
+   "name": "Sargon in the Basket",
+   "history": "legend",
+   "source": "The Legend of Sargon, a Neo-Assyrian text of the 7th century BCE",
+   "when": {
+    "day": 2
+   },
+   "text": "My mother bore me in secret, says Sargon. She set me in a basket of rushes, sealed the lid with pitch, and gave me to the river. The river carried me to Aqqi the water-drawer, who raised me as his son and made me a gardener. While I was a gardener, Ishtar loved me, and I became king.",
+   "moral": "the river may carry the lowly to the throne",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "adapa",
+   "name": "Adapa and the South Wind",
+   "history": "legend",
+   "source": "Akkadian myth, tablets from Amarna and Ashurbanipal's library",
+   "when": {
+    "invention": "bitumen_boats"
+   },
+   "text": "Adapa the wise was fishing when the South Wind capsized his boat, so he broke the wind's wing. Called before the sky god, he was offered the bread and water of life, but Enki had warned him they were the food of death, and he refused. So people stay wise, and die.",
+   "moral": "wisdom has a price",
+   "do": [
+    {
+     "insight": {
+      "code": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "curse_agade",
+   "name": "The Curse of Agade",
+   "history": "legend",
+   "source": "Sumerian poem, Ur III period",
+   "when": {
+    "happened": "temple_omen"
+   },
+   "text": "Because the king tore down the house of Enlil, the gods turned their faces away. The Gutians came down from the mountains like locusts, the canals silted up, and the fields gave no grain. Even the city whose quays once held ships from every land became a place where jackals cried.",
+   "moral": "pride brings ruin",
+   "do": [
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    }
+   ]
+  },
+  {
+   "id": "exaltation_inanna",
+   "name": "The Exaltation of Inanna",
+   "history": "real",
+   "tell": "festival",
+   "source": "Nin-me-sara, by Enheduanna, c. 2280 BCE",
+   "text": "Lady of all the powers, in whom the light shines, you are as great as heaven, as wide as the earth. When you roar like a storm, the land falls silent. I, Enheduanna, the high priestess, was cast out of my temple, and I sang this song to you until you gave me back my place.",
+   "moral": "a song can win back what was lost",
+   "do": [
+    {
+     "devotion": 8
+    },
+    {
+     "mood": 2
+    }
+   ]
+  }
+ ]
+}

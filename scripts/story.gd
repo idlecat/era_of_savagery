@@ -90,6 +90,7 @@ func holds(w: Dictionary) -> bool:
 
 func _at(where: Variant, c) -> Vector2:
 	if where is Vector2: return where
+	if where is Array and where.size() == 2: return Vector2(where[0], where[1]) # (from JSON)
 	match str(where):
 		"site": return c.site if c else D.VILLAGE
 		"village": return D.VILLAGE
@@ -113,7 +114,7 @@ func run(actions: Array, c) -> void:
 			var base := _at(a.get("at", "village"), c)
 			if c: c.ambushed = true
 			for off in a.get("offsets", [Vector2.ZERO]):
-				var p: Vector2 = base + off
+				var p: Vector2 = base + (Vector2(off[0], off[1]) if off is Array else off) # (JSON gives [x, y])
 				p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 40, D.H - 40))
 				if a["spawn"] == "wolf":
 					var w = sim.spawn_predator(p, base)

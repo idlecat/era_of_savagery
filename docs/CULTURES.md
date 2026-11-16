@@ -221,7 +221,7 @@ All conditions must hold. `time` (seconds), `day`, `pop` (living, at least), `er
 `devotion`, `mood` (at least), `deaths` (at least), `culture` (`{"martial": 20}` at least,
 `{"martial": -20}` at most), `found` (landmark id), `met` (clan id), `flag`, and the
 culture's own: `told` (tale id), `joined` (person id), `happened` (event id of this pack),
-`after` (something that has happened in the game: `drought`, `blizzard`, `storm`,
+`after` (something that has happened in the game: `drought`, `rain`, `blizzard`, `storm`,
 `great_flood`, `spring_flood`, `eruption`, `earthquake`, `wildfire`, `lightning`,
 `eclipse`, `festival`, `chosen`, `era2`, `era3`, `overpop`, or a pack event).
 
@@ -234,7 +234,7 @@ culture's own: `told` (tale id), `joined` (person id), `happened` (event id of t
 tech's cost) · `{"culture": {"spiritual": 5}}` · `{"invent": id}` · `{"boon": [effects]}`
 (lasting) · `{"remember": text, "who": "all" | "best:lore", "impact": 6}` · `{"feat":
 text}` (an achievement) · `{"tale": id}` (tell it now) · `{"join": person id}` ·
-`{"spawn": "wolf" | "tiger", "at": "village"}` · `{"reveal": "village", "r": 400}` ·
+`{"spawn": "wolf" | "tiger", "at": "village", "offsets": [[260, -180]]}` (a beast for each offset from `at`) · `{"reveal": "village", "r": 400}` ·
 `{"flag": name}`.
 
 ## Drafting a pack with an LLM

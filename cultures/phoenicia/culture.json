@@ -1,0 +1,710 @@
+{
+ "id": "phoenicia",
+ "order": 17,
+ "name": "Phoenicians",
+ "period": "c. 1500–539 BCE",
+ "place": "Byblos, Sidon and Tyre on the Levantine coast",
+ "desc": "Sailors and traders of a narrow coast between the mountains and the sea, who sold cedar to Egypt and purple cloth to kings, steered by the Pole Star to Spain, and gave the world the alphabet.",
+ "history": "real",
+ "source": "Inscriptions from Byblos (the Ahiram sarcophagus), Ugarit's archives, Egyptian and Assyrian records, Herodotus",
+ "tribe_names": [
+  "Abdashtart",
+  "Baalyaton",
+  "Bodmelqart",
+  "Gerashtart",
+  "Himilk",
+  "Milkyaton",
+  "Sakarbaal",
+  "Tabnit",
+  "Azarbaal",
+  "Shafat",
+  "Abibaal",
+  "Batbaal",
+  "Amotmilk",
+  "Arish",
+  "Yatonbaal",
+  "Hanna"
+ ],
+ "birth_names": [
+  "Abdi",
+  "Bod",
+  "Mutt",
+  "Ram",
+  "Sadyk",
+  "Tabi",
+  "Uzi",
+  "Zakar",
+  "Ahot",
+  "Kesha"
+ ],
+ "epithets": {
+  "gluttonous": [
+   "Trader of Cedar"
+  ],
+  "cautious": [
+   "Dyer of Purple",
+   "Pilot by the Pole Star"
+  ],
+  "devout": [
+   "Servant of Melqart"
+  ]
+ },
+ "memories": {
+  "gluttonous": [
+   "floated cedar logs down the coast to the ships of Egypt"
+  ],
+  "cautious": [
+   "steered home through the night by the star that does not move"
+  ],
+  "devout": [
+   "kept the fire on Melqart's altar burning through the winter storms"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "tyrian_purple",
+   "kind": "goods",
+   "name": "Tyrian Purple",
+   "history": "real",
+   "source": "Dye from murex sea snails; mounds of crushed shells survive at Sidon. It took thousands of snails to dye one cloak",
+   "practice": {
+    "hearth": 250,
+    "hunt": 80
+   },
+   "needs": {
+    "finds": [
+     "murex"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "A purple that never fades, worth more than silver: +3 mood, and trade brings a little lore.",
+   "hint": "Needs murex shells, and a strong stomach.",
+   "words": [
+    "purple dye"
+   ]
+  },
+  {
+   "id": "alphabet",
+   "kind": "goods",
+   "name": "The Alphabet",
+   "history": "real",
+   "source": "The Phoenician alphabet of 22 letters (by c. 1050 BCE), ancestor of the Greek, Latin, Hebrew and Arabic scripts",
+   "practice": {
+    "lead": 120,
+    "explore": 80
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.025
+    }
+   ],
+   "desc": "Twenty-two signs, one for each sound, that anyone can learn in a season: the tribe gathers much more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and traders who travel and lead.",
+   "words": [
+    "alphabet",
+    "letters"
+   ]
+  },
+  {
+   "id": "keeled_ships",
+   "kind": "tool",
+   "name": "Keeled Ships",
+   "history": "real",
+   "source": "Phoenician merchant ships ('round ships') and later biremes, shown on Assyrian reliefs from Nineveh",
+   "practice": {
+    "build": 150,
+    "hunt": 100
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.25
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "Ships built on a strong keel, with planks fitted by mortise and tenon: fishing yields 25% more, everyone carries 1 more.",
+   "hint": "Needs Polished Stone Tools, and builders who fish.",
+   "words": [
+    "ships"
+   ]
+  },
+  {
+   "id": "glass_beads",
+   "kind": "goods",
+   "name": "Glass Beads",
+   "history": "real",
+   "source": "Pliny told that Phoenician sailors first made glass on a beach; in fact it began in Mesopotamia, but Phoenician workshops made it famous",
+   "practice": {
+    "hearth": 250,
+    "quarry": 50
+   },
+   "needs": {
+    "techs": [
+     "fire",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Sand and soda melted into blue and yellow beads, eye-shaped against evil: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs fire and pottery, and long work at the furnace."
+  },
+  {
+   "id": "pole_star",
+   "kind": "tool",
+   "name": "Sailing by the Pole Star",
+   "history": "real",
+   "source": "Greek writers called the Pole Star 'the Phoenician star', because Phoenician sailors steered by it at night",
+   "practice": {
+    "explore": 200,
+    "ritual": 50
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "sight",
+     "add": 25
+    },
+    {
+     "stat": "speed",
+     "mul": 1.03
+    }
+   ],
+   "desc": "One star that never moves, to find the way by night: people see farther and travel 3% faster.",
+   "hint": "Comes from long scouting, and from watching the sky."
+  }
+ ],
+ "foods": [
+  {
+   "id": "salted_fish",
+   "name": "Salted Fish",
+   "history": "real",
+   "practice": {
+    "hunt": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "fish",
+     "salt"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.85
+    }
+   ],
+   "desc": "Fish split, salted and dried on the rocks for the long voyage: food spoils 15% slower.",
+   "hint": "Needs fish and salt."
+  },
+  {
+   "id": "olive_oil",
+   "name": "Olive Oil",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "build": 50
+   },
+   "needs": {
+    "finds": [
+     "olive"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Olives crushed under a stone and pressed: +2 mood, the hurt heal 5% faster.",
+   "hint": "Needs olive trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "murex",
+   "name": "Murex Shells",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "amount": 18,
+   "rate": 0.7,
+   "regrow": 0.02,
+   "winter": true,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "hunt",
+   "look": "salt",
+   "act": "Gathering murex",
+   "desc": "Spiny snails whose glands give a purple dye. The smell of the dye-works carries for miles."
+  },
+  {
+   "id": "olive",
+   "name": "Olive Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.85,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking olives",
+   "desc": "Grey-leaved trees that live for centuries; their fruit is ripe in winter."
+  },
+  {
+   "id": "cedar",
+   "name": "Cedar Grove",
+   "group": "food",
+   "res": "wood",
+   "history": "real",
+   "source": "The cedars of Lebanon were shipped to Egypt and Mesopotamia from the 3rd millennium BCE",
+   "amount": 45,
+   "rate": 0.9,
+   "regrow": 0.02,
+   "winter": true,
+   "where": "hills_home",
+   "count": 2,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Felling cedar",
+   "desc": "Great fragrant trees whose timber kings send for from across the sea."
+  }
+ ],
+ "people": [
+  {
+   "id": "arishat",
+   "as": "founder",
+   "name": "Arishat",
+   "epithet": "the Dyer",
+   "history": "invented",
+   "desc": "Her hands are purple to the elbow and her prices are high.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#8040a0",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "dyed a cloak purple for a king's envoy"
+   ]
+  },
+  {
+   "id": "germelqart",
+   "as": "founder",
+   "name": "Ger-Melqart",
+   "epithet": "the Pilot",
+   "history": "invented",
+   "desc": "He knows every harbour from Byblos to the islands.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#4070b0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 2,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "brought a ship home through a storm off Cyprus"
+   ]
+  },
+  {
+   "id": "ahiram",
+   "as": "ancestor",
+   "name": "Ahiram",
+   "epithet": "King of Byblos",
+   "history": "real",
+   "source": "Sarcophagus of Ahiram, c. 1000 BCE (National Museum of Beirut)",
+   "desc": "A king whose stone coffin carries the oldest long text in the Phoenician alphabet: a curse on anyone who disturbs it."
+  },
+  {
+   "id": "ammurapi",
+   "as": "ancestor",
+   "name": "Ammurapi",
+   "epithet": "Last King of Ugarit",
+   "history": "real",
+   "source": "Letter RS 18.147 from Ugarit, c. 1185 BCE",
+   "desc": "He wrote to the king of Cyprus that enemy ships were burning his towns while his army and fleet were far away. The tablet was found in the ruins."
+  },
+  {
+   "id": "wenamun",
+   "as": "wanderer",
+   "name": "Wenamun",
+   "epithet": "Envoy of Amun",
+   "history": "legend",
+   "source": "The Story of Wenamun, an Egyptian papyrus of c. 1100 BCE",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "an Egyptian priest who has been robbed on the way, and has come for cedar with nothing to pay for it.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 46,
+    "atk": 3,
+    "def": 2,
+    "spd": 1.0,
+    "color": "#e0d0a0",
+    "skills": {
+     "forage": 1,
+     "craft": 1,
+     "combat": 0,
+     "lore": 5,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "waited twenty-nine days in the harbour of Byblos for the prince to see him"
+   ],
+   "desc": "An Egyptian sent to buy timber, whose comic, humiliating journey is told in one of the oldest travel stories."
+  },
+  {
+   "id": "hiram",
+   "as": "chosen",
+   "name": "Hiram",
+   "epithet": "the Builder King",
+   "label": "Hiram the Builder King",
+   "history": "real",
+   "desc": "He sends cedar and craftsmen to raise temples. Crafting 8, Trade 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 2,
+     "trade": 5
+    }
+   }
+  },
+  {
+   "id": "kadmos",
+   "as": "chosen",
+   "name": "Kadmos",
+   "epithet": "Bringer of Letters",
+   "label": "Kadmos, Bringer of Letters",
+   "history": "legend",
+   "desc": "The prince who carries the alphabet over the sea. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 6,
+    "def": 4,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 3,
+     "lore": 8,
+     "trade": 2
+    }
+   }
+  },
+  {
+   "id": "mattan",
+   "as": "chosen",
+   "name": "Mattan",
+   "epithet": "who Sailed Round Libya",
+   "label": "Mattan, who Sailed Round Libya",
+   "history": "invented",
+   "desc": "A captain bold enough to sail around Africa. Foraging 7, Trade 5.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 72,
+    "atk": 7,
+    "def": 4,
+    "spd": 1.2,
+    "skills": {
+     "forage": 7,
+     "craft": 3,
+     "combat": 4,
+     "lore": 2,
+     "trade": 5
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "sea_peoples",
+   "title": "Ships on the Horizon",
+   "history": "real",
+   "source": "The collapse around 1185 BCE: Ugarit was burned by raiders from the sea while its army and fleet were away",
+   "when": {
+    "era": 2,
+    "pop": 11,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "Seven strange ships have been seen along the coast. Villages to the north are burning. Our own boats are away trading.",
+   "options": [
+    {
+     "label": "Man the walls",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 2
+        }
+       ]
+      },
+      {
+       "culture": {
+        "martial": 4
+       }
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         300,
+         200
+        ],
+        [
+         340,
+         160
+        ]
+       ]
+      }
+     ],
+     "result": "Stakes go up along the shore. Something is already moving in the dunes."
+    },
+    {
+     "label": "Flee to the mountains",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "mood": -3
+      }
+     ],
+     "result": "The people carry what they can up the cedar slopes and wait."
+    },
+    {
+     "label": "Offer them trade",
+     "cost": {
+      "goods": 4
+     },
+     "do": [
+      {
+       "culture": {
+        "martial": -3
+       }
+      }
+     ],
+     "result": "The strangers take the gifts, look long at the village, and sail on."
+    }
+   ]
+  },
+  {
+   "id": "cedar_trade",
+   "title": "Cedar for the Pharaoh",
+   "history": "real",
+   "source": "Byblos shipped cedar to Egypt for over two thousand years, for temple doors, coffins and sacred boats",
+   "when": {
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "A ship from the south offers grain, linen and gold for timber: our best logs, the long straight ones.",
+   "options": [
+    {
+     "label": "Sell the logs",
+     "cost": {
+      "wood": 30
+     },
+     "do": [
+      {
+       "give": {
+        "food": 30,
+        "goods": 5
+       }
+      }
+     ],
+     "result": "The logs are floated out to the ship. Grain and linen come ashore."
+    },
+    {
+     "label": "Keep our timber",
+     "result": "The ship sails on to the next harbour."
+    }
+   ]
+  },
+  {
+   "id": "dye_stink",
+   "title": "The Smell of Purple",
+   "history": "real",
+   "source": "Murex dye-works stood downwind of Phoenician towns because of the stench of rotting snails",
+   "when": {
+    "invention": "tyrian_purple"
+   },
+   "text": "The vats of rotting snails stink so badly that the dyers are made to move their works to the far end of the beach, downwind. The cloth, though, sells for more than silver.",
+   "do": [
+    {
+     "give": {
+      "goods": 3
+     }
+    },
+    {
+     "mood": -1
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "baal_yam",
+   "name": "Baal and the Sea",
+   "history": "legend",
+   "source": "The Baal Cycle, tablets from Ugarit, c. 1400–1200 BCE",
+   "when": {
+    "day": 2
+   },
+   "text": "Yam, the Sea, demanded that the gods hand Baal over as his slave. The craftsman god made Baal two clubs, Driver and Chaser. The first struck Yam on the shoulder, and he did not fall; the second struck him between the eyes, and the Sea sank down, and Baal was king.",
+   "moral": "the sea can be mastered",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "adonis_river",
+   "name": "The River That Runs Red",
+   "history": "legend",
+   "source": "Lucian, On the Syrian Goddess; the Adonis river (Nahr Ibrahim) does turn red with soil in spring",
+   "when": {
+    "season": "Spring"
+   },
+   "text": "Every spring the river near Byblos runs red down to the sea. The women of Byblos say it is the blood of the beautiful youth killed by a boar in the mountains, and they mourn him, and then rejoice that he lives again.",
+   "moral": "what dies in spring returns",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "melqart_dog",
+   "name": "Melqart's Dog",
+   "history": "legend",
+   "tell": "festival",
+   "source": "A Tyrian legend told by later writers (Pollux, Achilles Tatius)",
+   "text": "Melqart, lord of Tyre, was walking on the beach with a nymph when his dog bit into a shell, and came back with its jaws dyed a glorious purple. The nymph said she would not marry him until he brought her a robe of that colour. And so the dyers of Tyre began their work.",
+   "moral": "treasure hides in small things",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "around_libya",
+   "name": "The Sun on the Right Hand",
+   "history": "legend",
+   "source": "Herodotus 4.42: Phoenicians sent by Pharaoh Necho II sailed around Libya (Africa)",
+   "when": {
+    "invention": "keeled_ships"
+   },
+   "text": "Pharaoh sent our sailors south down the Red Sea, to come home by the Pillars of Heracles. Each autumn they landed, sowed grain and waited for the harvest. In the third year they came home, and told a story no one believed: that far in the south, the sun had stood on their right hand. That is how we know it was true.",
+   "moral": "the strangest report may be the truest",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "culture": {
+      "settled": -2
+     }
+    }
+   ]
+  }
+ ]
+}

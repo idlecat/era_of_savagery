@@ -1,0 +1,670 @@
+{
+ "id": "saba",
+ "order": 21,
+ "name": "Sabaeans",
+ "period": "c. 1000 BCE–275 CE",
+ "place": "Marib and the incense lands of South Arabia",
+ "desc": "The kingdom of Sheba in the highlands of Yemen, grown rich on frankincense and myrrh carried north by camel caravan. Their great dam at Marib watered two oases for a thousand years.",
+ "history": "real",
+ "source": "Sabaean inscriptions in the South Arabian script; excavations at Marib, Sirwah and the Awwam temple; Assyrian records",
+ "tribe_names": [
+  "Karib",
+  "Yatha",
+  "Sumhu",
+  "Dhamar",
+  "Yada",
+  "Ilsharah",
+  "Abkarib",
+  "Nasha",
+  "Wahab",
+  "Ilizz",
+  "Ammyada",
+  "Shamir",
+  "Abiyada",
+  "Lahay",
+  "Barakat",
+  "Hawfa"
+ ],
+ "birth_names": [
+  "Ali",
+  "Bara",
+  "Dhu",
+  "Hani",
+  "Ilu",
+  "Maad",
+  "Sad",
+  "Shams",
+  "Wadd",
+  "Yasr"
+ ],
+ "epithets": {
+  "gluttonous": [
+   "Leader of the Incense Caravan"
+  ],
+  "cautious": [
+   "Keeper of the Sluice",
+   "Builder of Terraces"
+  ],
+  "devout": [
+   "Servant of Almaqah"
+  ]
+ },
+ "memories": {
+  "gluttonous": [
+   "led a hundred camels of frankincense north to the sea of the Phoenicians"
+  ],
+  "cautious": [
+   "opened the sluice gates when the flood came down the wadi"
+  ],
+  "devout": [
+   "joined the sacred ibex hunt for the moon god"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "marib_dam",
+   "kind": "tool",
+   "name": "The Great Dam",
+   "history": "real",
+   "source": "The Marib dam, raised in stages from the 8th century BCE, with stone sluices that sent flood water to 9,600 hectares of fields",
+   "practice": {
+    "build": 300,
+    "quarry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.35
+    }
+   ],
+   "desc": "An earth dam across the wadi, with stone sluices that share the rare floods among the fields: farm plots yield 35% more.",
+   "hint": "Needs farming, Polished Stone Tools and the Tribe & Agrarian Era, and builders who quarry.",
+   "words": [
+    "dams"
+   ]
+  },
+  {
+   "id": "camel_caravan",
+   "kind": "tool",
+   "name": "Camel Caravans",
+   "history": "real",
+   "source": "The dromedary was domesticated in Arabia around 1000 BCE, opening the Incense Road from Yemen to Gaza",
+   "practice": {
+    "explore": 150,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 3
+    }
+   ],
+   "desc": "Strings of camels that cross the desert for weeks without water: everyone carries 3 more.",
+   "hint": "Needs Beast Domestication, and long journeys.",
+   "words": [
+    "camels"
+   ]
+  },
+  {
+   "id": "incense_burner",
+   "kind": "goods",
+   "name": "Incense Burners",
+   "history": "real",
+   "source": "Small stone altars for burning incense, often inscribed with the names of aromatics, are common in Sabaean sites",
+   "practice": {
+    "ritual": 200,
+    "quarry": 40
+   },
+   "needs": {
+    "finds": [
+     "frankincense"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Little stone altars where frankincense smokes all day: rites bring 15% more devotion, +1 mood.",
+   "hint": "Needs frankincense trees."
+  },
+  {
+   "id": "musnad",
+   "kind": "goods",
+   "name": "The South Arabian Script",
+   "history": "real",
+   "source": "The musnad alphabet of 29 letters, carved in monumental inscriptions from the early 1st millennium BCE",
+   "practice": {
+    "lead": 100,
+    "ritual": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    }
+   ],
+   "desc": "Tall, upright letters for carving the deeds of rulers and the gifts to the gods: the tribe gathers more lore.",
+   "hint": "Needs the Tribe & Agrarian Era.",
+   "words": [
+    "writing"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "camel_milk",
+   "name": "Camel Milk",
+   "history": "real",
+   "practice": {
+    "hunt": 100,
+    "hearth": 80
+   },
+   "needs": {
+    "inventions": [
+     "camel_caravan"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Rich milk from the caravan camels, food that walks with you: hunger grows 10% slower.",
+   "hint": "Needs camel caravans."
+  },
+  {
+   "id": "sidr_honey",
+   "name": "Sidr Honey",
+   "history": "real",
+   "practice": {
+    "hunt": 60,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "sidr"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.08
+    }
+   ],
+   "desc": "Dark honey from the flowers of the sidr tree, prized as food and medicine: +2 mood, the hurt heal 8% faster.",
+   "hint": "Needs sidr trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "frankincense",
+   "name": "Frankincense Trees",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "source": "Boswellia trees of Dhofar, Hadramawt and Somalia; their resin was worth its weight in gold in the Mediterranean",
+   "amount": 14,
+   "rate": 0.6,
+   "regrow": 0.03,
+   "winter": true,
+   "needs": "lore",
+   "where": "hills_far",
+   "count": 3,
+   "practice": "ritual",
+   "look": "willow",
+   "act": "Tapping frankincense",
+   "culture": {
+    "spiritual": 2
+   },
+   "desc": "Twisted little trees whose cut bark weeps a fragrant resin, burned for the gods and the sick."
+  },
+  {
+   "id": "sidr",
+   "name": "Sidr Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.85,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking sidr fruit",
+   "desc": "Thorny desert trees with small sweet fruit; bees love their flowers."
+  }
+ ],
+ "people": [
+  {
+   "id": "ilizza",
+   "as": "founder",
+   "name": "Ilizza",
+   "epithet": "Keeper of the Sluice",
+   "history": "invented",
+   "desc": "She decides whose field drinks first when the flood comes.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0a060",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "shared out the great flood among forty fields without a quarrel"
+   ]
+  },
+  {
+   "id": "nashakarib",
+   "as": "founder",
+   "name": "Nashakarib",
+   "epithet": "the Caravan Master",
+   "history": "invented",
+   "desc": "He knows every well on the road north.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a07040",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 2,
+     "lore": 1,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "found water for the whole caravan when the wells were dry"
+   ]
+  },
+  {
+   "id": "karibil",
+   "as": "ancestor",
+   "name": "Karib'il Watar",
+   "epithet": "the Unifier",
+   "history": "real",
+   "source": "His victory inscription at the temple of Sirwah, 7th century BCE",
+   "desc": "The ruler who united South Arabia under Saba and recorded every campaign on a great stone."
+  },
+  {
+   "id": "builders_awwam",
+   "as": "ancestor",
+   "name": "The Builders of Awwam",
+   "epithet": "servants of the moon",
+   "history": "real",
+   "source": "The Awwam temple (Mahram Bilqis) at Marib, sacred to Almaqah",
+   "desc": "The nameless workers who raised the great oval temple of the moon god, with its tall pillars that still stand in the sand."
+  },
+  {
+   "id": "samsi",
+   "as": "wanderer",
+   "name": "Samsi",
+   "epithet": "Queen of the Arabs",
+   "history": "real",
+   "source": "Assyrian annals of Tiglath-Pileser III (8th century BCE) name her and the camels she paid as tribute",
+   "when": {
+    "era": 2,
+    "day": 7,
+    "tech": "domestication"
+   },
+   "chance": 0.4,
+   "text": "a desert queen with a string of camels, who has fled a great king's army and seeks friends.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 62,
+    "atk": 6,
+    "def": 4,
+    "spd": 1.1,
+    "color": "#c08040",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 4,
+     "lore": 2,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "escaped into the desert with her camels when the Assyrians came"
+   ],
+   "desc": "An Arab queen of the 8th century BCE who fought and paid tribute to Assyria."
+  },
+  {
+   "id": "queen_sheba",
+   "as": "chosen",
+   "name": "Bilqis",
+   "epithet": "Queen of Sheba",
+   "label": "Bilqis, Queen of Sheba",
+   "history": "legend",
+   "desc": "A queen who tests the wisest king with riddles. Lore 7, Trade 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 2,
+     "lore": 7,
+     "trade": 6
+    }
+   }
+  },
+  {
+   "id": "yathaamar",
+   "as": "chosen",
+   "name": "Yatha'amar",
+   "epithet": "the Dam-Builder",
+   "label": "Yatha'amar the Dam-Builder",
+   "history": "real",
+   "desc": "He raises the sluices of Marib. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 3,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "ibex_hunter",
+   "as": "chosen",
+   "name": "Dhamar'ali",
+   "epithet": "the Ibex Hunter",
+   "label": "Dhamar'ali the Ibex Hunter",
+   "history": "invented",
+   "desc": "No mountain is too steep for him. Foraging 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff9f6b",
+    "hp": 78,
+    "atk": 9,
+    "def": 4,
+    "spd": 1.25,
+    "skills": {
+     "forage": 7,
+     "craft": 1,
+     "combat": 6,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "dam_breach",
+   "title": "The Dam Is Cracking",
+   "history": "real",
+   "source": "The Marib dam was breached and repaired several times; inscriptions record repairs in 449 and 450 CE, and its final collapse came around 570 CE",
+   "when": {
+    "after": "spring_flood",
+    "invention": "marib_dam"
+   },
+   "chance": 0.8,
+   "text": "The flood has torn a gap in the great dam. If it is not mended before the next flood, the fields will go back to desert.",
+   "options": [
+    {
+     "label": "Call every clan to mend it",
+     "cost": {
+      "wood": 25,
+      "food": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "mood": 2
+      },
+      {
+       "feat": "Mended the great dam"
+      }
+     ],
+     "result": "Twenty thousand baskets of earth later, the dam stands again, with a new inscription naming every clan that came."
+    },
+    {
+     "label": "Let the wadi have it",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 0.85
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": -6
+       }
+      }
+     ],
+     "result": "The water runs where it likes now. Some families pack their camels and leave."
+    }
+   ]
+  },
+  {
+   "id": "gifts_north",
+   "title": "Gifts for a Wise King",
+   "history": "legend",
+   "source": "1 Kings 10: the Queen of Sheba brought gold, spices and precious stones to Solomon to test him with hard questions",
+   "when": {
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.4,
+   "text": "Travellers tell of a king in the north so wise that no riddle can stump him. The chief would like to go and see, with a caravan of gifts.",
+   "options": [
+    {
+     "label": "Send the caravan",
+     "cost": {
+      "goods": 5,
+      "herbs": 5
+     },
+     "do": [
+      {
+       "insight": {
+        "code": 0.2
+       }
+      },
+      {
+       "culture": {
+        "ranked": 3
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The caravan comes back months later with stories, new ideas and a few riddles of its own."
+    },
+    {
+     "label": "Stay home",
+     "result": "The north will have to keep its wisdom to itself."
+    }
+   ]
+  },
+  {
+   "id": "incense_trade",
+   "title": "The Incense Road",
+   "history": "real",
+   "source": "Pliny: frankincense reached the Mediterranean after 65 stages, paying tolls and fees at every one",
+   "when": {
+    "find": "frankincense",
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "Traders from the north will pay well for our frankincense: grain, cloth, even gold. But the temples say the best resin belongs to the gods.",
+   "options": [
+    {
+     "label": "Sell the resin",
+     "cost": {
+      "herbs": 8
+     },
+     "do": [
+      {
+       "give": {
+        "food": 30,
+        "goods": 4
+       }
+      }
+     ],
+     "result": "The camels go north loaded with resin and come back loaded with grain."
+    },
+    {
+     "label": "Burn it for the gods",
+     "cost": {
+      "herbs": 8
+     },
+     "do": [
+      {
+       "devotion": 15
+      }
+     ],
+     "result": "The whole valley smells of incense for three days."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "hoopoe",
+   "name": "The Hoopoe's News",
+   "history": "legend",
+   "source": "Qur'an 27:20–44",
+   "when": {
+    "day": 3
+   },
+   "text": "The wise king missed the hoopoe among his birds and was angry. The hoopoe came back and said: I have flown where you have not, and found a land called Saba ruled by a queen, with a mighty throne, whose people bow to the sun. So the king sent the bird back with a letter.",
+   "moral": "the smallest messenger can carry great news",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "glass_floor",
+   "name": "The Floor of Glass",
+   "history": "legend",
+   "source": "Qur'an 27:44 and later Jewish and Islamic retellings",
+   "when": {
+    "happened": "gifts_north"
+   },
+   "text": "When the queen came to the wise king's palace, she was told to enter the hall. She thought its floor was a pool of water and lifted her skirts, but it was smooth glass over water. She laughed at herself, and the two rulers became friends, each having found someone clever enough to fool them.",
+   "moral": "the wise can laugh at themselves",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "flood_arim",
+   "name": "The Flood of the Dam",
+   "history": "legend",
+   "source": "Qur'an 34:15–16 (Sayl al-Arim)",
+   "when": {
+    "happened": "dam_breach"
+   },
+   "text": "There were two gardens, to the right and to the left, and the people were told: eat, and give thanks. But they grew proud and forgot, and the dam burst, and their two gardens became bitter thorn and tamarisk.",
+   "moral": "gratitude keeps the garden",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "culture": {
+      "settled": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "ibex_hunt",
+   "name": "The Hunt for the Moon God",
+   "history": "real",
+   "tell": "festival",
+   "source": "Sabaean inscriptions record ritual ibex hunts led by the ruler for Almaqah",
+   "text": "Once a year the ruler leads the young men into the mountains after the ibex, whose curved horns are like the crescent moon. The hunt brings rain: if it is good, the floods will come down the wadis and the fields will drink.",
+   "moral": "the hunt and the harvest are one",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 1.05
+      }
+     ]
+    },
+    {
+     "mood": 2
+    }
+   ]
+  }
+ ]
+}
