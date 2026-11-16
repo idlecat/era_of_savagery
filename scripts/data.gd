@@ -54,7 +54,6 @@ static func has_volcano() -> bool: return VOLCANO != Vector2.INF
 static func area_k() -> float:
 	return W * H / STD_AREA
 
-const OVERPOP_THRESHOLD := 12 # PRD says 20; lowered so it fires in a short session
 
 # ---- Water: rivers, fords and the land regions between them ----
 const RIVER_HALF := 46.0
@@ -581,9 +580,9 @@ const TECHS := [
 		"desc": "Unlocks Farm Plots for steady food.", "words": ["farms", "fields", "planting", "crops"]},
 	{"id": "bronze", "era": 3, "name": "Bronze Metallurgy", "cost": 70, "req": ["tools", "domestication"], "finds": ["copper", "tin"], "practice": {"quarry": 1.0, "build": 0.3},
 		"desc": "Unlocks the Bronze Smelter; while one stands with copper and tin to work, the tribe is armed in bronze (+60% ATK, +3 DEF).", "words": ["bronze", "metal", "smelting"]},
-	{"id": "totems", "era": 3, "name": "Megalithic Totems", "cost": 70, "req": ["pottery"], "practice": {"ritual": 1.0},
+	{"id": "totems", "era": 3, "name": "Megalithic Totems", "cost": 70, "req": ["pottery"], "practice": {"ritual": 1.0}, "codifies": "carved into the great totems",
 		"desc": "Unlocks the Grand Altar (mythic guardian). Carved totems preserve all the tribe's knowledge.", "words": ["great totems", "altars", "megaliths"]},
-	{"id": "code", "era": 3, "name": "Tribal Code", "cost": 60, "req": ["farming"], "practice": {"lead": 1.0, "build": 0.3},
+	{"id": "code", "era": 3, "name": "Tribal Code", "cost": 60, "req": ["farming"], "practice": {"lead": 1.0, "build": 0.3}, "codifies": "kept in the Tribal Code",
 		"desc": "+1 Vice-Chieftain slot and the Council Ring. Laws preserve all the tribe's knowledge.", "words": ["laws", "councils"]},
 ]
 const ERA_NAMES := {1: "Stone & Fire Era", 2: "Tribe & Agrarian Era", 3: "Bronze & Mythic Era"}

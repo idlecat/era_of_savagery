@@ -76,7 +76,8 @@ var explored_cells := 0
 var land_cells := 1
 var landmarks: Array = [] # copies of D.LANDMARKS + {"found": bool}
 var contracts: ContractSystem
-const MEAL := 3.0 # food per meal
+## Everyday rules (eating, storage, births, herds, burials, beds): config/rules.json.
+var RULES: Dictionary = preload("res://scripts/config.gd").load_cfg("rules")
 var evo: Evolution
 var hz: Hazards
 var nat: Nature
@@ -418,17 +419,17 @@ func unit_speed(u: E.Unit) -> float:
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work")
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
-## anything over that rots at FOOD_ROT per second.
-const FOOD_STORE_BASE := 80
-const FOOD_STORE_GRANARY := 100
-const FOOD_ROT := 0.03
+## anything over that rots at FOOD_ROT per second (config/rules.json "survival").
+var FOOD_STORE_BASE: int = int(RULES["survival"]["store_base"])
+var FOOD_STORE_GRANARY: int = int(RULES["survival"]["store_granary"])
+var FOOD_ROT: float = float(RULES["survival"]["rot"])
 func food_cap() -> int:
 	var c := FOOD_STORE_BASE + inv.store_bonus()
 	for s in structures:
 		if s.built and ours(s) and s.type == "granary": c += FOOD_STORE_GRANARY
 	return c
 ## Hunger per unit of distance walked: a villager walking all day gets ~70% hungrier.
-const WALK_HUNGER := 0.004
+var WALK_HUNGER: float = float(RULES["survival"]["walk_hunger"])
 
 # ------------------------------------------------------------------ XP & memory
 func xp_need(lv: int) -> float: return 25.0 + lv * 20.0
@@ -1024,11 +1025,13 @@ func _resettle(dt: float) -> void:
 			return
 
 # ------------------------------------------------------------------ the herd
-const OX_PER_PEN := 2
-const OX_EAT := 0.03 # food per second per ox (half again in winter: no grazing)
-const OX_MILK := 0.025 # food per second per cared-for ox (milk, less in winter)
-const CARE_DECAY := 100.0 / (D.DAY_LEN * 1.5) # untended, care runs out in a day and a half
-const TEND_TIME := 6.0
+## The aurochs pens (config/rules.json "herds"): oxen per pen, food eaten per ox per second
+## (more in winter: no grazing), milk per cared-for ox, days until untended care runs out.
+var OX_PER_PEN: int = int(RULES["herds"]["per_pen"])
+var OX_EAT: float = float(RULES["herds"]["eat"])
+var OX_MILK: float = float(RULES["herds"]["milk"])
+var CARE_DECAY: float = 100.0 / (D.DAY_LEN * float(RULES["herds"]["care_days"]))
+var TEND_TIME: float = float(RULES["herds"]["tend_time"])
 
 func pens() -> Array:
 	return structures.filter(func(s): return s.built and ours(s) and s.type == "aurochs_pen")
@@ -1041,7 +1044,7 @@ func _herd(dt: float) -> void:
 	var cap := ox_cap()
 	if oxen > cap: oxen = cap # a pen was lost
 	if oxen > 0:
-		var need: float = OX_EAT * oxen * (1.5 if hz.winter() else 1.0) * dt
+		var need: float = OX_EAT * oxen * (float(RULES["herds"]["winter_eat"]) if hz.winter() else 1.0) * dt
 		if stock["food"] >= need:
 			stock["food"] -= need
 			ox_hunger = 0.0
@@ -1117,8 +1120,8 @@ func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
 		_end_errand(u) # back to what they were doing
 
 # ------------------------------------------------------------------ burials
-const BURY_RANGE := 1500.0 # bodies further out than this are lost to the wild after a day
-const GRAVE_DIG := 5.0
+var BURY_RANGE: float = float(RULES["burial"]["range"]) # bodies further out than this are lost to the wild after a day
+var GRAVE_DIG: float = float(RULES["burial"]["dig"])
 
 func burial_ground() -> E.Structure:
 	for s in structures:
@@ -1236,7 +1239,7 @@ func _end_errand(u: E.Unit) -> void:
 
 # ------------------------------------------------------------------ night rest
 const SHELTERS := ["hut", "large_hut", "granary"] # everything that houses people
-const BED_FAR := 700.0 # further than this from a bed, people camp where they are
+var BED_FAR: float = float(RULES["beds"]["far"]) # further than this from a bed, people camp where they are
 
 ## Sleeping hours: a little inside the dark part of the day.
 func rest_time() -> bool:
@@ -1403,16 +1406,17 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 		step_move(u, dt, unit_speed(u) * 0.4)
 
 func unit_needs(u: E.Unit, dt: float) -> void:
-	var drain := 0.33 * (1.25 if u.has_trait("gluttonous") else 1.0) * (0.8 if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult() * inv.mul("hunger")
-	u.hunger -= drain * dt * (0.6 if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
+	var sv: Dictionary = RULES["survival"]
+	var drain: float = float(sv["hunger_rate"]) * (float(sv["gluttonous"]) if u.has_trait("gluttonous") else 1.0) * (float(sv["shared_hearth"]) if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult() * inv.mul("hunger")
+	u.hunger -= drain * dt * (float(sv["child_hunger"]) if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
 	u.walked = 0.0
-	if u.hunger < 40 and stock["food"] >= 1:
-		stock["food"] -= minf(stock["food"], MEAL) # a day's eating is a real cost: winter needs stores
+	if u.hunger < float(sv["eat_below"]) and stock["food"] >= 1:
+		stock["food"] -= minf(stock["food"], float(sv["meal"])) # a day's eating is a real cost: winter needs stores
 		evo.drift("ranked", -0.15) # meals from the common store
-		u.hunger = minf(100, u.hunger + (38.0 if has_tech("fire") else 30.0))
+		u.hunger = minf(100, u.hunger + float(sv["meal_fill_fire"] if has_tech("fire") else sv["meal_fill"]))
 	if u.hunger <= 0:
 		u.hunger = 0
-		hurt_unit(u, 0.5 * dt, null)
+		hurt_unit(u, float(sv["starving_damage"]) * dt, null)
 	var warm := near_warmth(u)
 	if warm and night_amt > 0.5: evo.practice(u, "hearth", dt)
 	var cold := hz.cold_rate(u, warm)
@@ -1743,17 +1747,18 @@ func tick(dt: float) -> void:
 
 func _update_births(dt: float) -> void:
 	var pop := living().size()
-	if pop < pop_cap() and stock["food"] >= 30:
+	var cb: Dictionary = RULES["births"]
+	if pop < pop_cap() and stock["food"] >= float(cb["min_food"]):
 		birth_timer += dt
-		if birth_timer > 45:
+		if birth_timer > float(cb["every"]):
 			birth_timer = 0
-			stock["food"] -= 15
+			stock["food"] -= float(cb["cost"])
 			var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
 			var nm: String = free.pick_random() if not free.is_empty() else "Nameless"
 			var parents: Array = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
 			var u: E.Unit = folk.make_child(nm, parents.pick_random() if not parents.is_empty() else null)
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)
-			folk.lift(5.0)
+			folk.lift(float(cb["mood"]))
 			units.append(u)
 			evo.on_birth(u)
 			add_log(tr("%s (%s) was born into the tribe.") % [tr(nm), tr(D.TRAITS[u.traits[0]]["name"])], "story", [u])
@@ -1912,14 +1917,14 @@ func _check_events() -> void:
 		_fire_event(story.pending.pop_front())
 	elif not cult.pending.is_empty(): # the culture's dilemmas
 		_fire_event(cult.pending.pop_front())
-	elif not flags.has("overpop") and living().size() >= D.OVERPOP_THRESHOLD:
+	elif not flags.has("overpop") and story.holds(RULES["triggers"]["overpop"]):
 		flags["overpop"] = true
 		_fire_event("overpop")
 	elif evo.pending_era > 1 and not flags.has("era%d" % evo.pending_era):
 		flags["era%d" % evo.pending_era] = true
 		_fire_event("era%d" % evo.pending_era)
 		evo.pending_era = 0
-	elif not flags.has("chosen") and devotion >= 100:
+	elif not flags.has("chosen") and story.holds(RULES["triggers"]["chosen"]):
 		flags["chosen"] = true
 		_fire_event("chosen")
 	elif folk.pending != "":

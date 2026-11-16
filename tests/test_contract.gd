@@ -318,7 +318,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -1074,10 +1074,10 @@ func test_folk() -> void:
 	for i in 40: F.play(kid, 0.05)
 	check(kid.skills["forage"]["xp"] + kid.skills["forage"]["lv"] * 1000 > xp0, "a child watching someone gather learns a little foraging")
 	# coming of age
-	kid.born_t = sim.time - F.CHILD_DAYS * D.DAY_LEN - 1.0
+	kid.born_t = sim.time - sim.folk.CHILD_DAYS * D.DAY_LEN - 1.0
 	F.mood_t = 0.0
 	F.update(0.05)
-	check(kid.role == "" and kid.max_hp >= 40 and kid.memory.any(func(m): return "came of age" in m["text"]), "after %d days a child comes of age" % F.CHILD_DAYS)
+	check(kid.role == "" and kid.max_hp >= 40 and kid.memory.any(func(m): return "came of age" in m["text"]), "after %d days a child comes of age" % int(sim.folk.CHILD_DAYS))
 	# mood sets the pace of work
 	var u = sim.unit_by_name("Tuo")
 	F.mood = 100.0
@@ -1677,6 +1677,12 @@ func test_config() -> void:
 	sim.nat.quake()
 	check(u.job.get("flee", false), "and a different reaction in the config is what they do")
 	re["on"]["earthquake"] = saved
+	# a rival clan's grudges are data too
+	var rv: Dictionary = sim.rivals.C
+	var cid: String = sim.rivals.clans.keys()[0]
+	var rel0: float = sim.rivals.clans[cid]["relation"]
+	sim.rivals._deed(cid, "built_on_land")
+	check(is_equal_approx(sim.rivals.clans[cid]["relation"], maxf(-100.0, rel0 + float(rv["deeds"]["built_on_land"]["relation"]))), "what our deeds do to a clan's feelings comes from config/rivals.json")
 
 func test_gm_operations() -> void:
 	print("\n== Reactions, weather and dilemmas as operations ==")

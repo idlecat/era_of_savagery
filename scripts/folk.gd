@@ -18,15 +18,11 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 
-const CHILD_DAYS := 3
-const ART_TIME := 18.0
+## All the numbers and texts of tribe life: config/rules.json "folk".
+var F: Dictionary = preload("res://scripts/config.gd").load_cfg("rules")["folk"]
+var CHILD_DAYS: float = float(F["child_days"])
 ## What things are worth in a trade, in food.
-const VALUE := {"goods": 6.0, "food": 1.0, "wood": 1.0, "stone": 1.5, "copper": 3.0, "tin": 4.0, "herbs": 2.0}
-const TREASURE_KINDS := {
-	"carve": ["Owl Figurine", "Ivory Mother Figure", "Antler Spear-Thrower", "Lion-Headed Carving"],
-	"beads": ["Shell Necklace", "Bear-Tooth Collar", "Amber Bead String"],
-	"paint": ["Painted Hunt Hide", "Red Hand Wall", "Great Deer Painting"],
-}
+var VALUE: Dictionary = F["trade"]["value"]
 
 var sim
 var festivals := true # tests switch this off
@@ -45,14 +41,12 @@ func _init(s) -> void:
 	sim = s
 
 # ------------------------------------------------------------ mood
-func work_mult() -> float: return 0.9 + mood * 0.002
+func work_mult() -> float: return float(F["mood"]["work_base"]) + mood * float(F["mood"]["work_per"])
 
 func mood_word() -> String:
-	if mood >= 80: return tr("Joyful")
-	if mood >= 60: return tr("Content")
-	if mood >= 40: return tr("Uneasy")
-	if mood >= 20: return tr("Gloomy")
-	return tr("Despairing")
+	for w in F["mood"]["words"]:
+		if mood >= float(w[0]): return tr(w[1])
+	return tr(F["mood"]["lowest_word"])
 
 func lift(amount: float) -> void: mood = clampf(mood + amount, 0.0, 100.0)
 
@@ -63,30 +57,32 @@ func decor_total() -> int:
 	return n
 
 func mood_target() -> float:
-	var t: float = 55.0 + minf(15.0, decor_total() * 2.0) + minf(15.0, treasures.size() * 4.0) + sim.inv.mood_bonus()
-	if sim.time < glow_until: t += 15.0
+	var m: Dictionary = F["mood"]
+	var t: float = float(m["base"]) + minf(float(m["decor_max"]), decor_total() * float(m["decor"])) + minf(float(m["treasure_max"]), treasures.size() * float(m["treasure"])) + sim.inv.mood_bonus()
+	if sim.time < glow_until: t += float(m["glow"])
 	var alive: Array = sim.living()
-	if sim.stock["food"] < alive.size(): t -= 15.0
-	t -= minf(12.0, 4.0 * alive.filter(func(u): return u.sick > 0).size())
+	if sim.stock["food"] < alive.size(): t -= float(m["hungry"])
+	t -= minf(float(m["sick_max"]), float(m["sick"]) * alive.filter(func(u): return u.sick > 0).size())
 	t -= sorrow
-	if sim.nat.panicking(): t -= 20.0
+	if sim.nat.panicking(): t -= float(m["panic"])
 	return clampf(t, 0.0, 100.0)
 
 func on_death() -> void:
-	sorrow = minf(30.0, sorrow + 8.0)
-	lift(-6.0)
+	sorrow = minf(float(F["mood"]["sorrow_max"]), sorrow + float(F["mood"]["death_sorrow"]))
+	lift(-float(F["mood"]["death_mood"]))
 
 # ------------------------------------------------------------ tick
 func update(dt: float) -> void:
 	mood_t -= dt
 	if mood_t <= 0:
 		mood_t = 1.0
-		sorrow = maxf(0.0, sorrow - 0.1)
+		var m: Dictionary = F["mood"]
+		sorrow = maxf(0.0, sorrow - float(m["sorrow_fade"]))
 		var target := mood_target()
-		mood += clampf(target - mood, -0.4, 0.4)
-		if mood < 25 and sim.day() != grumble_day and not sim.rest_time():
+		mood += clampf(target - mood, -float(m["step"]), float(m["step"]))
+		if mood < float(m["grumble_below"]) and sim.day() != grumble_day and not sim.rest_time():
 			grumble_day = sim.day()
-			sim.add_log(tr("The people grumble and work without heart. A festival, art or a full belly would lift them."), "story")
+			sim.add_log(tr(m["grumble"]), "story")
 		for u in sim.living():
 			if u.role == "child" and sim.time - u.born_t >= CHILD_DAYS * D.DAY_LEN: come_of_age(u)
 	if festivals:
@@ -176,11 +172,12 @@ func can_art(u: E.Unit) -> bool:
 ## Start a piece of work: painting goes to a hut that is not yet fully decorated.
 func start_art(u: E.Unit) -> void:
 	var kind := "carve" if u.lv("craft") >= u.lv("lore") else "paint"
-	if randf() < 0.3: kind = "beads"
+	var ca: Dictionary = F["art"]
+	if randf() < float(ca["beads_chance"]): kind = "beads"
 	var hut = null
 	if kind == "paint":
 		for s in sim.structures:
-			if s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary", "totem_shrine"] and s.decor < 3 and s.pos.distance_to(u.home) < 350:
+			if s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary", "totem_shrine"] and s.decor < int(ca["max_decor"]) and s.pos.distance_to(u.home) < 350:
 				hut = s
 				break
 		if hut == null: kind = "carve"
@@ -193,31 +190,32 @@ func do_art(u: E.Unit, j: Dictionary, dt: float) -> void:
 		return
 	u.act = {"carve": "Carving a figurine", "beads": "Stringing beads", "paint": "Painting the huts"}[j["kind"]]
 	j["t"] += dt * sim.work_mul(u)
-	if j["t"] < ART_TIME: return
+	if j["t"] < float(F["art_time"]): return
+	var ca: Dictionary = F["art"]
 	var skill := "lore" if j["kind"] == "paint" else "craft"
-	sim.gain_xp(u, skill, 4.0)
+	sim.gain_xp(u, skill, float(ca["xp"]))
 	sim.evo.practice(u, "ritual" if j["kind"] == "paint" else "build", 4.0)
-	lift(1.5)
+	lift(float(ca["mood"]))
 	if j["kind"] == "paint":
 		var s = sim.struct_by_id(j["hut"])
-		if s and s.built and s.decor < 3:
+		if s and s.built and s.decor < int(ca["max_decor"]):
 			s.decor += 1
 			sim.evo.drift("spiritual", 0.6)
 			sim.popup(s.pos + Vector2(0, -40), tr("Painted!"), Color("#ff9b7a"))
 	else:
-		var n := 2 if u.lv("craft") >= 3 else 1
+		var n: int = int(ca["goods_skilled"] if u.lv("craft") >= int(ca["skilled_lv"]) else ca["goods"])
 		sim.stock["goods"] += n
 		sim.evo.drift("ranked", -0.3) # (shared crafts: more communal)
 		sim.popup(u.pos + Vector2(0, -30), tr("+%d goods") % n, Color("#e6c46a"))
-	if randf() < 0.03 + 0.012 * u.lv(skill): _masterpiece(u, j["kind"])
+	if randf() < float(ca["masterpiece"]["base"]) + float(ca["masterpiece"]["per_lv"]) * u.lv(skill): _masterpiece(u, j["kind"])
 	sim.set_job(u, {})
 
 func _masterpiece(u: E.Unit, kind: String) -> void:
-	var names: Array = TREASURE_KINDS[kind]
+	var names: Array = F["treasures"][kind]
 	var what: String = names.pick_random()
 	treasures.append({"name": what, "maker": u.name, "day": sim.day()})
-	lift(10.0)
-	sim.devotion = minf(100.0, sim.devotion + 5)
+	lift(float(F["art"]["masterpiece"]["mood"]))
+	sim.devotion = minf(100.0, sim.devotion + float(F["art"]["masterpiece"]["devotion"]))
 	sim.remember(u, tr("made the %s, a treasure of the tribe, on Day %d") % [tr(what), sim.day()], 8)
 	sim.inv.feat("masterpiece", tr("Made a masterpiece: the %s") % tr(what), u,
 		{"desc": tr("A treasure of the tribe, made by %s. The whole tribe comes to see it, and its mood rises.") % tr(u.name)})
@@ -276,19 +274,15 @@ func trade_block(u: E.Unit, id: String) -> String:
 	return ""
 
 func rate(id: String) -> float:
-	match sim.rivals.stance(id):
-		"Vassal": return 1.3
-		"Allied": return 1.25
-		"Trusted": return 1.15
-		"Friendly": return 1.05
-	return 0.85
+	return float(F["trade"]["stance_rate"].get(sim.rivals.stance(id), F["trade"]["other_rate"]))
 
 ## How much better a deal this person strikes: +6% per Trade & Barter level, and the
 ## Silver Tongue of a master (Lv5) adds another 10%.
 func haggle(u: E.Unit) -> float:
 	if u == null: return 1.0
 	var lv: int = u.lv("trade")
-	return 1.0 + 0.06 * lv + (0.1 if lv >= 5 else 0.0)
+	var ct: Dictionary = F["trade"]
+	return 1.0 + float(ct["haggle_per_lv"]) * lv + (float(ct["master"]) if lv >= int(ct["master_lv"]) else 0.0)
 
 ## What a clan would give for `amt` of `res`: {their resource: amount}.
 ## `trader`: who bargains for us (a skilled trader gets more, see haggle()).
@@ -296,8 +290,8 @@ func quote(id: String, res: String, amt: int, trader: E.Unit = null) -> Dictiona
 	var c: Dictionary = sim.rivals.clans[id]
 	var sells: String = c["sells"]
 	if res == sells: return {}
-	var v: float = amt * VALUE[res] * (1.5 if res == c["wants"] else 1.0) * rate(id) * haggle(trader)
-	return {sells: maxi(1, roundi(v / VALUE[sells]))}
+	var v: float = amt * float(VALUE[res]) * (float(F["trade"]["wanted"]) if res == c["wants"] else 1.0) * rate(id) * haggle(trader)
+	return {sells: maxi(1, roundi(v / float(VALUE[sells])))}
 
 func send_trader(u: E.Unit, id: String, res: String, amt: int) -> String:
 	var why := trade_block(u, id)

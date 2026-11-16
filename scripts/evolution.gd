@@ -134,9 +134,9 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		else:
 			sim.remember(inventor, tr("taught the tribe %s on Day %d") % [tr(t["name"]), sim.day()], 6)
 			sim.add_log(tr("Tribal Wisdom: %s taught %s - %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech", [inventor])
-	if id in ["totems", "code"] and not codified:
+	if t.has("codifies") and not codified: # (a tech with "codifies" keeps knowledge from being lost)
 		codified = true
-		sim.add_log(tr("The tribe's knowledge is now %s - it can no longer be lost.") % (tr("carved into the great totems") if id == "totems" else tr("kept in the Tribal Code")), "tech")
+		sim.add_log(tr("The tribe's knowledge is now %s - it can no longer be lost.") % tr(t["codifies"]), "tech")
 	var e := era_now()
 	if e > era:
 		era = e

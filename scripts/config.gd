@@ -40,8 +40,10 @@ static func rand_in(v) -> float:
 const TEXT_KEYS := ["text", "title", "label", "desc", "result", "else_result", "alert", "warn", "done", "log",
 	"start_log", "end_log", "popup", "hit_popup", "out_popup", "hit_alert", "building_alert", "remember",
 	"hit_remember", "name", "acts", "reason", "grudge", "speaker_default"]
-## Keys whose values are all texts ({id: text}).
-const TEXT_TABLES := ["voices"]
+## Keys whose values are all texts ({id: text} or {id: [texts]}).
+const TEXT_TABLES := ["voices", "treasures"]
+## Keys holding lists of texts (nested lists too; numbers in them are skipped).
+const TEXT_LISTS := ["acts", "words"]
 
 ## Every player-visible text in a config (strings under TEXT_KEYS, lists of them for
 ## "acts", the key of a [key, var names...] text, and TEXT_TABLES), for translation checks.
@@ -51,10 +53,10 @@ static func texts(v, out: Array = [], keyed := false, key := "") -> Array:
 	elif v is Dictionary:
 		for k in v:
 			if k in TEXT_TABLES and v[k] is Dictionary:
-				for t in v[k].values(): texts(t, out, true)
-			else: texts(v[k], out, k in TEXT_KEYS, k)
+				for t in v[k].values(): texts(t, out, true, "acts")
+			else: texts(v[k], out, k in TEXT_KEYS or k in TEXT_LISTS, k)
 	elif v is Array:
-		if keyed and key != "acts" and not v.is_empty() and v[0] is String: texts(v[0], out, true) # [key, vars...]
+		if keyed and not key in TEXT_LISTS and not v.is_empty() and v[0] is String: texts(v[0], out, true) # [key, vars...]
 		else:
 			for x in v: texts(x, out, keyed, key)
 	return out

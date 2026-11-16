@@ -968,7 +968,7 @@ func _show_intro() -> void:
 [color=#ffd36b]Evolution[/color] — new wisdom comes from [i]practice[/i] (chopping wood teaches stone tools, rituals lead to totems) or from lore and research contracts. Each age changes homes, gear and what people can do; the tribe's culture drifts with its deeds and adopts traditions. Knowledge lives in people until it is carved into totems or laws.
 Every task grants specialization XP and notable events enter each person's [b]Memory Archive[/b], which is fed back into their next negotiation. Research the Wisdom Tree with lore from rituals. Milestone events: Overpopulation (%d people), Birth of the Chosen One (100%% devotion).
 
-LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or GLM with your API key.""") % (_intro_names() + [D.OVERPOP_THRESHOLD, llm.label()])
+LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or GLM with your API key.""") % (_intro_names() + [int(sim.RULES["triggers"]["overpop"]["pop"]), llm.label()])
 	var brief: String = D.MAP.get("brief", "")
 	if brief != "": r.text = "[color=#ffd36b]%s[/color] — %s\n\n" % [tr(D.MAP.get("name", "")), tr(brief)] + r.text
 	v.add_child(r)

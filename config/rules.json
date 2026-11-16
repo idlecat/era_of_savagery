@@ -1,0 +1,147 @@
+{
+ "_doc": "Everyday rules of tribe life: eating, storing food, births, the aurochs pens, burials, beds, and the folk life of children, art, mood and trade. Times are seconds unless named *_days. Read by sim.gd and folk.gd; see docs/CONFIG.md.",
+ "survival": {
+  "hunger_rate": 0.33,
+  "gluttonous": 1.25,
+  "shared_hearth": 0.8,
+  "child_hunger": 0.6,
+  "walk_hunger": 0.004,
+  "eat_below": 40,
+  "meal": 3.0,
+  "meal_fill": 30,
+  "meal_fill_fire": 38,
+  "starving_damage": 0.5,
+  "store_base": 80,
+  "store_granary": 100,
+  "rot": 0.03
+ },
+ "births": {
+  "every": 45,
+  "min_food": 30,
+  "cost": 15,
+  "mood": 5
+ },
+ "herds": {
+  "per_pen": 2,
+  "eat": 0.03,
+  "winter_eat": 1.5,
+  "milk": 0.025,
+  "care_days": 1.5,
+  "tend_time": 6
+ },
+ "burial": {
+  "range": 1500,
+  "dig": 5
+ },
+ "beds": {
+  "far": 700
+ },
+ "triggers": {
+  "_doc": "When the built-in dilemmas come up (conditions as in scenario scripts).",
+  "overpop": {
+   "pop": 12
+  },
+  "chosen": {
+   "devotion": 100
+  }
+ },
+ "folk": {
+  "child_days": 3,
+  "art_time": 18,
+  "mood": {
+   "base": 55,
+   "decor": 2,
+   "decor_max": 15,
+   "treasure": 4,
+   "treasure_max": 15,
+   "glow": 15,
+   "hungry": 15,
+   "sick": 4,
+   "sick_max": 12,
+   "panic": 20,
+   "step": 0.4,
+   "work_base": 0.9,
+   "work_per": 0.002,
+   "grumble_below": 25,
+   "death_sorrow": 8,
+   "sorrow_max": 30,
+   "sorrow_fade": 0.1,
+   "death_mood": 6,
+   "words": [
+    [
+     80,
+     "Joyful"
+    ],
+    [
+     60,
+     "Content"
+    ],
+    [
+     40,
+     "Uneasy"
+    ],
+    [
+     20,
+     "Gloomy"
+    ]
+   ],
+   "lowest_word": "Despairing",
+   "grumble": "The people grumble and work without heart. A festival, art or a full belly would lift them."
+  },
+  "art": {
+   "beads_chance": 0.3,
+   "max_decor": 3,
+   "goods": 1,
+   "goods_skilled": 2,
+   "skilled_lv": 3,
+   "xp": 4.0,
+   "mood": 1.5,
+   "masterpiece": {
+    "base": 0.03,
+    "per_lv": 0.012,
+    "mood": 10,
+    "devotion": 5
+   }
+  },
+  "treasures": {
+   "carve": [
+    "Owl Figurine",
+    "Ivory Mother Figure",
+    "Antler Spear-Thrower",
+    "Lion-Headed Carving"
+   ],
+   "beads": [
+    "Shell Necklace",
+    "Bear-Tooth Collar",
+    "Amber Bead String"
+   ],
+   "paint": [
+    "Painted Hunt Hide",
+    "Red Hand Wall",
+    "Great Deer Painting"
+   ]
+  },
+  "trade": {
+   "value": {
+    "goods": 6.0,
+    "food": 1.0,
+    "wood": 1.0,
+    "stone": 1.5,
+    "copper": 3.0,
+    "tin": 4.0,
+    "herbs": 2.0
+   },
+   "wanted": 1.5,
+   "stance_rate": {
+    "Vassal": 1.3,
+    "Allied": 1.25,
+    "Trusted": 1.15,
+    "Friendly": 1.05
+   },
+   "other_rate": 0.85,
+   "haggle_per_lv": 0.06,
+   "master_lv": 5,
+   "master": 0.1
+  }
+ }
+}

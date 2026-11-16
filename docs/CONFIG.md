@@ -6,6 +6,8 @@ The forces of nature, the hardships and how people respond to them are data, in 
 |---|---|---|
 | `config/events.json` | `hazards.gd`, `nature.gd` | seasons, weather, wolves, tiger raids, sickness, famine, lightning, wildfire, flood, Fire Mountain, earthquake, eclipse: when they happen, how strong they are, what the tribe is told |
 | `config/reactions.json` | `reactions.gd` (`sim.react`) | for each happening, what people do about it |
+| `config/rivals.json` | `rivals.gd` | the rival clans: how our deeds change their feelings, stances, raids and demands, theft, trespass, their people's strength, traders, war spoils, and how a chief weighs a deal at a parley |
+| `config/rules.json` | `sim.gd`, `folk.gd` | everyday life: eating and hunger, food storage and rot, births, the aurochs pens, burials, beds, when the overpopulation and Chosen One dilemmas come up, and folk life (children, art and treasures, mood, trade values) |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
 `scripts/config.gd` loads them (`Config.load_cfg("events")`, cached). A file of the same name in `user://config/` is **merged over** the game's one: it only needs the keys it changes. For example, to make wolves tougher and stop anyone fighting fires:
@@ -48,6 +50,20 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 - **needs** and **chance** decide between `do`/`result` and `else_do`/`else_result`. `needs` is a skilled person (`best`, `lv`, or a tech `or_tech`) or `{"var": name}`. `chance` scales with the best person at a `skill` (`per_lv`) or with the attack of `power: "fighters:<n>"` (`div`), clamped to `min`/`max`.
 - `"options_from": "chosen"` builds the options from the culture's mythic bloodlines.
 - **Actions** (`story.gd run()`, all listed in `story.ACTIONS`): `log`, `alert` (`at`, `level`), `give`, `spawn`, `reveal`, `mood`, `devotion`, `insight`, `culture`, `invent`, `boon`, `remember` (`%d` is the day; `impact`), `xp`, `hurt` (fraction of max HP), all with `who` = `all`, `best:<skill>` or `fighters:<n>`; `panic`, `weather`, `react`, `great_flood`, `open` (`contract`/`war`: the rules open that planning), `chosen`, `festival` (`length`, `glow_days`), `births`, `guests`; on the rival clan in var `clan` (or the one named by `"clan": "foe"`): `relation` (+`reason`), `relation_min`/`relation_max`, `raid`, `raid_delay_days`, `vassal`, `clear_treaties`, `grudge`, `peace_days`, `clan_pop`; and `feat`, `tale`, `join`. Culture packs and posed dilemmas may use the subset in `Cultures.DO_KEYS`.
+
+## rivals.json
+
+- `relations`: how fast feelings drift back toward a clan's temperament (`drift`), what treaties add (`goodwill`), the stance thresholds (`stance_at`; the stance names are fixed ids), and from which loss a clan keeps a grudge (`grudge_at`).
+- `deeds`: what each of our deeds does (`relation`, the `reason` they remember, the `alert` we get): killing their people, attacking their hunters or traders, breaking a peace, building on their land, an unpaid tribute, attacking, burning or plundering their village.
+- `raids`, `demands`, `theft`, `trespass`, `defence`, `spoils`, `traders`, `alliance`, `people`: when and how strongly clans act, all numbers.
+- `parley`: the chief's valuation of a deal. `[martial, peaceful]` pairs give different values for the two kinds of clan; `weights.stone` is `[before era 2, after]`. The checks on what an LLM chief may answer (`sanitize_terms`, `check_reply`) stay in code.
+
+## rules.json
+
+- `survival`: hunger rates, when people eat and how much a meal costs and fills, starving damage, food storage and rot.
+- `births`, `herds` (the aurochs pens), `burial`, `beds`.
+- `triggers`: the conditions (as in scenario scripts) for the overpopulation and Chosen One dilemmas.
+- `folk`: `child_days`, `art_time`, `mood` (what lifts and lowers it, how fast it moves, the words for it), `art` (goods, decoration, masterpieces), `treasures` (names by kind of art), `trade` (what goods are worth, rates by stance, haggling).
 
 ## reactions.json
 

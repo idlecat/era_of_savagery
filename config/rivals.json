@@ -1,0 +1,313 @@
+{
+ "_doc": "Rival clans: how their feelings toward us change, when they raid, trade and send messengers, how strong their people are, and how their chiefs weigh a deal. Times in days unless named *_s. Texts are English translation keys; [key, var...] texts take the clan's values (clan_name, chief, n...). See docs/CONFIG.md. The checks on LLM parley output (rivals.sanitize_terms/check_reply) stay in code.",
+ "relations": {
+  "drift": 0.0008,
+  "goodwill": {
+   "peace": 25,
+   "alliance": 45,
+   "vassal": 20
+  },
+  "grudge_at": -10,
+  "stance_alert": [
+   "The %s is now %s toward us.",
+   "clan_name",
+   "stance"
+  ],
+  "stance_at": {
+   "_doc": "Blood feud at or below blood_feud, Hostile at or below hostile, Wary below friendly, Friendly below trusted, else Trusted.",
+   "blood_feud": -50,
+   "hostile": -15,
+   "friendly": 15,
+   "trusted": 50
+  }
+ },
+ "people": {
+  "hunter": {
+   "hp": 32,
+   "atk": 3.0
+  },
+  "warrior": {
+   "hp": 42,
+   "atk": 5.5
+  },
+  "trader": {
+   "atk": 1.5
+  },
+  "def": 2.5,
+  "spd": 60,
+  "max_pop": 14,
+  "pop_every_days": 2,
+  "warrior_every_days": 1,
+  "warrior_share": 3,
+  "max_warrior_share": 2,
+  "hunters": 2,
+  "hunter_every_days": 0.8
+ },
+ "deeds": {
+  "_doc": "What our deeds do to their feelings (relation change, the grudge they remember, what we are told).",
+  "killed": {
+   "relation": -30,
+   "reason": [
+    "our %s was slain by your people",
+    "kind"
+   ],
+   "alert": [
+    "We killed one of the %s's people. They will not forget it.",
+    "clan_name"
+   ]
+  },
+  "killed_raider": {
+   "relation": -6,
+   "reason": [
+    "our %s was slain by your people",
+    "kind"
+   ]
+  },
+  "attacked_trader": {
+   "relation": -20,
+   "reason": "you attacked our trader",
+   "alert": [
+    "We attacked a trader of the %s. He flees home with his goods.",
+    "clan_name"
+   ]
+  },
+  "attacked_hunter": {
+   "relation": -12,
+   "reason": "you attacked our hunter",
+   "alert": [
+    "We attacked a hunter of the %s. He runs home to tell his clan.",
+    "clan_name"
+   ]
+  },
+  "broke_peace": {
+   "relation": -30,
+   "reason": "you broke the peace you swore",
+   "alert": [
+    "We have broken the peace with the %s! They will remember us as oath-breakers.",
+    "clan_name"
+   ]
+  },
+  "built_on_land": {
+   "relation": -15,
+   "reason": "you built on our land",
+   "extra_reach": 200
+  },
+  "unpaid_tribute": {
+   "relation": -20,
+   "reason": "you did not pay the tribute you promised",
+   "alert": [
+    "We could not pay our tribute. The peace with the %s is over!",
+    "clan_name"
+   ]
+  },
+  "attacked_village": {
+   "relation": -35,
+   "reason": "you attacked our village"
+  },
+  "burned": {
+   "relation": -25,
+   "reason": "you burned our homes"
+  },
+  "broke_warriors": {
+   "relation": -15,
+   "reason": "you hunted down our warriors"
+  },
+  "plundered": {
+   "relation": -10,
+   "reason": "you plundered our stores"
+  }
+ },
+ "trespass": {
+  "rate": 0.05,
+  "peace_mult": 0.5,
+  "warn_every_days": 1,
+  "alert": [
+   "The %s warns us off their hunting grounds.",
+   "clan_name"
+  ]
+ },
+ "raids": {
+  "first_days": [
+   4.5,
+   6.0
+  ],
+  "hostile_at": -15,
+  "full_hostility": 80,
+  "every_days": [
+   5.0,
+   2.0
+  ],
+  "jitter": [
+   0.8,
+   1.2
+  ],
+  "winter_mult": 0.8,
+  "size": {
+   "base": 2,
+   "hostility": 3,
+   "winter": 1
+  },
+  "outpost_chance": 0.4,
+  "give_up_s": 160,
+  "no_raids_after_beaten_days": 6,
+  "alert": [
+   "A war band of the %s (%d warriors) is marching on us!",
+   "clan_name",
+   "n"
+  ]
+ },
+ "demands": {
+  "chance": 0.5,
+  "every_days": 3,
+  "food": {
+   "base": 15,
+   "hostility": 25,
+   "winter": 10
+  }
+ },
+ "theft": {
+  "food": [
+   12,
+   18
+  ],
+  "popup": "Food stolen! -%d",
+  "alert": [
+   "Raiders of the %s are carrying off our food!",
+   "clan_name"
+  ]
+ },
+ "defence": {
+  "extra": 2,
+  "unscouted_extra": 1,
+  "min": 2,
+  "max": 8,
+  "allies_fewer": 2,
+  "allies_log": [
+   "Warriors of the %s fight beside our war party!",
+   "clan_name"
+  ],
+  "alert": [
+   "Our war party attacks the village of the %s!",
+   "clan_name"
+  ]
+ },
+ "spoils": {
+  "burn_huts": 2,
+  "burn_pop": 3,
+  "plunder_food": {
+   "base": 20,
+   "per_pop": 3,
+   "max": 60
+  },
+  "plunder_wood": 15
+ },
+ "traders": {
+  "min_relation": 15,
+  "after_war_days": 5,
+  "every_days": 2.5,
+  "every_days_trusted": 1.6,
+  "trusted_at": 50,
+  "jitter": [
+   0.85,
+   1.15
+  ],
+  "trusted_bonus": 0.3,
+  "small": [
+   15,
+   12
+  ],
+  "large": [
+   30,
+   26
+  ],
+  "goods": 3,
+  "goods_value": 6.0,
+  "goods_premium": 1.2,
+  "stone_mult": 1.5,
+  "lesson_price": 20,
+  "lesson": 0.35,
+  "learn_chance": 0.3,
+  "learn": 0.1
+ },
+ "alliance": {
+  "share": 0.08,
+  "share_log_chance": 0.3,
+  "call_chance": 0.35,
+  "call_every_days": 4,
+  "first_call_days": 3,
+  "vassal_revolt_below": -80,
+  "vassal_revolt_warriors": 3
+ },
+ "parley": {
+  "_doc": "How a chief weighs a deal (>= 0: acceptable). value = relation*relation + lore/combat of the envoy + traits + goods by weight - treaty costs.",
+  "relation": 0.5,
+  "per_round": -3.0,
+  "envoy_lore": 2.0,
+  "envoy_combat_martial": 1.5,
+  "traits": {
+   "belligerent": [
+    4.0,
+    -8.0
+   ],
+   "devout": [
+    0.0,
+    8.0
+   ],
+   "cautious": [
+    2.0,
+    2.0
+   ]
+  },
+  "weights": {
+   "food": 1.0,
+   "wood": 0.7,
+   "stone": [
+    0.9,
+    1.1
+   ]
+  },
+  "winter_food": 1.4,
+  "martial_food": 1.2,
+  "gift_bonus": [
+   0.0,
+   5.0
+  ],
+  "teach": [
+   28.0,
+   16.0
+  ],
+  "peace": {
+   "base": [
+    30.0,
+    12.0
+   ],
+   "per_day": 0.6,
+   "tribute": 0.9
+  },
+  "hunting_rights": {
+   "base": [
+    18.0,
+    18.0
+   ],
+   "per_day": 0.5
+  },
+  "alliance": {
+   "base": [
+    25.0,
+    15.0
+   ],
+   "per_day": 0.3,
+   "min_relation": 30
+  },
+  "blood_feud_beat": 0.5,
+  "beat_damage": 0.35,
+  "seal": {
+   "base": 5.0,
+   "per_value": 0.4,
+   "min": 3.0,
+   "max": 25.0,
+   "treaty": 8.0,
+   "teach": 0.6
+  }
+ }
+}
