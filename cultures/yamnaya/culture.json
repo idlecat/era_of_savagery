@@ -1,0 +1,694 @@
+{
+ "id": "yamnaya",
+ "order": 52,
+ "name": "Yamnaya Herders",
+ "period": "c. 3300–2600 BCE",
+ "place": "the Pontic-Caspian steppe",
+ "desc": "Cattle and sheep herders of the grass sea north of the Black Sea, who lived out of four-wheeled wagons, buried their dead under great mounds sprinkled with red ochre, and spread so far that much of Europe and South Asia carries their ancestry, and very likely their language.",
+ "history": "real",
+ "source": "Kurgan excavations across Ukraine and southern Russia; ancient DNA studies (Haak et al. 2015, Allentoft et al. 2015); Proto-Indo-European reconstructed by comparative linguistics",
+ "tribe_names": [
+  "Bheru",
+  "Dhegho",
+  "Gwena",
+  "Hekwa",
+  "Kerdo",
+  "Leuko",
+  "Mena",
+  "Nepo",
+  "Peku",
+  "Rego",
+  "Swesor",
+  "Wiro",
+  "Doru",
+  "Ghosti",
+  "Medhu",
+  "Owi"
+ ],
+ "birth_names": [
+  "Bhra",
+  "Dhu",
+  "Gwou",
+  "Kwon",
+  "Lupo",
+  "Mori",
+  "Nau",
+  "Sali",
+  "Treyo",
+  "Wedo"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Rider of the Grass Sea"
+  ],
+  "gluttonous": [
+   "Master of the Wagon",
+   "Herder of Many Cattle"
+  ],
+  "devout": [
+   "Keeper of the Mound"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "rode out alone to find the strayed cattle under the stars"
+  ],
+  "gluttonous": [
+   "drove the wagons a whole moon across the grass to the summer river"
+  ],
+  "devout": [
+   "sprinkled red earth over the old chief before the mound was raised"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "ox_wagon",
+   "kind": "tool",
+   "name": "Four-Wheeled Wagon",
+   "history": "real",
+   "source": "Wooden wagons with solid wheels were buried in Yamnaya kurgans, among the oldest wheeled vehicles anywhere",
+   "practice": {
+    "build": 150,
+    "chop": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 2
+    },
+    {
+     "stat": "speed",
+     "mul": 1.03
+    }
+   ],
+   "desc": "A house on solid wooden wheels, drawn by oxen, so the whole family can follow the herds: everyone carries 2 more and travels 3% faster.",
+   "hint": "Needs Beast Domestication and Polished Stone Tools.",
+   "words": [
+    "wagons",
+    "wheels"
+   ]
+  },
+  {
+   "id": "horseback",
+   "kind": "tool",
+   "name": "Riding the Horse",
+   "history": "real",
+   "source": "Skeletons from Yamnaya graves show the wear of regular horseback riding (Trautmann et al. 2023), though how they rode is still argued",
+   "practice": {
+    "hunt": 150,
+    "explore": 150
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.08
+    },
+    {
+     "stat": "sight",
+     "add": 15
+    }
+   ],
+   "desc": "Sitting on a horse's back to herd cattle over the endless grass: everyone travels 8% faster and sees farther.",
+   "hint": "Needs Beast Domestication, and long days on the steppe.",
+   "words": [
+    "riding",
+    "horses"
+   ]
+  },
+  {
+   "id": "kurgan",
+   "kind": "goods",
+   "name": "Kurgan Mounds",
+   "history": "real",
+   "source": "Yamnaya chiefs were buried lying on their backs with knees raised, sprinkled with ochre, under earth mounds that still dot the steppe",
+   "practice": {
+    "build": 150,
+    "ritual": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "sight",
+     "add": 10
+    }
+   ],
+   "desc": "Great mounds of earth over the dead, landmarks on the flat grass for generations: rites bring 10% more devotion, and people see a little farther.",
+   "hint": "Comes from building, and from the rites."
+  },
+  {
+   "id": "arsenic_copper",
+   "kind": "tool",
+   "name": "Arsenical Copper Axe",
+   "history": "real",
+   "source": "Yamnaya smiths cast shaft-hole axes and daggers of arsenical copper, harder than pure copper",
+   "practice": {
+    "chop": 150,
+    "quarry": 80
+   },
+   "needs": {
+    "finds": [
+     "copper"
+    ],
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.12
+    },
+    {
+     "stat": "atk",
+     "add": 1
+    }
+   ],
+   "desc": "A cast axe of copper hardened with arsenic: woodcutting 12% faster, +1 attack.",
+   "hint": "Needs copper ore and Polished Stone Tools."
+  }
+ ],
+ "foods": [
+  {
+   "id": "steppe_dairy",
+   "name": "Curds and Cheese",
+   "history": "real",
+   "source": "Milk proteins in Yamnaya dental calculus show they lived on dairy (Wilkin et al. 2021)",
+   "practice": {
+    "hunt": 100,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Milk of cows, sheep and goats turned into curds and cheese that travel well: hunger grows 10% slower, food spoils 5% slower.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "mead",
+   "name": "Mead",
+   "history": "legend",
+   "source": "Reconstructed Proto-Indo-European *médhu, 'honey, mead', survives in Sanskrit madhu, Greek methu and English mead",
+   "practice": {
+    "hearth": 150,
+    "hunt": 60
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Honey and water left to ferment, the drink of feasts and guest-friends: +3 mood.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "finds": [
+  {
+   "id": "feather_grass",
+   "name": "Feather-Grass Pasture",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 30,
+   "rate": 1.0,
+   "regrow": 0.1,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "hunt",
+   "look": "grain",
+   "seed": {
+    "domestication": 0.2
+   },
+   "act": "Grazing the herds",
+   "desc": "Silver grass that ripples like the sea to the horizon, where cattle grow fat. Finding it brings domestication closer."
+  },
+  {
+   "id": "sea_buckthorn",
+   "name": "Sea Buckthorn",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 20,
+   "rate": 0.85,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking buckthorn berries",
+   "desc": "Thorny shrubs along the steppe rivers, heavy with sour orange berries that stay on into winter."
+  }
+ ],
+ "people": [
+  {
+   "id": "wagon_mother",
+   "as": "founder",
+   "name": "Pothna",
+   "epithet": "Mistress of the Wagons",
+   "history": "invented",
+   "desc": "She decides where the camp moves and when.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#b09060",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "led the wagons through the winter to the shelter of the river valley"
+   ]
+  },
+  {
+   "id": "ekwon",
+   "as": "founder",
+   "name": "Ekwon",
+   "epithet": "the Horseman",
+   "history": "invented",
+   "desc": "He was the first in the tribe to sit on a horse and not fall off.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.2,
+    "color": "#a05030",
+    "skills": {
+     "forage": 3,
+     "craft": 0,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "rode a half-wild mare to the edge of the world and back"
+   ]
+  },
+  {
+   "id": "ochre_elder",
+   "as": "ancestor",
+   "name": "The Sleeper Under the Mound",
+   "epithet": "painted with ochre",
+   "history": "real",
+   "source": "Typical Yamnaya kurgan burials, from the Dnieper to the Volga",
+   "desc": "An elder buried lying on his back with knees raised, red ochre on his head and feet, a wagon beside the grave and the mound raised over him."
+  },
+  {
+   "id": "yemo",
+   "as": "ancestor",
+   "name": "Yemo",
+   "epithet": "the Twin",
+   "history": "legend",
+   "source": "Reconstructed from Indo-European myths: Vedic Yama, Norse Ymir, Latin Remus",
+   "desc": "In the oldest story, the first king, whose twin brother Manu made the world from his body; afterwards Yemo became lord of the dead."
+  },
+  {
+   "id": "maikop_smith",
+   "as": "wanderer",
+   "name": "Kazbek",
+   "epithet": "Smith from the Mountains",
+   "history": "invented",
+   "source": "The Maikop culture of the northern Caucasus (c. 3700–3000 BCE), whose chief's kurgan held gold and silver bulls",
+   "when": {
+    "day": 5,
+    "tech": "tools"
+   },
+   "chance": 0.4,
+   "text": "a smith from the great mountains to the south, who carries little gold bulls in his bag and knows how to cast copper.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#d0a040",
+    "skills": {
+     "forage": 1,
+     "craft": 6,
+     "combat": 2,
+     "lore": 2,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "cast a gold bull for a chief's tomb"
+   ],
+   "desc": "A craftsman of the Maikop mountain chiefdoms."
+  },
+  {
+   "id": "horse_tamer",
+   "as": "chosen",
+   "name": "Hekwon",
+   "epithet": "Tamer of Horses",
+   "label": "Hekwon, Tamer of Horses",
+   "history": "invented",
+   "desc": "No horse is too wild for him. Foraging 7, Combat 6, fast.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 78,
+    "atk": 9,
+    "def": 4,
+    "spd": 1.35,
+    "skills": {
+     "forage": 7,
+     "craft": 1,
+     "combat": 6,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "thunder_son",
+   "as": "chosen",
+   "name": "Perkwunos",
+   "epithet": "Son of the Thunder",
+   "label": "Perkwunos, Son of the Thunder",
+   "history": "legend",
+   "desc": "Born when lightning struck an oak. Combat 9.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 90,
+    "atk": 12,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 9,
+     "lore": 1
+    }
+   }
+  },
+  {
+   "id": "song_keeper",
+   "as": "chosen",
+   "name": "Weikwa",
+   "epithet": "Keeper of the Words",
+   "label": "Weikwa, Keeper of the Words",
+   "history": "invented",
+   "desc": "Her songs will be sung, changed, in a hundred tongues. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "drift_west",
+   "title": "The Young Ones Ride West",
+   "history": "real",
+   "source": "Ancient DNA shows a huge movement of steppe people into Europe around 2800 BCE, carrying their ancestry into the Corded Ware culture",
+   "when": {
+    "pop": 13,
+    "tech": "domestication"
+   },
+   "chance": 0.5,
+   "text": "The pastures are crowded and the young men and women are restless. A band of them want to take wagons and herds and ride west, toward the forests, and not come back.",
+   "options": [
+    {
+     "label": "Bless their going",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": -5,
+        "martial": 3
+       }
+      },
+      {
+       "mood": 2
+      },
+      {
+       "feat": "Sent the young ones west"
+      }
+     ],
+     "result": "The wagons roll west. A thousand years later their songs will still be sung in a hundred tongues."
+    },
+    {
+     "label": "Keep the tribe together",
+     "do": [
+      {
+       "culture": {
+        "settled": 4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The young ones stay, grumbling, and the pastures grow thin."
+    }
+   ]
+  },
+  {
+   "id": "raise_kurgan",
+   "title": "Raise a Mound for the Chief",
+   "history": "real",
+   "when": {
+    "deaths": 1
+   },
+   "text": "One of the elders has died. The tribe could raise a great mound over the grave, with ochre and a wagon, so the herders will see it from a day away.",
+   "options": [
+    {
+     "label": "Raise the kurgan",
+     "cost": {
+      "wood": 15,
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 10
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "invent": "kurgan"
+      }
+     ],
+     "result": "Everyone carries earth for days. The mound rises against the sky."
+    },
+    {
+     "label": "A simple grave",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The elder sleeps under the grass like everyone else."
+    }
+   ]
+  },
+  {
+   "id": "steppe_plague",
+   "title": "The Sickness of the Herders",
+   "history": "real",
+   "source": "Ancient DNA has found early forms of plague (Yersinia pestis) in steppe burials from about 3000 BCE (Rasmussen et al. 2015)",
+   "when": {
+    "deaths": 3,
+    "pop": 10
+   },
+   "chance": 0.5,
+   "text": "A sickness is passing from tent to tent. The healers say: move the camp, leave the sick ground behind, and burn the bedding.",
+   "options": [
+    {
+     "label": "Move the camp",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.1
+        }
+       ]
+      },
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The camp moves a day's ride. The sickness does not follow."
+    },
+    {
+     "label": "Stay and pray",
+     "do": [
+      {
+       "devotion": 8
+      }
+     ],
+     "result": "The healers burn herbs and sing. The sickness lingers."
+    }
+   ]
+  },
+  {
+   "id": "guest_bond",
+   "title": "The Guest-Friend",
+   "history": "legend",
+   "source": "Reconstructed Proto-Indo-European *ghóstis meant both 'guest' and 'host': a sacred bond of hospitality",
+   "when": {
+    "day": 4
+   },
+   "text": "A stranger arrives on foot from the empty steppe. By the old law, whoever shares bread and a fire with a guest is bound to him and his children forever.",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    },
+    {
+     "give": {
+      "goods": 2
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "manu_yemo",
+   "name": "Manu and Yemo",
+   "history": "legend",
+   "source": "Reconstructed Proto-Indo-European creation myth (Bruce Lincoln)",
+   "when": {
+    "day": 2
+   },
+   "text": "In the beginning there were two brothers, Man and Twin, and a cow. Twin gave himself up so that the world could be made: from his skull came the sky, from his flesh the earth, from his hair the grass. Man was the first priest, and all people are his children. Twin went to rule the land of the dead.",
+   "moral": "the world is made from a gift",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "thunderer",
+   "name": "The Thunderer and the Serpent",
+   "history": "legend",
+   "source": "Reconstructed from Indra and Vritra, Thor and the World Serpent, Perun and Veles",
+   "when": {
+    "after": "storm"
+   },
+   "text": "A serpent stole the cattle and the waters and hid them in a cave under the mountain. The Thunderer rode out in his chariot, split the rock with his weapon, and killed the serpent. The cattle came out lowing, and the rain fell on the grass.",
+   "moral": "what was stolen can be won back",
+   "do": [
+    {
+     "culture": {
+      "martial": 3
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "sun_maiden",
+   "name": "The Sun Maiden's Wedding",
+   "history": "legend",
+   "source": "Reconstructed from the Vedic Surya, the Lithuanian Saulė and the Greek Dioscuri",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "The daughter of the Sun was to be married, and every god raced for her hand. The Divine Twins, the horsemen of the dawn, won the race in their chariot, and carried her across the sky. That is why the twins come riding every morning before the sun.",
+   "moral": "the swift win the prize",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "twins_feast",
+   "name": "The Feast of the Horse Twins",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the Divine Twins of Indo-European myth",
+   "text": "When the grass is high, the young riders race from the mound to the river and back. The winners pour mead for the twins who ride before the dawn, and everyone eats until the stars come out.",
+   "moral": "the herd and the riders are one",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

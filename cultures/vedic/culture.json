@@ -1,0 +1,662 @@
+{
+ "id": "vedic",
+ "order": 51,
+ "name": "Vedic Peoples",
+ "period": "c. 1500–322 BCE",
+ "place": "the Punjab and the Ganges plain",
+ "desc": "Herders of cattle and horses who sang the hymns of the Rigveda around their fire altars and passed them down, word for word, by memory alone for three thousand years. Their descendants cleared the Ganges forests with iron, founded the kingdoms of Magadha, and gave birth to the Upanishads, the Buddha and Mahavira.",
+ "history": "real",
+ "source": "The Rigveda and later Vedic texts, preserved by oral recitation; the Sulba Sutras; archaeology of the Painted Grey Ware culture",
+ "tribe_names": [
+  "Bhadra",
+  "Chandra",
+  "Devala",
+  "Gopa",
+  "Indu",
+  "Kanva",
+  "Nala",
+  "Priya",
+  "Rohini",
+  "Tara",
+  "Vasu",
+  "Yami",
+  "Kaushika",
+  "Sujata",
+  "Ravi",
+  "Asita"
+ ],
+ "birth_names": [
+  "Agni",
+  "Bala",
+  "Deva",
+  "Hari",
+  "Kama",
+  "Lata",
+  "Mala",
+  "Rita",
+  "Sati",
+  "Uma"
+ ],
+ "epithets": {
+  "devout": [
+   "Singer of the Hymns",
+   "Keeper of the Three Fires"
+  ],
+  "belligerent": [
+   "Charioteer of the Bharatas"
+  ],
+  "gluttonous": [
+   "Herder of a Thousand Cows"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "recited a whole book of hymns without missing a syllable"
+  ],
+  "belligerent": [
+   "drove a chariot across the river in the cattle raid"
+  ],
+  "gluttonous": [
+   "brought the herd home from the far pastures with every calf"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "vedic_recitation",
+   "kind": "goods",
+   "name": "Perfect Recitation",
+   "history": "real",
+   "source": "Vedic chant was preserved by methods of recitation (word by word, in pairs, back and forth) so exact that the Rigveda survives unchanged; UNESCO lists it as world heritage",
+   "practice": {
+    "ritual": 250,
+    "hearth": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Hymns learned forwards, backwards and in pairs, so not a syllable is ever lost: the tribe gathers more lore, rites bring 5% more devotion.",
+   "hint": "Comes from long rites and nights at the fire."
+  },
+  {
+   "id": "sulba_geometry",
+   "kind": "tool",
+   "name": "Geometry of the Cords",
+   "history": "real",
+   "source": "The Sulba Sutras (c. 800–500 BCE) give rules for building fire altars with cords and pegs, including the theorem later named after Pythagoras",
+   "practice": {
+    "build": 150,
+    "ritual": 150
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.1
+    },
+    {
+     "stat": "lore",
+     "add": 0.01
+    }
+   ],
+   "desc": "Squares, circles and right angles laid out with knotted cords for the fire altars: building is 10% faster, a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and builders who keep the rites.",
+   "words": [
+    "geometry"
+   ]
+  },
+  {
+   "id": "iron_plough",
+   "kind": "tool",
+   "name": "Iron Ploughshare",
+   "history": "real",
+   "source": "Iron tools spread through the Ganges plain from about 1000 BCE, opening its forests to rice farming",
+   "practice": {
+    "berry": 200,
+    "chop": 100
+   },
+   "needs": {
+    "techs": [
+     "bronze",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.2
+    },
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.1
+    }
+   ],
+   "desc": "An iron tip for the plough and an iron axe for the jungle: farm plots yield 20% more, woodcutting 10% faster.",
+   "hint": "Needs Bronze Metallurgy and farming."
+  },
+  {
+   "id": "ayurveda",
+   "kind": "medicine",
+   "name": "Herbs of the Atharvaveda",
+   "history": "real",
+   "source": "The Atharvaveda contains charms and herbal cures that are the roots of later Ayurveda",
+   "practice": {
+    "ritual": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "turmeric"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.2
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Roots and leaves given with a chant for each sickness: the sick recover 20% faster, the hurt heal 5% faster.",
+   "hint": "Needs turmeric, and healers' rites."
+  }
+ ],
+ "foods": [
+  {
+   "id": "ghee_rice",
+   "name": "Rice with Ghee",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_rice"
+    ],
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Rice from the wet fields, boiled and eaten with melted butter: hunger grows 10% slower.",
+   "hint": "Needs wild rice and Beast Domestication."
+  },
+  {
+   "id": "madhuparka",
+   "name": "Madhuparka",
+   "history": "real",
+   "source": "Vedic custom offered an honoured guest madhuparka, a mixture of curd, honey and ghee",
+   "practice": {
+    "hearth": 100,
+    "hunt": 60
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Curd, honey and ghee stirred together for every guest: +3 mood.",
+   "hint": "Needs Beast Domestication."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_rice",
+   "name": "Wild Rice",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Rice was gathered and then farmed in the Ganges valley (Lahuradewa) from very early times",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.08,
+   "winter": false,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 1.5,
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Gathering rice",
+   "desc": "Grass of the wet margins, its grains falling at a touch. Gathering it brings farming closer."
+  },
+  {
+   "id": "turmeric",
+   "name": "Turmeric",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "needs": "lore",
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "ritual",
+   "look": "tubers",
+   "act": "Digging turmeric",
+   "desc": "A golden root for colour, flavour and healing wounds."
+  }
+ ],
+ "people": [
+  {
+   "id": "vishva",
+   "as": "founder",
+   "name": "Vishvara",
+   "epithet": "Singer at the Fire",
+   "history": "invented",
+   "desc": "He knows ten thousand verses and never misses one.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0a040",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "sang the hymn to Agni at dawn as his grandfather taught him"
+   ]
+  },
+  {
+   "id": "gavishti",
+   "as": "founder",
+   "name": "Gavaksha",
+   "epithet": "Leader of the Herds",
+   "history": "invented",
+   "desc": "In this tribe wealth is counted in cows, and she has the most.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a07040",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 2,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "found the stolen cattle in a cave and brought them home"
+   ]
+  },
+  {
+   "id": "ghosha",
+   "as": "ancestor",
+   "name": "Ghosha",
+   "epithet": "the Seer",
+   "history": "legend",
+   "source": "Two hymns of the Rigveda (10.39–40) are attributed to her",
+   "desc": "A woman seer who, the hymns say, was healed of a skin disease by the twin horsemen of the gods, and married late and happily."
+  },
+  {
+   "id": "panini",
+   "as": "ancestor",
+   "name": "Panini",
+   "epithet": "the Grammarian",
+   "history": "real",
+   "source": "The Ashtadhyayi, about 4,000 rules describing Sanskrit, c. 4th century BCE",
+   "desc": "A scholar of Gandhara who described a whole language in four thousand short rules, a feat linguists still admire."
+  },
+  {
+   "id": "jivaka",
+   "as": "wanderer",
+   "name": "Jivaka",
+   "epithet": "the Physician",
+   "history": "legend",
+   "source": "Buddhist texts: a foundling raised at the court of Magadha who studied medicine at Taxila and became physician to the Buddha",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a young doctor back from the great school in the north-west, who says every plant within a day's walk is a medicine.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 52,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#9ff0c8",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 0,
+     "lore": 7,
+     "trade": 1
+    }
+   },
+   "memory": [
+    "searched a whole day's walk around Taxila and found no plant that was not a medicine"
+   ],
+   "desc": "In legend, the greatest physician of the Buddha's time."
+  },
+  {
+   "id": "sudas",
+   "as": "chosen",
+   "name": "Sudas",
+   "epithet": "Victor of the Ten Kings",
+   "label": "Sudas, Victor of the Ten Kings",
+   "history": "legend",
+   "desc": "A king who beats ten kings at the river. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 8,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "yajnavalkya",
+   "as": "chosen",
+   "name": "Yajnavalkya",
+   "epithet": "the Sage",
+   "label": "Yajnavalkya the Sage",
+   "history": "legend",
+   "desc": "He wins every debate and walks away from his riches. Lore 9.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 0,
+     "lore": 9
+    }
+   }
+  },
+  {
+   "id": "gargi",
+   "as": "chosen",
+   "name": "Gargi",
+   "epithet": "who Questioned the Sage",
+   "label": "Gargi, who Questioned the Sage",
+   "history": "legend",
+   "desc": "A woman philosopher who asks what the world is woven on. Lore 8, Crafting 4.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "ten_kings",
+   "title": "Ten Kings at the River",
+   "history": "legend",
+   "source": "Rigveda 7.18: King Sudas of the Bharatas defeated a confederacy of ten tribes on the Parushni river",
+   "when": {
+    "era": 2,
+    "pop": 12,
+    "culture": {
+     "martial": 5
+    }
+   },
+   "chance": 0.4,
+   "text": "Ten neighbouring clans have joined together against us and are coming across the river. The singers say the gods are with us; the war leaders want to break the dykes and let the river fight for us.",
+   "options": [
+    {
+     "label": "Break the dykes",
+     "do": [
+      {
+       "culture": {
+        "martial": 6
+       }
+      },
+      {
+       "remember": "broke the dykes when the ten kings crossed the river",
+       "who": "best:combat",
+       "impact": 9
+      },
+      {
+       "give": {
+        "goods": 4
+       }
+      }
+     ],
+     "result": "The river rises under the enemy. The ten kings' army is swept away, and the singers make a new hymn."
+    },
+    {
+     "label": "Offer cattle for peace",
+     "cost": {
+      "food": 30
+     },
+     "do": [
+      {
+       "culture": {
+        "martial": -5
+       }
+      }
+     ],
+     "result": "Cattle cross the river instead of warriors."
+    }
+   ]
+  },
+  {
+   "id": "horse_sacrifice",
+   "title": "The Horse Goes Free",
+   "history": "real",
+   "source": "The ashvamedha: a consecrated horse wandered for a year, followed by warriors; every land it crossed had to accept the king or fight",
+   "when": {
+    "tech": "domestication",
+    "era": 2,
+    "culture": {
+     "ranked": 5
+    }
+   },
+   "chance": 0.4,
+   "text": "The priests propose the great horse rite: a white stallion set free to wander for a year, followed by our warriors. Every land it walks through will be ours, or will fight.",
+   "options": [
+    {
+     "label": "Let the horse go",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 6,
+        "martial": 4
+       }
+      },
+      {
+       "devotion": 10
+      },
+      {
+       "feat": "Held the great horse rite"
+      }
+     ],
+     "result": "A year later the horse comes home, and many chiefs have bowed rather than fight."
+    },
+    {
+     "label": "Too proud a rite",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The horse stays in its stall."
+    }
+   ]
+  },
+  {
+   "id": "debate_court",
+   "title": "A Thousand Cows for the Wisest",
+   "history": "legend",
+   "source": "Brihadaranyaka Upanishad 3: King Janaka offered a thousand cows with gold on their horns to the wisest sage at his court",
+   "when": {
+    "era": 2,
+    "pop": 10
+   },
+   "chance": 0.5,
+   "text": "The chief offers a hundred cows to whoever can answer every question about the world. The wise ones gather, and the debate lasts three days.",
+   "do": [
+    {
+     "insight": {
+      "code": 0.2
+     }
+    },
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    },
+    {
+     "remember": "debated for three days about what the world is woven on",
+     "who": "best:lore",
+     "impact": 8
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "indra_vritra",
+   "name": "Indra Frees the Waters",
+   "history": "legend",
+   "source": "Rigveda 1.32",
+   "when": {
+    "day": 2
+   },
+   "text": "The serpent Vritra lay coiled around the mountain and held back all the waters of the world. Indra drank the soma, took up the thunderbolt the craftsman had made him, and struck the serpent down. The waters rushed out like lowing cows running to their calves, and the rivers flowed to the sea.",
+   "moral": "what is held back must be set free",
+   "do": [
+    {
+     "culture": {
+      "martial": 2
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "manu_fish",
+   "name": "Manu and the Fish",
+   "history": "legend",
+   "source": "Shatapatha Brahmana 1.8.1",
+   "when": {
+    "after": "spring_flood"
+   },
+   "text": "As Manu washed his hands, a little fish came into them and said: keep me, and I will save you. He kept it in a jar, then a pond, then the sea, as it grew. One day it said: a flood is coming; build a boat. When the waters rose, the fish towed the boat to a mountain in the north, and Manu alone was saved.",
+   "moral": "kindness to the small is repaid",
+   "do": [
+    {
+     "devotion": 5
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "nachiketa",
+   "name": "Nachiketa and Death",
+   "history": "legend",
+   "source": "Katha Upanishad",
+   "when": {
+    "deaths": 1
+   },
+   "text": "A boy, given to Death by his angry father, waited three days at Death's door with nothing to eat. Death, ashamed, offered him three wishes. The boy asked for his father's peace, for the secret of the fire, and for the answer to one question: what happens after we die? Death offered him gold and kingdoms instead, but the boy would not be put off.",
+   "moral": "seek the truth over riches",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "ushas",
+   "name": "The Hymn to Dawn",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Rigveda hymns to Ushas, goddess of dawn",
+   "text": "She comes like a young woman shining, waking every living thing, driving away the black cloak of night. She has shone before; she will shine after. She sets the birds flying from their nests and the people to their work. Shine on us today, Dawn, with wealth of cattle and of children.",
+   "moral": "every morning is a gift",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

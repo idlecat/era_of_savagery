@@ -1,0 +1,681 @@
+{
+ "id": "bmac",
+ "order": 53,
+ "name": "Oxus Oasis People",
+ "period": "c. 2300–1700 BCE",
+ "place": "the oases of Bactria and Margiana, Central Asia",
+ "desc": "Builders of walled compounds in the river oases of the Central Asian desert, who irrigated the Murghab delta, carved little stone 'princesses' in flounced woollen dresses, and stood at the crossroads between the steppe, Iran and the Indus.",
+ "history": "real",
+ "source": "Excavations at Gonur Depe and Togolok by Viktor Sarianidi (from the 1970s); the Bactria–Margiana Archaeological Complex",
+ "tribe_names": [
+  "Margu",
+  "Togol",
+  "Bakhdi",
+  "Sapal",
+  "Dashli",
+  "Kelel",
+  "Namaz",
+  "Altyn",
+  "Gonura",
+  "Djarkut",
+  "Molali",
+  "Taip",
+  "Ulug",
+  "Kangurt",
+  "Anau",
+  "Sarazm"
+ ],
+ "birth_names": [
+  "Ari",
+  "Bek",
+  "Dila",
+  "Gul",
+  "Kamal",
+  "Lola",
+  "Mira",
+  "Nur",
+  "Ozod",
+  "Sabo"
+ ],
+ "epithets": {
+  "cautious": [
+   "Keeper of the Canal Gates",
+   "Carver of Little Queens"
+  ],
+  "gluttonous": [
+   "Driver of Camels"
+  ],
+  "devout": [
+   "Brewer of the Sacred Drink"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "opened the canal gate the night the meltwater came down"
+  ],
+  "gluttonous": [
+   "led two-humped camels across the desert to the Indus traders"
+  ],
+  "devout": [
+   "pounded twigs in the mortar for the sacred drink at the fire temple"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "oasis_canals",
+   "kind": "tool",
+   "name": "Oasis Canals",
+   "history": "real",
+   "source": "The settlements of Margiana spread along canals fed by the Murghab river delta",
+   "practice": {
+    "build": 200,
+    "berry": 120
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.25
+    }
+   ],
+   "desc": "Channels led out from the river's fan into the desert, turning sand into barley fields: farm plots yield 25% more.",
+   "hint": "Needs farming.",
+   "words": [
+    "canals"
+   ]
+  },
+  {
+   "id": "walled_compound",
+   "kind": "tool",
+   "name": "Walled Compound",
+   "history": "real",
+   "source": "Gonur Depe had a walled palace and temple complex with rectangular towers, surrounded by an outer wall",
+   "practice": {
+    "build": 250,
+    "hearth": 80
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    }
+   ],
+   "desc": "Mud-brick walls with square towers around the whole village: +2 defence.",
+   "hint": "Needs pottery and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "bactrian_camels",
+   "kind": "tool",
+   "name": "Two-Humped Camels",
+   "history": "real",
+   "source": "Figurines and bones from Bactria and Margiana are early evidence of the domesticated Bactrian camel",
+   "practice": {
+    "explore": 150,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "carry",
+     "add": 2
+    },
+    {
+     "stat": "cold",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Shaggy camels that cross the cold desert and give wool besides: everyone carries 2 more, the cold bites 5% less.",
+   "hint": "Needs Beast Domestication.",
+   "words": [
+    "camels"
+   ]
+  },
+  {
+   "id": "stone_princess",
+   "kind": "goods",
+   "name": "Little Stone Queens",
+   "history": "real",
+   "source": "'Bactrian princesses': seated figurines of chlorite and white stone, wearing flounced woollen dresses, c. 2000 BCE",
+   "practice": {
+    "quarry": 100,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Small seated women of dark and white stone, set in houses and graves: rites bring 10% more devotion, +2 mood.",
+   "hint": "Needs Polished Stone Tools, and carvers who keep the rites."
+  },
+  {
+   "id": "sacred_drink",
+   "kind": "medicine",
+   "name": "The Sacred Drink",
+   "history": "legend",
+   "source": "Vessels in the 'white rooms' of Togolok and Gonur were claimed to hold traces of ephedra, perhaps the haoma or soma of later hymns; this is still argued",
+   "practice": {
+    "ritual": 200
+   },
+   "needs": {
+    "finds": [
+     "ephedra"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "sick",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Twigs pounded and pressed into a bitter drink that keeps the priests awake through the night rites: rites bring 10% more devotion, the sick recover 5% faster.",
+   "hint": "Needs ephedra."
+  }
+ ],
+ "foods": [
+  {
+   "id": "dried_melon",
+   "name": "Dried Melon Strips",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "wild_melon"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Sweet melon cut in strips and dried in the desert sun for the winter: food spoils 10% slower, +1 mood.",
+   "hint": "Needs wild melons."
+  },
+  {
+   "id": "oasis_bread",
+   "name": "Barley Flatbread",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Flat barley loaves baked against the wall of a clay oven: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_melon",
+   "name": "Wild Melons",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "tubers",
+   "act": "Gathering melons",
+   "desc": "Trailing vines with small, fragrant melons on the edges of the oasis."
+  },
+  {
+   "id": "ephedra",
+   "name": "Ephedra Shrubs",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "needs": "lore",
+   "where": "hills_home",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Cutting ephedra",
+   "desc": "Jointed green twigs of the mountains, bitter and stimulating."
+  }
+ ],
+ "people": [
+  {
+   "id": "canal_keeper",
+   "as": "founder",
+   "name": "Yaksha",
+   "epithet": "Keeper of the Water",
+   "history": "invented",
+   "desc": "She decides when each field drinks, and no one argues.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a09060",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "shared the water fairly through a summer when the river was half dry"
+   ]
+  },
+  {
+   "id": "camel_driver",
+   "as": "founder",
+   "name": "Tokhar",
+   "epithet": "the Camel Driver",
+   "history": "invented",
+   "desc": "He has crossed the desert so often the camels follow him like dogs.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#b08050",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 2,
+     "lore": 0,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "found the hidden well in the desert when the caravan was dying of thirst"
+   ]
+  },
+  {
+   "id": "princess_of_bactria",
+   "as": "ancestor",
+   "name": "The Lady in the Flounced Dress",
+   "epithet": "the Bactrian Princess",
+   "history": "real",
+   "source": "Composite stone figurines from Bactria, c. 2000 BCE (Louvre, Metropolitan Museum)",
+   "desc": "A seated woman carved in dark chlorite with a white stone face, perhaps a goddess, perhaps a great lady; she sat in many graves."
+  },
+  {
+   "id": "gonur_charioteer",
+   "as": "ancestor",
+   "name": "The Lord of Gonur",
+   "epithet": "buried with his wagon",
+   "history": "real",
+   "source": "Royal tombs at Gonur Depe held four-wheeled wagons with bronze-rimmed wheels and the remains of animals",
+   "desc": "A ruler of the oasis city buried with a wagon, a foal and his finest things in a house-shaped tomb."
+  },
+  {
+   "id": "lapis_trader",
+   "as": "wanderer",
+   "name": "Sar-i-Sang",
+   "epithet": "Lapis Trader",
+   "history": "invented",
+   "source": "Lapis lazuli from the mines of Sar-i Sang in Badakhshan reached Sumer, Egypt and the Indus",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader down from the high mountains with a bag of stones bluer than the sky, flecked with gold.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#3050c0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "carried lapis from the mountain mines all the way to the river cities"
+   ],
+   "desc": "A trader of the lapis road, named for the mines he comes from."
+  },
+  {
+   "id": "oasis_queen",
+   "as": "chosen",
+   "name": "Bakhtri",
+   "epithet": "Queen of the Oasis",
+   "label": "Bakhtri, Queen of the Oasis",
+   "history": "invented",
+   "desc": "She holds the water and the trade roads. Lore 6, Trade 7.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 4,
+     "combat": 2,
+     "lore": 6,
+     "trade": 7
+    }
+   }
+  },
+  {
+   "id": "fire_priest",
+   "as": "chosen",
+   "name": "Atar",
+   "epithet": "Priest of the White Rooms",
+   "label": "Atar, Priest of the White Rooms",
+   "history": "invented",
+   "desc": "Keeper of the fire and the sacred drink. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "tower_captain",
+   "as": "chosen",
+   "name": "Murgh",
+   "epithet": "Captain of the Towers",
+   "label": "Murgh, Captain of the Towers",
+   "history": "invented",
+   "desc": "No raider has ever climbed his walls. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 10,
+    "def": 7,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "delta_shifts",
+   "title": "The Delta Moves",
+   "history": "real",
+   "source": "As the Murghab delta shifted south, the people of Margiana moved their settlements to follow the water",
+   "when": {
+    "after": "drought",
+    "era": 2
+   },
+   "chance": 0.6,
+   "text": "The river no longer reaches the northern fields. Its fingers have crept south into the desert. The village must follow the water or dig a long new canal.",
+   "options": [
+    {
+     "label": "Dig a long canal",
+     "cost": {
+      "wood": 20,
+      "food": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "A season of digging, and the water comes back to the old fields."
+    },
+    {
+     "label": "Follow the water south",
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The village is rebuilt a day's walk south. The old walls slowly fill with sand."
+    }
+   ]
+  },
+  {
+   "id": "riders_north",
+   "title": "Riders from the North",
+   "history": "real",
+   "source": "Around 1800–1700 BCE steppe pottery and people of the Andronovo world appear in the Bactrian and Margian oases",
+   "when": {
+    "era": 2,
+    "pop": 10,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "Herders from the northern steppe have come to the edge of the oasis with their horses and chariots. They want water and grain; they offer horses and bronze.",
+   "options": [
+    {
+     "label": "Trade and let them settle",
+     "do": [
+      {
+       "give": {
+        "goods": 3
+       }
+      },
+      {
+       "culture": {
+        "martial": 3,
+        "settled": -2
+       }
+      },
+      {
+       "insight": {
+        "domestication": 0.2
+       }
+      }
+     ],
+     "result": "The newcomers pitch their tents beside the walls. Within a generation, the children speak both tongues."
+    },
+    {
+     "label": "Close the gates",
+     "do": [
+      {
+       "culture": {
+        "martial": 4
+       }
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         300,
+         200
+        ],
+        [
+         340,
+         160
+        ]
+       ]
+      }
+     ],
+     "result": "The gates close. That night riders circle the walls."
+    }
+   ]
+  },
+  {
+   "id": "white_rooms",
+   "title": "The White Rooms",
+   "history": "legend",
+   "when": {
+    "invention": "sacred_drink"
+   },
+   "text": "The priests plaster a set of rooms pure white and set great jars and stone mortars in them. Only they may enter, and from inside comes the sound of pounding and singing through the night.",
+   "do": [
+    {
+     "devotion": 8
+    },
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "princess_tale",
+   "name": "The Lady Who Holds the Water",
+   "history": "invented",
+   "source": "A story made up around the 'Bactrian princess' figurines",
+   "when": {
+    "day": 2
+   },
+   "text": "Long ago a great lady sat at the head of the river where it splits into a hundred fingers. She held the water in the folds of her skirt and let it out to each field in turn. Since then we carve her sitting, in her flounced dress, so she will go on sharing the water fairly.",
+   "moral": "share the water fairly",
+   "do": [
+    {
+     "culture": {
+      "ranked": -2
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "desert_camel",
+   "name": "Why the Camel Has Two Humps",
+   "history": "invented",
+   "source": "A story in the manner of Central Asian folk tales",
+   "when": {
+    "invention": "bactrian_camels"
+   },
+   "text": "The camel was once proud and drank only from the best wells. When the long drought came, it had to cross the whole desert to find water, and it learned to carry two humps of patience on its back, one for going and one for coming home.",
+   "moral": "carry patience for the road",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "fire_temple",
+   "name": "The Fire That Never Sleeps",
+   "history": "invented",
+   "source": "A story made up around the fire altars of Gonur",
+   "when": {
+    "tech": "fire"
+   },
+   "text": "When the first oasis was dug, the gods gave the people a fire and said: as long as it burns, the desert will not take you. So the priests watch it day and night, and feed it the sweet wood of the tamarisk.",
+   "moral": "a tended fire holds back the desert",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "harvest_oasis",
+   "name": "The Night of the Full Canals",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the irrigation year",
+   "text": "When the meltwater comes down from the mountains and every canal runs full, the people float little lamps on the water and follow them from field to field, singing, until the lamps reach the desert's edge and go out.",
+   "moral": "the water is life",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

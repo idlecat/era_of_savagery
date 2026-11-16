@@ -1,0 +1,658 @@
+{
+ "id": "scythian",
+ "order": 55,
+ "name": "Scythians",
+ "period": "c. 900–200 BCE",
+ "place": "the steppe from the Danube to the Altai",
+ "desc": "Horse-archer nomads of the great steppe, who lived in felt tents on wagons, decorated everything with golden animals, steamed themselves with hemp, buried their kings under huge mounds with their horses, and outran the army of Persia.",
+ "history": "real",
+ "source": "Herodotus, Histories book 4; royal kurgans such as Tovsta Mohyla and Arzhan; the frozen tombs of Pazyryk in the Altai",
+ "tribe_names": [
+  "Ariapeithes",
+  "Scyles",
+  "Spargapeithes",
+  "Saulius",
+  "Octamasadas",
+  "Opoea",
+  "Skilurus",
+  "Palakos",
+  "Taxakis",
+  "Scopasis",
+  "Ateas",
+  "Gnurus",
+  "Lykos",
+  "Kharsis",
+  "Argimpasa",
+  "Tabiti"
+ ],
+ "birth_names": [
+  "Ari",
+  "Ishpa",
+  "Kola",
+  "Lipo",
+  "Mada",
+  "Papa",
+  "Sauro",
+  "Targi",
+  "Uma",
+  "Zana"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Archer of the Gorytos",
+   "Rider Who Never Dismounts"
+  ],
+  "gluttonous": [
+   "Keeper of the Mare Herds"
+  ],
+  "devout": [
+   "Diviner with the Willow Rods"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "shot backwards from a galloping horse and hit the man chasing me"
+  ],
+  "gluttonous": [
+   "milked forty mares in one morning for the cheese"
+  ],
+  "devout": [
+   "laid out willow rods on the ground and read what was to come"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "recurve_bow",
+   "kind": "tool",
+   "name": "Recurve Bow",
+   "history": "real",
+   "source": "The short Scythian bow of wood, horn and sinew, carried in a gorytos, a combined bow-case and quiver",
+   "practice": {
+    "hunt": 250
+   },
+   "needs": {
+    "techs": [
+     "hide"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "gather",
+     "of": "hunt",
+     "mul": 1.1
+    }
+   ],
+   "desc": "A short bow of wood, horn and sinew that shoots far from horseback: +2 attack, hunting is 10% faster.",
+   "hint": "Needs Hide Tailoring, and many hunts.",
+   "words": [
+    "bows"
+   ]
+  },
+  {
+   "id": "hemp_steam",
+   "kind": "medicine",
+   "name": "Hemp Steam Tent",
+   "history": "real",
+   "source": "Herodotus 4.75: Scythians threw hemp seed on red-hot stones in a felt tent 'and howl with joy'; braziers with hemp were found in the Pazyryk tombs",
+   "practice": {
+    "hearth": 200,
+    "ritual": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_hemp"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "sick",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A felt tent over red-hot stones and hemp seed, for washing and for joy: +3 mood, the sick recover 5% faster.",
+   "hint": "Needs wild hemp."
+  },
+  {
+   "id": "felt_tents",
+   "kind": "goods",
+   "name": "Felt Tents",
+   "history": "real",
+   "source": "Herodotus and Hippocrates describe Scythian families living in felt-covered wagons; felt hangings survive at Pazyryk",
+   "practice": {
+    "hearth": 250,
+    "hunt": 80
+   },
+   "needs": {
+    "techs": [
+     "hide"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "cold",
+     "mul": 0.85
+    }
+   ],
+   "desc": "Thick felt pressed from wool and stretched over wagons and frames: the cold bites 15% less.",
+   "hint": "Needs Hide Tailoring, and many evenings of work."
+  },
+  {
+   "id": "animal_gold",
+   "kind": "goods",
+   "name": "Golden Animal Style",
+   "history": "real",
+   "source": "The gold pectoral of Tovsta Mohyla (4th century BCE) and countless plaques of stags, panthers and griffins",
+   "practice": {
+    "hearth": 150,
+    "ritual": 100
+   },
+   "needs": {
+    "finds": [
+     "altai_gold"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Stags, panthers and griffins in gold on every quiver, bridle and belt: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs gold and fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "hippake",
+   "name": "Mare's Milk Cheese",
+   "history": "real",
+   "source": "Hippocrates and Herodotus mention hippake, a cheese made from mare's milk, as the Scythians' food",
+   "practice": {
+    "hunt": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Mare's milk churned and pressed into cheese that rides along in the saddlebags: hunger grows 10% slower, food spoils 5% slower.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "cauldron_stew",
+   "name": "Cauldron Stew",
+   "history": "real",
+   "source": "Herodotus 4.61: lacking wood, Scythians boiled meat in a cauldron over a fire of the animal's own bones",
+   "practice": {
+    "hunt": 120,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Meat boiled in a great bronze cauldron for the whole camp: hunger grows 5% slower, +2 mood.",
+   "hint": "Needs fire."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_hemp",
+   "name": "Wild Hemp",
+   "group": "medicine",
+   "res": "herbs",
+   "history": "real",
+   "amount": 16,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "needs": "lore",
+   "where": "meadow",
+   "count": 3,
+   "practice": "ritual",
+   "look": "yarrow",
+   "act": "Gathering hemp",
+   "desc": "Tall plants whose fibre makes cloth and whose seeds make a joyful smoke."
+  },
+  {
+   "id": "altai_gold",
+   "name": "Mountain Gold",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "source": "Herodotus wrote of gold-guarding griffins in the far north-east, perhaps the gold of the Altai",
+   "amount": 16,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Digging gold",
+   "desc": "Gold in the far mountains, which the old stories say griffins guard."
+  }
+ ],
+ "people": [
+  {
+   "id": "felt_mother",
+   "as": "founder",
+   "name": "Kasta",
+   "epithet": "Mistress of the Felt",
+   "history": "invented",
+   "desc": "She can pitch a camp of forty tents before the sun is high.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#c09050",
+    "skills": {
+     "forage": 3,
+     "craft": 4,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "sewed a felt hanging of a griffin and a stag that took a whole winter"
+   ]
+  },
+  {
+   "id": "horse_archer",
+   "as": "founder",
+   "name": "Arpo",
+   "epithet": "the Horse-Archer",
+   "history": "invented",
+   "desc": "He was put on a horse before he could walk.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 58,
+    "atk": 7,
+    "def": 3,
+    "spd": 1.25,
+    "color": "#a04030",
+    "skills": {
+     "forage": 3,
+     "craft": 0,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "shot a running deer from a galloping horse at a hundred paces"
+   ]
+  },
+  {
+   "id": "targitaos",
+   "as": "ancestor",
+   "name": "Targitaos",
+   "epithet": "the First Man",
+   "history": "legend",
+   "source": "Herodotus 4.5",
+   "desc": "The first man of the Scythians, son of the sky god and a daughter of the river, whose three sons became the fathers of the tribes."
+  },
+  {
+   "id": "ice_maiden",
+   "as": "ancestor",
+   "name": "The Ice Maiden",
+   "epithet": "of Ukok",
+   "history": "real",
+   "source": "A woman buried in the permafrost of the Ukok plateau, Altai, c. 500 BCE, found in 1993",
+   "desc": "A young woman buried with six saddled horses, a tall headdress and her arms covered in tattoos of deer with griffin beaks."
+  },
+  {
+   "id": "anacharsis",
+   "as": "wanderer",
+   "name": "Anacharsis",
+   "epithet": "the Scythian Sage",
+   "history": "legend",
+   "source": "Herodotus 4.76; later Greeks counted him among the wise men of the world",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a Scythian prince who has travelled among the Greeks and come home full of strange ideas, and sharp sayings.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a0b0c0",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 2,
+     "lore": 7,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "said that laws are like spiderwebs: they catch the weak and the strong break through"
+   ],
+   "desc": "A Scythian philosopher of the 6th century BCE, remembered by the Greeks for his blunt wisdom."
+  },
+  {
+   "id": "tomyris",
+   "as": "chosen",
+   "name": "Tomyris",
+   "epithet": "Queen of the Massagetae",
+   "label": "Tomyris, Queen of the Massagetae",
+   "history": "legend",
+   "desc": "The queen who defeats the great king of Persia. Combat 9.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 12,
+    "def": 5,
+    "spd": 1.25,
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 9,
+     "lore": 2
+    }
+   }
+  },
+  {
+   "id": "idanthyrsus",
+   "as": "chosen",
+   "name": "Idanthyrsus",
+   "epithet": "who Mocked Darius",
+   "label": "Idanthyrsus, who Mocked Darius",
+   "history": "legend",
+   "desc": "A king who wins by never standing still. Combat 7, Lore 5, very fast.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 78,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.35,
+    "skills": {
+     "forage": 5,
+     "craft": 2,
+     "combat": 7,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "colaxais",
+   "as": "chosen",
+   "name": "Colaxais",
+   "epithet": "Keeper of the Golden Gifts",
+   "label": "Colaxais, Keeper of the Golden Gifts",
+   "history": "legend",
+   "desc": "The youngest son, who could pick up the burning gold. Lore 6, Crafting 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#e0c040",
+    "hp": 70,
+    "atk": 7,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 6,
+     "combat": 4,
+     "lore": 6
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "persian_invasion",
+   "title": "The Great King Comes",
+   "history": "real",
+   "source": "Herodotus 4.83–142: Darius invaded Scythia around 513 BCE; the Scythians retreated, burning the grass and filling the wells, until he gave up",
+   "when": {
+    "era": 2,
+    "pop": 11,
+    "culture": {
+     "settled": -5
+    }
+   },
+   "chance": 0.4,
+   "text": "A huge army from the south has crossed the river. It is far too big to fight. The elders say: we have no towns to defend; let us ride ahead of it, burn the grass, fill the wells, and let the steppe fight for us.",
+   "options": [
+    {
+     "label": "Ride ahead and burn the grass",
+     "do": [
+      {
+       "culture": {
+        "settled": -6,
+        "martial": 4
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "speed",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "feat": "Outran the army of the Great King"
+      }
+     ],
+     "result": "For months the enemy follows smoke and empty wells. At last they turn back, starving."
+    },
+    {
+     "label": "Send tribute",
+     "cost": {
+      "food": 30,
+      "goods": 4
+     },
+     "do": [
+      {
+       "mood": -4
+      }
+     ],
+     "result": "The great king accepts the gifts and goes home. The young warriors are ashamed."
+    }
+   ]
+  },
+  {
+   "id": "women_warriors",
+   "title": "The Daughters Ride to War",
+   "history": "real",
+   "source": "Herodotus' 'Amazons' of the Sauromatians; about a third of Scythian-Sarmatian warrior graves with weapons are of women",
+   "when": {
+    "invention": "recurve_bow",
+    "pop": 10
+   },
+   "text": "The young women have been practising with the bow as long as the young men, and shoot as straight. They ask to ride with the war band. Among us, the old ones say, this has always been so.",
+   "do": [
+    {
+     "culture": {
+      "martial": 4,
+      "ranked": -2
+     }
+    },
+    {
+     "boon": [
+      {
+       "stat": "atk",
+       "add": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "royal_kurgan",
+   "title": "A Mound for a King",
+   "history": "real",
+   "source": "Herodotus 4.71–72 describes royal burials; the kurgans of Arzhan and Tovsta Mohyla held kings, horses and gold",
+   "when": {
+    "deaths": 2,
+    "tech": "domestication"
+   },
+   "text": "The chief has died. His body is carried round the tribes for forty days, and now the mound must be raised, with his horses and his gold around him.",
+   "options": [
+    {
+     "label": "Raise a great mound",
+     "cost": {
+      "food": 20,
+      "goods": 4
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "culture": {
+        "ranked": 5
+       }
+      }
+     ],
+     "result": "The mound rises taller than any tree. Riders salute it as they pass."
+    },
+    {
+     "label": "A rider's grave",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "He is buried with his horse and his bow, and the grass covers him."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "golden_gifts",
+   "name": "The Golden Gifts from the Sky",
+   "history": "legend",
+   "source": "Herodotus 4.5–6",
+   "when": {
+    "day": 2
+   },
+   "text": "Four golden things fell from the sky: a plough, a yoke, an axe and a cup. The eldest son went to pick them up, and they burst into flame. The second son went, and they burned again. When the youngest came near, the fire went out, and he carried them home. So his brothers gave him the kingship.",
+   "moral": "the gifts choose who is worthy",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  },
+  {
+   "id": "five_arrows",
+   "name": "A Bird, a Mouse, a Frog and Five Arrows",
+   "history": "legend",
+   "source": "Herodotus 4.131–132",
+   "when": {
+    "invention": "recurve_bow"
+   },
+   "text": "The great king who chased the Scythians across the steppe was sent a strange gift: a bird, a mouse, a frog and five arrows. His advisers read it this way: unless you fly like birds, hide in the earth like mice or leap into the lakes like frogs, our arrows will find you. He went home.",
+   "moral": "a message can be sharper than an arrow",
+   "do": [
+    {
+     "culture": {
+      "martial": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "tomyris_tale",
+   "name": "Tomyris and the Great King",
+   "history": "legend",
+   "source": "Herodotus 1.205–214",
+   "when": {
+    "culture": {
+     "martial": 10
+    }
+   },
+   "text": "The conqueror of half the world asked the queen of the steppe to marry him, but she knew he wanted her land, not her. He tricked her son with a feast of wine and captured him. The queen sent a message: give back my son, or I will give you more blood than you can drink. He did not listen, and she kept her word.",
+   "moral": "do not mistake a queen for a prize",
+   "do": [
+    {
+     "culture": {
+      "martial": 3
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "griffin_gold",
+   "name": "The Griffins and the Gold",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Herodotus 3.116, 4.13, after the poet Aristeas",
+   "text": "Far to the north-east, past the one-eyed Arimaspians, griffins guard mountains of gold. The one-eyed men are always trying to steal it, and the griffins are always chasing them away. Every golden stag on our belts, the old ones say, was won from a griffin.",
+   "moral": "treasure is won by daring",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

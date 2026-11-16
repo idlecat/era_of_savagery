@@ -1,0 +1,716 @@
+{
+ "id": "indus",
+ "order": 50,
+ "name": "Indus Valley People",
+ "period": "c. 3300–1300 BCE",
+ "place": "the Indus and Ghaggar-Hakra plains",
+ "desc": "Builders of planned cities of baked brick, with straight streets, covered drains in every lane and bathrooms in most houses. They used one standard of weights from Afghanistan to Gujarat, carved tiny seals with unicorns, and wrote in a script no one can yet read.",
+ "history": "real",
+ "source": "Excavations at Harappa (from 1921), Mohenjo-daro (from 1922), Dholavira, Lothal and Rakhigarhi; Mehrgarh for the older farming villages",
+ "tribe_names": [
+  "Ahu",
+  "Bira",
+  "Chanu",
+  "Danu",
+  "Elu",
+  "Gara",
+  "Hanu",
+  "Ira",
+  "Kalu",
+  "Lomu",
+  "Nalu",
+  "Orku",
+  "Pella",
+  "Sanu",
+  "Tiru",
+  "Velu"
+ ],
+ "birth_names": [
+  "Ama",
+  "Bela",
+  "Chai",
+  "Dima",
+  "Kani",
+  "Lali",
+  "Mina",
+  "Pari",
+  "Runi",
+  "Sena"
+ ],
+ "epithets": {
+  "cautious": [
+   "Keeper of the Weights",
+   "Layer of Bricks"
+  ],
+  "devout": [
+   "Cutter of Seals"
+  ],
+  "gluttonous": [
+   "Spinner of Cotton"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "laid a whole street of drains with bricks of the same size"
+  ],
+  "devout": [
+   "carved a unicorn seal so small it fit on a thumbnail"
+  ],
+  "gluttonous": [
+   "spun enough cotton thread in a season to dress the whole family"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "covered_drains",
+   "kind": "medicine",
+   "name": "Covered Drains",
+   "history": "real",
+   "source": "Mohenjo-daro had brick drains under every street, with inspection holes, and bathrooms with private wells in most houses",
+   "practice": {
+    "build": 200,
+    "hearth": 80
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.2
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Brick channels under the lanes carry the waste away: the sick recover 20% faster, +1 mood.",
+   "hint": "Needs fire, and builders.",
+   "words": [
+    "drains"
+   ]
+  },
+  {
+   "id": "standard_bricks",
+   "kind": "tool",
+   "name": "Standard Baked Bricks",
+   "history": "real",
+   "source": "Indus bricks were made everywhere in the same proportions, 1 : 2 : 4",
+   "practice": {
+    "build": 200,
+    "hearth": 100
+   },
+   "needs": {
+    "techs": [
+     "fire",
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.12
+    }
+   ],
+   "desc": "Bricks fired hard in kilns, all of the same shape, so any builder can work with any other: building is 12% faster.",
+   "hint": "Needs fire and pottery, and builders at the kiln."
+  },
+  {
+   "id": "chert_weights",
+   "kind": "goods",
+   "name": "Cube Weights",
+   "history": "real",
+   "source": "Cubes of polished chert in a fixed series (1, 2, 4, 8, 16, 32, 64, then 160, 200...) used across the whole civilisation",
+   "practice": {
+    "quarry": 80,
+    "lead": 80
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Little stone cubes, doubling in weight, the same in every city: the stores hold 15 more, +1 mood.",
+   "hint": "Needs Polished Stone Tools.",
+   "words": [
+    "weights"
+   ]
+  },
+  {
+   "id": "unicorn_seals",
+   "kind": "goods",
+   "name": "Unicorn Seals",
+   "history": "real",
+   "source": "Thousands of square steatite seals, most showing a one-horned animal and a line of the undeciphered Indus script",
+   "practice": {
+    "ritual": 150,
+    "quarry": 50
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Tiny carved stamps to seal bales and jars, each with a beast and a few signs: a little more lore, and food spoils 5% slower.",
+   "hint": "Needs the Tribe & Agrarian Era.",
+   "words": [
+    "writing"
+   ]
+  },
+  {
+   "id": "carnelian_beads",
+   "kind": "goods",
+   "name": "Etched Carnelian Beads",
+   "history": "real",
+   "source": "Long carnelian beads, drilled with stone drills and etched white with soda, were traded as far as the Royal Tombs of Ur",
+   "practice": {
+    "quarry": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "carnelian"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Red stones heated until they glow, drilled for days, and etched with white patterns: +2 mood, and trade brings a little lore.",
+   "hint": "Needs carnelian and fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "sesame_cakes",
+   "name": "Sesame Cakes",
+   "history": "real",
+   "source": "Charred sesame seeds from Harappa are among the oldest evidence of the crop",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Sesame seeds pounded with jaggery into little cakes: +2 mood, hunger grows 5% slower.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "ghee",
+   "name": "Ghee",
+   "history": "real",
+   "source": "Zebu cattle were domesticated in the Indus region by about 7000 BCE (Mehrgarh)",
+   "practice": {
+    "hunt": 80,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Butter from zebu milk, simmered clear so it keeps for months in the heat: food spoils 10% slower, hunger grows 5% slower.",
+   "hint": "Needs Beast Domestication."
+  }
+ ],
+ "finds": [
+  {
+   "id": "tree_cotton",
+   "name": "Tree Cotton",
+   "group": "food",
+   "res": "goods",
+   "history": "real",
+   "source": "Cotton fibres from Mehrgarh (c. 5000 BCE) are the oldest known; Indus cloth was traded to Mesopotamia",
+   "amount": 18,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "yarrow",
+   "act": "Picking cotton",
+   "effects": [
+    {
+     "stat": "cold",
+     "mul": 0.92
+    }
+   ],
+   "desc": "Shrubs whose pods burst into soft white fibre. Once known, cotton cloth makes the cold bite 8% less."
+  },
+  {
+   "id": "carnelian",
+   "name": "Carnelian Pebbles",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "ochre",
+   "act": "Gathering carnelian",
+   "desc": "Orange-red pebbles that glow deep red when heated."
+  }
+ ],
+ "people": [
+  {
+   "id": "moha",
+   "as": "founder",
+   "name": "Moha",
+   "epithet": "Planner of Streets",
+   "history": "invented",
+   "desc": "He lays out a new quarter with a cord and a pole before the first brick is set.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c07050",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 1,
+     "lore": 2,
+     "trade": 1
+    }
+   },
+   "memory": [
+    "laid out the streets of the lower town straight from north to south"
+   ]
+  },
+  {
+   "id": "sindhu",
+   "as": "founder",
+   "name": "Sindha",
+   "epithet": "Bead-Maker",
+   "history": "invented",
+   "desc": "Her drills of hard stone bore through carnelian a finger-length at a time.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#d06040",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "drilled a bead so long it took a whole season"
+   ]
+  },
+  {
+   "id": "priest_king",
+   "as": "ancestor",
+   "name": "The Priest-King",
+   "epithet": "of Mohenjo-daro",
+   "history": "real",
+   "source": "Steatite bust from Mohenjo-daro, c. 2000 BCE (National Museum of Pakistan)",
+   "desc": "A bearded man with a cloak of trefoil patterns and half-closed eyes; no one knows if he was a priest, a king, or neither."
+  },
+  {
+   "id": "dancing_girl",
+   "as": "ancestor",
+   "name": "The Dancing Girl",
+   "epithet": "cast in bronze",
+   "history": "real",
+   "source": "Bronze figurine from Mohenjo-daro, c. 2300 BCE (National Museum, New Delhi)",
+   "desc": "A young woman with a hand on her hip and an arm full of bangles, cast by the lost-wax method: one of the oldest bronze sculptures."
+  },
+  {
+   "id": "dilmun_trader",
+   "as": "wanderer",
+   "name": "Lu-Enlil",
+   "epithet": "Trader from the Gulf",
+   "history": "invented",
+   "source": "Indus weights and seals have been found on the island of Dilmun (Bahrain), a hub of the Gulf trade",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a merchant from the islands of the western gulf, who wants beads and cotton and pays in copper and dates.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0a060",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "sailed from Dilmun to the mouth of the great river with a hold full of copper"
+   ],
+   "desc": "A Gulf merchant of the kind who carried Indus goods to Sumer."
+  },
+  {
+   "id": "bath_builder",
+   "as": "chosen",
+   "name": "Ralu",
+   "epithet": "Builder of the Great Bath",
+   "label": "Ralu, Builder of the Great Bath",
+   "history": "invented",
+   "desc": "She makes a pool of brick that does not leak a drop. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 1,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "seal_reader",
+   "as": "chosen",
+   "name": "Kedu",
+   "epithet": "Reader of the Signs",
+   "label": "Kedu, Reader of the Signs",
+   "history": "invented",
+   "desc": "The one person who can read every seal. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 0,
+     "lore": 8,
+     "trade": 3
+    }
+   }
+  },
+  {
+   "id": "river_captain",
+   "as": "chosen",
+   "name": "Mahal",
+   "epithet": "Captain of the River Boats",
+   "label": "Mahal, Captain of the River Boats",
+   "history": "invented",
+   "desc": "He takes the boats from the mountains to the sea. Foraging 6, Trade 7.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#ffd36b",
+    "hp": 70,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 6,
+     "craft": 3,
+     "combat": 3,
+     "lore": 2,
+     "trade": 7
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "river_dries",
+   "title": "The Eastern River Dries",
+   "history": "real",
+   "source": "As the monsoon weakened after about 2200 BCE, the Ghaggar-Hakra river dwindled and people moved east and south into smaller villages",
+   "when": {
+    "after": "drought",
+    "era": 2
+   },
+   "chance": 0.6,
+   "text": "The river east of the city flows less each year. The elders argue: dig deep wells and hold on, or move toward the rivers of the east, where the rains still come.",
+   "options": [
+    {
+     "label": "Dig deeper wells",
+     "cost": {
+      "wood": 15,
+      "food": 10
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 6
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "Brick-lined wells go down, deeper than ever. The city holds on."
+    },
+    {
+     "label": "Move east",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "mood": -2
+      },
+      {
+       "boon": [
+        {
+         "stat": "speed",
+         "mul": 1.03
+        }
+       ]
+      }
+     ],
+     "result": "Families pack their carts and walk toward the green east."
+    }
+   ]
+  },
+  {
+   "id": "great_bath",
+   "title": "A Pool for Purity",
+   "history": "real",
+   "source": "The Great Bath of Mohenjo-daro, sealed with bitumen and fine brick, perhaps for ritual washing",
+   "when": {
+    "invention": "standard_bricks",
+    "pop": 11
+   },
+   "text": "The priests ask for a great pool in the heart of the citadel, sealed so tightly that not a drop leaks, where the people can wash themselves clean before the gods.",
+   "options": [
+    {
+     "label": "Build the Great Bath",
+     "cost": {
+      "wood": 20,
+      "stone": 10
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "feat": "Built the Great Bath"
+      }
+     ],
+     "result": "Steps lead down into still water. People come from every quarter to wash on the holy days."
+    },
+    {
+     "label": "Wells are enough",
+     "result": "The priests wash at the wells like everyone else."
+    }
+   ]
+  },
+  {
+   "id": "meluhha_ships",
+   "title": "Ships for the Far West",
+   "history": "real",
+   "source": "Akkadian texts speak of ships of Meluhha (the Indus) bringing carnelian, ivory and timber to Mesopotamia",
+   "when": {
+    "invention": "carnelian_beads"
+   },
+   "chance": 0.5,
+   "text": "Sailors say there is a land far to the west, at the head of the gulf, where kings pay anything for red beads. A ship could go, if the tribe can fill it.",
+   "options": [
+    {
+     "label": "Send the ship",
+     "cost": {
+      "goods": 6
+     },
+     "do": [
+      {
+       "give": {
+        "food": 30,
+        "stone": 10
+       }
+      },
+      {
+       "insight": {
+        "bronze": 0.1
+       }
+      }
+     ],
+     "result": "The ship returns with copper, silver and strange stories of cities of mud."
+    },
+    {
+     "label": "Keep the beads",
+     "do": [
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The beads stay on our own necks."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "unicorn_tale",
+   "name": "The One-Horned Beast",
+   "history": "invented",
+   "source": "A story made up around the unicorn seals",
+   "when": {
+    "day": 2
+   },
+   "text": "In the forests at the edge of the world lives a beast with one horn, which no one has ever caught. It comes to drink only from water that is clean. That is why we carve it on our seals: it means what is inside is honest, and the water of our city is pure.",
+   "moral": "keep things clean and honest",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "lord_of_beasts",
+   "name": "The Lord of the Beasts",
+   "history": "invented",
+   "source": "A story made up around the 'Pashupati' seal of Mohenjo-daro, a horned figure seated among animals",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "A great one sits with his legs folded, wearing horns, and around him stand the tiger, the elephant, the rhinoceros and the buffalo, and two deer lie at his feet. None of them harms another while he sits there. When the herders take the cattle out, they ask him to keep the tigers calm.",
+   "moral": "calm can tame the fiercest",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "planned_city",
+   "name": "Why Our Streets Run Straight",
+   "history": "invented",
+   "source": "A story made up around the grid plans of Indus cities",
+   "when": {
+    "invention": "standard_bricks"
+   },
+   "text": "When the first city was built, every family wanted its house to face the river. They quarrelled until the wisest woman drew lines in the sand with a cord: north to south, east to west. 'Now no house is better than another,' she said, 'and every drain runs to the river.'",
+   "moral": "fair rules make peace",
+   "do": [
+    {
+     "culture": {
+      "ranked": -3
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "bathing_day",
+   "name": "The Bathing Day",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the Great Bath",
+   "text": "On the bathing day the whole city climbs to the citadel in clean cotton, and one by one the people go down the brick steps into the still water. They come up laughing, with flowers in their hair, and the drums play in the courtyard until the stars come out.",
+   "moral": "clean water, clean hearts",
+   "do": [
+    {
+     "mood": 4
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  }
+ ]
+}

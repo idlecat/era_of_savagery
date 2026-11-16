@@ -1,0 +1,657 @@
+{
+ "id": "andronovo",
+ "order": 54,
+ "name": "Sintashta and Andronovo",
+ "period": "c. 2100–900 BCE",
+ "place": "the southern Urals and the steppes of Kazakhstan",
+ "desc": "Herders and metalworkers of the steppe who built round fortified towns with a furnace in every house and buried their chiefs with the first spoked-wheel chariots. Their way of life spread from the Urals to the Altai and down toward Iran and India.",
+ "history": "real",
+ "source": "Excavations at Sintashta (from 1972) and Arkaim (from 1987); graves with chariots at Sintashta and Krivoye Ozero",
+ "tribe_names": [
+  "Arka",
+  "Sinta",
+  "Ural",
+  "Toba",
+  "Alak",
+  "Begaz",
+  "Atasu",
+  "Kara",
+  "Kizil",
+  "Ayak",
+  "Tau",
+  "Sarym",
+  "Tobol",
+  "Ishim",
+  "Andron",
+  "Ulken"
+ ],
+ "birth_names": [
+  "Ai",
+  "Bala",
+  "Dala",
+  "Kok",
+  "Kun",
+  "Nur",
+  "Sary",
+  "Tal",
+  "Uly",
+  "Zhel"
+ ],
+ "epithets": {
+  "belligerent": [
+   "Charioteer of the Steppe"
+  ],
+  "cautious": [
+   "Smith of the House Furnace",
+   "Builder of the Round Wall"
+  ],
+  "gluttonous": [
+   "Herder of the Horse Herds"
+  ]
+ },
+ "memories": {
+  "belligerent": [
+   "drove a two-horse chariot faster than any rider could follow"
+  ],
+  "cautious": [
+   "smelted copper in the furnace under my own house"
+  ],
+  "gluttonous": [
+   "brought a hundred horses through the snow to the winter pastures"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "spoked_wheel",
+   "kind": "tool",
+   "name": "Spoked-Wheel Chariot",
+   "history": "real",
+   "source": "Chariots with spoked wheels buried at Sintashta and Krivoye Ozero, c. 2000 BCE, are the oldest known",
+   "practice": {
+    "build": 200,
+    "hunt": 150
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "speed",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A light car on two spoked wheels, drawn by two horses at a gallop: +2 attack, everyone travels 5% faster.",
+   "hint": "Needs Beast Domestication and Polished Stone Tools.",
+   "words": [
+    "chariots",
+    "spokes"
+   ]
+  },
+  {
+   "id": "house_furnace",
+   "kind": "tool",
+   "name": "A Furnace in Every House",
+   "history": "real",
+   "source": "At Arkaim and Sintashta nearly every house had its own well and copper-smelting furnace",
+   "practice": {
+    "quarry": 150,
+    "hearth": 150
+   },
+   "needs": {
+    "finds": [
+     "malachite"
+    ],
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "quarry",
+     "mul": 1.15
+    },
+    {
+     "stat": "atk",
+     "add": 1
+    }
+   ],
+   "desc": "Each family smelts its own copper from green stone in a furnace beside the well: quarrying 15% faster, +1 attack.",
+   "hint": "Needs malachite and fire."
+  },
+  {
+   "id": "round_town",
+   "kind": "tool",
+   "name": "The Round Town",
+   "history": "real",
+   "source": "Arkaim: two rings of houses and walls around a central square, about 160 m across",
+   "practice": {
+    "build": 250,
+    "lead": 60
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Houses built back to back in two rings inside a ditch and a wall, all doors facing the middle: +2 defence, +1 mood.",
+   "hint": "Needs Polished Stone Tools and the Tribe & Agrarian Era."
+  },
+  {
+   "id": "horse_herds",
+   "kind": "goods",
+   "name": "Great Horse Herds",
+   "history": "real",
+   "source": "Horse bones dominate Sintashta and Andronovo sites; horses were also sacrificed in the chiefs' graves",
+   "practice": {
+    "hunt": 200,
+    "explore": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 20
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "Herds of horses for milk, meat, riding and the chariot: the stores hold 20 more, everyone carries 1 more.",
+   "hint": "Needs Beast Domestication."
+  }
+ ],
+ "foods": [
+  {
+   "id": "mare_milk",
+   "name": "Mare's Milk",
+   "history": "real",
+   "source": "Fat residues in pots from Botai (c. 3500 BCE) show that mares were milked on the steppe very early",
+   "practice": {
+    "hunt": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "inventions": [
+     "horse_herds"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Milk from the herd's mares, fresh or soured: hunger grows 10% slower, +1 mood.",
+   "hint": "Needs great horse herds."
+  },
+  {
+   "id": "smoked_fish_ural",
+   "name": "Smoked River Fish",
+   "history": "real",
+   "practice": {
+    "hunt": 100,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "fish"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Fish from the steppe rivers smoked over the house fires for winter: food spoils 10% slower.",
+   "hint": "Needs fish."
+  }
+ ],
+ "finds": [
+  {
+   "id": "malachite",
+   "name": "Malachite Seams",
+   "group": "ore",
+   "res": "copper",
+   "history": "real",
+   "source": "The Sintashta people mined copper ores such as malachite in the southern Urals",
+   "amount": 30,
+   "rate": 0.6,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_home",
+   "count": 3,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Mining malachite",
+   "seed": {
+    "bronze": 0.1
+   },
+   "desc": "Banded green stone that turns into copper in the furnace."
+  },
+  {
+   "id": "steppe_grass",
+   "name": "Steppe Pasture",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 30,
+   "rate": 1.0,
+   "regrow": 0.1,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "hunt",
+   "look": "grain",
+   "seed": {
+    "domestication": 0.2
+   },
+   "act": "Grazing the horses",
+   "desc": "Rich grass stretching to the sky, where horse herds grow. Finding it brings domestication closer."
+  }
+ ],
+ "people": [
+  {
+   "id": "furnace_mother",
+   "as": "founder",
+   "name": "Ziya",
+   "epithet": "Mistress of the Furnace",
+   "history": "invented",
+   "desc": "Her furnace gives the cleanest copper in the town.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c08040",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "cast twelve sickles in one day at the house furnace"
+   ]
+  },
+  {
+   "id": "charioteer",
+   "as": "founder",
+   "name": "Asva",
+   "epithet": "the Charioteer",
+   "history": "invented",
+   "desc": "He talks to his two horses as if they were his sons.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.2,
+    "color": "#a05030",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "won the chariot race at the chief's funeral"
+   ]
+  },
+  {
+   "id": "sintashta_chief",
+   "as": "ancestor",
+   "name": "The Charioteer of Sintashta",
+   "epithet": "buried with his horses",
+   "history": "real",
+   "source": "Chariot graves of the Sintashta cemetery, c. 2000 BCE",
+   "desc": "A warrior buried with his chariot, his weapons and his two horses, the oldest charioteer we know."
+  },
+  {
+   "id": "arkaim_builders",
+   "as": "ancestor",
+   "name": "The Builders of Arkaim",
+   "epithet": "of the round town",
+   "history": "real",
+   "source": "Arkaim, c. 2000 BCE, found in 1987 just before it was to be flooded by a reservoir",
+   "desc": "The families who built a town in two perfect rings on the steppe, which burned, and was found again four thousand years later."
+  },
+  {
+   "id": "seima_smith",
+   "as": "wanderer",
+   "name": "Turbin",
+   "epithet": "the Wandering Smith",
+   "history": "invented",
+   "source": "The Seima-Turbino phenomenon: superb bronze spearheads and knives that spread across Eurasia from the Altai around 2000 BCE",
+   "when": {
+    "tech": "tools",
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a smith from the far forests of the east, whose spearheads are cast hollow in a single piece.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 54,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#d0a050",
+    "skills": {
+     "forage": 2,
+     "craft": 6,
+     "combat": 3,
+     "lore": 1,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "cast a socketed spearhead that no one else could copy"
+   ],
+   "desc": "A travelling bronze-caster of the Seima-Turbino kind."
+  },
+  {
+   "id": "chariot_lord",
+   "as": "chosen",
+   "name": "Rathin",
+   "epithet": "Lord of Chariots",
+   "label": "Rathin, Lord of Chariots",
+   "history": "invented",
+   "desc": "The finest charioteer of the steppe. Combat 8, very fast.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 82,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.35,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  },
+  {
+   "id": "copper_queen",
+   "as": "chosen",
+   "name": "Mys",
+   "epithet": "the Copper Queen",
+   "label": "Mys, the Copper Queen",
+   "history": "invented",
+   "desc": "She can find copper by the colour of the grass. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 8,
+     "combat": 2,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "star_watcher",
+   "as": "chosen",
+   "name": "Kuyash",
+   "epithet": "Watcher of the Sky Wheel",
+   "label": "Kuyash, Watcher of the Sky Wheel",
+   "history": "invented",
+   "desc": "He reads the turning of the stars like the turning of a wheel. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "horse_burial",
+   "title": "Horses for the Chief's Journey",
+   "history": "real",
+   "source": "Sintashta chiefs were buried with chariots and with pairs of horses",
+   "when": {
+    "deaths": 2,
+    "tech": "domestication"
+   },
+   "text": "The war chief has died. The elders say he must have his chariot and his two horses in the grave, so he can drive across the sky to the land of the fathers.",
+   "options": [
+    {
+     "label": "Give him his chariot and horses",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "culture": {
+        "ranked": 5
+       }
+      }
+     ],
+     "result": "The chariot goes into the grave with its horses. The whole steppe will hear of this burial."
+    },
+    {
+     "label": "Keep the horses for the living",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      },
+      {
+       "mood": -1
+      }
+     ],
+     "result": "He is buried with a model wheel. The horses graze on."
+    }
+   ]
+  },
+  {
+   "id": "arkaim_fire",
+   "title": "The Round Town Burns",
+   "history": "real",
+   "source": "Arkaim and several Sintashta towns were destroyed by fire",
+   "when": {
+    "after": "wildfire",
+    "invention": "round_town"
+   },
+   "text": "Fire has swept from house to house around the ring. The people stand on the steppe watching the smoke. Rebuild, or take to the wagons?",
+   "options": [
+    {
+     "label": "Rebuild the ring",
+     "cost": {
+      "wood": 30
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 6
+       }
+      }
+     ],
+     "result": "The ring rises again, just as it was."
+    },
+    {
+     "label": "Take to the wagons",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "speed",
+         "mul": 1.03
+        }
+       ]
+      }
+     ],
+     "result": "The people go back to the life of the herds, and spread far across the steppe."
+    }
+   ]
+  },
+  {
+   "id": "sky_wheel",
+   "title": "The Wheel of the Sky",
+   "history": "legend",
+   "source": "Some have claimed Arkaim was an observatory; most archaeologists doubt it",
+   "when": {
+    "invention": "spoked_wheel",
+    "era": 2
+   },
+   "text": "A wheelwright looks up at the night sky turning around the still star in the north, and sees a great wheel with spokes of light. The singers begin to call the sun a chariot.",
+   "do": [
+    {
+     "insight": {
+      "code": 0.1
+     }
+    },
+    {
+     "devotion": 5
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "sun_chariot",
+   "name": "The Chariot of the Sun",
+   "history": "legend",
+   "source": "A shared Indo-European image: the Vedic Surya, the Greek Helios, the Trundholm sun chariot of Denmark",
+   "when": {
+    "day": 2
+   },
+   "text": "Every morning the sun climbs into its golden chariot behind the eastern edge of the steppe, and its horses run across the sky all day without tiring. At night it drives under the earth and comes up again in the east. That is why our chiefs ride to their graves in chariots.",
+   "moral": "what sets will rise again",
+   "do": [
+    {
+     "devotion": 4
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "first_wheel",
+   "name": "The First Spoked Wheel",
+   "history": "invented",
+   "source": "A story made up around the invention of the spoked wheel",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "A smith's daughter watched her father bend a birch rim around a fire and said: why make the wheel heavy as a stone, when the sun has only rays? She cut out the solid planks and set in thin spokes like the sun's. The new wheel was so light that the horses flew.",
+   "moral": "strength can come from emptiness",
+   "do": [
+    {
+     "insight": {
+      "domestication": 0.1
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "copper_mountain",
+   "name": "The Mountain of Green Stone",
+   "history": "invented",
+   "source": "A story in the manner of Ural mining legends",
+   "when": {
+    "find": "malachite"
+   },
+   "text": "In the mountain lives a woman made of green stone, who shows the veins of copper only to those who are honest and patient. Greedy miners find nothing but rock; the patient find seams that run for years.",
+   "moral": "the mountain rewards patience",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "gather",
+       "of": "quarry",
+       "mul": 1.03
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "chariot_race",
+   "name": "The Race Around the Kurgan",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around steppe funeral games",
+   "text": "When the grass is high, the chariots gather at the great mound and race three times around it, so close that the wheels throw up the earth of the grave. The winner pours mare's milk on the mound for the chief who sleeps inside.",
+   "moral": "the living race for the dead",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}
