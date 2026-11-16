@@ -1,4 +1,5 @@
-## Endgames: three ways for the tribe to win its place in legend, and one way to lose it.
+## Endgames: ways for the tribe to win its place in legend, and one way to lose it
+## (config/legacy.json: a path is won when all its conditions are met).
 ##
 ##   Conquest - every neighbouring clan bends the knee as our vassal.
 ##   Unity    - allied with every clan, with a Council Ring where their chiefs can meet.
@@ -13,8 +14,9 @@ extends RefCounted
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 
-const PATHS := ["conquest", "unity", "wisdom"]
-const TITLES := {"conquest": "Victory by Conquest", "unity": "Victory by Unity", "wisdom": "Victory by Wisdom", "defeat": "The Fire Goes Out"}
+## The paths, their conditions and texts: config/legacy.json.
+var C: Dictionary = preload("res://scripts/config.gd").load_cfg("legacy")
+var PATHS: Array = C["paths"].keys()
 
 var sim
 var achieved := {} # path -> day
@@ -26,21 +28,29 @@ func _init(s) -> void:
 
 ## For the Legacy panel: each path with its conditions and whether they are met.
 func progress() -> Array:
+	var out: Array = []
+	for path in C["paths"]:
+		var pd: Dictionary = C["paths"][path]
+		out.append({"path": path, "title": tr(pd["title"]), "desc": tr(pd["desc"]), "conds": pd["conds"].map(func(c): return _cond(c))})
+	return out
+
+## A condition: {count: vassals|allies|techs} (all of them) or {built: structure}.
+func _cond(c: Dictionary) -> Dictionary:
+	if c.has("built"): return {"text": sim.story.text(c["text"]), "done": sim._struct_exists(c["built"])}
 	var R = sim.rivals
-	var ids: Array = R.clans.keys()
-	var vassals: int = ids.filter(func(id): return R.clans[id]["vassal"] > 0).size()
-	var allied: int = ids.filter(func(id): return R.has_treaty(id, "alliance")).size()
-	var known: int = D.TECHS.filter(func(t): return sim.has_tech(t["id"])).size()
-	return [
-		{"path": "conquest", "title": tr(TITLES["conquest"]), "desc": tr("Every neighbouring clan bends the knee."), "conds": [
-			{"text": tr("Clans made our vassals: %d / %d") % [vassals, ids.size()], "done": vassals == ids.size()}]},
-		{"path": "unity", "title": tr(TITLES["unity"]), "desc": tr("The clans of the river become one people."), "conds": [
-			{"text": tr("Alliances with every clan: %d / %d") % [allied, ids.size()], "done": allied == ids.size()},
-			{"text": tr("A Council Ring where the chiefs can meet"), "done": sim._struct_exists("council_ring")}]},
-		{"path": "wisdom", "title": tr(TITLES["wisdom"]), "desc": tr("All that can be known, carved in stone."), "conds": [
-			{"text": tr("Wisdom known: %d / %d") % [known, D.TECHS.size()], "done": known == D.TECHS.size()},
-			{"text": tr("A Grand Altar raised"), "done": sim._struct_exists("grand_altar")}]},
-	]
+	var n := 0
+	var of := 0
+	match str(c.get("count", "")):
+		"vassals":
+			of = R.clans.size()
+			n = R.clans.keys().filter(func(id): return R.clans[id]["vassal"] > 0).size()
+		"allies":
+			of = R.clans.size()
+			n = R.clans.keys().filter(func(id): return R.has_treaty(id, "alliance")).size()
+		"techs":
+			of = D.TECHS.size()
+			n = D.TECHS.filter(func(t): return sim.has_tech(t["id"])).size()
+	return {"text": sim.story.text(c["text"], {"n": n, "of": of}), "done": n == of}
 
 func update(dt: float) -> void:
 	check_t -= dt
@@ -87,7 +97,7 @@ func saga_ctx(path: String) -> Dictionary:
 		clans.append({"clan": tr(c["name"]), "chieftain": tr(c["chief"]), "fate": tr(R.stance(id)) if c["met"] else tr("never met")})
 	var teller := storyteller()
 	return {
-		"path": path, "ending": tr(TITLES[path]), "day": sim.day(), "age": tr(D.ERA_NAMES[sim.evo.era]),
+		"path": path, "ending": tr((C["defeat"] if path == "defeat" else C["paths"][path])["title"]), "day": sim.day(), "age": tr(D.ERA_NAMES[sim.evo.era]),
 		"people_living": sim.living().size(), "people_fallen": sim.units.filter(func(u): return u.dead).size(),
 		"wisdom": D.TECHS.filter(func(t): return sim.has_tech(t["id"])).map(func(t): return tr(t["name"])),
 		"traditions": sim.evo.world_ctx()["traditions"], "culture": sim.evo.culture_summary(),
@@ -100,39 +110,28 @@ func saga_ctx(path: String) -> Dictionary:
 ## Offline saga: stitched from the same facts.
 func saga_offline(ctx: Dictionary) -> String:
 	var lines: Array = []
-	var opening: String = {
-		"conquest": tr("Hear how the tribe of the bonfire became lords of the river."),
-		"unity": tr("Hear how the clans of the river learned to sit at one fire."),
-		"wisdom": tr("Hear how the tribe of the bonfire came to know all that can be known."),
-		"defeat": tr("Hear how the last fire of our tribe went out."),
-	}[ctx["path"]]
+	var pd: Dictionary = C["defeat"] if ctx["path"] == "defeat" else C["paths"][ctx["path"]]
+	var opening: String = tr(pd["opening"])
 	lines.append(opening)
 	for d in ctx["great_deeds"].slice(0, 6):
 		lines.append(tr("%s %s.") % [d["who"], d["deed"]])
 	var fates: Array = ctx["neighbours"].map(func(n): return tr("the %s (%s)") % [n["clan"], n["fate"]])
 	if not fates.is_empty(): lines.append(tr("Our neighbours: %s.") % ", ".join(fates))
-	lines.append({
-		"defeat": tr("After %d days, no one was left to tend the fire. Only the wind remembers us."),
-	}.get(ctx["path"], tr("After %d days, our people still stand, and their tale is told at every fire.")) % ctx["day"])
+	lines.append(tr(pd.get("closing", C["closing"])) % ctx["day"])
 	return "\n".join(lines)
 
 # ------------------------------------------------------------ events
 func event_def(id: String) -> Dictionary:
 	var path := path_of(id)
-	var lived: int = sim.living().size()
-	var text := ""
-	match path:
-		"conquest": text = tr("The last of the neighbouring chiefs has laid down their weapons at our fire. From the ford to the far hills, the clans pay us tribute.")
-		"unity": text = tr("In the Council Ring the chiefs of every clan sit together and share one fire. Where there were three peoples, there is now one.")
-		"wisdom": text = tr("Beneath the Grand Altar the elders recite all that our people know - fire, stone, bronze and the law. Nothing will be forgotten.")
-		"defeat": text = tr("The last of our people has fallen. The bonfire burns down to ash.")
-	var opts: Array = [{"label": tr("Begin anew"), "desc": tr("Start a new chronicle."), "enabled": true}]
-	if path != "defeat": opts.push_front({"label": tr("Continue the chronicle"), "desc": tr("Keep playing: %d people still live.") % lived, "enabled": true})
-	return {"title": tr(TITLES[path]), "text": text, "options": opts}
+	var pd: Dictionary = C["defeat"] if path == "defeat" else C["paths"][path]
+	var co: Dictionary = C["options"]
+	var opts: Array = [{"label": tr(co["restart"]["label"]), "desc": tr(co["restart"]["desc"]), "enabled": true}]
+	if path != "defeat": opts.push_front({"label": tr(co["continue"]["label"]), "desc": sim.story.text(co["continue"]["desc"], {"n": sim.living().size()}), "enabled": true})
+	return {"title": tr(pd["title"]), "text": tr(pd["text"]), "options": opts}
 
 ## Returns {"text", "restart": bool}
 func resolve(id: String, idx: int) -> Dictionary:
 	pending = ""
 	var path := path_of(id)
 	var restart: bool = path == "defeat" or idx == 1
-	return {"text": tr("The chronicle goes on.") if not restart else tr("A new tribe gathers around a new fire."), "restart": restart}
+	return {"text": tr(C["options"]["restart" if restart else "continue"]["result"]), "restart": restart}

@@ -1,0 +1,83 @@
+{
+ "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id). text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
+ "paths": {
+  "conquest": {
+   "title": "Victory by Conquest",
+   "desc": "Every neighbouring clan bends the knee.",
+   "conds": [
+    {
+     "count": "vassals",
+     "text": [
+      "Clans made our vassals: %d / %d",
+      "n",
+      "of"
+     ]
+    }
+   ],
+   "text": "The last of the neighbouring chiefs has laid down their weapons at our fire. From the ford to the far hills, the clans pay us tribute.",
+   "opening": "Hear how the tribe of the bonfire became lords of the river."
+  },
+  "unity": {
+   "title": "Victory by Unity",
+   "desc": "The clans of the river become one people.",
+   "conds": [
+    {
+     "count": "allies",
+     "text": [
+      "Alliances with every clan: %d / %d",
+      "n",
+      "of"
+     ]
+    },
+    {
+     "built": "council_ring",
+     "text": "A Council Ring where the chiefs can meet"
+    }
+   ],
+   "text": "In the Council Ring the chiefs of every clan sit together and share one fire. Where there were three peoples, there is now one.",
+   "opening": "Hear how the clans of the river learned to sit at one fire."
+  },
+  "wisdom": {
+   "title": "Victory by Wisdom",
+   "desc": "All that can be known, carved in stone.",
+   "conds": [
+    {
+     "count": "techs",
+     "text": [
+      "Wisdom known: %d / %d",
+      "n",
+      "of"
+     ]
+    },
+    {
+     "built": "grand_altar",
+     "text": "A Grand Altar raised"
+    }
+   ],
+   "text": "Beneath the Grand Altar the elders recite all that our people know - fire, stone, bronze and the law. Nothing will be forgotten.",
+   "opening": "Hear how the tribe of the bonfire came to know all that can be known."
+  }
+ },
+ "defeat": {
+  "title": "The Fire Goes Out",
+  "text": "The last of our people has fallen. The bonfire burns down to ash.",
+  "opening": "Hear how the last fire of our tribe went out.",
+  "closing": "After %d days, no one was left to tend the fire. Only the wind remembers us."
+ },
+ "closing": "After %d days, our people still stand, and their tale is told at every fire.",
+ "options": {
+  "continue": {
+   "label": "Continue the chronicle",
+   "desc": [
+    "Keep playing: %d people still live.",
+    "n"
+   ],
+   "result": "The chronicle goes on."
+  },
+  "restart": {
+   "label": "Begin anew",
+   "desc": "Start a new chronicle.",
+   "result": "A new tribe gathers around a new fire."
+  }
+ }
+}
