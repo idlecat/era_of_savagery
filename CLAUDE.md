@@ -4,6 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Godot 4.7 (GDScript only) prototype of `docs/PRD.md`: a pause-and-play tribe RTS where node-triggered LLM "Task Contracts" are negotiated once and then executed by a deterministic state machine. README.md documents gameplay systems in detail.
 
+## Principles
+
+**Configuration over hardcoding.** Rules are data; scripts are the machinery that runs them. Tuning numbers, chances, timings, texts, events, dilemmas (choices, costs, outcomes), reactions and their triggers belong in data files (`config/*.json`, culture packs, scenarios, `D.*` tables), not in `match` branches and literals inside the logic. Code provides a small set of named verbs (story actions, reaction responses, effect stats, conditions) and the data picks and parameterizes them. When adding or changing a feature, add keys or a reusable verb rather than a one-off branch; when touching code that still hardcodes these things, move them to data. Reuse the shared formats (one dilemma format, one action runner `story.run()`, one condition checker `story.holds()`) instead of writing another. Keep in code only what must stay trusted or is pure mechanics: the sanitizing of LLM output, pathing, rendering, and the executor itself.
+
+**Ready for an LLM game master.** The goal is a fully LLM-driven experience in which an LLM acts as game master and controls the game through MCP endpoints (reading the world, firing events, posing dilemmas, spawning, changing weather, steering clans and people). Design every system so an external caller could drive it:
+- Every way the game can change is a named operation that takes JSON-shaped arguments (`story.run()` actions, `sim.react.trigger(event, ctx)`, event/dilemma ids, contract plans), not something only reachable from a UI handler or buried in a tick. The HUD should call the same operations a game master would.
+- Every state a game master needs is readable as a plain dictionary (`hz.summary()`, `evo.world_ctx()`, `rivals.summary()`, `folk.summary()`...). Keep these up to date when adding state.
+- Input from outside is untrusted, like LLM contract output: whitelist ids, clamp numbers and map aliases at the boundary (`contracts.sanitize()` style), and never let it bypass the rules.
+- The sim stays deterministic and LLM-free inside its tick; it reports outward through signals (`event_fired`, `log_added`, `alert_raised`, `feat_added`...) that a game master could subscribe to, and an offline fallback (`persona_engine.gd`, the built-in rules) must keep the game playable without one.
+
 ## Commands
 
 ```sh
