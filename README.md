@@ -318,7 +318,7 @@ Beyond the Wisdom Tree, the tribe makes smaller inventions out of what it does e
 | Tools | Fire-Hardened Digging Stick (+25% foraging), Bone Fishhook (needs fish; +40% fishing), Hunting Sling (+2 attack), Carrying Frame (carry 3 more), Bone Needle (needs Hide Tailoring; cold 30% weaker) |
 | Daily goods | Woven Baskets (+30 food storage), Smoking Rack (needs fire; food spoils 30% slower), Salt-Cured Meat (needs salt; another 20%), Bone Flute (mood +5), Fur Bedding (needs Hide Tailoring; mood +3), Clay Lamp (needs Pottery; more lore) |
 
-The **Achievements** button (top bar) lists the inventions made, with who and when, and a hint and progress for each one still to come. It also lists **the tribe's firsts** in order: inventions, wisdom discovered or learned, natural finds, landmarks, clans met, traditions, new ages, masterpieces and outposts. The personas know the tribe's inventions too.
+The **Achievements** button (top bar) lists the inventions made, with who and when, and a hint and progress for each one still to come. It also lists **the tribe's firsts** in order: inventions, wisdom discovered or learned, natural finds, landmarks, clans met, traditions, new ages, masterpieces and outposts. The personas know the tribe's inventions too. Each new first also pauses the game for a moment of celebration: a dialog with a picture of the place where it happened, what it means, who did it, and (for a culture's entries) whether it is history or legend and its source. Several in a row queue up; a checkbox in the dialog turns them off.
 
 ## Cultures
 

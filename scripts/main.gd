@@ -155,6 +155,8 @@ func _enter_tree() -> void:
 func _debug_shot(args: Dictionary) -> void:
 	await get_tree().process_frame
 	while not ready_done: await get_tree().process_frame
+	hud.feat_popups = args.get("demo", "") == "feat" # (achievement dialogs would cover the scenes)
+	hud.feat_queue.clear()
 	var fast := float(args.get("fast", "0"))
 	if fast > 0:
 		hud._close_modal()
@@ -461,6 +463,11 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.evo.breakthrough("fire", sim.living()[1])
 			for i in int(float(args.get("secs", "30")) / STEP): sim.tick(STEP)
 			hud.open_achievements()
+		"feat": # an achievement dialog: a culture invention (or the first base one) made in the village
+			hud._close_modal()
+			for i in int(float(args.get("secs", "6")) / STEP): sim.tick(STEP)
+			var d: Dictionary = sim.cult.list("inventions")[0] if sim.cult.on() else sim.D.INVENTIONS[0]
+			sim.inv.discover(d["id"], sim.living()[0])
 		"heritage": # the culture's Heritage panel: a few things made, found, met and told
 			hud._close_modal()
 			var cu = sim.cult

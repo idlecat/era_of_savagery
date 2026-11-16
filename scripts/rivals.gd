@@ -230,7 +230,8 @@ func _contact(c: Dictionary) -> void:
 		if finder == null or u.pos.distance_to(c["pos"]) < finder.pos.distance_to(c["pos"]): finder = u
 	if finder: sim.remember(finder, tr("was the first to meet the %s on Day %d") % [tr(c["name"]), sim.day()], 7)
 	sim.alert(tr("First contact: the %s!") % tr(c["name"]), c["pos"], "warn")
-	sim.inv.feat("contact", tr("Met the %s") % tr(c["name"]), finder)
+	sim.inv.feat("contact", tr("Met the %s") % tr(c["name"]), finder,
+		{"desc": tr("%s Their chief is %s %s.") % [tr(c["desc"]), tr(c["chief"]), tr(c["epithet"])], "at": c["pos"]})
 	pending.append("contact_" + c["id"])
 
 ## Daily tribute and treaty expiry.

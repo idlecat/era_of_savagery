@@ -93,11 +93,18 @@ func discover(id: String, u: E.Unit) -> void:
 		sim.popup(u.pos + Vector2(0, -50), tr("New %s: %s") % [tr(D.INVENTION_KINDS[d["kind"]]).to_lower(), nm], Color("#9ff0c8"), true)
 	sim.add_log(tr("Invention! %s made the first %s: %s") % [tr(u.name) if u else tr("The tribe"), nm, tr(d["desc"])], "tech", [u] if u else [])
 	sim.folk.lift(3.0)
-	feat("invention", tr("Invented the %s (%s)") % [nm, tr(D.INVENTION_KINDS[d["kind"]]).to_lower()], u)
+	feat("invention", tr("Invented the %s (%s)") % [nm, tr(D.INVENTION_KINDS[d["kind"]]).to_lower()], u,
+		{"desc": tr(d["desc"]), "source": d.get("source", ""), "history": d.get("history", "")})
 
-## Note one of the tribe's firsts for the Achievements panel.
-func feat(kind: String, text: String, who: E.Unit = null) -> void:
-	feats.append({"day": sim.day(), "kind": kind, "text": text, "who": who.name if who else ""})
+## Note one of the tribe's firsts for the Achievements panel (and the HUD's celebration).
+## info: "desc" (what it means, translated), "source" and "history" (culture entries, as
+## keys), "at" (where it happened; default: the one who did it, or the village).
+func feat(kind: String, text: String, who: E.Unit = null, info := {}) -> void:
+	var f := {"day": sim.day(), "kind": kind, "text": text, "who": who.name if who else "",
+		"desc": info.get("desc", ""), "source": info.get("source", ""), "history": info.get("history", ""),
+		"at": info.get("at", who.pos if who else D.VILLAGE)}
+	feats.append(f)
+	sim.feat_added.emit(f)
 
 # ------------------------------------------------------------ effects
 ## Effects are data ({"stat", "mul"|"add", "of"}, see D.EFFECT_STATS) on inventions, on

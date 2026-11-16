@@ -39,6 +39,7 @@ var wear_tex: ImageTexture
 var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
+var clean := false # pictures (the HUD's achievement snapshots): no labels, bars, rings or popups
 var decor: Array = []
 var river_banks: Array = [] # per river: [left bank, right bank] polylines
 var cmd_marker := {}
@@ -592,6 +593,7 @@ func draw_overlay() -> void:
 
 	_draw_weather()
 	_draw_nature()
+	if clean: return
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
 	for f in D.FORDS:
 		var ford_lbl: Vector2 = f["p"] + f["t"] * (D.FORD_LEN + 30.0)

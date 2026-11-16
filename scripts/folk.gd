@@ -220,7 +220,8 @@ func _masterpiece(u: E.Unit, kind: String) -> void:
 	lift(10.0)
 	sim.devotion = minf(100.0, sim.devotion + 5)
 	sim.remember(u, tr("made the %s, a treasure of the tribe, on Day %d") % [tr(what), sim.day()], 8)
-	sim.inv.feat("masterpiece", tr("Made a masterpiece: the %s") % tr(what), u)
+	sim.inv.feat("masterpiece", tr("Made a masterpiece: the %s") % tr(what), u,
+		{"desc": tr("A treasure of the tribe, made by %s. The whole tribe comes to see it, and its mood rises.") % tr(u.name)})
 	sim.alert(tr("%s has made a masterpiece: the %s! The whole tribe comes to see it.") % [tr(u.name), tr(what)], u.pos, "info", [u])
 
 # ------------------------------------------------------------ festivals

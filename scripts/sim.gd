@@ -21,6 +21,7 @@ signal contract_finished(contract)
 signal log_added()
 signal alert_raised(alert)
 signal envoy_arrived(unit, clan_id)
+signal feat_added(feat) # one of the tribe's firsts (inv.feat): the HUD celebrates it
 
 var next_id := 1
 var time := 0.0
@@ -951,7 +952,7 @@ func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	add_log(tr("Discovery! %s found %s: %s") % [tr(u.name), tr(fd["name"]), tr(fd["desc"])], "story", [u])
 	popup(at + Vector2(0, -40), tr("Discovered: %s") % tr(fd["name"]), Color("#ffd36b"), true)
 	remember(u, tr("found %s on Day %d") % [tr(fd["name"]), day()], 6)
-	inv.feat("find", tr("Found %s") % tr(fd["name"]), u)
+	inv.feat("find", tr("Found %s") % tr(fd["name"]), u, {"desc": tr(fd["desc"]), "source": fd.get("source", ""), "history": fd.get("history", ""), "at": at})
 	gain_xp(u, "lore" if fd["group"] == "medicine" else "forage", 5)
 	match id:
 		"flint": evo.seed("tools", 0.45, u)
@@ -2188,7 +2189,8 @@ func _discover(lm: Dictionary) -> void:
 	var finder: E.Unit = null
 	for u in living():
 		if finder == null or u.pos.distance_to(lm["pos"]) < finder.pos.distance_to(lm["pos"]): finder = u
-	inv.feat("landmark", tr("Discovered %s") % tr(lm["name"]), finder)
+	inv.feat("landmark", tr("Discovered %s") % tr(lm["name"]), finder,
+		{"desc": (tr("%s %s.") % [tr(finder.name), tr(lm["text"])]) if finder else "", "at": lm["pos"]})
 	var rw: Dictionary = lm.get("reward", {})
 	var parts: Array = []
 	for k in rw:

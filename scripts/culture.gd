@@ -87,7 +87,7 @@ func _roll(e: Dictionary) -> bool:
 func _chronicle(ev: Dictionary) -> void:
 	sim.add_log("%s — %s" % [tr(ev["title"]), tr(ev["text"])], "story")
 	sim.story.run(ev.get("do", []), null)
-	sim.inv.feat("story", tr(ev["title"]))
+	sim.inv.feat("story", tr(ev["title"]), null, {"desc": tr(ev["text"]), "source": ev.get("source", ""), "history": ev.get("history", "")})
 
 ## Tell a folk tale now (once per tale). The best keeper of lore tells it.
 func tell(id: String) -> void:
@@ -105,7 +105,7 @@ func tell(id: String) -> void:
 		sim.add_log(tr("By the fire, the elders tell the tale of %s: %s") % [tr(t["name"]), tr(t["text"])], "story")
 	sim.folk.lift(1.0)
 	sim.story.run(t.get("do", []), null)
-	sim.inv.feat("tale", tr("Told the tale of %s") % tr(t["name"]), teller)
+	sim.inv.feat("tale", tr("Told the tale of %s") % tr(t["name"]), teller, {"desc": tr(t["text"]), "source": t.get("source", ""), "history": t.get("history", "")})
 
 ## A festival: the people ask for a tale saved for feasts (or any untold one).
 func festival() -> void:
@@ -130,7 +130,7 @@ func join(id: String) -> void:
 	sim.add_log(tr("%s comes to the tribe: %s") % [full, tr(p.get("text", p["desc"]))], "story", [u])
 	sim.popup(at + Vector2(0, -40), tr("%s joins the tribe!") % tr(p["name"]), Color("#ffd36b"), true)
 	sim.remember(u, tr("came to the tribe on Day %d") % sim.day(), 8)
-	sim.inv.feat("hero", tr("%s joined the tribe") % full, u)
+	sim.inv.feat("hero", tr("%s joined the tribe") % full, u, {"desc": tr(p["desc"]), "source": p.get("source", ""), "history": p.get("history", "")})
 
 ## The Chosen One was born from bloodline `def` (one of D.CHOSEN).
 func on_chosen(d: Dictionary) -> void:
@@ -173,7 +173,8 @@ func resolve(id: String, idx: int) -> String:
 	if not _affords(o): o = opts.back() # (can't pay: the last choice, usually "do nothing")
 	for r in o.get("cost", {}): sim.stock[r] -= float(o["cost"][r])
 	sim.story.run(o.get("do", []), null)
-	sim.inv.feat("story", "%s: %s" % [tr(ev["title"]), tr(o["label"])])
+	sim.inv.feat("story", "%s: %s" % [tr(ev["title"]), tr(o["label"])], null,
+		{"desc": tr(o["result"]) if o.has("result") else tr(ev["text"]), "source": ev.get("source", ""), "history": ev.get("history", "")})
 	return tr(o["result"]) if o.has("result") else tr("The tribe chose: %s.") % tr(o["label"])
 
 # ------------------------------------------------------------ what the tribe knows

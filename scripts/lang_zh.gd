@@ -1683,4 +1683,17 @@ const STRINGS := {
 	"Tools & crafts": "工具与技艺",
 	"From the land": "大地物产",
 	"Your people's history and legends: tools, foods, people, happenings and folk tales": "你的族群的历史与传说：工具、食物、人物、大事与民间传说",
+	# ---- achievement dialogs
+	"%s %s.": "%s%s。",
+	"What the tribe has learned has carried it into a new age. New buildings, new wisdom and new choices lie ahead.": "部落所学的一切把它带入了一个新的时代。新的建筑、新的智慧与新的抉择就在前方。",
+	"%s Their chief is %s %s.": "%s他们的首领是%s%s。",
+	"A treasure of the tribe, made by %s. The whole tribe comes to see it, and its mood rises.": "由%s制作的部落珍宝。全族都来观赏，心情随之高涨。",
+	"A new settlement on the frontier: %s.": "边疆上的一处新聚落：%s。",
+	"%s  ACHIEVEMENT  %s": "%s  成就  %s",
+	"by %s": "由%s达成",
+	"by the whole tribe": "由全族达成",
+	"Day %d · %s · the tribe's first no. %d": "第%d天 · %s · 部落的第%d项首创",
+	"Celebrate achievements as they happen": "成就达成时弹出庆祝",
+	"Next (%d more)": "下一个（还有%d个）",
+	"Achievement": "成就",
 }

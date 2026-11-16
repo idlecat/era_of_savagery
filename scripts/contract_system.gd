@@ -933,7 +933,8 @@ func _complete(c: E.Contract) -> void:
 		_release(u)
 		sim.set_job(u, {})
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
-	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % c.plan["plan_id"], ld)
+	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % c.plan["plan_id"], ld,
+		{"desc": tr("A new settlement on the frontier: %s.") % ", ".join(built.map(func(n): return tr(n))), "at": c.site})
 	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [c.plan["plan_id"], what, housing(c.plan)], "contract")
 	sim.contract_finished.emit(c)
 

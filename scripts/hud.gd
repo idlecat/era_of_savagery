@@ -32,6 +32,13 @@ var log_text: RichTextLabel
 var policy_opt: OptionButton
 var build_btns := {}
 var modal: Control = null
+# ---- achievement celebrations (one dialog per first, queued; see _show_feat)
+var feat_popups := true # the player can switch them off; the screenshot harness does
+var feat_queue: Array = []
+var feat_token := -1 # modal_token of the open achievement dialog (-1: none)
+var feat_resume = null # sim.paused before the first dialog of a run
+var snap_vp: SubViewport
+var snap_cam: Camera2D
 var modal_token := 0
 var refresh_t := 0.0
 var log_dirty := true
@@ -82,6 +89,8 @@ func setup(s, w, l) -> void:
 	sim.envoy_arrived.connect(open_parley)
 	sim.contract_finished.connect(func(c): _toast_contract_done(c))
 	sim.alert_raised.connect(_on_alert)
+	sim.feat_added.connect(_on_feat)
+	feat_popups = _feat_pref()
 	world.selection_changed.connect(_refresh_left)
 	world.structure_clicked.connect(func(s): if s.type == "burial_ground": open_graves(s))
 	_refresh_left()
@@ -470,6 +479,7 @@ func _map_tip(delta: float) -> void:
 # ------------------------------------------------------------ periodic refresh
 func _process(delta: float) -> void:
 	if minimap: minimap.queue_redraw()
+	_feat_tick()
 	_map_tip(delta)
 	_expire_alerts()
 	refresh_t -= delta
@@ -1826,6 +1836,155 @@ func open_achievements() -> void:
 	f.text = "\n".join(lines) if not lines.is_empty() else tr("[color=#8a7a60]Nothing yet. Explore, work and learn: every first is written here.[/color]")
 	v.add_child(f)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+# ------------------------------------------------------------ achievement celebrations
+## Each of the tribe's firsts (inv.feat) pauses the game for a dialog with a picture of the
+## place where it happened, what it means and, for culture entries, its source. They queue
+## up and wait while any other dialog (an event, a negotiation) is open.
+const SETTINGS_CFG := "user://settings.cfg"
+const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
+	"era": "☀", "masterpiece": "✿", "outpost": "⌂", "story": "☼", "tale": "❦", "hero": "★"}
+
+func _feat_pref() -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(SETTINGS_CFG) == OK: return bool(cf.get_value("ui", "feat_popups", true))
+	return true
+
+func _set_feat_pref(on: bool) -> void:
+	feat_popups = on
+	var cf := ConfigFile.new()
+	cf.load(SETTINGS_CFG)
+	cf.set_value("ui", "feat_popups", on)
+	cf.save(SETTINGS_CFG)
+
+func _on_feat(f: Dictionary) -> void:
+	if feat_popups: feat_queue.append(f)
+
+## Once a frame: notice when the achievement dialog was closed (button or Esc), and show
+## the next one when nothing else is on screen.
+func _feat_tick() -> void:
+	if feat_token >= 0 and (modal == null or modal_token != feat_token):
+		feat_token = -1
+	if feat_token >= 0 or feat_token == -2: return # (-2: taking the picture)
+	if feat_queue.is_empty():
+		if feat_resume != null and modal == null:
+			sim.paused = feat_resume
+			feat_resume = null
+		return
+	if modal == null and sim.pending_event == "": _show_feat()
+
+## A picture of the world around `at` (world space), drawn by a second camera that shares
+## the world but not the HUD.
+func _snapshot(at: Vector2) -> Texture2D:
+	if snap_vp == null:
+		snap_vp = SubViewport.new()
+		snap_vp.size = Vector2i(640, 300)
+		snap_vp.world_2d = get_viewport().world_2d
+		snap_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		snap_cam = Camera2D.new()
+		snap_vp.add_child(snap_cam)
+		add_child(snap_vp)
+		snap_cam.enabled = true
+		snap_cam.make_current()
+	snap_cam.position = world.iso(at) + Vector2(0, -24)
+	snap_cam.zoom = Vector2(1.6, 1.6)
+	world.clean = true # (just for this frame: the game is paused)
+	world.overlay.queue_redraw()
+	snap_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	await RenderingServer.frame_post_draw
+	world.clean = false
+	world.overlay.queue_redraw()
+	return ImageTexture.create_from_image(snap_vp.get_texture().get_image())
+
+func _show_feat() -> void:
+	var f: Dictionary = feat_queue.pop_front()
+	if feat_resume == null: feat_resume = sim.paused
+	sim.paused = true
+	feat_token = -2
+	var tex: Texture2D = await _snapshot(f["at"])
+	if modal != null: # (something else opened meanwhile: wait for it)
+		feat_queue.push_front(f)
+		feat_token = -1
+		return
+	var fk: Array = FEAT_KINDS.get(f["kind"], ["Achievement", "#ffd36b"])
+	var col := Color(fk[1])
+	var sym: String = FEAT_SYMBOLS.get(f["kind"], "★")
+	var v := _open_modal(tr("%s  ACHIEVEMENT  %s") % [sym, sym], 680)
+	feat_token = modal_token
+	var frame := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color.BLACK
+	sb.border_color = col
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(6)
+	sb.shadow_color = Color(col, 0.35)
+	sb.shadow_size = 10
+	frame.add_theme_stylebox_override("panel", sb)
+	var stack := Control.new()
+	stack.custom_minimum_size = Vector2(640, 300)
+	frame.add_child(stack)
+	var pic := TextureRect.new()
+	pic.texture = tex
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	pic.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stack.add_child(pic)
+	var vig := TextureRect.new() # a soft vignette and a band for the caption
+	var g := Gradient.new()
+	g.set_color(0, Color(0, 0, 0, 0))
+	g.set_color(1, Color(0, 0, 0, 0.75))
+	g.set_offset(0, 0.55)
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.42)
+	gt.fill_to = Vector2(1.05, 1.05)
+	vig.texture = gt
+	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(vig)
+	var tag := _label("%s %s" % [sym, tr(fk[0]).to_upper()], 14, col)
+	tag.position = Vector2(14, 10)
+	tag.add_theme_color_override("font_shadow_color", Color.BLACK)
+	stack.add_child(tag)
+	var cap := _label(f["text"], 24, Color("#fff4dc"))
+	cap.add_theme_color_override("font_shadow_color", Color.BLACK)
+	cap.add_theme_constant_override("shadow_offset_x", 2)
+	cap.add_theme_constant_override("shadow_offset_y", 2)
+	cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cap.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	cap.offset_left = 16
+	cap.offset_right = -16
+	cap.offset_top = -48
+	cap.offset_bottom = -10
+	stack.add_child(cap)
+	v.add_child(frame)
+	var by: String = (tr("by %s") % tr(f["who"])) if f["who"] != "" else tr("by the whole tribe")
+	v.add_child(_label(tr("Day %d · %s · the tribe's first no. %d") % [f["day"], by, sim.inv.feats.find(f) + 1], 14, COL_DIM))
+	if f["desc"] != "":
+		var d := _rich(0, true)
+		d.text = f["desc"]
+		v.add_child(d)
+	if f["source"] != "" or f["history"] != "":
+		var s := _rich(0, true)
+		s.text = _badge(f["history"]).strip_edges() + (("  [color=#8a7a60][i]%s[/i][/color]" % (tr("Source: %s") % tr(f["source"]))) if f["source"] != "" else "")
+		v.add_child(s)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var cb := CheckBox.new()
+	cb.text = tr("Celebrate achievements as they happen")
+	cb.button_pressed = feat_popups
+	cb.toggled.connect(func(on):
+		_set_feat_pref(on)
+		if not on: feat_queue.clear())
+	cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(cb)
+	var more := feat_queue.size()
+	var ok := _button(tr("Next (%d more)") % more if more > 0 else tr("Continue"), func(): _close_modal())
+	ok.custom_minimum_size = Vector2(160, 36)
+	row.add_child(ok)
+	v.add_child(row)
+	ok.grab_focus()
 
 ## Real history or legend? Shown beside every Heritage entry that says.
 const HISTORY_BADGES := {"real": ["Historical", "#9fd0ff"], "legend": ["Legend", "#e8c070"], "invented": ["Imagined", "#c0a8e0"]}

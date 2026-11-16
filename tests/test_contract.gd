@@ -56,6 +56,7 @@ func _initialize() -> void:
 	test_cultures()
 	test_flood_deer()
 	test_dry_beds()
+	test_feat_details()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1547,3 +1548,18 @@ func test_dry_beds() -> void:
 	for i in 400: sim.update_unit(u, 0.05)
 	check(D.river_dist(u.pos) >= sim.nat.flood_half(), "when the flood rises, the sleeper gets up and moves out of it (%d, water to %d)" % [D.river_dist(u.pos), sim.nat.flood_half()])
 	check(u.sleeping or u.act == "Keeping watch" or u.act == "Going to sleep", "and settles down again (%s)" % u.act)
+
+func test_feat_details() -> void:
+	print("\n== Achievements carry their story ==")
+	var sim = _new_sim()
+	var got: Array = []
+	sim.feat_added.connect(func(f): got.append(f))
+	var u = sim.unit_by_name("Tuo")
+	sim.inv.discover("moss_dressing", u)
+	check(got.size() == 1 and got[0]["kind"] == "invention", "a new first is announced (for the HUD to celebrate)")
+	check(got[0]["desc"].contains("40%") and got[0]["at"] == u.pos and got[0]["who"] == "Tuo", "with what it means, who did it and where")
+	sim.discover_find("salt", u, u.pos + Vector2(30, 0))
+	check(got.back()["kind"] == "find" and got.back()["at"] == u.pos + Vector2(30, 0) and got.back()["desc"] != "", "a find is pictured where it was found")
+	sim.evo.adopt("peaceful_ways")
+	check(got.back()["kind"] == "tradition" and got.back()["at"] == D.VILLAGE and got.back()["desc"] != "", "a tribe-wide first is pictured at the village")
+	check(sim.inv.feats.size() == got.size(), "and every one is kept for the Achievements panel")
