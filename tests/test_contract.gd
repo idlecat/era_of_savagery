@@ -54,6 +54,7 @@ func _initialize() -> void:
 	test_water()
 	test_inventions()
 	test_cultures()
+	test_flood_deer()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1510,3 +1511,21 @@ func test_cultures() -> void:
 		break
 	Cultures.reset()
 	Scenarios.apply()
+
+func test_flood_deer() -> void:
+	print("\n== Deer and the spring flood ==")
+	var sim = _new_sim()
+	var deer: Array = sim.nodes.filter(func(n): return n.kind == "deer")
+	var d = deer[0]
+	var c: Vector2 = D.nearest_river_point(D.VILLAGE + Vector2(0, 600))
+	var out: Vector2 = (D.VILLAGE + Vector2(0, 600) - c).normalized()
+	d.pos = c + out * (D.RIVER_HALF + 50.0)
+	d.bank = D.region_at(d.pos)
+	check(sim.nat.flood_half() == D.RIVER_HALF, "no flood: the river is its usual width")
+	sim.nat.flood_left = 40.0
+	check(D.river_dist(d.pos) < sim.nat.flood_half(), "the flood covers the deer's meadow")
+	for i in 100: sim.tick(0.05)
+	check(D.river_dist(d.pos) >= sim.nat.flood_half(), "the deer bounds out of the floodwater (%d from the river, water to %d)" % [D.river_dist(d.pos), sim.nat.flood_half()])
+	var far: Array = sim.nodes.filter(func(n): return n.kind == "deer" and D.river_dist(n.pos) < INF)
+	for i in 200: sim.tick(0.05)
+	check(far.all(func(n): return D.river_dist(n.pos) >= sim.nat.flood_half() - 1.0), "no deer wades into the flood")

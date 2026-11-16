@@ -1670,12 +1670,20 @@ func tick(dt: float) -> void:
 					n.kind = "tree"
 					n.amount = n.max_amount
 			"deer":
-				n.wander_t -= dt
-				if n.wander_t <= 0:
-					n.wander_t = randf_range(2, 5)
-					n.vel = Vector2.from_angle(randf() * TAU) * 14
+				var half: float = nat.flood_half() # (the spring flood swells the river)
+				var info: Dictionary = D.river_info(n.pos) if half > D.RIVER_HALF else {}
+				var fleeing: bool = not info.is_empty() and info["d"] < half + 15.0
+				if fleeing: # the water is rising around it: bound away from the river
+					n.vel = info["n"] * 45.0
+					n.wander_t = 1.0
+				else:
+					n.wander_t -= dt
+					if n.wander_t <= 0:
+						n.wander_t = randf_range(2, 5)
+						n.vel = Vector2.from_angle(randf() * TAU) * 14
 				var np: Vector2 = n.pos + n.vel * dt
-				if not D.in_river(np) and D.region_at(np) == n.bank and np.x > 20 and np.x < D.W - 20 and np.y > 20 and np.y < D.H - 20 and np.distance_to(D.VILLAGE) > 150:
+				var dry: bool = fleeing or half <= D.RIVER_HALF or D.river_dist(np) >= half + 15.0
+				if dry and not D.in_river(np) and D.region_at(np) == n.bank and np.x > 20 and np.x < D.W - 20 and np.y > 20 and np.y < D.H - 20 and np.distance_to(D.VILLAGE) > (0.0 if fleeing else 150.0):
 					n.pos = np
 				else:
 					n.vel = -n.vel

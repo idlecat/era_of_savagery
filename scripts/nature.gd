@@ -320,6 +320,14 @@ func _flood_strike() -> void:
 	sim.alert(tr("The river floods its banks!%s%s") % [caught, what], river_near_home(), "danger")
 	for u in sim.living(): sim.remember(u, tr("saw the river flood in the spring of Year %d") % sim.hz.year(), 3)
 
+## How far from a river's centreline the water reaches now: wider while the spring flood
+## rises, peaks and falls back (as drawn; deer keep out of it).
+func flood_half() -> float:
+	var k := 0.0
+	if flood_left > 0: k = 1.0 if flood_left >= 8.0 else flood_left / 8.0
+	elif flood_at > 0 and sim.time >= flood_at - 15.0: k = clampf(1.0 - (flood_at - sim.time) / 15.0, 0.0, 1.0) * 0.5
+	return D.RIVER_HALF + 110.0 * k
+
 ## The stretch of river nearest the village (where flood alerts point).
 func river_near_home() -> Vector2:
 	return D.nearest_river_point(D.VILLAGE) if not D.RIVERS.is_empty() else D.VILLAGE

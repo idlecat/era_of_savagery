@@ -667,11 +667,10 @@ func _draw_weather() -> void:
 ## Lightning bolts and flashes, falling ash, the swollen spring river.
 func _draw_nature() -> void:
 	var nat = sim.nat
-	if nat.flood_left > 0 or (nat.flood_at > 0 and sim.time >= nat.flood_at - 15.0):
-		var k: float = 1.0 if nat.flood_left > 0 else clampf(1.0 - (nat.flood_at - sim.time) / 15.0, 0.0, 1.0) * 0.5
-		if nat.flood_left > 0 and nat.flood_left < 8.0: k = nat.flood_left / 8.0
+	var half: float = nat.flood_half()
+	if half > D.RIVER_HALF:
+		var k: float = (half - D.RIVER_HALF) / 110.0
 		ci.draw_set_transform_matrix(GROUND)
-		var half: float = D.RIVER_HALF + 110.0 * k
 		for pts in D.RIVERS:
 			var sparse := PackedVector2Array()
 			for i in range(0, pts.size(), 2): sparse.append(pts[i])
