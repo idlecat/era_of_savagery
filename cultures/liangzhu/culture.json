@@ -1,0 +1,691 @@
+{
+ "id": "liangzhu",
+ "order": 65,
+ "name": "Liangzhu",
+ "period": "c. 3300–2300 BCE",
+ "place": "the Yangtze delta, around Lake Tai",
+ "desc": "Rice farmers of the Yangtze delta who built a walled city on the water, protected by the oldest large dams in the world, and carved jade tubes and discs with a staring god-and-beast face that no one has fully explained.",
+ "history": "real",
+ "source": "Excavations at Liangzhu, Yuhang (from 1936), including the Mojiaoshan palace platform and the dam system; a UNESCO World Heritage site since 2019",
+ "tribe_names": [
+  "Fan",
+  "Yao",
+  "Hui",
+  "Mo",
+  "Tang",
+  "Hang",
+  "Zhu",
+  "Shan",
+  "Qin",
+  "Lu",
+  "Ling",
+  "Xi",
+  "Daozi",
+  "Mei",
+  "Bi",
+  "Cong"
+ ],
+ "birth_names": [
+  "Ahe",
+  "Bao",
+  "Huo",
+  "Jing",
+  "Lian",
+  "Miao",
+  "Qiu",
+  "Shui",
+  "Tian",
+  "Ying"
+ ],
+ "epithets": {
+  "cautious": [
+   "Builder of Dams",
+   "Grinder of the Cong"
+  ],
+  "gluttonous": [
+   "Keeper of the Rice Pits"
+  ],
+  "devout": [
+   "Bearer of the God's Face"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "packed reed-wrapped bundles of clay into the dam until it held"
+  ],
+  "gluttonous": [
+   "filled the storage pits with enough rice for three years"
+  ],
+  "devout": [
+   "carved the god's staring eyes on a jade tube"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "liangzhu_dams",
+   "kind": "tool",
+   "name": "High and Low Dams",
+   "history": "real",
+   "source": "Eleven dams north-west of Liangzhu, built around 3100 BCE of clay packed in reed bundles, held back floods and stored water",
+   "practice": {
+    "build": 300,
+    "berry": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ],
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.25
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "Walls of clay in reed bags across the valleys, to hold back the mountain floods and keep water for the dry months: farm plots yield 25% more, +1 defence.",
+   "hint": "Needs farming and the Tribe & Agrarian Era.",
+   "words": [
+    "dams"
+   ]
+  },
+  {
+   "id": "jade_cong",
+   "kind": "goods",
+   "name": "Jade Cong and Bi",
+   "history": "real",
+   "source": "Square jade tubes (cong) and flat discs (bi) carved with the 'god-man-beast' face; the largest cong, from Fanshan tomb M12, weighs 6.5 kg",
+   "practice": {
+    "quarry": 150,
+    "ritual": 200
+   },
+   "needs": {
+    "finds": [
+     "tianmu_jade"
+    ],
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A square tube with a round hole, and a flat disc with a hole, carved with a god riding a beast: rites bring 15% more devotion, +1 mood.",
+   "hint": "Needs jade and Polished Stone Tools."
+  },
+  {
+   "id": "rice_paddies",
+   "kind": "tool",
+   "name": "Rice Paddies",
+   "history": "real",
+   "source": "Field systems at Maoshan near Liangzhu, with ridges and canals, show large-scale paddy farming",
+   "practice": {
+    "berry": 250,
+    "build": 80
+   },
+   "needs": {
+    "finds": [
+     "delta_rice"
+    ],
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    }
+   ],
+   "desc": "Flooded fields divided by low banks, with water let in and out by little canals: farm plots yield 15% more.",
+   "hint": "Needs wild rice and farming."
+  },
+  {
+   "id": "rice_granary",
+   "kind": "goods",
+   "name": "Great Rice Store",
+   "history": "real",
+   "source": "A pit beside the Mojiaoshan palace held some 200,000 kg of burnt rice",
+   "practice": {
+    "build": 150,
+    "berry": 150
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 40
+    }
+   ],
+   "desc": "Pits and halls for the rice of the whole delta: the stores hold 40 more food.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "foods": [
+  {
+   "id": "steamed_rice",
+   "name": "Steamed Rice",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "delta_rice"
+    ],
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Rice steamed soft in a pottery steamer: hunger grows 10% slower.",
+   "hint": "Needs wild rice and pottery."
+  },
+  {
+   "id": "caltrop_lotus",
+   "name": "Water Caltrop and Lotus Root",
+   "history": "real",
+   "source": "Water caltrop and lotus remains are common at Liangzhu and Hemudu sites",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {
+    "finds": [
+     "water_caltrop"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Horned nuts from the ponds and crunchy lotus roots, boiled together: hunger grows 5% slower, food spoils 5% slower.",
+   "hint": "Needs water caltrop."
+  }
+ ],
+ "finds": [
+  {
+   "id": "delta_rice",
+   "name": "Wild Rice",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.08,
+   "winter": false,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 1.5,
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Gathering rice",
+   "desc": "Rice grass in the wet margins of the lakes. Gathering it brings farming closer."
+  },
+  {
+   "id": "water_caltrop",
+   "name": "Water Caltrop",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.07,
+   "winter": false,
+   "where": "river",
+   "count": 3,
+   "practice": "berry",
+   "look": "fish",
+   "act": "Picking water caltrop",
+   "desc": "Floating plants with horned nuts, picked from boats."
+  },
+  {
+   "id": "tianmu_jade",
+   "name": "Mountain Jade",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "amount": 16,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "flint",
+   "act": "Prying out jade",
+   "culture": {
+    "spiritual": 3
+   },
+   "desc": "Pale green jade from the hills to the west: each load is lore."
+  }
+ ],
+ "people": [
+  {
+   "id": "dam_builder",
+   "as": "founder",
+   "name": "Tang Yuan",
+   "epithet": "Builder of Dams",
+   "history": "invented",
+   "desc": "He has watched the floods come down the valleys for forty years.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#7090a0",
+    "skills": {
+     "forage": 2,
+     "craft": 5,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "closed the gap in the dam an hour before the flood came"
+   ]
+  },
+  {
+   "id": "jade_priestess",
+   "as": "founder",
+   "name": "Yao Ling",
+   "epithet": "Keeper of the God's Face",
+   "history": "invented",
+   "desc": "She alone may hold the great cong at the rites.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#90c0a0",
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "held up the great cong to the sky at the summer rite"
+   ]
+  },
+  {
+   "id": "king_of_cong",
+   "as": "ancestor",
+   "name": "The King of Cong",
+   "epithet": "of Fanshan Tomb 12",
+   "history": "real",
+   "source": "Tomb M12 at Fanshan, the richest Liangzhu burial, with the largest jade cong and a jade axe of command",
+   "desc": "A ruler buried with over six hundred jades, including the greatest cong ever found and a jade axe carved with the god."
+  },
+  {
+   "id": "god_beast",
+   "as": "ancestor",
+   "name": "The God Riding the Beast",
+   "epithet": "the staring face",
+   "history": "real",
+   "source": "The 'god-man-beast' emblem carved on Liangzhu jades",
+   "desc": "A feathered figure riding a beast with huge round eyes: the god of Liangzhu, carved on every great jade, whose name is lost."
+  },
+  {
+   "id": "boat_trader",
+   "as": "wanderer",
+   "name": "Chuan",
+   "epithet": "the Boat Trader",
+   "history": "invented",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader who poles a dugout boat through the delta channels, carrying jade, salt and stories from the coast.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#5080a0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2,
+     "trade": 5
+    }
+   },
+   "memory": [
+    "poled a boat through every channel of the delta in one summer"
+   ],
+   "desc": "A boatman of the water towns."
+  },
+  {
+   "id": "dam_lord",
+   "as": "chosen",
+   "name": "Mo Shan",
+   "epithet": "Lord of the Waters",
+   "label": "Mo Shan, Lord of the Waters",
+   "history": "invented",
+   "desc": "He commands the floods to stop, and they do. Crafting 8, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 6,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 3,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "cong_priest",
+   "as": "chosen",
+   "name": "Shen Hui",
+   "epithet": "Face of the God",
+   "label": "Shen Hui, Face of the God",
+   "history": "invented",
+   "desc": "She wears the god's face at the rites. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#9ff0c8",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "axe_bearer",
+   "as": "chosen",
+   "name": "Yue",
+   "epithet": "Bearer of the Jade Axe",
+   "label": "Yue, Bearer of the Jade Axe",
+   "history": "invented",
+   "desc": "He carries the axe that means command. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 2,
+     "craft": 1,
+     "combat": 8,
+     "lore": 2
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "build_dams",
+   "title": "Wall the Valleys",
+   "history": "real",
+   "when": {
+    "after": "spring_flood",
+    "era": 2
+   },
+   "chance": 0.8,
+   "text": "The mountain floods came down again and drowned the lower fields. The builders want to wall off the valleys above the city with clay in reed bags.",
+   "options": [
+    {
+     "label": "Build the dams",
+     "cost": {
+      "wood": 25,
+      "food": 20
+     },
+     "do": [
+      {
+       "invent": "liangzhu_dams"
+      },
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "feat": "Walled the valleys with dams"
+      }
+     ],
+     "result": "Thousands of reed bags of clay, stacked by thousands of hands. The next flood stops at the wall."
+    },
+    {
+     "label": "Move to higher ground",
+     "do": [
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The low fields are left to the water."
+    }
+   ]
+  },
+  {
+   "id": "great_flood_end",
+   "title": "The Water Will Not Go Down",
+   "history": "real",
+   "source": "A layer of flood silt over Liangzhu around 2300 BCE marks the end of the city",
+   "when": {
+    "after": "spring_flood",
+    "era": 3,
+    "pop": 12
+   },
+   "chance": 0.3,
+   "text": "This flood is not like the others. The water stands in the city for months, and mud covers the fields. Some say the god has turned his face away.",
+   "options": [
+    {
+     "label": "Stay and dig out",
+     "cost": {
+      "food": 30
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 6
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "Season after season the mud is cleared. The city lives on, smaller."
+    },
+    {
+     "label": "Scatter to the hills",
+     "do": [
+      {
+       "culture": {
+        "settled": -6
+       }
+      },
+      {
+       "devotion": 5
+      }
+     ],
+     "result": "The people leave the water city. Their jades travel north, and the god's face is carved for a thousand years more."
+    }
+   ]
+  },
+  {
+   "id": "mojiaoshan",
+   "title": "The Great Platform",
+   "history": "real",
+   "source": "The Mojiaoshan platform, an artificial mound about 30 hectares across, carried the palaces of Liangzhu",
+   "when": {
+    "pop": 13,
+    "invention": "rice_granary"
+   },
+   "text": "The chief wants the palace raised on a great platform of earth above the flood, the biggest thing anyone has ever built.",
+   "options": [
+    {
+     "label": "Raise the platform",
+     "cost": {
+      "wood": 30,
+      "food": 25
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 6
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "feat": "Raised the great platform"
+      }
+     ],
+     "result": "Year after year the platform rises. From its top, the whole delta can be seen."
+    },
+    {
+     "label": "Not now",
+     "result": "The palace stays where it is."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "god_face",
+   "name": "The God with Round Eyes",
+   "history": "invented",
+   "source": "A story made up around the Liangzhu emblem",
+   "when": {
+    "day": 2
+   },
+   "text": "Long ago a feathered god came down riding a great beast with eyes like full moons. Where the beast looked, the floods drew back and the rice grew. So we carve its eyes on every jade, so that it keeps looking at our fields.",
+   "moral": "keep the guardian watching",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "square_round",
+   "name": "Why the Cong Is Square Outside and Round Inside",
+   "history": "invented",
+   "source": "A story made up around the jade cong",
+   "when": {
+    "invention": "jade_cong"
+   },
+   "text": "The earth is square and the sky is round. The cong is square outside and round inside, so that the earth can hold the sky within it. When the priest holds the cong up, the sky comes down into the tube and speaks.",
+   "moral": "the earth holds the sky",
+   "do": [
+    {
+     "devotion": 4
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "rice_fish",
+   "name": "The Rice and the Fish",
+   "history": "invented",
+   "source": "A story in the manner of the water towns",
+   "when": {
+    "find": "delta_rice"
+   },
+   "text": "Rice and Fish lived in the same pond. Fish said: your roots muddy my water. Rice said: your tail knocks my stems. So the god divided them, and the rice died of weeds and the fish died of hunger. The god put them back together, and since then they live as friends.",
+   "moral": "neighbours need each other",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "boat_festival",
+   "name": "The Boat Race on the Lake",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the water towns of the delta",
+   "text": "At midsummer every village launches its longest dugout, painted with the god's eyes, and the young men race across the lake. The winning village holds the great jade disc for a year.",
+   "moral": "the lake belongs to all the villages",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,691 @@
+{
+ "id": "zhou",
+ "order": 63,
+ "name": "Zhou",
+ "period": "c. 1046–256 BCE",
+ "place": "the Wei valley and the warring states of the Yellow River",
+ "desc": "The people who overthrew the Shang in the name of the Mandate of Heaven: rule belongs to the virtuous, and heaven takes it from the cruel. In their long decline, the warring states cast the first iron, built crossbows, and produced Confucius, Laozi, Sunzi and the Hundred Schools of thought.",
+ "history": "real",
+ "source": "The Book of Songs, the Book of Documents, the Zuo Zhuan; Western Zhou bronze inscriptions; excavated texts from Warring States tombs",
+ "tribe_names": [
+  "Bozhong",
+  "Chu",
+  "Gong",
+  "Jing",
+  "Kang",
+  "Li",
+  "Mu",
+  "Ping",
+  "Qi",
+  "Shen",
+  "Tai",
+  "You",
+  "Zhao",
+  "Huan",
+  "Xuan",
+  "Jiang"
+ ],
+ "birth_names": [
+  "Ah",
+  "Cai",
+  "Hua",
+  "Jun",
+  "Lan",
+  "Ming",
+  "Ru",
+  "Shi",
+  "Wan",
+  "Yuer"
+ ],
+ "epithets": {
+  "devout": [
+   "Master of Rites",
+   "Singer of the Odes"
+  ],
+  "belligerent": [
+   "Crossbowman"
+  ],
+  "cautious": [
+   "Founder of Iron"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "led the rites at the ancestral temple without a single misstep"
+  ],
+  "belligerent": [
+   "shot a crossbow bolt through a wooden shield at two hundred paces"
+  ],
+  "cautious": [
+   "poured molten iron into a mould for a ploughshare"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "crossbow",
+   "kind": "tool",
+   "name": "Crossbow",
+   "history": "real",
+   "source": "Bronze crossbow trigger mechanisms appear in Warring States tombs from the 5th century BCE",
+   "practice": {
+    "hunt": 200,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ],
+    "era": 3
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 3
+    }
+   ],
+   "desc": "A bow on a stock with a bronze trigger, which anyone can shoot after a day's training: +3 attack.",
+   "hint": "Needs Bronze Metallurgy and the Bronze & Mythic Era.",
+   "words": [
+    "crossbows"
+   ]
+  },
+  {
+   "id": "cast_iron",
+   "kind": "tool",
+   "name": "Cast Iron",
+   "history": "real",
+   "source": "Chinese smiths cast molten iron in moulds by the 5th century BCE, about two thousand years before Europe",
+   "practice": {
+    "quarry": 200,
+    "hearth": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.15
+    },
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Iron melted in hot blast furnaces and poured like bronze into moulds for ploughshares and hoes: farm plots yield 15% more, woodcutting 10% faster.",
+   "hint": "Needs Bronze Metallurgy.",
+   "words": [
+    "iron"
+   ]
+  },
+  {
+   "id": "book_of_songs",
+   "kind": "goods",
+   "name": "The Book of Songs",
+   "history": "real",
+   "source": "305 songs and odes of the Western Zhou and Spring and Autumn periods, said to have been chosen by Confucius",
+   "practice": {
+    "ritual": 150,
+    "hearth": 200
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "lore",
+     "add": 0.01
+    }
+   ],
+   "desc": "Songs of love, work, war and the ancestors, gathered from every state: +3 mood, a little more lore.",
+   "hint": "Needs the Tribe & Agrarian Era, and songs at the fire."
+  },
+  {
+   "id": "rites_music",
+   "kind": "goods",
+   "name": "Rites and Music",
+   "history": "real",
+   "source": "The Duke of Zhou is credited with setting down the rites and music of the Zhou court; bronze bell sets like those of Marquis Yi of Zeng (433 BCE) played whole scales",
+   "practice": {
+    "ritual": 250,
+    "lead": 80
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Every rite in its order, accompanied by bells of bronze tuned to every note: rites bring 10% more devotion, +2 mood.",
+   "hint": "Needs Bronze Metallurgy, and long rites."
+  },
+  {
+   "id": "well_field",
+   "kind": "tool",
+   "name": "The Well-Field",
+   "history": "legend",
+   "source": "Mencius described the 'well-field' system: nine plots like the character 井, eight families each farming one and sharing the work of the middle plot",
+   "practice": {
+    "berry": 200,
+    "lead": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Land divided in nine squares, eight for families and one worked together for the common store: farm plots yield 10% more, +1 mood.",
+   "hint": "Needs farming, and someone to lead."
+  }
+ ],
+ "foods": [
+  {
+   "id": "jiang_paste",
+   "name": "Fermented Paste",
+   "history": "real",
+   "source": "The Rites of Zhou mention dozens of jiang, fermented pastes of meat, fish and beans",
+   "practice": {
+    "hearth": 200,
+    "berry": 80
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Beans or meat salted and left to ferment in sealed jars, to flavour everything: food spoils 10% slower, +1 mood.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "ritual_pork",
+   "name": "Pork for the Rites",
+   "history": "real",
+   "practice": {
+    "hunt": 120,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Pork roasted and shared out after the offerings, each by rank: +3 mood.",
+   "hint": "Needs Beast Domestication."
+  }
+ ],
+ "finds": [
+  {
+   "id": "zhou_soy",
+   "name": "Wild Soybean",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.85,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "tubers",
+   "seed": {
+    "farming": 0.1
+   },
+   "act": "Picking wild beans",
+   "desc": "Twining vines with small hairy pods; the 'shu' of the old songs."
+  },
+  {
+   "id": "iron_sand",
+   "name": "Iron Sand",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.6,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "riverbank",
+   "count": 3,
+   "practice": "quarry",
+   "look": "ochre",
+   "act": "Washing iron sand",
+   "seed": {
+    "bronze": 0.1
+   },
+   "desc": "Heavy black sand in the river bends, full of iron."
+  }
+ ],
+ "people": [
+  {
+   "id": "rites_master",
+   "as": "founder",
+   "name": "Shi Ke",
+   "epithet": "Master of the Rites",
+   "history": "invented",
+   "desc": "He knows where every person should stand in every ceremony.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a090c0",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "sang the ode of King Wen at the ancestral temple"
+   ]
+  },
+  {
+   "id": "farm_mother",
+   "as": "founder",
+   "name": "Jiang Ning",
+   "epithet": "Keeper of the Well-Field",
+   "history": "invented",
+   "desc": "She divides the land so no family has cause to complain.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#80a060",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "laid out nine fields like the sign for a well"
+   ]
+  },
+  {
+   "id": "king_wen",
+   "as": "ancestor",
+   "name": "King Wen",
+   "epithet": "the Cultured",
+   "history": "legend",
+   "source": "Book of Songs; Records of the Grand Historian; tradition credits him with arranging the hexagrams of the Book of Changes",
+   "desc": "The virtuous lord of Zhou, imprisoned by the last Shang king, who is said to have arranged the sixty-four hexagrams of the Changes in prison."
+  },
+  {
+   "id": "duke_zhou",
+   "as": "ancestor",
+   "name": "The Duke of Zhou",
+   "epithet": "Regent and Teacher",
+   "history": "real",
+   "source": "Book of Documents; Confucius dreamed of him all his life",
+   "desc": "The king's uncle who ruled for the boy-king, set down the rites and music, and gave the power back when the king came of age."
+  },
+  {
+   "id": "laozi",
+   "as": "wanderer",
+   "name": "Laozi",
+   "epithet": "the Old Master",
+   "history": "legend",
+   "source": "Records of the Grand Historian: leaving for the west, he wrote the Daodejing for the keeper of the pass",
+   "when": {
+    "era": 3,
+    "day": 8
+   },
+   "chance": 0.4,
+   "text": "an old archivist riding a black ox toward the western pass, who says he is leaving the world, but might stay a while.",
+   "stats": {
+    "traits": [
+     "lazy"
+    ],
+    "hp": 50,
+    "atk": 3,
+    "def": 4,
+    "spd": 0.9,
+    "color": "#e0e0d0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 0,
+     "lore": 9
+    }
+   },
+   "memory": [
+    "wrote five thousand words for the keeper of the pass and rode on"
+   ],
+   "desc": "The legendary author of the Daodejing, who taught that the soft overcomes the hard."
+  },
+  {
+   "id": "confucius",
+   "as": "chosen",
+   "name": "Confucius",
+   "epithet": "the Teacher",
+   "label": "Confucius the Teacher",
+   "history": "real",
+   "desc": "He teaches that a good ruler governs by example. Lore 9.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 2,
+     "lore": 9
+    }
+   }
+  },
+  {
+   "id": "sunzi",
+   "as": "chosen",
+   "name": "Sunzi",
+   "epithet": "Master of War",
+   "label": "Sunzi, Master of War",
+   "history": "real",
+   "desc": "He wins battles without fighting them. Combat 8, Lore 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ff6b6b",
+    "hp": 78,
+    "atk": 10,
+    "def": 6,
+    "spd": 1.05,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 8,
+     "lore": 6
+    }
+   }
+  },
+  {
+   "id": "mozi",
+   "as": "chosen",
+   "name": "Mozi",
+   "epithet": "Defender of Cities",
+   "label": "Mozi, Defender of Cities",
+   "history": "real",
+   "desc": "An engineer who teaches love for all and builds defences for the weak. Crafting 8, Lore 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 5,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 3,
+     "lore": 6
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "mandate",
+   "title": "The Mandate of Heaven",
+   "history": "real",
+   "source": "The Zhou taught that heaven gives the right to rule to the virtuous and withdraws it, with floods, quakes and famine, from the wicked",
+   "when": {
+    "after": "earthquake",
+    "era": 2
+   },
+   "text": "After the earthquake people mutter that heaven is angry with the chief. The elders say: the mandate is not given forever. The chief must show virtue, or another will take it.",
+   "options": [
+    {
+     "label": "Open the granaries to the people",
+     "cost": {
+      "food": 25
+     },
+     "do": [
+      {
+       "mood": 5
+      },
+      {
+       "culture": {
+        "ranked": -2
+       }
+      },
+      {
+       "devotion": 6
+      }
+     ],
+     "result": "Grain goes to every household. The muttering stops: the chief still has the mandate."
+    },
+    {
+     "label": "Punish the mutterers",
+     "do": [
+      {
+       "culture": {
+        "ranked": 5
+       }
+      },
+      {
+       "mood": -5
+      }
+     ],
+     "result": "The mutterers fall silent. In their hearts, they wait."
+    }
+   ]
+  },
+  {
+   "id": "beacon_fires",
+   "title": "The Beacon Fires",
+   "history": "legend",
+   "source": "Records of the Grand Historian: King You lit the beacons to make his consort Bao Si laugh; when enemies really came, no one answered",
+   "when": {
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.3,
+   "text": "The war chief has built beacon towers on the hills to call allies in danger. A young noble wants to light them for fun, to see the allies come running.",
+   "options": [
+    {
+     "label": "Light them, for a laugh",
+     "do": [
+      {
+       "mood": 3
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      },
+      {
+       "spawn": "wolf",
+       "at": "village",
+       "offsets": [
+        [
+         300,
+         -200
+        ],
+        [
+         260,
+         -240
+        ]
+       ]
+      }
+     ],
+     "result": "The allies come running and find nothing. Later, when the wolves come, the fires are lit again, and no one comes."
+    },
+    {
+     "label": "Beacons are not toys",
+     "do": [
+      {
+       "culture": {
+        "martial": 3
+       }
+      }
+     ],
+     "result": "The noble sulks. The beacons stay ready."
+    }
+   ]
+  },
+  {
+   "id": "hundred_schools",
+   "title": "The Hundred Schools",
+   "history": "real",
+   "source": "In the Warring States period, Confucians, Mohists, Daoists, Legalists and many others argued at the courts of rival kings",
+   "when": {
+    "era": 3,
+    "pop": 12
+   },
+   "text": "Teachers have come from every state to argue in our square: one says rule by rites, one by love for all, one by doing nothing, one by strict laws. The young people listen all day.",
+   "do": [
+    {
+     "insight": {
+      "code": 0.3
+     }
+    },
+    {
+     "mood": 2
+    },
+    {
+     "feat": "Heard the Hundred Schools argue"
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "duke_hair",
+   "name": "The Duke Who Held His Hair",
+   "history": "legend",
+   "source": "Records of the Grand Historian; Han Shi Waizhuan",
+   "when": {
+    "day": 2
+   },
+   "text": "The Duke of Zhou was so eager to meet wise men that if one came while he was washing his hair, he would come out holding it in his hand; if one came while he was eating, he would spit out his food. He did this three times at one bath and three times at one meal.",
+   "moral": "make time for the wise",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "guanju",
+   "name": "The Ospreys Cry",
+   "history": "real",
+   "tell": "festival",
+   "source": "Book of Songs, the first ode",
+   "text": "Guan guan cry the ospreys on the island in the river. The lovely, good young woman is a fit match for a gentleman. Long and short grow the floating-hearts; left and right we pick them. The lovely, good young woman: waking and sleeping he longs for her.",
+   "moral": "love is the beginning of all songs",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  },
+  {
+   "id": "butterfly",
+   "name": "The Butterfly Dream",
+   "history": "legend",
+   "source": "Zhuangzi, chapter 2",
+   "when": {
+    "era": 3
+   },
+   "text": "Zhuang Zhou dreamed he was a butterfly, fluttering happily, not knowing he was Zhou. Then he woke, and was Zhou again. But he did not know whether he was Zhou who had dreamed of being a butterfly, or a butterfly now dreaming it was Zhou.",
+   "moral": "who can say what is real?",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "spiritual": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "laozi_water",
+   "name": "Nothing Is Softer than Water",
+   "history": "legend",
+   "source": "Daodejing, chapter 78",
+   "when": {
+    "joined": "laozi"
+   },
+   "text": "Nothing under heaven is softer or weaker than water, the old master said, and yet nothing is better at wearing down the hard and strong. The weak overcomes the strong, the soft overcomes the hard. Everyone knows this; no one can put it into practice.",
+   "moral": "the soft overcomes the hard",
+   "do": [
+    {
+     "culture": {
+      "martial": -3
+     }
+    },
+    {
+     "devotion": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,701 @@
+{
+ "id": "shang",
+ "order": 62,
+ "name": "Shang",
+ "period": "c. 1600–1046 BCE",
+ "place": "the Yellow River plain, with its last capital at Yin (Anyang)",
+ "desc": "The first Chinese dynasty that wrote: its kings asked their ancestors every question by cracking bones and turtle shells and carving the answers beside the cracks. They cast bronze cauldrons weighing nearly a tonne, rode chariots, and counted wealth in cowrie shells.",
+ "history": "real",
+ "source": "Oracle bones, first recognised in 1899; excavations at Yinxu, Anyang (from 1928), including the intact tomb of Fu Hao (1976)",
+ "tribe_names": [
+  "Bin",
+  "Zheng",
+  "Xuan",
+  "Da",
+  "He",
+  "Xing",
+  "Yong",
+  "Huang",
+  "Ya",
+  "Qin",
+  "Ze",
+  "Jing",
+  "Fu Jing",
+  "Que",
+  "Zhi",
+  "Chu"
+ ],
+ "birth_names": [
+  "Bei",
+  "Chen",
+  "Ding",
+  "Geng",
+  "Jia",
+  "Ren",
+  "Wu",
+  "Xin",
+  "Yi",
+  "Gui"
+ ],
+ "epithets": {
+  "devout": [
+   "Diviner of the Bones",
+   "Carver of the Answers"
+  ],
+  "belligerent": [
+   "Charioteer of the King"
+  ],
+  "cautious": [
+   "Caster of the Great Ding"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "cracked a turtle shell and read that the harvest would be good"
+  ],
+  "belligerent": [
+   "drove the king's chariot in the hunt by the river"
+  ],
+  "cautious": [
+   "poured the bronze for a cauldron so big that it took a hundred men"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "oracle_bones",
+   "kind": "goods",
+   "name": "Oracle Bones",
+   "history": "real",
+   "source": "Over 150,000 inscribed ox shoulder blades and turtle plastrons from Anyang, the oldest body of Chinese writing",
+   "practice": {
+    "ritual": 250,
+    "lead": 60
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.02
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Hot bronze pressed to a prepared shell until it cracks; the diviner reads the crack and carves the question and answer: more lore, rites bring 10% more devotion.",
+   "hint": "Needs the Tribe & Agrarian Era, and long rites.",
+   "words": [
+    "writing",
+    "oracle bones"
+   ]
+  },
+  {
+   "id": "great_ding",
+   "kind": "goods",
+   "name": "The Great Cauldron",
+   "history": "real",
+   "source": "The Houmuwu ding (832 kg), cast for a queen mother, is the heaviest ancient Chinese bronze",
+   "practice": {
+    "quarry": 200,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "A four-legged bronze cauldron as heavy as ten oxen, for the meat offered to the ancestors: rites bring 15% more devotion, +2 mood.",
+   "hint": "Needs Bronze Metallurgy."
+  },
+  {
+   "id": "shang_chariot",
+   "kind": "tool",
+   "name": "War Chariots",
+   "history": "real",
+   "source": "Chariots with many-spoked wheels appear suddenly at Anyang around 1200 BCE, buried with their horses",
+   "practice": {
+    "hunt": 150,
+    "build": 100
+   },
+   "needs": {
+    "techs": [
+     "domestication",
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "atk",
+     "add": 2
+    },
+    {
+     "stat": "speed",
+     "mul": 1.03
+    }
+   ],
+   "desc": "Two horses, a driver, an archer and a halberdier on a car of many spokes: +2 attack, everyone travels 3% faster.",
+   "hint": "Needs Beast Domestication and Bronze Metallurgy.",
+   "words": [
+    "chariots"
+   ]
+  },
+  {
+   "id": "cowrie_money",
+   "kind": "goods",
+   "name": "Cowrie Shells",
+   "history": "real",
+   "source": "Cowries from the southern seas were treasured and given as rewards by Shang kings; the character for 'wealth' is drawn with a shell",
+   "practice": {
+    "lead": 100,
+    "explore": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "store",
+     "add": 10
+    }
+   ],
+   "desc": "Little shells from the far sea, strung in tens and given as rewards: +2 mood, the stores hold 10 more.",
+   "hint": "Comes from leading others and from travel."
+  }
+ ],
+ "foods": [
+  {
+   "id": "ancestor_wine",
+   "name": "Wine for the Ancestors",
+   "history": "real",
+   "source": "Shang tombs are full of bronze wine vessels; the Zhou later blamed the Shang's fall on drink",
+   "practice": {
+    "hearth": 200,
+    "ritual": 80
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Millet wine poured from bronze vessels at every feast and rite: +3 mood, rites bring 5% more devotion.",
+   "hint": "Needs pottery and farming."
+  },
+  {
+   "id": "yiyin_soup",
+   "name": "Yi Yin's Broth",
+   "history": "legend",
+   "source": "Lüshi Chunqiu, 'The Root of Flavour': the cook Yi Yin explained ruling by the art of blending tastes",
+   "practice": {
+    "hearth": 250,
+    "hunt": 60
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "A broth balanced in sour, sweet, bitter, hot and salty, as a cook would balance a kingdom: hunger grows 10% slower, +1 mood.",
+   "hint": "Needs pottery, and many hours at the hearth."
+  }
+ ],
+ "finds": [
+  {
+   "id": "river_turtles",
+   "name": "River Turtles",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 18,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "river",
+   "count": 3,
+   "practice": "hunt",
+   "look": "fish",
+   "act": "Catching turtles",
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Turtles of the river shallows; their under-shells are the best for divination. Once known, a little more lore."
+  },
+  {
+   "id": "shang_mulberry",
+   "name": "Mulberry Grove",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.9,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "yarrow",
+   "act": "Picking mulberries",
+   "effects": [
+    {
+     "stat": "cold",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Mulberry trees for fruit and for the silkworms. Once known, silk makes the cold bite 5% less."
+  }
+ ],
+ "people": [
+  {
+   "id": "diviner_que",
+   "as": "founder",
+   "name": "Ke",
+   "epithet": "the Diviner",
+   "history": "invented",
+   "source": "Named after Que, one of the busiest diviners on the oracle bones of King Wu Ding",
+   "desc": "He has cracked a thousand bones and carved every answer.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0a080",
+    "skills": {
+     "forage": 1,
+     "craft": 3,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "asked the bones whether it would rain, and it rained"
+   ]
+  },
+  {
+   "id": "bronze_master",
+   "as": "founder",
+   "name": "Gong",
+   "epithet": "Master of the Foundry",
+   "history": "invented",
+   "desc": "He runs a foundry where a hundred people pour bronze at once.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#a07040",
+    "skills": {
+     "forage": 1,
+     "craft": 5,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "cast a ding with a face on each side that seemed to watch the room"
+   ]
+  },
+  {
+   "id": "pangeng",
+   "as": "ancestor",
+   "name": "Pangeng",
+   "epithet": "who Moved to Yin",
+   "history": "real",
+   "source": "Book of Documents, 'Pangeng'; the move to Yin around 1300 BCE",
+   "desc": "The king who moved the capital to Yin over the people's complaints, and made three speeches to persuade them."
+  },
+  {
+   "id": "yi_yin",
+   "as": "ancestor",
+   "name": "Yi Yin",
+   "epithet": "the Cook Minister",
+   "history": "legend",
+   "source": "Mencius; Lüshi Chunqiu; he is honoured as a high ancestor on the oracle bones",
+   "desc": "A cook who became chief minister to Tang, the founder of Shang, and is said to have once sent a king into exile until he mended his ways."
+  },
+  {
+   "id": "cowrie_trader",
+   "as": "wanderer",
+   "name": "Hai",
+   "epithet": "Trader from the Southern Sea",
+   "history": "invented",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a trader with strings of shining cowrie shells from the warm southern sea, who has walked for half a year.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#e0d0b0",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 1,
+     "lore": 2,
+     "trade": 6
+    }
+   },
+   "memory": [
+    "walked from the coast where the cowries wash up to the king's city"
+   ],
+   "desc": "A trader of the kind who brought cowries north to Shang."
+  },
+  {
+   "id": "fu_hao",
+   "as": "chosen",
+   "name": "Fu Hao",
+   "epithet": "General and Queen",
+   "label": "Fu Hao, General and Queen",
+   "history": "real",
+   "desc": "A queen who leads thirteen thousand into battle and performs the rites herself. Combat 8, Lore 5.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 6,
+    "spd": 1.1,
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 8,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "wu_ding",
+   "as": "chosen",
+   "name": "Wu Ding",
+   "epithet": "the Great King",
+   "label": "Wu Ding the Great King",
+   "history": "real",
+   "desc": "The king of the oracle bones, who asks the ancestors about everything. Lore 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#ffd36b",
+    "hp": 76,
+    "atk": 9,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 6,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "tang",
+   "as": "chosen",
+   "name": "Tang",
+   "epithet": "the Victorious",
+   "label": "Tang the Victorious",
+   "history": "legend",
+   "desc": "He overthrows a tyrant and offers himself for rain. Lore 6, Combat 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#9ff0c8",
+    "hp": 76,
+    "atk": 8,
+    "def": 6,
+    "spd": 1.05,
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 6,
+     "lore": 6
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "ask_bones",
+   "title": "Ask the Ancestors",
+   "history": "real",
+   "source": "Oracle bone inscriptions ask about war, hunts, harvests, rain, childbirth and toothache, often as a pair: 'will it...?' / 'will it not...?'",
+   "when": {
+    "invention": "oracle_bones",
+    "culture": {
+     "martial": 5
+    }
+   },
+   "chance": 0.5,
+   "text": "Raiders have been seen to the west. The chief has the diviner crack a shell: 'If we attack, will the ancestors help us?' The crack runs long and straight.",
+   "options": [
+    {
+     "label": "Attack, as the bones say",
+     "do": [
+      {
+       "culture": {
+        "martial": 5
+       }
+      },
+      {
+       "give": {
+        "food": 15,
+        "goods": 3
+       }
+      },
+      {
+       "remember": "attacked when the bones said yes, and won",
+       "who": "best:combat",
+       "impact": 7
+      }
+     ],
+     "result": "The raid is a success. The diviner carves a note beside the crack: it was so."
+    },
+    {
+     "label": "Ask again, the other way",
+     "do": [
+      {
+       "devotion": 5
+      },
+      {
+       "culture": {
+        "spiritual": 3
+       }
+      }
+     ],
+     "result": "'Will the ancestors NOT help us?' The second crack is crooked. The chief waits, and the raiders move on."
+    }
+   ]
+  },
+  {
+   "id": "move_capital",
+   "title": "Move the Capital",
+   "history": "real",
+   "source": "Book of Documents, 'Pangeng': the people did not want to move, and the king spoke to them three times",
+   "when": {
+    "after": "spring_flood",
+    "pop": 12
+   },
+   "chance": 0.6,
+   "text": "The river has flooded the town again. The chief wants to move everyone to higher ground across the river, but the people do not want to leave their homes.",
+   "options": [
+    {
+     "label": "Persuade them and move",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "def",
+         "add": 1
+        }
+       ]
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "Three speeches later, the people pack up. The new town never floods."
+    },
+    {
+     "label": "Stay and raise the dykes",
+     "cost": {
+      "wood": 15
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 4
+       }
+      }
+     ],
+     "result": "The dykes go up a little higher."
+    }
+   ]
+  },
+  {
+   "id": "wine_pool",
+   "title": "A Pool of Wine",
+   "history": "legend",
+   "source": "Records of the Grand Historian: the last Shang king made a pool of wine and a forest of hanging meat, and lost the mandate",
+   "when": {
+    "era": 3,
+    "pop": 14
+   },
+   "chance": 0.3,
+   "text": "The chief proposes a feast without end: a pool filled with wine, meat hanging from the trees, music day and night. The elders frown.",
+   "options": [
+    {
+     "label": "Hold the great feast",
+     "cost": {
+      "food": 40
+     },
+     "do": [
+      {
+       "mood": 6
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "devotion": -8
+      }
+     ],
+     "result": "For a week no one works. Afterwards, people whisper that heaven has turned its face away."
+    },
+    {
+     "label": "Feast in moderation",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "mood": 2
+      },
+      {
+       "devotion": 3
+      }
+     ],
+     "result": "One good night, and back to the fields."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "black_bird",
+   "name": "The Dark Bird",
+   "history": "legend",
+   "source": "Book of Songs, 'Xuan Niao'; Records of the Grand Historian",
+   "when": {
+    "day": 2
+   },
+   "text": "Heaven commanded the dark bird to come down and give birth to Shang. Jiandi was bathing with her sisters when a swallow dropped an egg; she swallowed it, and bore Xie, the ancestor of the Shang kings.",
+   "moral": "heaven chooses its own",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "tang_rain",
+   "name": "Tang Prays at the Mulberry Grove",
+   "history": "legend",
+   "source": "Lüshi Chunqiu; Mozi",
+   "when": {
+    "after": "drought"
+   },
+   "text": "For five years no rain fell. King Tang cut his hair and nails, went to the mulberry grove and offered himself in place of his people: 'If I have done wrong, do not punish the people for it.' Before he had finished speaking, the rain came.",
+   "moral": "a leader carries the blame",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "cook_minister",
+   "name": "The Cook Who Taught a King",
+   "history": "legend",
+   "source": "Lüshi Chunqiu, 'The Root of Flavour'",
+   "when": {
+    "invention": "yiyin_soup"
+   },
+   "text": "When King Tang asked how to rule, his cook answered with a recipe: the art lies in water and fire, in sour and sweet, bitter, hot and salt, in what comes first and what comes later. A kingdom is like a stew: too much of any one thing spoils it.",
+   "moral": "balance is everything",
+   "do": [
+    {
+     "culture": {
+      "ranked": 2
+     }
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "ancestor_feast",
+   "name": "The Feast of the Ten Days",
+   "history": "real",
+   "tell": "festival",
+   "source": "The Shang ritual calendar, with offerings to each ancestor on his or her day of the ten-day week",
+   "text": "Each ancestor has a day of the ten-day week: Day Jia, Day Yi, Day Bing. On the feast all ten are honoured together, the great cauldrons are filled, and the living eat with the dead.",
+   "moral": "the dead are part of the family",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "devotion": 5
+    }
+   ]
+  }
+ ]
+}

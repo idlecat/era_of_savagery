@@ -1,0 +1,663 @@
+{
+ "id": "jomon",
+ "order": 67,
+ "name": "Jōmon",
+ "period": "c. 14,000–300 BCE",
+ "place": "the islands of Japan",
+ "desc": "Forest and sea foragers of Japan who made some of the oldest pottery in the world, pressed with cord patterns, and later shaped pots like leaping flames. They lived for thousands of years in settled villages without farming, on chestnuts, acorns, fish and shellfish.",
+ "history": "real",
+ "source": "Pottery from Odai Yamamoto I (c. 14,500 BCE); the great village of Sannai-Maruyama, Aomori; shell mounds such as Ōmori, excavated by Edward Morse in 1877",
+ "tribe_names": [
+  "Aki",
+  "Hana",
+  "Iwa",
+  "Kaze",
+  "Kuri",
+  "Mori",
+  "Nami",
+  "Sora",
+  "Taki",
+  "Umi",
+  "Yama",
+  "Kawa",
+  "Hoshi",
+  "Tsuki",
+  "Kai",
+  "Shika"
+ ],
+ "birth_names": [
+  "Ame",
+  "Hi",
+  "Ko",
+  "Mizu",
+  "Natsu",
+  "Sachi",
+  "Tami",
+  "Uta",
+  "Yuki",
+  "Tora"
+ ],
+ "epithets": {
+  "cautious": [
+   "Shaper of Flame Pots",
+   "Keeper of the Chestnut Grove"
+  ],
+  "devout": [
+   "Maker of the Clay Spirits"
+  ],
+  "belligerent": [
+   "Hunter of the Mountain Boar"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "built up a pot with flames on its rim, coil by coil"
+  ],
+  "devout": [
+   "broke a clay figure at the shrine to take away a sickness"
+  ],
+  "belligerent": [
+   "dug a pit trap on the deer path and caught a stag"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "cord_pottery",
+   "kind": "goods",
+   "name": "Cord-Marked Pottery",
+   "history": "real",
+   "source": "Jōmon means 'cord-marked'; pottery from Odai Yamamoto I, about 16,500 years old, is among the oldest in the world",
+   "practice": {
+    "hearth": 200,
+    "berry": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "store",
+     "add": 20
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Deep pots rolled with twisted cord before firing, for boiling nuts and shellfish: the stores hold 20 more, hunger grows 5% slower.",
+   "hint": "Comes from foraging and evenings at the hearth.",
+   "words": [
+    "pots"
+   ]
+  },
+  {
+   "id": "flame_pots",
+   "kind": "goods",
+   "name": "Flame-Style Pots",
+   "history": "real",
+   "source": "Kaen-doki, pots with rims like leaping flames, from the Middle Jōmon of Niigata (c. 3000 BCE)",
+   "practice": {
+    "hearth": 250,
+    "ritual": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Pots whose rims rise into swirling flames and horns, too wild to be only for cooking: +3 mood, rites bring 5% more devotion.",
+   "hint": "Needs pottery, and rites."
+  },
+  {
+   "id": "dogu",
+   "kind": "medicine",
+   "name": "Dogū Figures",
+   "history": "real",
+   "source": "Clay figurines, many with goggle eyes, most found deliberately broken, perhaps to carry away illness",
+   "practice": {
+    "ritual": 200,
+    "hearth": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.1
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Small clay people, broken at the place where the sick person hurts: the sick recover 10% faster, rites bring 5% more devotion.",
+   "hint": "Comes from the rites."
+  },
+  {
+   "id": "six_pillars",
+   "kind": "tool",
+   "name": "The Six-Pillar Tower",
+   "history": "real",
+   "source": "At Sannai-Maruyama six holes held chestnut posts about 1 m thick, set at exactly 4.2 m apart",
+   "practice": {
+    "build": 250,
+    "chop": 150
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "sight",
+     "add": 30
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Six great chestnut trunks raised in two rows, high enough to see the sea: people see much farther, +1 mood.",
+   "hint": "Needs the Tribe & Agrarian Era, and builders who fell great trees."
+  },
+  {
+   "id": "torihama_lacquer",
+   "kind": "goods",
+   "name": "Red Lacquered Combs",
+   "history": "real",
+   "source": "Red lacquered combs and bowls from the Torihama shell mound (c. 5000 BCE)",
+   "practice": {
+    "hearth": 150,
+    "chop": 80
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Wooden combs and bowls coated in red lacquer: +2 mood.",
+   "hint": "Needs fire."
+  }
+ ],
+ "foods": [
+  {
+   "id": "jomon_cookies",
+   "name": "Nut Cookies",
+   "history": "real",
+   "source": "Charred 'Jōmon cookies' of ground chestnut, walnut and acorn flour have been found at several sites",
+   "practice": {
+    "berry": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "chestnut"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Ground chestnuts and walnuts mixed with egg and baked in little cakes: hunger grows 10% slower, food spoils 5% slower.",
+   "hint": "Needs chestnut groves."
+  },
+  {
+   "id": "shellfish_stew",
+   "name": "Shellfish Stew",
+   "history": "real",
+   "practice": {
+    "hunt": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "shell_beds"
+    ],
+    "inventions": [
+     "cord_pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.92
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Clams and oysters boiled in a cord-marked pot with wild greens: hunger grows 8% slower, +1 mood.",
+   "hint": "Needs shellfish beds and cord-marked pottery."
+  }
+ ],
+ "finds": [
+  {
+   "id": "chestnut",
+   "name": "Chestnut Grove",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Sannai-Maruyama's people tended chestnut groves around the village for centuries",
+   "amount": 30,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "forest",
+   "count": 4,
+   "practice": "berry",
+   "look": "mushroom",
+   "act": "Gathering chestnuts",
+   "desc": "Tall chestnut trees, tended like an orchard; the nuts keep all winter."
+  },
+  {
+   "id": "shell_beds",
+   "name": "Shellfish Beds",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "Over two thousand Jōmon shell mounds line Japan's coasts",
+   "amount": 26,
+   "rate": 1.0,
+   "regrow": 0.08,
+   "winter": true,
+   "where": "riverbank",
+   "count": 3,
+   "practice": "hunt",
+   "look": "salt",
+   "act": "Digging clams",
+   "desc": "Clams and oysters in the mud of the shore, easy to gather by the basket."
+  }
+ ],
+ "people": [
+  {
+   "id": "flame_potter",
+   "as": "founder",
+   "name": "Homura",
+   "epithet": "Shaper of Flames",
+   "history": "invented",
+   "desc": "Her pots look as if they are burning even when cold.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c06030",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "built a pot with four flames on its rim for the feast"
+   ]
+  },
+  {
+   "id": "chestnut_keeper",
+   "as": "founder",
+   "name": "Kurio",
+   "epithet": "Keeper of the Chestnuts",
+   "history": "invented",
+   "desc": "He knows every chestnut tree around the village and which ones bear best.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#806030",
+    "skills": {
+     "forage": 5,
+     "craft": 1,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "planted chestnut seedlings that my grandchildren will harvest"
+   ]
+  },
+  {
+   "id": "venus_jomon",
+   "as": "ancestor",
+   "name": "The Jōmon Venus",
+   "epithet": "of Tanabatake",
+   "history": "real",
+   "source": "A complete clay figurine from Tanabatake, Nagano, c. 3000 BCE, a National Treasure of Japan",
+   "desc": "A rare unbroken clay woman with a round belly and a heart-shaped face, found carefully buried in the middle of a village."
+  },
+  {
+   "id": "sannai_people",
+   "as": "ancestor",
+   "name": "The People of Sannai-Maruyama",
+   "epithet": "of the great village",
+   "history": "real",
+   "source": "Sannai-Maruyama, Aomori, lived in for about 1,700 years (c. 3900–2200 BCE)",
+   "desc": "Villagers who lived in one place for seventeen centuries without farming, with long houses, chestnut groves and a tower of six pillars."
+  },
+  {
+   "id": "obsidian_trader",
+   "as": "wanderer",
+   "name": "Kōzu",
+   "epithet": "Obsidian Paddler",
+   "history": "real",
+   "source": "Obsidian from Kōzushima island was carried across open sea to Honshu from over 30,000 years ago",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a paddler who crosses the open sea from an island of black glass, with blades sharper than any flint.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 54,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#303040",
+    "skills": {
+     "forage": 4,
+     "craft": 3,
+     "combat": 3,
+     "lore": 1,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "paddled a dugout across the open sea from the island of black glass"
+   ],
+   "desc": "An islander of the kind who brought Kōzushima obsidian to the mainland; the game names him after the island."
+  },
+  {
+   "id": "goggle_shaman",
+   "as": "chosen",
+   "name": "Me",
+   "epithet": "the Goggle-Eyed Seer",
+   "label": "Me, the Goggle-Eyed Seer",
+   "history": "invented",
+   "desc": "Her eyes are covered like the clay figures', and she sees what others cannot. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 60,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 0,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "pillar_raiser",
+   "as": "chosen",
+   "name": "Hashira",
+   "epithet": "Raiser of Pillars",
+   "label": "Hashira, Raiser of Pillars",
+   "history": "invented",
+   "desc": "He raises chestnut trunks to the sky. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 8,
+     "combat": 2,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "bear_hunter_jomon",
+   "as": "chosen",
+   "name": "Kuma",
+   "epithet": "the Bear Hunter",
+   "label": "Kuma, the Bear Hunter",
+   "history": "invented",
+   "desc": "He faces the brown bear alone with a spear. Combat 8, Foraging 6.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 6,
+     "craft": 1,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "shell_mound",
+   "title": "The Shell Mound Grows",
+   "history": "real",
+   "source": "Jōmon shell mounds held not only shells but careful burials of people and dogs",
+   "when": {
+    "find": "shell_beds",
+    "deaths": 1
+   },
+   "text": "The heap of shells by the village has grown as tall as a house. The elders say it is not rubbish: everything that fed us should be returned with thanks, and our dead and our dogs should rest there too.",
+   "do": [
+    {
+     "devotion": 8
+    },
+    {
+     "culture": {
+      "settled": 3,
+      "spiritual": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "farming_comes",
+   "title": "Strangers with Rice",
+   "history": "real",
+   "source": "Around 1000–300 BCE rice farmers from the continent arrived in Kyushu, beginning the Yayoi period",
+   "when": {
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.4,
+   "text": "Strangers have come by boat from across the western sea, with bronze, and a grass whose seeds they plant in flooded fields. They offer to teach us.",
+   "options": [
+    {
+     "label": "Learn their ways",
+     "do": [
+      {
+       "insight": {
+        "farming": 0.35
+       }
+      },
+      {
+       "culture": {
+        "settled": 5
+       }
+      }
+     ],
+     "result": "The first flooded field is dug beside the chestnut grove."
+    },
+    {
+     "label": "Keep to the forest",
+     "do": [
+      {
+       "culture": {
+        "settled": -3
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The forest has fed us for ten thousand years. It will go on doing so."
+    }
+   ]
+  },
+  {
+   "id": "broken_dogu",
+   "title": "Break the Clay Figure",
+   "history": "real",
+   "when": {
+    "invention": "dogu",
+    "after": "drought"
+   },
+   "text": "Sickness has come with the dry weather. The seer says: make a clay person for each sick one, and break it where they hurt, so the pain goes into the clay.",
+   "options": [
+    {
+     "label": "Make and break the figures",
+     "cost": {
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 8
+      },
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "Broken clay arms and legs are buried at the edge of the village."
+    },
+    {
+     "label": "Rest and warm broth",
+     "do": [
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The sick are kept warm and fed."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "first_pot",
+   "name": "The First Pot",
+   "history": "invented",
+   "source": "A story made up around the oldest pottery in the world",
+   "when": {
+    "day": 2
+   },
+   "text": "A girl made a basket of twisted cord and lined it with clay to carry water. She left it by the fire, and in the morning the cord had burned away and the clay was hard as stone, with the pattern of the cord on it. Since then we roll cord on every pot, to thank the basket.",
+   "moral": "accidents can be gifts",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "pottery": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "chestnut_spirit",
+   "name": "The Spirit of the Chestnut Tree",
+   "history": "invented",
+   "source": "A story in the manner of Japanese tree-spirit tales",
+   "when": {
+    "find": "chestnut"
+   },
+   "text": "The oldest chestnut tree in the grove has a spirit who remembers every child who climbed it. If you thank her when you gather her nuts, she gives more next year; if you break her branches, the squirrels get there first.",
+   "moral": "thank what feeds you",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "gather",
+       "of": "chestnut",
+       "mul": 1.05
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sea_mountain",
+   "name": "The Sea and the Mountain",
+   "history": "invented",
+   "source": "A story in the manner of Japanese folk tales",
+   "when": {
+    "era": 2
+   },
+   "text": "The Mountain gave the people deer, boar and chestnuts; the Sea gave them fish and shells. Each was jealous of the other. So the people carried the Sea's shells up to the Mountain's shrine, and the Mountain's acorns down to the Sea, and the two became friends.",
+   "moral": "carry gifts between those who quarrel",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "martial": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "pillar_festival",
+   "name": "Raising the Great Pillar",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the six pillars of Sannai-Maruyama, and the later Onbashira festival",
+   "text": "Every few years the whole village goes into the mountains, chooses the greatest chestnut tree, and drags it home with ropes, singing. The young people ride on the log down the steep slopes, and it is raised with shouts to stand among the pillars.",
+   "moral": "what we raise together stands",
+   "do": [
+    {
+     "mood": 5
+    }
+   ]
+  }
+ ]
+}

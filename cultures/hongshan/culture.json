@@ -1,0 +1,649 @@
+{
+ "id": "hongshan",
+ "order": 64,
+ "name": "Hongshan",
+ "period": "c. 4700–2900 BCE",
+ "place": "the Liao river and the hills of Inner Mongolia",
+ "desc": "Millet farmers and hunters of north-east China, master carvers of jade, who made curled 'pig-dragons', built round and square stone altars, and kept a temple where a clay goddess looked out with eyes of jade.",
+ "history": "real",
+ "source": "Excavations at Niuheliang (from 1983) and Hongshanhou near Chifeng",
+ "tribe_names": [
+  "Aoha",
+  "Bala",
+  "Chifu",
+  "Dalin",
+  "Erhe",
+  "Gulu",
+  "Hada",
+  "Jiru",
+  "Kele",
+  "Laha",
+  "Mula",
+  "Naiman",
+  "Oula",
+  "Sumu",
+  "Tala",
+  "Wuni"
+ ],
+ "birth_names": [
+  "Ana",
+  "Bagu",
+  "Dudu",
+  "Eru",
+  "Hulu",
+  "Ili",
+  "Mama",
+  "Nuni",
+  "Saga",
+  "Turu"
+ ],
+ "epithets": {
+  "cautious": [
+   "Grinder of Jade",
+   "Builder of the Stone Cairn"
+  ],
+  "devout": [
+   "Keeper of the Goddess"
+  ],
+  "belligerent": [
+   "Hunter of the Boar"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "ground a jade ring with sand and water for a whole winter"
+  ],
+  "devout": [
+   "painted the goddess's lips red before the spring rite"
+  ],
+  "belligerent": [
+   "tracked a wild boar for three days through the oak woods"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "jade_carving",
+   "kind": "goods",
+   "name": "Jade Carving",
+   "history": "real",
+   "source": "Hongshan jades, ground and drilled with sand abrasives: pig-dragons, hooked clouds, turtles and birds",
+   "practice": {
+    "quarry": 150,
+    "ritual": 150
+   },
+   "needs": {
+    "finds": [
+     "nephrite"
+    ],
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Jade too hard to cut, ground for months with sand and water into curled dragons and clouds: rites bring 15% more devotion, +1 mood.",
+   "hint": "Needs nephrite jade and Polished Stone Tools."
+  },
+  {
+   "id": "stone_cairns",
+   "kind": "goods",
+   "name": "Stone Cairn Tombs",
+   "history": "real",
+   "source": "The cairns of Niuheliang: stone-lined graves under mounds edged with painted pottery cylinders",
+   "practice": {
+    "build": 150,
+    "ritual": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "sight",
+     "add": 10
+    }
+   ],
+   "desc": "Mounds of stone over the graves of the great, ringed with painted clay tubes: rites bring 10% more devotion, and people see a little farther.",
+   "hint": "Comes from building and the rites."
+  },
+  {
+   "id": "round_altar",
+   "kind": "goods",
+   "name": "Round and Square Altars",
+   "history": "real",
+   "source": "Stone altars at Niuheliang in three stepped circles, beside square ones, perhaps for heaven and earth",
+   "practice": {
+    "build": 150,
+    "ritual": 200
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.01
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A round altar for the sky and a square one for the earth, laid out in stone: a little more lore, rites bring 5% more devotion.",
+   "hint": "Needs the Tribe & Agrarian Era."
+  },
+  {
+   "id": "painted_tubes",
+   "kind": "goods",
+   "name": "Painted Pottery",
+   "history": "real",
+   "practice": {
+    "hearth": 200
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Red pots painted with black hooks and scales: the stores hold 15 more, +1 mood.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "foods": [
+  {
+   "id": "pine_nut_millet",
+   "name": "Millet with Pine Nuts",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "pine_nuts"
+    ],
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Millet cooked with rich pine nuts from the forest: hunger grows 10% slower.",
+   "hint": "Needs pine nuts and farming."
+  },
+  {
+   "id": "smoked_boar",
+   "name": "Smoked Boar",
+   "history": "real",
+   "practice": {
+    "hunt": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "techs": [
+     "fire"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Wild boar smoked over oak for the winter: food spoils 10% slower, +1 mood.",
+   "hint": "Needs fire."
+  }
+ ],
+ "finds": [
+  {
+   "id": "nephrite",
+   "name": "Nephrite Jade",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "source": "Hongshan jade came from the Xiuyan deposits of Liaoning and other sources",
+   "amount": 16,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "flint",
+   "act": "Prying out jade",
+   "culture": {
+    "spiritual": 3
+   },
+   "desc": "Green stone so tough it cannot be chipped, only ground: each load is lore."
+  },
+  {
+   "id": "pine_nuts",
+   "name": "Korean Pine",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": true,
+   "where": "forest",
+   "count": 3,
+   "practice": "berry",
+   "look": "mushroom",
+   "act": "Gathering pine nuts",
+   "desc": "Great pines whose cones are full of rich, oily nuts that keep all winter."
+  }
+ ],
+ "people": [
+  {
+   "id": "jade_master",
+   "as": "founder",
+   "name": "Yu Na",
+   "epithet": "Grinder of Jade",
+   "history": "invented",
+   "desc": "Her patience is harder than the jade she grinds.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#70b090",
+    "skills": {
+     "forage": 1,
+     "craft": 5,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "carved a pig-dragon so smooth it felt like water"
+   ]
+  },
+  {
+   "id": "boar_hunter",
+   "as": "founder",
+   "name": "Hada Gu",
+   "epithet": "the Boar Hunter",
+   "history": "invented",
+   "desc": "He wears the tusks of every boar he has killed.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#a06040",
+    "skills": {
+     "forage": 3,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "killed a boar with a single spear-thrust in the snow"
+   ]
+  },
+  {
+   "id": "goddess_niuheliang",
+   "as": "ancestor",
+   "name": "The Goddess of Niuheliang",
+   "epithet": "with eyes of jade",
+   "history": "real",
+   "source": "A life-size clay head with inlaid jade eyes, from the 'Goddess Temple' at Niuheliang, c. 3500 BCE",
+   "desc": "A painted clay face with green jade for eyes, found among the broken bodies of other figures in a hilltop temple."
+  },
+  {
+   "id": "jade_man",
+   "as": "ancestor",
+   "name": "The Jade-Bearer of the Central Cairn",
+   "epithet": "lord of the mound",
+   "history": "real",
+   "source": "Central graves at Niuheliang held a single body with jades on the chest, head and hands",
+   "desc": "A man buried alone in the heart of a great cairn, with only jade beside him: no pots, no weapons."
+  },
+  {
+   "id": "south_trader",
+   "as": "wanderer",
+   "name": "Hua Yang",
+   "epithet": "Trader from the South",
+   "history": "invented",
+   "source": "Hongshan painted pottery shows influence from the Yangshao culture to the south",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a traveller from the great river valleys of the south, carrying painted bowls and seed millet.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c06040",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 1,
+     "lore": 2,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "walked a whole season north with painted pots on my back"
+   ],
+   "desc": "A trader of the kind who carried painted pottery between Yangshao and Hongshan."
+  },
+  {
+   "id": "pig_dragon_shaman",
+   "as": "chosen",
+   "name": "Luan",
+   "epithet": "Who Speaks with the Dragon",
+   "label": "Luan, Who Speaks with the Dragon",
+   "history": "invented",
+   "desc": "A shaman who wears two jade dragons on her chest. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#9ff0c8",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "cairn_lord",
+   "as": "chosen",
+   "name": "Shi Ba",
+   "epithet": "Lord of the Cairns",
+   "label": "Shi Ba, Lord of the Cairns",
+   "history": "invented",
+   "desc": "He raises hills of stone over the dead. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "bear_hunter",
+   "as": "chosen",
+   "name": "Xiong",
+   "epithet": "the Bear-Spear",
+   "label": "Xiong, the Bear-Spear",
+   "history": "invented",
+   "desc": "He wears a bear's jaw as a crown. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "goddess_temple",
+   "title": "A House for the Goddess",
+   "history": "real",
+   "source": "The Goddess Temple at Niuheliang, a long building on a hilltop with clay figures and a bear's jaw",
+   "when": {
+    "pop": 10,
+    "era": 2
+   },
+   "text": "The shamans want a long hall on the highest hill, with clay figures of the goddess and her companions, their eyes set with jade.",
+   "options": [
+    {
+     "label": "Build the temple",
+     "cost": {
+      "wood": 20,
+      "food": 10
+     },
+     "do": [
+      {
+       "devotion": 12
+      },
+      {
+       "culture": {
+        "spiritual": 5
+       }
+      },
+      {
+       "feat": "Built the temple of the goddess"
+      }
+     ],
+     "result": "The goddess looks down from the hill with green eyes over all the valleys."
+    },
+    {
+     "label": "The open sky is enough",
+     "do": [
+      {
+       "culture": {
+        "spiritual": -3
+       }
+      }
+     ],
+     "result": "The rites stay under the open sky."
+    }
+   ]
+  },
+  {
+   "id": "dry_steppe",
+   "title": "The Grassland Advances",
+   "history": "real",
+   "source": "A drier climate after about 3000 BCE pushed the Hongshan region toward herding",
+   "when": {
+    "after": "drought",
+    "era": 2
+   },
+   "chance": 0.6,
+   "text": "Each year the millet fields grow thinner and the grassland creeps closer. Some families want to give up farming and follow herds.",
+   "options": [
+    {
+     "label": "Take up herding",
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "insight": {
+        "domestication": 0.2
+       }
+      }
+     ],
+     "result": "Some fields become pasture. The herds grow."
+    },
+    {
+     "label": "Hold to the fields",
+     "do": [
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The fields are kept, thin as they are."
+    }
+   ]
+  },
+  {
+   "id": "jade_burial",
+   "title": "Only Jade",
+   "history": "real",
+   "source": "Hongshan's great tombs contain jades and almost nothing else, a sign that jade was the highest of gifts",
+   "when": {
+    "deaths": 2,
+    "invention": "jade_carving"
+   },
+   "text": "A great elder has died. The jade carvers say: no pots, no weapons, only jade, laid on the chest and over the eyes, so the soul can find its way.",
+   "options": [
+    {
+     "label": "Bury the elder with jade",
+     "cost": {
+      "goods": 3
+     },
+     "do": [
+      {
+       "devotion": 10
+      },
+      {
+       "culture": {
+        "ranked": 4
+       }
+      }
+     ],
+     "result": "The jades go into the grave, cold and green."
+    },
+    {
+     "label": "Keep the jade for the living",
+     "do": [
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The jades stay with the family."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "pig_dragon",
+   "name": "The Pig Who Became a Dragon",
+   "history": "invented",
+   "source": "A story made up around the jade 'pig-dragons'",
+   "when": {
+    "day": 2
+   },
+   "text": "A little pig curled up in the snow to sleep and dreamed it was flying through the clouds. When it woke, the clouds had come down to hold it, and it was a dragon. That is why our dragons are curled like sleeping piglets, and why we carve them in green jade, the colour of the clouds before rain.",
+   "moral": "dreams can change what you are",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "jade_eyes",
+   "name": "The Goddess with Jade Eyes",
+   "history": "invented",
+   "source": "A story made up around the goddess of Niuheliang",
+   "when": {
+    "happened": "goddess_temple"
+   },
+   "text": "The goddess was made of the red clay of the hill, but she had no eyes, and could not see her children. A carver gave her two pieces of the finest green jade, and then she saw everything: every hunter in the forest, every child in the cradle. She watches still.",
+   "moral": "the gods need us to give them eyes",
+   "do": [
+    {
+     "devotion": 6
+    }
+   ]
+  },
+  {
+   "id": "sky_round",
+   "name": "The Sky Is Round, the Earth Is Square",
+   "history": "legend",
+   "source": "A very old Chinese idea, perhaps already shown in the altars of Niuheliang",
+   "when": {
+    "invention": "round_altar"
+   },
+   "text": "The sky is round like a bowl turned over, and the earth beneath it is square like a field. That is why the altar for the sky is a circle and the altar for the earth is a square. Stand between them, and you stand at the middle of the world.",
+   "moral": "know where you stand",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "snow_feast",
+   "name": "The Feast of the First Snow",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the hunting year of the north",
+   "text": "When the first snow falls, the hunters come back from the oak woods with boar and deer, and the whole village gathers at the cairns to eat and to tell the ancestors what the year has brought.",
+   "moral": "share the hunt with the ancestors",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

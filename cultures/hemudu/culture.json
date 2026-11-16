@@ -1,0 +1,621 @@
+{
+ "id": "hemudu",
+ "order": 66,
+ "name": "Hemudu",
+ "period": "c. 5500–3300 BCE",
+ "place": "the marshes south of Hangzhou Bay",
+ "desc": "Marsh-dwelling rice farmers who lived in long houses raised on stilts and joined with mortise and tenon, dug with spades of buffalo shoulder-blade, paddled dugout canoes, and made the oldest lacquered bowl in the world.",
+ "history": "real",
+ "source": "Excavations at Hemudu, Yuyao (1973–78), and at Tianluoshan (from 2004)",
+ "tribe_names": [
+  "Ahe",
+  "Bei",
+  "Chao",
+  "Diao",
+  "Gou",
+  "Hai",
+  "Jiang",
+  "Lu",
+  "Mo",
+  "Niao",
+  "Pu",
+  "Qi",
+  "Si",
+  "Tao",
+  "Wa",
+  "Zhou"
+ ],
+ "birth_names": [
+  "Ah",
+  "Bo",
+  "Da",
+  "Er",
+  "Gu",
+  "Huo",
+  "Miao",
+  "Nan",
+  "Shui",
+  "Xia"
+ ],
+ "epithets": {
+  "cautious": [
+   "Joiner of Timbers",
+   "Painter of Lacquer"
+  ],
+  "gluttonous": [
+   "Digger with the Bone Spade"
+  ],
+  "devout": [
+   "Carver of the Twin Birds"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "cut a tenon so tight that the post never moved in a storm"
+  ],
+  "gluttonous": [
+   "turned a whole field of mud with a buffalo-bone spade"
+  ],
+  "devout": [
+   "carved two birds facing the sun on a piece of ivory"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "stilt_houses",
+   "kind": "tool",
+   "name": "Stilt Houses",
+   "history": "real",
+   "source": "Hemudu's long houses stood on wooden piles above the marsh, their beams joined with mortise and tenon, the oldest such joints known",
+   "practice": {
+    "build": 200,
+    "chop": 120
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.1
+    },
+    {
+     "stat": "sick",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Houses raised on posts above the wet ground, beams locked by carved joints without a single nail: building is 10% faster, the sick recover 5% faster.",
+   "hint": "Comes from building and woodcutting.",
+   "words": [
+    "stilts"
+   ]
+  },
+  {
+   "id": "lacquer_bowl",
+   "kind": "goods",
+   "name": "Red Lacquer Bowl",
+   "history": "real",
+   "source": "A wooden bowl coated with red lacquer from Hemudu, about 7,000 years old, the oldest lacquerware known (Kuahuqiao, nearby, is older still)",
+   "practice": {
+    "hearth": 200,
+    "chop": 80
+   },
+   "needs": {
+    "finds": [
+     "lacquer_tree"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Wooden bowls painted with the sap of the lacquer tree, which dries hard, red and waterproof: +2 mood, food spoils 5% slower.",
+   "hint": "Needs lacquer trees."
+  },
+  {
+   "id": "bone_spade",
+   "kind": "tool",
+   "name": "Bone Spade",
+   "history": "real",
+   "source": "Over a hundred spades made from the shoulder blades of water buffalo and deer were found at Hemudu",
+   "practice": {
+    "berry": 200,
+    "hunt": 60
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.2
+    }
+   ],
+   "desc": "A buffalo's shoulder blade lashed to a handle, to turn the mud of the rice fields: farm plots yield 20% more.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "dugout_paddle",
+   "kind": "tool",
+   "name": "Dugout Canoe and Paddle",
+   "history": "real",
+   "source": "Wooden paddles from Hemudu and an 8,000-year-old dugout canoe from nearby Kuahuqiao",
+   "practice": {
+    "hunt": 150,
+    "chop": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.2
+    },
+    {
+     "stat": "speed",
+     "mul": 1.02
+    }
+   ],
+   "desc": "A hollowed log and a carved paddle for the marsh channels: fishing yields 20% more, everyone moves 2% faster.",
+   "hint": "Comes from hunting and woodcutting."
+  }
+ ],
+ "foods": [
+  {
+   "id": "marsh_rice",
+   "name": "Boiled Rice",
+   "history": "real",
+   "source": "Hemudu yielded huge quantities of rice husks and grains, early evidence of rice farming",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "finds": [
+     "marsh_wild_rice"
+    ],
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Rice boiled in black cord-marked pots: hunger grows 10% slower.",
+   "hint": "Needs wild rice and pottery."
+  },
+  {
+   "id": "acorn_flour",
+   "name": "Acorn Flour",
+   "history": "real",
+   "source": "Storage pits full of acorns were found at Hemudu and Tianluoshan",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.92
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.97
+    }
+   ],
+   "desc": "Acorns soaked to wash out the bitterness and ground to flour that keeps for years: food spoils 8% slower.",
+   "hint": "Comes from foraging."
+  }
+ ],
+ "finds": [
+  {
+   "id": "marsh_wild_rice",
+   "name": "Marsh Rice",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.08,
+   "winter": false,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 1.5,
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Gathering rice",
+   "desc": "Rice grass in the marsh shallows. Gathering it brings farming closer."
+  },
+  {
+   "id": "lacquer_tree",
+   "name": "Lacquer Trees",
+   "group": "food",
+   "res": "goods",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.6,
+   "regrow": 0.03,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "chop",
+   "look": "willow",
+   "act": "Tapping lacquer",
+   "desc": "Trees whose sap stings the skin but dries into a hard, shining coat."
+  }
+ ],
+ "people": [
+  {
+   "id": "joiner",
+   "as": "founder",
+   "name": "Mu Sun",
+   "epithet": "the Joiner",
+   "history": "invented",
+   "desc": "He can fit two beams together so they never come apart.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a07840",
+    "skills": {
+     "forage": 1,
+     "craft": 5,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "raised the long house on its posts before the summer floods"
+   ]
+  },
+  {
+   "id": "rice_mother",
+   "as": "founder",
+   "name": "He Mu",
+   "epithet": "Mother of the Rice",
+   "history": "invented",
+   "desc": "She knows which plants carry the most grains and saves their seed.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 50,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0b060",
+    "skills": {
+     "forage": 5,
+     "craft": 1,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "chose the seed rice from the heaviest heads for ten years"
+   ]
+  },
+  {
+   "id": "twin_birds_carver",
+   "as": "ancestor",
+   "name": "The Carver of the Twin Birds",
+   "epithet": "who carved the sun",
+   "history": "real",
+   "source": "The ivory plaque 'Twin Birds Facing the Sun' from Hemudu (Zhejiang Provincial Museum)",
+   "desc": "An unknown artist who carved two birds facing a blazing sun on a piece of ivory, seven thousand years ago."
+  },
+  {
+   "id": "tianluoshan",
+   "as": "ancestor",
+   "name": "The People of Snail Hill",
+   "epithet": "who left their village to the mud",
+   "history": "real",
+   "source": "Tianluoshan, a waterlogged Hemudu village with wooden posts still standing, excavated from 2004",
+   "desc": "A village so well preserved in the waterlogged ground that its house posts, paddles and acorn pits survived seven thousand years."
+  },
+  {
+   "id": "sea_fisher",
+   "as": "wanderer",
+   "name": "Yu Hai",
+   "epithet": "Fisher of the Open Sea",
+   "history": "invented",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a fisher who has paddled a dugout along the coast from the islands, with tales of whales.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#3070a0",
+    "skills": {
+     "forage": 5,
+     "craft": 2,
+     "combat": 2,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "paddled from island to island for a whole moon"
+   ],
+   "desc": "A sea-going fisher of the kind whose descendants would one day sail into the Pacific."
+  },
+  {
+   "id": "sun_bird_shaman",
+   "as": "chosen",
+   "name": "Yang Niao",
+   "epithet": "Who Calls the Sun",
+   "label": "Yang Niao, Who Calls the Sun",
+   "history": "invented",
+   "desc": "When she sings, the sun-birds bring the morning. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#ffd36b",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 0,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "master_joiner",
+   "as": "chosen",
+   "name": "Ban Mu",
+   "epithet": "Master of Joints",
+   "label": "Ban Mu, Master of Joints",
+   "history": "invented",
+   "desc": "No house he builds ever falls. Crafting 9.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 9,
+     "combat": 1,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "buffalo_rider",
+   "as": "chosen",
+   "name": "Niu Ge",
+   "epithet": "the Buffalo-Rider",
+   "label": "Niu Ge, the Buffalo-Rider",
+   "history": "invented",
+   "desc": "He rides the great water buffalo into the marsh. Combat 7, Foraging 7.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 82,
+    "atk": 10,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 7,
+     "craft": 1,
+     "combat": 7,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "sea_rises",
+   "title": "The Sea Comes In",
+   "history": "real",
+   "source": "Rising seas and floods repeatedly buried Hemudu villages under marine silt",
+   "when": {
+    "after": "spring_flood"
+   },
+   "text": "Salt water has flooded the rice fields and the lower houses. The elders say the sea is hungry this year.",
+   "options": [
+    {
+     "label": "Raise the houses higher",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.03
+        }
+       ]
+      }
+     ],
+     "result": "New posts, taller than before. The next flood passes underneath."
+    },
+    {
+     "label": "Move up the valley",
+     "do": [
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The village moves inland. The old posts stay in the mud."
+    }
+   ]
+  },
+  {
+   "id": "buffalo_spade",
+   "title": "The Buffalo Gives Its Bones",
+   "history": "real",
+   "when": {
+    "invention": "bone_spade",
+    "pop": 10
+   },
+   "text": "A great water buffalo has been killed in the hunt. The farmers ask for its shoulder blades for spades; the hunters want its horns for the shrine.",
+   "options": [
+    {
+     "label": "Spades for the fields",
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "yield",
+         "of": "farm_plot",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "Two new spades turn the mud by evening."
+    },
+    {
+     "label": "Horns for the shrine",
+     "do": [
+      {
+       "devotion": 8
+      }
+     ],
+     "result": "The horns hang over the shrine, black and curved."
+    }
+   ]
+  },
+  {
+   "id": "pig_figure",
+   "title": "The Pig on the Pot",
+   "history": "real",
+   "source": "A black pottery bowl from Hemudu is incised with a pig, and a small clay pig figure was also found",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "The first pigs have been kept in a pen beside the houses all year. A potter scratches one on the side of a bowl, and the children laugh.",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "give": {
+      "food": 10
+     }
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "twin_birds_sun",
+   "name": "Two Birds Carry the Sun",
+   "history": "invented",
+   "source": "A story made up around the ivory 'Twin Birds Facing the Sun'",
+   "when": {
+    "day": 2
+   },
+   "text": "Every night the sun falls into the eastern sea and is too heavy to climb out alone. Two great birds dive into the water, take it between them and fly it up into the sky. When you hear the birds singing at dawn, they are telling each other they have done it again.",
+   "moral": "even the sun needs help",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "first_rice",
+   "name": "The Dog Who Brought Rice",
+   "history": "legend",
+   "source": "A widespread South Chinese folk tale",
+   "when": {
+    "find": "marsh_wild_rice"
+   },
+   "text": "After the great flood there was nothing left to plant. A dog swam across the water to the land of the gods, rolled in their rice fields, and swam back. Only the seeds caught on the tip of its tail stayed dry. That is why rice grains grow only at the tip of the stalk, and why we give the dog the first bowl of new rice.",
+   "moral": "honour the humble helper",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "farming": 0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "lacquer_red",
+   "name": "Why Lacquer Is Red",
+   "history": "invented",
+   "source": "A story made up around the oldest lacquer bowls",
+   "when": {
+    "invention": "lacquer_bowl"
+   },
+   "text": "The lacquer tree's sap stings anyone who cuts it. A woman whose hands were raw from it mixed the sap with red earth and painted her bowl, and it shone like a sunrise and never leaked. She said: the tree bites, but it gives back more than it takes.",
+   "moral": "what hurts may also give",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "harvest_marsh",
+   "name": "The Rice Harvest by Canoe",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the marsh harvest",
+   "text": "When the rice is ripe, the whole village paddles out in canoes between the stalks, cutting the heads and singing. At night, the first rice is cooked in the black pots and the old ones tell how the dog brought it.",
+   "moral": "the harvest belongs to everyone",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

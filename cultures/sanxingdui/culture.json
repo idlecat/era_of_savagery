@@ -1,0 +1,657 @@
+{
+ "id": "sanxingdui",
+ "order": 61,
+ "name": "Sanxingdui and Ancient Shu",
+ "period": "c. 1700–1150 BCE",
+ "place": "the Chengdu plain, Sichuan",
+ "desc": "An unknown kingdom of the Sichuan basin whose sacrificial pits held bronze heads with bulging eyes, a standing bronze figure taller than a man, bronze trees with birds on their branches, gold masks and hundreds of elephant tusks, unlike anything else in ancient China.",
+ "history": "real",
+ "source": "The sacrificial pits of Sanxingdui, found in 1986 and more since 2020; the Jinsha site in Chengdu; the Chronicles of Huayang",
+ "tribe_names": [
+  "Ba",
+  "Ce",
+  "Duo",
+  "E",
+  "Guan",
+  "Han",
+  "Jian",
+  "Kun",
+  "Lu",
+  "Min",
+  "Qiong",
+  "Ruo",
+  "Tang",
+  "Ya",
+  "Yanzi",
+  "Zhuo"
+ ],
+ "birth_names": [
+  "Ah",
+  "Bu",
+  "Ding",
+  "Gu",
+  "Jin",
+  "Mu",
+  "Niao",
+  "Shi",
+  "Xiang",
+  "Yuer"
+ ],
+ "epithets": {
+  "devout": [
+   "Bearer of the Bronze Mask",
+   "Watcher of the Sun-Birds"
+  ],
+  "cautious": [
+   "Beater of Gold Leaf"
+  ],
+  "gluttonous": [
+   "Fisher of the Min River"
+  ]
+ },
+ "memories": {
+  "devout": [
+   "wore the great mask with the long eyes at the spring rite"
+  ],
+  "cautious": [
+   "beat a lump of gold into a mask as thin as a leaf"
+  ],
+  "gluttonous": [
+   "caught a fish as long as my arm with a cormorant"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "bronze_masks",
+   "kind": "goods",
+   "name": "Bronze Masks",
+   "history": "real",
+   "source": "Bronze heads and masks from Sanxingdui, some with cylindrical eyes jutting out, the largest over 1.3 m wide",
+   "practice": {
+    "ritual": 200,
+    "quarry": 100
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Great bronze faces with eyes that stare out of their heads, to let the spirits see: rites bring 15% more devotion, +1 mood.",
+   "hint": "Needs Bronze Metallurgy, and long rites."
+  },
+  {
+   "id": "bronze_tree",
+   "kind": "goods",
+   "name": "Bronze Sacred Tree",
+   "history": "real",
+   "source": "Bronze tree no. 1 from Sanxingdui, nearly 4 m tall, with nine birds on its branches and a dragon climbing down the trunk",
+   "practice": {
+    "build": 150,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ],
+    "era": 3
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "A tree of bronze reaching from earth to sky, with sun-birds on its branches: +3 mood, rites bring 5% more devotion.",
+   "hint": "Needs Bronze Metallurgy and the Bronze & Mythic Era."
+  },
+  {
+   "id": "gold_leaf",
+   "kind": "goods",
+   "name": "Gold Leaf",
+   "history": "real",
+   "source": "Gold masks from Sanxingdui and the gold foil 'Sun and Immortal Birds' from Jinsha, now the emblem of Chinese cultural heritage",
+   "practice": {
+    "hearth": 150,
+    "ritual": 100
+   },
+   "needs": {
+    "finds": [
+     "shu_gold"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Gold beaten as thin as paper and cut into masks and circles of flying birds: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs gold."
+  },
+  {
+   "id": "bieling_channels",
+   "kind": "tool",
+   "name": "Bieling's Channels",
+   "history": "legend",
+   "source": "Chronicles of Huayang: Bieling cut through the mountains to drain the flood of the Chengdu plain; Li Bing's Dujiangyan (256 BCE) later did the same",
+   "practice": {
+    "build": 250,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming",
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.25
+    }
+   ],
+   "desc": "Channels cut to spread the mountain river across the plain instead of letting it flood: farm plots yield 25% more.",
+   "hint": "Needs farming and Polished Stone Tools.",
+   "words": [
+    "canals"
+   ]
+  }
+ ],
+ "foods": [
+  {
+   "id": "pepper_fish",
+   "name": "Fish with Sichuan Pepper",
+   "history": "real",
+   "source": "Sichuan pepper (huajiao) is native to the region and was used in China from very early times",
+   "practice": {
+    "hunt": 100,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "sichuan_pepper",
+     "fish"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "River fish cooked with the numbing red pepper of the hills: +3 mood, hunger grows 5% slower.",
+   "hint": "Needs Sichuan pepper and fish."
+  },
+  {
+   "id": "plain_rice",
+   "name": "Rice of the Plain",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Rice from the wet fields of the plain, boiled in pots: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  }
+ ],
+ "finds": [
+  {
+   "id": "sichuan_pepper",
+   "name": "Sichuan Pepper Bushes",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 16,
+   "rate": 0.8,
+   "regrow": 0.04,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking pepper husks",
+   "desc": "Thorny shrubs with red husks that make the tongue tingle."
+  },
+  {
+   "id": "shu_gold",
+   "name": "River Gold",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.5,
+   "regrow": 0.01,
+   "winter": true,
+   "where": "riverbank",
+   "count": 2,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Panning gold",
+   "desc": "Glittering grains in the river sand below the mountains."
+  }
+ ],
+ "people": [
+  {
+   "id": "mask_priest",
+   "as": "founder",
+   "name": "Mu Ya",
+   "epithet": "Priest of the Long Eyes",
+   "history": "invented",
+   "desc": "When he wears the mask, he says, he can see beyond the mountains.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c0a040",
+    "skills": {
+     "forage": 1,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "led the procession of masks around the bronze tree"
+   ]
+  },
+  {
+   "id": "cormorant_fisher",
+   "as": "founder",
+   "name": "Yu Fu",
+   "epithet": "Master of Cormorants",
+   "history": "invented",
+   "desc": "His birds bring him fish from the bottom of the river.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 54,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#507090",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "trained a cormorant that brought back seven fish in an hour"
+   ]
+  },
+  {
+   "id": "cancong",
+   "as": "ancestor",
+   "name": "Cancong",
+   "epithet": "the King with Vertical Eyes",
+   "history": "legend",
+   "source": "Chronicles of Huayang; Li Bai, 'Hard is the Road to Shu'",
+   "desc": "The first king of Shu, whose eyes stood out from his head; he taught the people to raise silkworms."
+  },
+  {
+   "id": "yufu",
+   "as": "ancestor",
+   "name": "Yufu",
+   "epithet": "the Fisher King",
+   "history": "legend",
+   "source": "Chronicles of Huayang",
+   "desc": "An early king of Shu whose name means 'fish-hawk', remembered for his hunting and fishing, and said to have become an immortal."
+  },
+  {
+   "id": "zhang_trader",
+   "as": "wanderer",
+   "name": "Luo Zhang",
+   "epithet": "Bearer of the Jade Blade",
+   "history": "invented",
+   "source": "Jade yazhang blades of the Erlitou type were found at Sanxingdui, showing contact with the Central Plains",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "a traveller who has come over the mountain roads from the north with a jade blade, the sign of the kings of the Central Plains.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#80b090",
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 3,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "crossed the plank roads clinging to the cliffs above the Jialing"
+   ],
+   "desc": "A traveller from the Central Plains, of the kind who brought jade blades to Shu."
+  },
+  {
+   "id": "duyu",
+   "as": "chosen",
+   "name": "Duyu",
+   "epithet": "the Cuckoo King",
+   "label": "Duyu, the Cuckoo King",
+   "history": "legend",
+   "desc": "He teaches the people to farm, and becomes a cuckoo. Foraging 7, Lore 5.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#9ff0c8",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 7,
+     "craft": 3,
+     "combat": 2,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "bieling",
+   "as": "chosen",
+   "name": "Bieling",
+   "epithet": "who Drained the Flood",
+   "label": "Bieling, who Drained the Flood",
+   "history": "legend",
+   "desc": "A dead man who floated upstream and came to life to tame the waters. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "bronze_giant",
+   "as": "chosen",
+   "name": "The Standing One",
+   "epithet": "Great Shaman of Shu",
+   "label": "The Standing One, Great Shaman of Shu",
+   "history": "invented",
+   "desc": "Taller than any man, his empty hands once held something no one remembers. Lore 7, Combat 6.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#d4a050",
+    "hp": 80,
+    "atk": 8,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 6,
+     "lore": 7
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "bury_treasures",
+   "title": "Break and Bury the Treasures",
+   "history": "real",
+   "source": "The Sanxingdui pits held bronzes, jades and tusks that had been deliberately broken, burned and buried; why is still unknown",
+   "when": {
+    "era": 3,
+    "invention": "bronze_masks"
+   },
+   "text": "The priests say the old masks and vessels have served their time. They must be broken, burned and buried in a pit with the tusks, and new ones made.",
+   "options": [
+    {
+     "label": "Break and bury them",
+     "cost": {
+      "goods": 4
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "culture": {
+        "spiritual": 5
+       }
+      },
+      {
+       "feat": "Buried the old treasures in the sacred pit"
+      }
+     ],
+     "result": "The pit is filled and covered. Three thousand years later, someone will dig it up and the world will gasp."
+    },
+    {
+     "label": "Keep them",
+     "do": [
+      {
+       "mood": 1
+      },
+      {
+       "devotion": -5
+      }
+     ],
+     "result": "The old masks stay on their stands. The priests are uneasy."
+    }
+   ]
+  },
+  {
+   "id": "river_moves",
+   "title": "The Earthquake Moves the River",
+   "history": "real",
+   "source": "One theory holds that an earthquake around 1100 BCE dammed the Min and moved the river away from Sanxingdui, and the capital moved to Jinsha",
+   "when": {
+    "after": "earthquake"
+   },
+   "text": "The ground shook, a hillside fell into the river, and now the water runs far from the town. The elders argue about whether to follow it.",
+   "options": [
+    {
+     "label": "Move to the new river",
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "gather",
+         "of": "fish",
+         "mul": 1.05
+        }
+       ]
+      }
+     ],
+     "result": "A new town is built by the river, on the site the people call 'the Golden Sand'."
+    },
+    {
+     "label": "Dig a channel to the old town",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": 5
+       }
+      }
+     ],
+     "result": "The water comes back to the old walls."
+    }
+   ]
+  },
+  {
+   "id": "elephant_tusks",
+   "title": "Tusks from the Southern Forests",
+   "history": "real",
+   "source": "Over a thousand elephant tusks were found at Sanxingdui and Jinsha; wild elephants then lived in the region",
+   "when": {
+    "era": 2,
+    "day": 6
+   },
+   "chance": 0.4,
+   "text": "Hunters come back from the southern forests with the tusks of elephants. The priests want them for the great rites; the carvers want them for combs and bracelets.",
+   "options": [
+    {
+     "label": "Give them to the gods",
+     "do": [
+      {
+       "devotion": 10
+      }
+     ],
+     "result": "The tusks are laid around the altar."
+    },
+    {
+     "label": "Carve them",
+     "do": [
+      {
+       "give": {
+        "goods": 5
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "Combs and bracelets of white ivory appear on every wrist."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "cancong_eyes",
+   "name": "The King Whose Eyes Stood Out",
+   "history": "legend",
+   "source": "Chronicles of Huayang",
+   "when": {
+    "day": 2
+   },
+   "text": "The first king of our land had eyes that stood out from his face like two horns, so that he could see far over the mountains. He saw the silkworms on the mulberry trees and taught the people to raise them, and wherever he went they built shrines.",
+   "moral": "see far, teach well",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "fusang_tree",
+   "name": "The Fusang Tree and the Ten Suns",
+   "history": "legend",
+   "source": "Shanhai Jing, Classic of the Regions Beyond the Eastern Seas",
+   "when": {
+    "era": 2
+   },
+   "text": "Far in the east grows the Fusang tree, where the ten suns, each carried by a bird, bathe in the hot spring. Nine rest in the lower branches while one rises to cross the sky. The bronze tree in our temple is that tree, and its birds are those suns.",
+   "moral": "each sun takes its turn",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "cuckoo_king",
+   "name": "The King Who Became a Cuckoo",
+   "history": "legend",
+   "source": "Chronicles of Huayang; Li Shangyin, 'The Brocade Zither'",
+   "when": {
+    "season": "Spring"
+   },
+   "text": "King Duyu taught the people to farm, then gave his throne to the man who had drained the flood, and went into the mountains. When he died, his spirit became a cuckoo that cries every spring, 'Time to sow! Time to sow!' until blood comes from its throat, and the azaleas are red with it.",
+   "moral": "remember the time to sow",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "yield",
+       "of": "farm_plot",
+       "mul": 1.03
+      }
+     ]
+    },
+    {
+     "mood": 1
+    }
+   ]
+  },
+  {
+   "id": "sun_birds",
+   "name": "The Four Sun-Birds",
+   "history": "real",
+   "tell": "festival",
+   "source": "The gold foil disc of Jinsha, c. 1000 BCE",
+   "text": "On the great day of the sun, the priests hold up a circle of gold leaf, thin as a petal: a sun with twelve flaming rays, and four birds flying round it, one for each season. The light shines through it onto the faces of the people.",
+   "moral": "the year turns like birds round the sun",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

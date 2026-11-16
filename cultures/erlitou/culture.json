@@ -1,0 +1,641 @@
+{
+ "id": "erlitou",
+ "order": 60,
+ "name": "Erlitou and the Xia",
+ "period": "c. 1900–1500 BCE",
+ "place": "the Yi and Luo rivers, central China",
+ "desc": "The first great royal city of China, with palaces on rammed-earth platforms, a grid of roads, the oldest bronze ritual vessels cast in clay moulds and a dragon made of two thousand pieces of turquoise. Many think it was the capital of the Xia, the first dynasty of the old histories.",
+ "history": "real",
+ "source": "Excavations at Erlitou, Yanshi (from 1959); the Xia dynasty in Sima Qian's Records of the Grand Historian",
+ "tribe_names": [
+  "Ao",
+  "Bian",
+  "Ce",
+  "Dan",
+  "Fang",
+  "Gao",
+  "Heng",
+  "Jiao",
+  "Kui",
+  "Lin",
+  "Mi",
+  "Pan",
+  "Qu",
+  "Rui",
+  "Shu",
+  "Tu"
+ ],
+ "birth_names": [
+  "Ah",
+  "Bao",
+  "Cui",
+  "Dou",
+  "Gui",
+  "He",
+  "Jue",
+  "Ling",
+  "Ru",
+  "Suer"
+ ],
+ "epithets": {
+  "cautious": [
+   "Pounder of Earth",
+   "Caster of Bronze"
+  ],
+  "devout": [
+   "Keeper of the Turquoise Dragon"
+  ],
+  "gluttonous": [
+   "Steward of the Wine Cups"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "pounded the palace platform layer by layer until it rang like stone"
+  ],
+  "devout": [
+   "set the last turquoise chip in the dragon's eye"
+  ],
+  "gluttonous": [
+   "poured millet wine from a bronze jue at the ancestors' feast"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "rammed_earth",
+   "kind": "tool",
+   "name": "Rammed Earth",
+   "history": "real",
+   "source": "The palace platforms and walls of Erlitou were built of earth pounded in thin layers between boards (hangtu)",
+   "practice": {
+    "build": 200,
+    "quarry": 50
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.1
+    },
+    {
+     "stat": "def",
+     "add": 1
+    }
+   ],
+   "desc": "Earth pounded layer by layer between boards until it is as hard as stone: building is 10% faster, +1 defence.",
+   "hint": "Comes from long building."
+  },
+  {
+   "id": "piece_mould",
+   "kind": "goods",
+   "name": "Piece-Mould Bronzes",
+   "history": "real",
+   "source": "Erlitou's bronze jue wine cups, cast in several clay mould sections, are the oldest Chinese bronze vessels",
+   "practice": {
+    "quarry": 150,
+    "ritual": 150
+   },
+   "needs": {
+    "techs": [
+     "bronze"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Bronze poured into clay moulds made in pieces, to cast thin-legged wine cups for the ancestors: rites bring 15% more devotion, +1 mood.",
+   "hint": "Needs Bronze Metallurgy, and long rites."
+  },
+  {
+   "id": "turquoise_mosaic",
+   "kind": "goods",
+   "name": "Turquoise Mosaic",
+   "history": "real",
+   "source": "The turquoise dragon from tomb 2002VM3 at Erlitou, about 70 cm long, made of over 2,000 pieces",
+   "practice": {
+    "hearth": 150,
+    "ritual": 150
+   },
+   "needs": {
+    "finds": [
+     "turquoise"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Thousands of tiny blue-green chips set into a dragon or a plaque: +3 mood, rites bring 5% more devotion.",
+   "hint": "Needs turquoise."
+  },
+  {
+   "id": "road_grid",
+   "kind": "tool",
+   "name": "Road Grid",
+   "history": "real",
+   "source": "Erlitou had the oldest known grid of main roads in China, some showing wheel ruts",
+   "practice": {
+    "build": 150,
+    "lead": 80
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "speed",
+     "mul": 1.04
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Straight roads crossing at right angles between the palace and the workshops: everyone moves 4% faster, +1 mood.",
+   "hint": "Needs the Tribe & Agrarian Era."
+  }
+ ],
+ "foods": [
+  {
+   "id": "yan_steamer",
+   "name": "Steamed Millet",
+   "history": "real",
+   "source": "The yan, a pottery steamer with a perforated grate, is an ancient Chinese way of steaming grain",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "pottery",
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Millet steamed over boiling water in a double pot: hunger grows 10% slower.",
+   "hint": "Needs pottery and farming."
+  },
+  {
+   "id": "soy_porridge",
+   "name": "Soybean Porridge",
+   "history": "real",
+   "source": "The soybean was domesticated in China from wild soy by about 3000–1000 BCE",
+   "practice": {
+    "berry": 150,
+    "hearth": 80
+   },
+   "needs": {
+    "finds": [
+     "wild_soy"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    },
+    {
+     "stat": "heal",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Beans boiled soft with millet: hunger grows 5% slower, the hurt heal 5% faster.",
+   "hint": "Needs wild soybeans."
+  }
+ ],
+ "finds": [
+  {
+   "id": "turquoise",
+   "name": "Turquoise Veins",
+   "group": "ore",
+   "res": "goods",
+   "history": "real",
+   "amount": 14,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "copper",
+   "act": "Prying out turquoise",
+   "desc": "Sky-blue stone in thin veins, prized above gold by the kings."
+  },
+  {
+   "id": "wild_soy",
+   "name": "Wild Soybean",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 22,
+   "rate": 0.85,
+   "regrow": 0.06,
+   "winter": false,
+   "where": "meadow",
+   "count": 3,
+   "practice": "berry",
+   "look": "tubers",
+   "seed": {
+    "farming": 0.1
+   },
+   "act": "Picking wild beans",
+   "desc": "Twining vines with small hairy pods of hard black beans."
+  }
+ ],
+ "people": [
+  {
+   "id": "hangtu_master",
+   "as": "founder",
+   "name": "Hou Gong",
+   "epithet": "Master of the Rammers",
+   "history": "invented",
+   "desc": "He knows by the sound when a layer of earth is hard enough.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 0.95,
+    "color": "#b09060",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "led the song that kept forty rammers pounding in time"
+   ]
+  },
+  {
+   "id": "bronze_woman",
+   "as": "founder",
+   "name": "Ji Zhu",
+   "epithet": "Mother of the Moulds",
+   "history": "invented",
+   "desc": "Her clay moulds fit together so tightly that the bronze never leaks.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a07850",
+    "skills": {
+     "forage": 1,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "cast a jue cup with legs as thin as reeds"
+   ]
+  },
+  {
+   "id": "qi_of_xia",
+   "as": "ancestor",
+   "name": "Qi",
+   "epithet": "Son of Yu",
+   "history": "legend",
+   "source": "Records of the Grand Historian, Annals of Xia",
+   "desc": "The son of Yu the Great, said to be the first king who inherited the throne from his father, beginning the first dynasty."
+  },
+  {
+   "id": "dragon_bearer",
+   "as": "ancestor",
+   "name": "The Dragon Bearer",
+   "epithet": "of Tomb 2002VM3",
+   "history": "real",
+   "source": "A noble buried at Erlitou with the turquoise dragon laid along his body and a bronze bell at his waist",
+   "desc": "A man of high rank buried cradling a dragon of turquoise, perhaps a ritual master of the court."
+  },
+  {
+   "id": "dongyi_archer",
+   "as": "wanderer",
+   "name": "Yi Ruo",
+   "epithet": "Bowman of the East",
+   "history": "invented",
+   "source": "The Dongyi, 'eastern archers', of the old histories; the Yueshi culture of Shandong lay east of Erlitou",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a bowman from the eastern peoples by the sea, with a bow taller than he is.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 58,
+    "atk": 7,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#c06040",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 5,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "shot a wild goose from the sky with a single arrow"
+   ],
+   "desc": "An archer of the eastern peoples whom the Xia both feared and needed."
+  },
+  {
+   "id": "kongjia",
+   "as": "chosen",
+   "name": "Kongjia",
+   "epithet": "Raiser of Dragons",
+   "label": "Kongjia, Raiser of Dragons",
+   "history": "legend",
+   "desc": "A king to whom heaven gave two dragons. Lore 7, Foraging 5.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#9ff0c8",
+    "hp": 66,
+    "atk": 5,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 5,
+     "craft": 3,
+     "combat": 2,
+     "lore": 7
+    }
+   }
+  },
+  {
+   "id": "shaokang",
+   "as": "chosen",
+   "name": "Shaokang",
+   "epithet": "the Restorer",
+   "label": "Shaokang the Restorer",
+   "history": "legend",
+   "desc": "Born in exile, he wins back his father's kingdom. Combat 7, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#ffd36b",
+    "hp": 78,
+    "atk": 9,
+    "def": 6,
+    "spd": 1.1,
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 7,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "dukang",
+   "as": "chosen",
+   "name": "Du Kang",
+   "epithet": "the First Brewer",
+   "label": "Du Kang, the First Brewer",
+   "history": "legend",
+   "desc": "Left-over millet in a hollow tree taught him to make wine. Crafting 7, Foraging 6.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#e0b060",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 6,
+     "craft": 7,
+     "combat": 1,
+     "lore": 3,
+     "trade": 3
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "drunk_astronomers",
+   "title": "The Astronomers Were Drunk",
+   "history": "legend",
+   "source": "Book of Documents, 'The Punitive Expedition of Yin': the court astronomers Xi and He, drunk, failed to foretell an eclipse",
+   "when": {
+    "after": "eclipse",
+    "era": 2
+   },
+   "text": "The sun was eaten and no one was warned. The keepers of the calendar were found asleep beside the wine jars. The chief must decide what to do with them.",
+   "options": [
+    {
+     "label": "Punish them",
+     "do": [
+      {
+       "culture": {
+        "ranked": 5
+       }
+      },
+      {
+       "boon": [
+        {
+         "stat": "lore",
+         "add": 0.005
+        }
+       ]
+      }
+     ],
+     "result": "New watchers are named, sober ones. From now on every eclipse is written down."
+    },
+    {
+     "label": "Forgive them",
+     "do": [
+      {
+       "mood": 2
+      },
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The astronomers swear off wine, for a month or two."
+    }
+   ]
+  },
+  {
+   "id": "palace_platform",
+   "title": "A Platform for the Palace",
+   "history": "real",
+   "source": "Palace no. 1 at Erlitou stood on a rammed-earth platform about 100 m square",
+   "when": {
+    "invention": "rammed_earth",
+    "pop": 12
+   },
+   "text": "The chief wants a great hall on a platform of pounded earth, with a courtyard where all the people can gather before the ancestors.",
+   "options": [
+    {
+     "label": "Build the platform",
+     "cost": {
+      "wood": 25,
+      "food": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 6,
+        "settled": 4
+       }
+      },
+      {
+       "devotion": 8
+      },
+      {
+       "feat": "Raised a palace on a rammed-earth platform"
+      }
+     ],
+     "result": "Thousands of baskets of earth, pounded to the beat of drums. The hall stands high over the river."
+    },
+    {
+     "label": "Huts are enough",
+     "do": [
+      {
+       "culture": {
+        "ranked": -3
+       }
+      }
+     ],
+     "result": "The chief lives like everyone else, for now."
+    }
+   ]
+  },
+  {
+   "id": "nine_cauldrons",
+   "title": "The Nine Cauldrons",
+   "history": "legend",
+   "source": "Zuo Zhuan: Yu cast nine bronze cauldrons from metal sent by the nine provinces; whoever held them held the mandate",
+   "when": {
+    "invention": "piece_mould",
+    "era": 3
+   },
+   "text": "The smiths propose to cast great cauldrons, one for each region the tribe knows, with the beasts of each land on its sides, so the people will know what is good and what is evil in every place.",
+   "do": [
+    {
+     "devotion": 12
+    },
+    {
+     "culture": {
+      "ranked": 5
+     }
+    },
+    {
+     "feat": "Cast the great cauldrons"
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "qi_music",
+   "name": "Qi Brings Music from Heaven",
+   "history": "legend",
+   "source": "Shanhai Jing, Classic of the Great Wilderness: West",
+   "when": {
+    "day": 2
+   },
+   "text": "Qi, son of Yu, rode two dragons up to heaven three times, and each time came down with something stolen from the gods: the songs called Nine Arguments and Nine Songs. That is how music came to the earth, and why it sounds like heaven.",
+   "moral": "beauty can be brought down from heaven",
+   "do": [
+    {
+     "mood": 3
+    }
+   ]
+  },
+  {
+   "id": "kongjia_dragons",
+   "name": "Kongjia's Dragons",
+   "history": "legend",
+   "source": "Records of the Grand Historian, Annals of Xia",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "Heaven sent King Kongjia a pair of dragons, one male and one female, but no one knew how to raise them. A man named Liu Lei learned from the dragon-keepers and fed them. When the female died, he cooked her and served her to the king, who asked for more. Then Liu Lei ran away.",
+   "moral": "some gifts are not meant to be kept",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "yu_flood",
+   "name": "Yu Tames the Flood",
+   "history": "legend",
+   "source": "Records of the Grand Historian; Mencius",
+   "when": {
+    "after": "spring_flood"
+   },
+   "text": "For thirteen years Yu worked on the waters. His father had tried to dam them and failed. Yu dug channels instead and led the rivers to the sea. Three times he passed his own door and heard his son crying inside, and three times he did not go in.",
+   "moral": "guide the water, do not fight it",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "build",
+       "mul": 1.03
+      }
+     ]
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "dukang_wine",
+   "name": "Du Kang and the Hollow Tree",
+   "history": "legend",
+   "tell": "festival",
+   "source": "Later tradition; Du Kang is honoured as the god of wine",
+   "text": "A young herdsman left his millet in a hollow mulberry tree and forgot it. Weeks later a sweet smell came out of the tree, and the rainwater inside tasted wonderful. He had made the first wine. 'How shall I drown my sorrow?' the poets say. 'Only with Du Kang.'",
+   "moral": "happy accidents deserve a feast",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}
