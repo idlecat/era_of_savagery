@@ -1,0 +1,645 @@
+{
+ "id": "stonehenge",
+ "order": 83,
+ "name": "Stone Circle Builders",
+ "period": "c. 3500–1500 BCE",
+ "place": "Neolithic and Bronze Age Britain, from Salisbury Plain to Orkney",
+ "desc": "Farmers of Britain who raised circles of standing stones aligned to the midwinter sunset, dragged bluestones 240 km from the hills of Wales, built stone villages with stone furniture on Orkney, and gathered from all over the island for great winter feasts.",
+ "history": "real",
+ "source": "Stonehenge and Durrington Walls (Stonehenge Riverside Project, 2003–09); Skara Brae and the Ness of Brodgar on Orkney; the Amesbury Archer (found 2002)",
+ "tribe_names": [
+  "Bran",
+  "Cara",
+  "Dunan",
+  "Eba",
+  "Gwen",
+  "Ida",
+  "Kel",
+  "Lir",
+  "Mab",
+  "Nia",
+  "Oran",
+  "Peda",
+  "Rhos",
+  "Sul",
+  "Tor",
+  "Wenna"
+ ],
+ "birth_names": [
+  "Ash",
+  "Birch",
+  "Elm",
+  "Fern",
+  "Hazel",
+  "Ivy",
+  "Oak",
+  "Rowan",
+  "Sloe",
+  "Wren"
+ ],
+ "epithets": {
+  "cautious": [
+   "Shaper of Sarsens",
+   "Watcher of the Midwinter Sun"
+  ],
+  "gluttonous": [
+   "Keeper of the Pigs"
+  ],
+  "devout": [
+   "Keeper of the Dead in the Long Barrow"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "pounded a sarsen smooth with stone mauls for a whole summer"
+  ],
+  "gluttonous": [
+   "drove pigs from the far west to the midwinter feast"
+  ],
+  "devout": [
+   "carried the bones of the ancestors into the long barrow"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "sarsen_joints",
+   "kind": "tool",
+   "name": "Jointed Stones",
+   "history": "real",
+   "source": "Stonehenge's lintels are held by mortise-and-tenon and tongue-and-groove joints, carpentry techniques done in stone",
+   "practice": {
+    "build": 250,
+    "quarry": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "build",
+     "mul": 1.12
+    }
+   ],
+   "desc": "Great stones cut with joints like a carpenter's beams, so the lintels lock in place: building is 12% faster.",
+   "hint": "Needs Polished Stone Tools, and builders who quarry."
+  },
+  {
+   "id": "solstice_alignment",
+   "kind": "goods",
+   "name": "The Solstice Line",
+   "history": "real",
+   "source": "Stonehenge is aligned on the midsummer sunrise and the midwinter sunset",
+   "practice": {
+    "ritual": 250,
+    "build": 80
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "lore",
+     "add": 0.015
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    }
+   ],
+   "desc": "Stones set so that the midwinter sun goes down exactly between them: a little more lore, rites bring 10% more devotion.",
+   "hint": "Needs the Tribe & Agrarian Era, and long watching of the sky.",
+   "words": [
+    "calendar"
+   ]
+  },
+  {
+   "id": "stone_furniture",
+   "kind": "goods",
+   "name": "Stone Houses of Orkney",
+   "history": "real",
+   "source": "Skara Brae (c. 3100–2500 BCE): houses with stone beds, hearths and dressers, linked by covered passages",
+   "practice": {
+    "build": 200,
+    "hearth": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "cold",
+     "mul": 0.85
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Houses dug into the ground, with beds, shelves and dressers all of stone, linked by covered passages against the wind: the cold bites 15% less, +1 mood.",
+   "hint": "Comes from building and the hearth."
+  },
+  {
+   "id": "grooved_ware",
+   "kind": "goods",
+   "name": "Grooved Ware",
+   "history": "real",
+   "source": "Flat-bottomed pots with grooved decoration, first made on Orkney and then spread across Britain",
+   "practice": {
+    "hearth": 200
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "store",
+     "add": 20
+    }
+   ],
+   "desc": "Big flat-bottomed pots with grooved patterns, for feasting and storing: the stores hold 20 more.",
+   "hint": "Needs pottery."
+  }
+ ],
+ "foods": [
+  {
+   "id": "midwinter_pork",
+   "name": "Midwinter Pork",
+   "history": "real",
+   "source": "Pig bones at Durrington Walls show feasts in midwinter; isotopes show the pigs came from as far as Scotland",
+   "practice": {
+    "hunt": 120,
+    "hearth": 120
+   },
+   "needs": {
+    "techs": [
+     "domestication"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Pigs driven from every corner of the island and roasted at the winter gathering: +3 mood, hunger grows 5% slower.",
+   "hint": "Needs Beast Domestication."
+  },
+  {
+   "id": "hazelnut_store",
+   "name": "Roasted Hazelnuts",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "hazelnut"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Hazelnuts roasted in pits by the thousand and stored for winter: food spoils 10% slower.",
+   "hint": "Needs hazelnut thickets."
+  }
+ ],
+ "finds": [
+  {
+   "id": "bluestone",
+   "name": "Bluestone Outcrop",
+   "group": "ore",
+   "res": "lore",
+   "history": "real",
+   "source": "Stonehenge's bluestones were quarried in the Preseli Hills of Wales, about 240 km away",
+   "amount": 18,
+   "rate": 0.5,
+   "regrow": 0.0,
+   "winter": true,
+   "needs": "tools",
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "flint",
+   "act": "Prising out bluestone pillars",
+   "culture": {
+    "spiritual": 3
+   },
+   "desc": "Pillars of speckled blue rock that ring when struck, said to have healing power: each load is lore."
+  },
+  {
+   "id": "hazelnut",
+   "name": "Hazelnut Thickets",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 24,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 4,
+   "practice": "berry",
+   "look": "mushroom",
+   "act": "Gathering hazelnuts",
+   "desc": "Thickets of hazel, heavy with nuts in autumn."
+  }
+ ],
+ "people": [
+  {
+   "id": "sun_watcher",
+   "as": "founder",
+   "name": "Heulwen",
+   "epithet": "Watcher of the Sun",
+   "history": "invented",
+   "desc": "She knows the day the sun turns back toward summer.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0c060",
+    "skills": {
+     "forage": 2,
+     "craft": 2,
+     "combat": 0,
+     "lore": 5
+    }
+   },
+   "memory": [
+    "marked where the midwinter sun set behind the hill with a post"
+   ]
+  },
+  {
+   "id": "stone_hauler",
+   "as": "founder",
+   "name": "Maen",
+   "epithet": "Hauler of Stones",
+   "history": "invented",
+   "desc": "He has dragged stones on sledges further than anyone alive.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 58,
+    "atk": 5,
+    "def": 4,
+    "spd": 0.95,
+    "color": "#7080a0",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 1
+    }
+   },
+   "memory": [
+    "hauled a bluestone over the river on a raft of logs"
+   ]
+  },
+  {
+   "id": "henge_builders",
+   "as": "ancestor",
+   "name": "The Builders of the Henge",
+   "epithet": "of Salisbury Plain",
+   "history": "real",
+   "source": "Stonehenge was rebuilt in stages from about 3000 to 1500 BCE",
+   "desc": "Generations of nameless people who dug the ditch, raised the sarsens and set the bluestones, and kept changing their temple for fifteen hundred years."
+  },
+  {
+   "id": "skara_brae",
+   "as": "ancestor",
+   "name": "The Villagers of Skara Brae",
+   "epithet": "uncovered by a storm",
+   "history": "real",
+   "source": "Skara Brae, Orkney, revealed by a storm in 1850",
+   "desc": "A village of eight stone houses buried by sand, so well kept that their stone beds and dressers still stand, laid bare by a storm in 1850."
+  },
+  {
+   "id": "amesbury_archer",
+   "as": "wanderer",
+   "name": "The Amesbury Archer",
+   "epithet": "from the Alps",
+   "history": "real",
+   "source": "A man buried near Stonehenge around 2300 BCE with copper knives, gold hair ornaments and archery gear; isotopes show he grew up in the Alps",
+   "when": {
+    "era": 2,
+    "day": 7
+   },
+   "chance": 0.4,
+   "text": "a limping stranger from the far mountains across the sea, with copper knives, gold in his hair and the secret of working metal.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 4,
+    "spd": 0.9,
+    "color": "#d0a040",
+    "skills": {
+     "forage": 3,
+     "craft": 6,
+     "combat": 4,
+     "lore": 3,
+     "trade": 3
+    }
+   },
+   "memory": [
+    "walked from the high mountains to the land of the great stones with a lame knee"
+   ],
+   "desc": "One of the first metalworkers in Britain, and the richest burial of his age found there."
+  },
+  {
+   "id": "henge_lord",
+   "as": "chosen",
+   "name": "Garan",
+   "epithet": "Raiser of the Sarsens",
+   "label": "Garan, Raiser of the Sarsens",
+   "history": "invented",
+   "desc": "He raises stones that will stand for five thousand years. Crafting 9.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 72,
+    "atk": 6,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 9,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "merlin",
+   "as": "chosen",
+   "name": "Myrddin",
+   "epithet": "who Moved the Stones",
+   "label": "Myrddin, who Moved the Stones",
+   "history": "legend",
+   "desc": "In legend, the wizard who brought the giants' dance across the sea. Lore 9.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 64,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 9
+    }
+   }
+  },
+  {
+   "id": "beaker_chief",
+   "as": "chosen",
+   "name": "Bel",
+   "epithet": "Lord of the Bell Beakers",
+   "label": "Bel, Lord of the Bell Beakers",
+   "history": "invented",
+   "desc": "A warrior with a copper dagger and a wrist-guard of stone. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 8,
+     "lore": 1
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "drag_bluestones",
+   "title": "Bring the Stones from the West",
+   "history": "real",
+   "source": "The bluestones were moved some 240 km from Wales around 3000 BCE, probably by sledge and by raft",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "The elders say the temple needs the blue stones of the western hills, which ring like bells and heal the sick. It will take a whole summer and every pair of hands.",
+   "options": [
+    {
+     "label": "Bring the bluestones",
+     "cost": {
+      "food": 30,
+      "wood": 20
+     },
+     "do": [
+      {
+       "devotion": 15
+      },
+      {
+       "boon": [
+        {
+         "stat": "sick",
+         "mul": 1.05
+        }
+       ]
+      },
+      {
+       "feat": "Brought the bluestones from the western hills"
+      }
+     ],
+     "result": "Sledges, ropes, rollers and rafts. One by one, the blue stones arrive and are raised in the circle."
+    },
+    {
+     "label": "Use the stones nearby",
+     "do": [
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The circle is built of local stone, and the people rest."
+    }
+   ]
+  },
+  {
+   "id": "midwinter_feast",
+   "title": "The Midwinter Gathering",
+   "history": "real",
+   "when": {
+    "season": "Winter",
+    "invention": "solstice_alignment"
+   },
+   "text": "The sun is setting between the great stones on the shortest day. People have come from every corner of the island, driving pigs, to feast and to see the sun turn back.",
+   "options": [
+    {
+     "label": "Feast with everyone",
+     "cost": {
+      "food": 25
+     },
+     "do": [
+      {
+       "mood": 6
+      },
+      {
+       "devotion": 6
+      },
+      {
+       "culture": {
+        "martial": -3
+       }
+      }
+     ],
+     "result": "Fires burn all night along the avenue. Strangers become friends over roast pork."
+    },
+    {
+     "label": "A quiet rite",
+     "do": [
+      {
+       "devotion": 4
+      }
+     ],
+     "result": "The sun sets, the people watch in silence, and go home."
+    }
+   ]
+  },
+  {
+   "id": "beaker_people",
+   "title": "Strangers with Copper",
+   "history": "real",
+   "source": "After about 2500 BCE, Beaker people from the continent brought metal to Britain, and ancient DNA shows they replaced most of the earlier population",
+   "when": {
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.4,
+   "text": "Newcomers have crossed the sea with copper daggers, archer's wrist-guards and bell-shaped beakers. They want land, and they bring knowledge of metal.",
+   "options": [
+    {
+     "label": "Welcome them",
+     "do": [
+      {
+       "insight": {
+        "bronze": 0.25
+       }
+      },
+      {
+       "culture": {
+        "martial": 3
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "Within a few generations, the newcomers' ways and blood are everywhere."
+    },
+    {
+     "label": "Keep to the old ways",
+     "do": [
+      {
+       "culture": {
+        "settled": 4
+       }
+      },
+      {
+       "devotion": 4
+      }
+     ],
+     "result": "The old families keep to their stones, for a while."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "giants_dance",
+   "name": "The Giants' Dance",
+   "history": "legend",
+   "source": "Geoffrey of Monmouth, History of the Kings of Britain (1136)",
+   "when": {
+    "day": 2
+   },
+   "text": "The stones once stood on a mountain in Ireland, carried there by giants from Africa, and they had healing power. A king wanted them for a memorial, and his wizard, by his arts, moved them across the sea and set them up on the plain exactly as before.",
+   "moral": "great things are remembered as magic",
+   "do": [
+    {
+     "devotion": 4
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "sun_door",
+   "name": "The Door of the Sun",
+   "history": "invented",
+   "source": "A story made up around the solstice alignment of Stonehenge",
+   "when": {
+    "invention": "solstice_alignment"
+   },
+   "text": "On the shortest day the sun walks through the door of stone into the land of the dead, and the ancestors greet it. If we did not hold the door open with our feast, it might stay there. That is why we gather, and why the days grow long again.",
+   "moral": "the living help the sun return",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "wood_and_stone",
+   "name": "The Circle of Wood and the Circle of Stone",
+   "history": "legend",
+   "source": "A theory by Mike Parker Pearson: timber circles at Durrington Walls for the living, the stone circle for the dead",
+   "when": {
+    "deaths": 2
+   },
+   "text": "Upriver stands the circle of wood, where the living feast; downriver stands the circle of stone, where the dead dwell. When one of us dies, we carry them down the river from wood to stone, from the passing to the lasting.",
+   "moral": "wood for the living, stone for the dead",
+   "do": [
+    {
+     "devotion": 6
+    }
+   ]
+  },
+  {
+   "id": "midwinter_fires",
+   "name": "The Fires on the Avenue",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the Stonehenge Avenue and the midwinter feasts",
+   "text": "On the longest night, fires are lit all along the avenue from the river to the stones. The people walk it in a long line, singing, carrying torches, until they stand inside the circle and watch the stars turn above the lintels.",
+   "moral": "walk together through the dark",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

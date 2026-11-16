@@ -21,8 +21,11 @@ Everything is listed in the **Heritage** panel. Each entry shows a *Historical*,
 or *Imagined* badge and its source. The LLM personas know the tales that have been told
 and the great people of their culture.
 
-The packs that ship are `huaxia` (Chinese legend), `yangshao` (Neolithic millet farmers)
-and `natufian` (Levantine foragers). Use them as examples.
+48 packs ship with the game, from `huaxia` (Chinese legend, the default) to `lapita`
+(Pacific voyagers); `ls cultures/` lists them. `order` sorts them in the New Game list
+by region: 1–3 the first three, 10s Near East, 30s Africa, 40s Aegean, 50s South Asia
+and the steppe, 60s East Asia, 70s Americas, 80s other Neolithic peoples. Read any of
+them as an example; `yangshao` and `natufian` are short and typical.
 
 ## Files
 

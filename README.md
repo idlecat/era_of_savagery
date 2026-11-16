@@ -322,13 +322,17 @@ The **Achievements** button (top bar) lists the inventions made, with who and wh
 
 ## Cultures
 
-On the New Game screen the player picks the **culture** the tribe belongs to (or none, for the base game). A culture is a pack of data files in `cultures/<id>/`, with no code, so a new people can be added by writing one JSON file and its Chinese translation ([docs/CULTURES.md](docs/CULTURES.md) has the format and a checker). Three ship with the game:
+On the New Game screen the player picks the **culture** the tribe belongs to (or none, for the base game). A culture is a pack of data files in `cultures/<id>/`, with no code, so a new people can be added by writing one JSON file and its Chinese translation ([docs/CULTURES.md](docs/CULTURES.md) has the format and a checker). 48 ship with the game, each with founders and a name pool, inventions and foods, natural finds, ancestors, a wanderer, Chosen One bloodlines, events and folk tales, every entry marked real, legend or invented with its source:
 
-| Culture | |
+| Region | Cultures |
 |---|---|
-| **Legends of Huaxia** (default) | Chinese legend: Fuxi's nets, Shennong's plough and herb broth, knotted cords, silk, millet wine; Suiren, Nüwa, Cangjie and the other ancestors; the ten suns, tracks in the mud; tales of Nüwa mending the sky, Hou Yi, Jingwei and Kuafu |
-| **Yangshao Villagers** (c. 5000–3000 BCE) | Painted pottery, spindle whorls, net sinkers, harvest knives, millet gruel, penned pigs; the Banpo ditch and urn burials, Jiangzhai's plaza; Houji and the Sleeper of Xishuipo |
-| **Natufian Foragers** (c. 12,500–9,500 BCE) | Bone-hafted sickles, stone mortars, shell headdresses, the oldest bread and beer; the Long Cold (Younger Dryas), the first dog, the feast for the dead at Hilazon Tachtit |
+| China | **Legends of Huaxia** (default), Yangshao, Hongshan, Liangzhu, Hemudu, Erlitou and the Xia, Sanxingdui and ancient Shu, Shang, Zhou |
+| Japan and the Pacific | Jōmon, Lapita voyagers |
+| Near East | Natufians, Göbekli Tepe, Çatalhöyük, Sumerians, Akkadians, Elamites, Babylonians, Assyrians, Hittites, Mitanni, Phoenicians, Urartians, Lydians, Medes, Sabaeans, Persians |
+| Africa | Egyptians, Kerma, Kushites, Carthaginians, Nok |
+| Europe and the Aegean | Cucuteni–Trypillia, Stone Circle Builders (Neolithic Britain), Minoans, Mycenaeans, Archaic Greeks |
+| South and Central Asia, the steppe | Indus Valley, Vedic peoples, Yamnaya, Oxus oases (BMAC), Sintashta–Andronovo, Scythians |
+| Americas | Caral-Supe, Olmec, Chavín, Maya, Zapotec |
 
 A culture brings everyday inventions and **foods** (with effects such as +25% farm yield or slower hunger), **natural finds** placed on the map, **people** (the Chosen One's bloodlines, founders who lead a random tribe, wanderers who come to join, and ancestors), **events** (chronicle entries or dilemmas that pause the game) and **folk tales**, told by the best keeper of lore by the fire at night, one a night, or at festivals. Tales can leave lasting boons. The **Heritage** button lists everything the tribe has made, found, met, lived through and been told, each marked *Historical*, *Legend* or *Imagined* with its source. The personas know the tales that were told and the great people of their culture.
 

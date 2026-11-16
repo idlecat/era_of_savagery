@@ -1,0 +1,658 @@
+{
+ "id": "cucuteni",
+ "order": 82,
+ "name": "Cucuteni–Trypillia",
+ "period": "c. 5500–2750 BCE",
+ "place": "the forest-steppe between the Carpathians and the Dnieper",
+ "desc": "Farmers of old Europe who built the largest settlements of their age, rings of two-storey houses for ten thousand people, painted their pots with whirling spirals, modelled councils of clay figures, and every few generations burned their villages down and built anew.",
+ "history": "real",
+ "source": "Excavations at Cucuteni (Romania, from 1884), Trypillia (Ukraine, from 1897), and the mega-sites of Talianki, Maidanetske and Nebelivka",
+ "tribe_names": [
+  "Arda",
+  "Brasa",
+  "Ciru",
+  "Danu",
+  "Elva",
+  "Feru",
+  "Gala",
+  "Iana",
+  "Lera",
+  "Mira",
+  "Noru",
+  "Olta",
+  "Prut",
+  "Rada",
+  "Siret",
+  "Tisa"
+ ],
+ "birth_names": [
+  "Ana",
+  "Bela",
+  "Dora",
+  "Eli",
+  "Ilu",
+  "Kora",
+  "Lina",
+  "Mila",
+  "Nela",
+  "Vira"
+ ],
+ "epithets": {
+  "cautious": [
+   "Painter of Spirals",
+   "Builder of the Great Ring"
+  ],
+  "devout": [
+   "Keeper of the Clay Council"
+  ],
+  "gluttonous": [
+   "Sower of Emmer"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "painted a pot with spirals that seemed to turn"
+  ],
+  "devout": [
+   "set the clay figures in a circle around the hearth"
+  ],
+  "gluttonous": [
+   "sowed emmer in the black earth and reaped twice the seed"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "spiral_pottery",
+   "kind": "goods",
+   "name": "Spiral Painted Pottery",
+   "history": "real",
+   "source": "Cucuteni-Trypillia pots, fired at over 900°C and painted in red, white and black with spirals and waves",
+   "practice": {
+    "hearth": 250,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    },
+    {
+     "stat": "store",
+     "add": 15
+    }
+   ],
+   "desc": "Tall pots fired hot and painted with endless spirals in three colours: +3 mood, the stores hold 15 more.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "ring_settlement",
+   "kind": "tool",
+   "name": "Ring Town",
+   "history": "real",
+   "source": "Mega-sites such as Talianki (c. 3900 BCE) covered over 300 hectares, with houses in concentric ovals around an open centre",
+   "practice": {
+    "build": 250,
+    "lead": 100
+   },
+   "needs": {
+    "era": 2
+   },
+   "effects": [
+    {
+     "stat": "def",
+     "add": 1
+    },
+    {
+     "stat": "mood",
+     "add": 2
+    }
+   ],
+   "desc": "Houses built in great rings, one inside the other, around an open meadow for the herds and the gatherings: +1 defence, +2 mood.",
+   "hint": "Needs the Tribe & Agrarian Era, and someone to lead."
+  },
+  {
+   "id": "clay_council",
+   "kind": "goods",
+   "name": "Clay Figures",
+   "history": "real",
+   "source": "The 'Council of Goddesses' from Poduri: 21 clay figurines and 13 chairs, buried together in a pot",
+   "practice": {
+    "ritual": 200,
+    "hearth": 80
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "sick",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Little clay women set in circles on clay chairs, to sit in council with the ancestors: rites bring 10% more devotion, the sick recover 5% faster.",
+   "hint": "Needs pottery, and rites."
+  },
+  {
+   "id": "two_storey",
+   "kind": "tool",
+   "name": "Two-Storey Houses",
+   "history": "real",
+   "source": "Many Trypillian houses had a second floor on a timber frame, with clay floors and storage below",
+   "practice": {
+    "build": 200,
+    "chop": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "store",
+     "add": 15
+    },
+    {
+     "stat": "cold",
+     "mul": 0.92
+    }
+   ],
+   "desc": "Timber-framed houses with a clay upper floor for living and a lower one for stores: the stores hold 15 more, the cold bites 8% less.",
+   "hint": "Comes from building and woodcutting."
+  }
+ ],
+ "foods": [
+  {
+   "id": "emmer_bread",
+   "name": "Emmer Bread",
+   "history": "real",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Bread of emmer wheat from the black earth, baked in domed clay ovens: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "cornel_cherry",
+   "name": "Cornelian Cherry Jam",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 60
+   },
+   "needs": {
+    "finds": [
+     "cornel"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Sour red cherries cooked down for winter: +2 mood, food spoils 5% slower.",
+   "hint": "Needs cornelian cherries."
+  }
+ ],
+ "finds": [
+  {
+   "id": "black_earth",
+   "name": "Black Earth",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "The chernozem soils of Ukraine and Moldova, among the most fertile in the world",
+   "amount": 28,
+   "rate": 0.9,
+   "regrow": 0.07,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "look": "grain",
+   "seed": {
+    "farming": 0.2
+   },
+   "act": "Gathering wild grain",
+   "effects": [
+    {
+     "stat": "yield",
+     "of": "farm_plot",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Deep black soil where wild grain grows thick. Once known, farm plots yield 5% more."
+  },
+  {
+   "id": "cornel",
+   "name": "Cornelian Cherries",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 20,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking cherries",
+   "desc": "Shrubs with bright red, sour cherries in late summer."
+  }
+ ],
+ "people": [
+  {
+   "id": "spiral_painter",
+   "as": "founder",
+   "name": "Spira",
+   "epithet": "Painter of Spirals",
+   "history": "invented",
+   "desc": "Her spirals never end; she says that is the point.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 48,
+    "atk": 3,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#c05030",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "painted a pot that the whole village came to see"
+   ]
+  },
+  {
+   "id": "ring_planner",
+   "as": "founder",
+   "name": "Kolo",
+   "epithet": "Planner of the Rings",
+   "history": "invented",
+   "desc": "He marks out where every new house will stand in the ring.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a08050",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 1,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "paced out the third ring of houses with a rope"
+   ]
+  },
+  {
+   "id": "council_goddesses",
+   "as": "ancestor",
+   "name": "The Council of Goddesses",
+   "epithet": "of Poduri",
+   "history": "real",
+   "source": "21 figurines and 13 chairs found together at Poduri-Dealul Ghindaru, Romania, c. 4900 BCE",
+   "desc": "Twenty-one little clay women, buried together in a pot with their chairs, as if still in council."
+  },
+  {
+   "id": "talianki_builders",
+   "as": "ancestor",
+   "name": "The Builders of Talianki",
+   "epithet": "of the great ring",
+   "history": "real",
+   "source": "Talianki, Ukraine, c. 3900 BCE, home to perhaps 10,000–15,000 people",
+   "desc": "The families who built one of the largest towns on earth in their time, then left it, as their people always did."
+  },
+  {
+   "id": "steppe_herder",
+   "as": "wanderer",
+   "name": "Stog",
+   "epithet": "Herder from the Steppe",
+   "history": "invented",
+   "source": "The Trypillians traded and mixed with the herders of the steppe to the east (the Sredny Stog culture)",
+   "when": {
+    "day": 6,
+    "pop": 10
+   },
+   "chance": 0.4,
+   "text": "a herder from the open grass to the east, riding a horse and leading cattle, who wants painted pots.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 58,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.2,
+    "color": "#b09060",
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 4,
+     "lore": 0,
+     "trade": 2
+    }
+   },
+   "memory": [
+    "rode from the great river to the edge of the forest"
+   ],
+   "desc": "A steppe herder of the kind who traded with the ring towns."
+  },
+  {
+   "id": "fire_keeper",
+   "as": "chosen",
+   "name": "Vatra",
+   "epithet": "Keeper of the Burning",
+   "label": "Vatra, Keeper of the Burning",
+   "history": "invented",
+   "desc": "She decides when a house has lived its life and must burn. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "great_planner",
+   "as": "chosen",
+   "name": "Krug",
+   "epithet": "Maker of the Great Ring",
+   "label": "Krug, Maker of the Great Ring",
+   "history": "invented",
+   "desc": "He lays out a town for ten thousand. Crafting 8, Lore 5.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 5,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 5
+    }
+   }
+  },
+  {
+   "id": "black_earth_mother",
+   "as": "chosen",
+   "name": "Glia",
+   "epithet": "Mother of the Black Earth",
+   "label": "Glia, Mother of the Black Earth",
+   "history": "invented",
+   "desc": "Whatever she plants grows twice as tall. Foraging 8.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "color": "#ffd36b",
+    "hp": 70,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 8,
+     "craft": 3,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "burn_house",
+   "title": "The House Must Burn",
+   "history": "real",
+   "source": "Most Cucuteni-Trypillia houses were burned, often deliberately, at the end of their life; the fires baked their clay floors hard",
+   "when": {
+    "era": 2,
+    "pop": 11
+   },
+   "chance": 0.4,
+   "text": "The oldest houses of the village have stood for two generations. The elders say their time is over: they must be filled with offerings and burned, and new ones built.",
+   "options": [
+    {
+     "label": "Burn and rebuild",
+     "cost": {
+      "wood": 25
+     },
+     "do": [
+      {
+       "devotion": 10
+      },
+      {
+       "culture": {
+        "spiritual": 4
+       }
+      },
+      {
+       "mood": 2
+      }
+     ],
+     "result": "The fire roars all night, and the clay walls glow red. In spring, new houses rise on the ashes."
+    },
+    {
+     "label": "Keep the old houses",
+     "do": [
+      {
+       "culture": {
+        "settled": 4
+       }
+      },
+      {
+       "devotion": -4
+      }
+     ],
+     "result": "The old houses stand. The elders are uneasy."
+    }
+   ]
+  },
+  {
+   "id": "too_many",
+   "title": "Too Many for One Town",
+   "history": "real",
+   "source": "The mega-sites were occupied for only a few generations before their people dispersed into smaller villages",
+   "when": {
+    "pop": 15
+   },
+   "chance": 0.4,
+   "text": "The town has grown so large that the fields are a day's walk away. Quarrels break out between the rings. Some families want to leave and found new villages.",
+   "options": [
+    {
+     "label": "Let them go",
+     "do": [
+      {
+       "culture": {
+        "settled": -4
+       }
+      },
+      {
+       "mood": 3
+      }
+     ],
+     "result": "New villages spring up in the forest-steppe, each with its own ring."
+    },
+    {
+     "label": "Build an assembly house",
+     "cost": {
+      "wood": 30
+     },
+     "do": [
+      {
+       "culture": {
+        "ranked": 4
+       }
+      },
+      {
+       "insight": {
+        "code": 0.15
+       }
+      }
+     ],
+     "result": "A great hall rises between the rings, where every quarter sends speakers."
+    }
+   ]
+  },
+  {
+   "id": "copper_trade",
+   "title": "Copper from the Balkans",
+   "history": "real",
+   "source": "Copper ornaments in Trypillian hoards came from Balkan mines; the Varna cemetery shows how rich that trade was",
+   "when": {
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "Traders from the south bring shining copper rings and axes. They want grain and painted pots in return.",
+   "options": [
+    {
+     "label": "Trade for copper",
+     "cost": {
+      "food": 20
+     },
+     "do": [
+      {
+       "give": {
+        "copper": 3
+       }
+      },
+      {
+       "insight": {
+        "bronze": 0.1
+       }
+      }
+     ],
+     "result": "The copper goes into the hoard under the floor."
+    },
+    {
+     "label": "Keep the grain",
+     "result": "The traders go on to the next village."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "endless_spiral",
+   "name": "The Endless Spiral",
+   "history": "invented",
+   "source": "A story made up around Cucuteni spiral painting",
+   "when": {
+    "day": 2
+   },
+   "text": "The world turns like a spiral on a pot: the sun goes round, the seasons go round, the people are born and die and are born again in their children. That is why our spirals never end: if they ended, the world would stop.",
+   "moral": "everything returns",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "burning_house",
+   "name": "Why the Houses Burn",
+   "history": "invented",
+   "source": "A story made up around the burned houses of Trypillia",
+   "when": {
+    "happened": "burn_house"
+   },
+   "text": "A house is alive like a person. It is born when its first fire is lit, it grows old with its family, and when it dies it must be burned, like the dead are honoured, so its spirit can go free and the earth can take it back.",
+   "moral": "even houses have a life",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "clay_council_tale",
+   "name": "The Council of Clay Women",
+   "history": "invented",
+   "source": "A story made up around the Poduri figurines",
+   "when": {
+    "invention": "clay_council"
+   },
+   "text": "When the village cannot agree, the grandmothers make little clay women and set them on little chairs around the fire. They talk over the matter in front of them, and by morning the clay women have always helped them find the answer.",
+   "moral": "wisdom comes from talking together",
+   "do": [
+    {
+     "culture": {
+      "ranked": -3
+     }
+    },
+    {
+     "insight": {
+      "code": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "id": "harvest_ring",
+   "name": "The Harvest in the Ring",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the open centre of the ring towns",
+   "text": "When the emmer is in, every ring of the town comes to the open meadow in the middle. The best painted pots are filled with new grain and set out for all to see, and the dancing goes round and round, like the spirals.",
+   "moral": "the circle has room for all",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

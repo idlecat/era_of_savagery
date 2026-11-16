@@ -1,0 +1,628 @@
+{
+ "id": "lapita",
+ "order": 84,
+ "name": "Lapita Voyagers",
+ "period": "c. 1600–500 BCE",
+ "place": "the islands of the western Pacific, from New Guinea to Samoa",
+ "desc": "Seafarers who sailed outrigger canoes beyond sight of land and were the first people to reach the remote islands of the Pacific, carrying pigs, dogs, chickens, taro and breadfruit, and pottery stamped with faces in fine dotted patterns. They were the ancestors of the Polynesians.",
+ "history": "real",
+ "source": "The Lapita type site in New Caledonia (excavated 1952); the Teouma cemetery in Vanuatu (from 2004); obsidian traced to Talasea, New Britain",
+ "tribe_names": [
+  "Ana",
+  "Hina",
+  "Kai",
+  "Lani",
+  "Malu",
+  "Nalu",
+  "Ono",
+  "Pua",
+  "Rangi",
+  "Tasi",
+  "Ulu",
+  "Vaka",
+  "Fetu",
+  "Moana",
+  "Tane",
+  "Ika"
+ ],
+ "birth_names": [
+  "Ahi",
+  "Hau",
+  "Kalo",
+  "Lua",
+  "Mahina",
+  "Niu",
+  "Pili",
+  "Tai",
+  "Ua",
+  "Vai"
+ ],
+ "epithets": {
+  "cautious": [
+   "Reader of the Swells",
+   "Stamper of Pots"
+  ],
+  "belligerent": [
+   "Paddler of the Long Canoe"
+  ],
+  "devout": [
+   "Keeper of the Ancestors' Skulls"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "felt the swell from an island beyond the horizon through the hull"
+  ],
+  "belligerent": [
+   "paddled three days and nights without sleep to reach a new island"
+  ],
+  "devout": [
+   "carried the grandmother's skull to the new island in a pot"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "outrigger_canoe",
+   "kind": "tool",
+   "name": "Outrigger Canoe",
+   "history": "real",
+   "source": "Austronesian outrigger and double-hulled canoes carried the Lapita people thousands of kilometres across open ocean",
+   "practice": {
+    "build": 150,
+    "hunt": 150
+   },
+   "needs": {
+    "techs": [
+     "tools"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "fish",
+     "mul": 1.25
+    },
+    {
+     "stat": "carry",
+     "add": 1
+    }
+   ],
+   "desc": "A hull with a float on a boom beside it, so it cannot capsize in the ocean swell: fishing yields 25% more, everyone carries 1 more.",
+   "hint": "Needs Polished Stone Tools, and builders who fish.",
+   "words": [
+    "canoes",
+    "outriggers"
+   ]
+  },
+  {
+   "id": "star_path",
+   "kind": "tool",
+   "name": "Wayfinding",
+   "history": "real",
+   "source": "Pacific navigators steered by the rising and setting points of stars, the swells, the birds and the clouds, without instruments",
+   "practice": {
+    "explore": 250,
+    "ritual": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "sight",
+     "add": 30
+    },
+    {
+     "stat": "speed",
+     "mul": 1.04
+    }
+   ],
+   "desc": "Knowing where each star rises and sets, and reading the swells and the birds: people see much farther and travel 4% faster.",
+   "hint": "Comes from long scouting, and from watching the sky."
+  },
+  {
+   "id": "dentate_pottery",
+   "kind": "goods",
+   "name": "Dentate-Stamped Pottery",
+   "history": "real",
+   "source": "Lapita pots were decorated with tiny comb-like stamps pressed into the clay, making stylised human faces and patterns",
+   "practice": {
+    "hearth": 250,
+    "ritual": 50
+   },
+   "needs": {
+    "techs": [
+     "pottery"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "devotion",
+     "mul": 1.05
+    }
+   ],
+   "desc": "Pots pricked with tiny toothed stamps into faces with long eyes: +2 mood, rites bring 5% more devotion.",
+   "hint": "Needs pottery."
+  },
+  {
+   "id": "shell_adze",
+   "kind": "tool",
+   "name": "Giant Clam Adze",
+   "history": "real",
+   "source": "On islands without good stone, adzes were ground from the thick shell of the giant clam",
+   "practice": {
+    "chop": 200,
+    "hunt": 60
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "chop",
+     "mul": 1.12
+    }
+   ],
+   "desc": "A heavy blade ground from the shell of the giant clam, for hollowing canoes: woodcutting 12% faster.",
+   "hint": "Comes from woodcutting and fishing."
+  }
+ ],
+ "foods": [
+  {
+   "id": "taro_pudding",
+   "name": "Taro Pudding",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_taro"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Taro roots baked in an earth oven and pounded with coconut cream: hunger grows 10% slower.",
+   "hint": "Needs wild taro."
+  },
+  {
+   "id": "pit_breadfruit",
+   "name": "Fermented Breadfruit",
+   "history": "real",
+   "source": "Pacific islanders stored breadfruit for years by fermenting it in leaf-lined pits",
+   "practice": {
+    "berry": 150,
+    "build": 50
+   },
+   "needs": {
+    "finds": [
+     "breadfruit"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "spoil",
+     "mul": 0.85
+    }
+   ],
+   "desc": "Breadfruit buried in leaf-lined pits to ferment, food for voyages and for the lean season: food spoils 15% slower.",
+   "hint": "Needs breadfruit trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_taro",
+   "name": "Wild Taro",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.85,
+   "regrow": 0.06,
+   "winter": true,
+   "where": "riverbank",
+   "count": 4,
+   "practice": "berry",
+   "look": "tubers",
+   "seed": {
+    "farming": 0.15
+   },
+   "act": "Digging taro",
+   "desc": "Big-leaved plants of the wet ground with starchy roots."
+  },
+  {
+   "id": "breadfruit",
+   "name": "Breadfruit Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": true,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking breadfruit",
+   "desc": "Tall trees with big round fruit that tastes like bread when roasted."
+  }
+ ],
+ "people": [
+  {
+   "id": "navigator",
+   "as": "founder",
+   "name": "Hokule",
+   "epithet": "Reader of the Stars",
+   "history": "invented",
+   "desc": "She knows a hundred stars and the island under each of them.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#3070b0",
+    "skills": {
+     "forage": 3,
+     "craft": 2,
+     "combat": 1,
+     "lore": 4
+    }
+   },
+   "memory": [
+    "found an island by watching which way the boobies flew at dusk"
+   ]
+  },
+  {
+   "id": "canoe_maker",
+   "as": "founder",
+   "name": "Waka",
+   "epithet": "Maker of Canoes",
+   "history": "invented",
+   "desc": "He can hollow a canoe from a single tree in a moon.",
+   "stats": {
+    "traits": [
+     "gluttonous"
+    ],
+    "hp": 56,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#a07040",
+    "skills": {
+     "forage": 3,
+     "craft": 4,
+     "combat": 1,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "lashed the outrigger to the first canoe that reached this island"
+   ]
+  },
+  {
+   "id": "teouma",
+   "as": "ancestor",
+   "name": "The Ancestors of Teouma",
+   "epithet": "first people of Vanuatu",
+   "history": "real",
+   "source": "The Teouma cemetery, Efate, Vanuatu, c. 1000 BCE; many skulls had been removed and kept, and some placed in pots",
+   "desc": "The first settlers of Vanuatu, whose skulls their children took up after burial and kept, some in decorated pots, as treasured ancestors."
+  },
+  {
+   "id": "lapita_potters",
+   "as": "ancestor",
+   "name": "The Potters of Site 13",
+   "epithet": "who gave the name",
+   "history": "real",
+   "source": "Site WKO013A at Lapita, New Caledonia, which gave its name to the whole culture",
+   "desc": "The women and men whose stamped pots, found on a beach in New Caledonia, gave a name to the first settlers of the remote Pacific."
+  },
+  {
+   "id": "obsidian_paddler",
+   "as": "wanderer",
+   "name": "Talasea",
+   "epithet": "Carrier of the Black Glass",
+   "history": "real",
+   "source": "Obsidian from Talasea on New Britain travelled some 4,500 km, as far as Fiji",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a paddler from the big island in the west, with a bag of black glass from the fire mountain, looking for new islands to trade with.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#303050",
+    "skills": {
+     "forage": 4,
+     "craft": 2,
+     "combat": 3,
+     "lore": 1,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "paddled from the fire mountain to an island no one had named"
+   ],
+   "desc": "An obsidian trader named after the source of his stone."
+  },
+  {
+   "id": "maui",
+   "as": "chosen",
+   "name": "Maui",
+   "epithet": "Fisher of Islands",
+   "label": "Maui, Fisher of Islands",
+   "history": "legend",
+   "desc": "The trickster who pulls islands from the sea with his hook. Foraging 8, Lore 6.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ffd36b",
+    "hp": 80,
+    "atk": 9,
+    "def": 5,
+    "spd": 1.2,
+    "skills": {
+     "forage": 8,
+     "craft": 3,
+     "combat": 5,
+     "lore": 6
+    }
+   }
+  },
+  {
+   "id": "star_navigator",
+   "as": "chosen",
+   "name": "Tupaia",
+   "epithet": "the Navigator",
+   "label": "Tupaia the Navigator",
+   "history": "real",
+   "desc": "A much later heir of the Lapita voyagers, who drew 74 islands from memory for Captain Cook in 1769. Lore 8, Foraging 6.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.1,
+    "skills": {
+     "forage": 6,
+     "craft": 3,
+     "combat": 2,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "canoe_lord",
+   "as": "chosen",
+   "name": "Hiro",
+   "epithet": "Builder of the Great Canoe",
+   "label": "Hiro, Builder of the Great Canoe",
+   "history": "legend",
+   "desc": "He builds the double canoe that crosses the ocean. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#c8a8ff",
+    "hp": 70,
+    "atk": 6,
+    "def": 5,
+    "spd": 1.05,
+    "skills": {
+     "forage": 3,
+     "craft": 8,
+     "combat": 3,
+     "lore": 3
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "voyage_beyond",
+   "title": "Beyond the Horizon",
+   "history": "real",
+   "source": "Lapita people crossed the 850 km of open sea from the Solomons to Vanuatu and Fiji, sailing against the prevailing winds so they could always return",
+   "when": {
+    "invention": "outrigger_canoe",
+    "pop": 12
+   },
+   "chance": 0.5,
+   "text": "The navigators have seen birds flying out to sea each morning and returning each evening. There is land beyond the horizon. Shall we load a canoe with pigs, taro and seed, and go?",
+   "options": [
+    {
+     "label": "Sail into the wind",
+     "cost": {
+      "food": 30,
+      "wood": 20
+     },
+     "do": [
+      {
+       "culture": {
+        "settled": -5
+       }
+      },
+      {
+       "give": {
+        "goods": 5
+       }
+      },
+      {
+       "feat": "Found an island beyond the horizon"
+      }
+     ],
+     "result": "After nine days a green line rises from the sea. The canoes come home to tell, and some stay to plant."
+    },
+    {
+     "label": "Stay on our island",
+     "do": [
+      {
+       "culture": {
+        "settled": 4
+       }
+      }
+     ],
+     "result": "The birds keep flying out each morning. Someday."
+    }
+   ]
+  },
+  {
+   "id": "ancestor_skulls",
+   "title": "Keeping the Ancestors",
+   "history": "real",
+   "when": {
+    "deaths": 2
+   },
+   "text": "A respected elder has been buried for a season. As the old custom goes, the family wants to take up the skull and keep it in a stamped pot, so the elder can travel with them to any new island.",
+   "do": [
+    {
+     "devotion": 8
+    },
+    {
+     "culture": {
+      "spiritual": 4
+     }
+    }
+   ]
+  },
+  {
+   "id": "cyclone",
+   "title": "The Great Wind",
+   "history": "real",
+   "when": {
+    "after": "storm"
+   },
+   "chance": 0.6,
+   "text": "A cyclone has torn through the island, flattening the gardens and breaking canoes on the reef.",
+   "options": [
+    {
+     "label": "Rebuild the canoes first",
+     "cost": {
+      "wood": 20
+     },
+     "do": [
+      {
+       "boon": [
+        {
+         "stat": "gather",
+         "of": "fish",
+         "mul": 1.03
+        }
+       ]
+      }
+     ],
+     "result": "With the canoes repaired, the sea feeds everyone while the gardens regrow."
+    },
+    {
+     "label": "Dig the breadfruit pits",
+     "do": [
+      {
+       "give": {
+        "food": 20
+       }
+      },
+      {
+       "mood": -1
+      }
+     ],
+     "result": "The stored breadfruit, sour and strong, carries everyone through."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "maui_islands",
+   "name": "Maui Fishes Up the Islands",
+   "history": "legend",
+   "source": "Polynesian tradition, told from New Zealand to Hawaii",
+   "when": {
+    "day": 2
+   },
+   "text": "Maui made a fish-hook from his grandmother's jawbone and went fishing with his brothers. Far out at sea his hook caught on something enormous. He hauled and hauled, and up out of the sea came an island, then another and another, with the canoes' wake still on their hills.",
+   "moral": "the sea gives land to the bold",
+   "do": [
+    {
+     "mood": 3
+    },
+    {
+     "culture": {
+      "settled": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "star_compass",
+   "name": "The House of the Stars",
+   "history": "real",
+   "source": "The Pacific star compass, kept in memory by navigators",
+   "when": {
+    "invention": "star_path"
+   },
+   "text": "Around the canoe is a great round house with many doors. Each star comes out of its own door in the east and goes in at its own door in the west. Learn the doors, and you will never be lost; the island you seek always lies under one of them.",
+   "moral": "know the stars and you are never lost",
+   "do": [
+    {
+     "insight": {
+      "code": 0.05
+     }
+    },
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "pig_dog_chicken",
+   "name": "The Three Who Came in the Canoe",
+   "history": "invented",
+   "source": "A story made up around the animals the Lapita carried",
+   "when": {
+    "tech": "domestication"
+   },
+   "text": "When the first canoe came to the empty island, three passengers argued about who was most useful. Pig said: I am food for the feast. Dog said: I guard the house. Chicken said: I wake you for the voyage. The navigator said: that is why all three of you came.",
+   "moral": "every passenger has a use",
+   "do": [
+    {
+     "mood": 2
+    }
+   ]
+  },
+  {
+   "id": "landfall_feast",
+   "name": "The Landfall Feast",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the settling of new islands",
+   "text": "Each year on the day the first canoe reached this island, the people make an earth oven on the beach, roast pig and taro, and the oldest navigator names every island between here and home, one by one, until the fire burns low.",
+   "moral": "remember the way you came",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

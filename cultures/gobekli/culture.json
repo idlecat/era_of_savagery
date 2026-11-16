@@ -1,0 +1,607 @@
+{
+ "id": "gobekli",
+ "order": 80,
+ "name": "Göbekli Tepe",
+ "period": "c. 9500–8000 BCE",
+ "place": "the hills of south-eastern Anatolia",
+ "desc": "People of the very beginning of farming who raised rings of great T-shaped stone pillars carved with foxes, boars, snakes and vultures, perhaps before anyone anywhere had planted a field. Nearby, on Karacadağ, wild einkorn wheat was first tamed.",
+ "history": "real",
+ "source": "Excavations at Göbekli Tepe by Klaus Schmidt (from 1995) and Karahan Tepe (from 2019); the genetic origin of einkorn in the Karacadağ hills (Heun et al. 1997)",
+ "tribe_names": [
+  "Taru",
+  "Akel",
+  "Bozu",
+  "Dila",
+  "Erka",
+  "Gaza",
+  "Huru",
+  "Iska",
+  "Kara",
+  "Lasu",
+  "Muna",
+  "Nevu",
+  "Orfa",
+  "Sefi",
+  "Tepa",
+  "Urda"
+ ],
+ "birth_names": [
+  "Ati",
+  "Biru",
+  "Ela",
+  "Hani",
+  "Ike",
+  "Kiri",
+  "Lali",
+  "Nur",
+  "Pera",
+  "Sami"
+ ],
+ "epithets": {
+  "cautious": [
+   "Carver of the Pillars",
+   "Quarrier of the Great Stones"
+  ],
+  "devout": [
+   "Keeper of the Vulture Stone"
+  ],
+  "belligerent": [
+   "Hunter of Gazelle"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "carved a fox leaping down the side of a pillar"
+  ],
+  "devout": [
+   "sat in the stone circle all night under the stars"
+  ],
+  "belligerent": [
+   "drove a herd of gazelle into the stone funnel"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "t_pillars",
+   "kind": "goods",
+   "name": "T-Shaped Pillars",
+   "history": "real",
+   "source": "Pillars up to 5.5 m tall and 10 tonnes, carved as stylised human figures with arms, belts and loincloths of fox pelt",
+   "practice": {
+    "quarry": 250,
+    "ritual": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.15
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Great stone pillars, each a giant with arms carved down its sides, set in rings around two taller ones: rites bring 15% more devotion, +1 mood.",
+   "hint": "Comes from quarrying and the rites."
+  },
+  {
+   "id": "animal_reliefs",
+   "kind": "goods",
+   "name": "Animal Reliefs",
+   "history": "real",
+   "source": "The pillars are carved with foxes, boars, snakes, scorpions, cranes and vultures",
+   "practice": {
+    "quarry": 150,
+    "hunt": 100
+   },
+   "needs": {
+    "inventions": [
+     "t_pillars"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "gather",
+     "of": "hunt",
+     "mul": 1.05
+    }
+   ],
+   "desc": "The beasts of the hunt carved snarling in the stone: +2 mood, hunting is 5% faster.",
+   "hint": "Needs the T-shaped pillars, and hunters who carve."
+  },
+  {
+   "id": "brewing_troughs",
+   "kind": "goods",
+   "name": "Stone Troughs",
+   "history": "real",
+   "source": "Large limestone vessels at Göbekli Tepe hold traces that some read as fermented grain, perhaps beer for great feasts",
+   "practice": {
+    "quarry": 100,
+    "hearth": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Great stone tubs where wild grain is soaked and left to work for the feasts: +3 mood.",
+   "hint": "Comes from quarrying and the hearth."
+  },
+  {
+   "id": "gazelle_kites",
+   "kind": "tool",
+   "name": "Hunting Funnels",
+   "history": "real",
+   "source": "Hunters of the region drove gazelle into funnel traps of stone walls ('desert kites')",
+   "practice": {
+    "hunt": 200,
+    "build": 80
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "gather",
+     "of": "hunt",
+     "mul": 1.2
+    }
+   ],
+   "desc": "Long walls of piled stone that narrow to a pen, where whole herds are driven: hunting is 20% faster.",
+   "hint": "Comes from hunting and building."
+  }
+ ],
+ "foods": [
+  {
+   "id": "einkorn_porridge",
+   "name": "Einkorn Porridge",
+   "history": "real",
+   "practice": {
+    "berry": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "wild_einkorn"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Wild einkorn wheat, pounded and boiled: hunger grows 10% slower.",
+   "hint": "Needs wild einkorn."
+  },
+  {
+   "id": "feast_meat",
+   "name": "Feast of Gazelle",
+   "history": "real",
+   "source": "Tens of thousands of gazelle and aurochs bones at Göbekli Tepe show great communal feasts",
+   "practice": {
+    "hunt": 150,
+    "hearth": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "hunger",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Gazelle and aurochs roasted for everyone who came to raise the stones: +2 mood, hunger grows 5% slower.",
+   "hint": "Comes from hunting and the hearth."
+  }
+ ],
+ "finds": [
+  {
+   "id": "wild_einkorn",
+   "name": "Wild Einkorn",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "source": "The DNA of domestic einkorn points to wild stands on the Karacadağ mountain, about 30 km away",
+   "amount": 26,
+   "rate": 0.9,
+   "regrow": 0.08,
+   "winter": false,
+   "where": "meadow",
+   "count": 4,
+   "practice": "berry",
+   "practice_x": 2.0,
+   "look": "grain",
+   "seed": {
+    "farming": 0.25
+   },
+   "act": "Reaping wild einkorn",
+   "desc": "Thin wheat with one grain to each husk, growing wild on the volcanic slopes. Reaping it brings farming closer."
+  },
+  {
+   "id": "limestone",
+   "name": "Limestone Plateau",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "amount": 40,
+   "rate": 0.7,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "hills_home",
+   "count": 3,
+   "practice": "quarry",
+   "look": "salt",
+   "act": "Cutting limestone",
+   "desc": "Soft white bedrock that can be cut with flint into great pillars."
+  }
+ ],
+ "people": [
+  {
+   "id": "pillar_carver",
+   "as": "founder",
+   "name": "Taşa",
+   "epithet": "Carver of Pillars",
+   "history": "invented",
+   "desc": "She can see the fox waiting inside the stone before she starts.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#d0c0a0",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 3
+    }
+   },
+   "memory": [
+    "carved a vulture holding a ball on its wing"
+   ]
+  },
+  {
+   "id": "gazelle_driver",
+   "as": "founder",
+   "name": "Ceylan",
+   "epithet": "Driver of Gazelles",
+   "history": "invented",
+   "desc": "He leads the great drives that feed the pillar-raisers.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 56,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#c09060",
+    "skills": {
+     "forage": 4,
+     "craft": 0,
+     "combat": 3,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "drove three hundred gazelle into the stone funnel in one morning"
+   ]
+  },
+  {
+   "id": "vulture_stone",
+   "as": "ancestor",
+   "name": "The Carvers of the Vulture Stone",
+   "epithet": "Pillar 43",
+   "history": "real",
+   "source": "Pillar 43 of Enclosure D, carved with a vulture, a scorpion and a headless man",
+   "desc": "The unknown artists of the most crowded pillar of all, whose vulture and headless man have been read as a story of death and the sky."
+  },
+  {
+   "id": "karahan_face",
+   "as": "ancestor",
+   "name": "The Face in the Rock",
+   "epithet": "of Karahan Tepe",
+   "history": "real",
+   "source": "A human head carved out of the bedrock wall of a chamber at Karahan Tepe, surrounded by stone pillars",
+   "desc": "A human face growing out of the living rock, looking across a chamber of pillars that rise from the floor like a crowd."
+  },
+  {
+   "id": "obsidian_walker",
+   "as": "wanderer",
+   "name": "Göllü",
+   "epithet": "Obsidian Walker",
+   "history": "real",
+   "source": "Obsidian from Göllü Dağ in Cappadocia, 500 km away, has been found at Göbekli Tepe",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a traveller from the far west with a bag of black glass, sharper than any flint, who has heard of the great stones and come to see them.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.1,
+    "color": "#303040",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 2,
+     "lore": 2,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "walked a month from the mountain of black glass"
+   ],
+   "desc": "An obsidian trader named after the volcano his stone comes from."
+  },
+  {
+   "id": "pillar_lord",
+   "as": "chosen",
+   "name": "Dikili",
+   "epithet": "Raiser of Stones",
+   "label": "Dikili, Raiser of Stones",
+   "history": "invented",
+   "desc": "He raises pillars no one thought could stand. Crafting 9.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 70,
+    "atk": 6,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 9,
+     "combat": 2,
+     "lore": 4
+    }
+   }
+  },
+  {
+   "id": "vulture_shaman",
+   "as": "chosen",
+   "name": "Akbaba",
+   "epithet": "Who Flies with the Vultures",
+   "label": "Akbaba, Who Flies with the Vultures",
+   "history": "invented",
+   "desc": "She guides the dead to the sky. Lore 8.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 62,
+    "atk": 4,
+    "def": 4,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 3,
+     "combat": 1,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "aurochs_hunter",
+   "as": "chosen",
+   "name": "Yaban",
+   "epithet": "Slayer of the Aurochs",
+   "label": "Yaban, Slayer of the Aurochs",
+   "history": "invented",
+   "desc": "He brings down the great wild bull alone. Combat 8, Foraging 7.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 88,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.15,
+    "skills": {
+     "forage": 7,
+     "craft": 1,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "raise_ring",
+   "title": "Raise a Ring of Pillars",
+   "history": "real",
+   "source": "Each enclosure at Göbekli Tepe needed hundreds of people to quarry, move and raise its pillars",
+   "when": {
+    "pop": 10,
+    "day": 4
+   },
+   "chance": 0.5,
+   "text": "The elders want to call all the bands of the hills to raise a new ring of great stones on the hilltop. It will take everyone, and a great deal of meat and beer.",
+   "options": [
+    {
+     "label": "Call the bands together",
+     "cost": {
+      "food": 30
+     },
+     "do": [
+      {
+       "invent": "t_pillars"
+      },
+      {
+       "devotion": 10
+      },
+      {
+       "culture": {
+        "settled": 5
+       }
+      },
+      {
+       "feat": "Raised a ring of great pillars"
+      }
+     ],
+     "result": "Hundreds come. For a season the hill rings with chisels and songs, and the stones stand."
+    },
+    {
+     "label": "Keep to the hunt",
+     "do": [
+      {
+       "culture": {
+        "settled": -3
+       }
+      }
+     ],
+     "result": "The bands go their own ways, following the herds."
+    }
+   ]
+  },
+  {
+   "id": "bury_enclosure",
+   "title": "Bury the Old Ring",
+   "history": "real",
+   "source": "The enclosures of Göbekli Tepe were filled in with rubble, bones and flint, perhaps on purpose; this is debated",
+   "when": {
+    "invention": "t_pillars",
+    "era": 2
+   },
+   "chance": 0.4,
+   "text": "The oldest ring of stones has served its time. The elders say it should be buried, filled with earth and the bones of the feasts, and a new one raised beside it.",
+   "options": [
+    {
+     "label": "Bury it with honour",
+     "cost": {
+      "food": 15
+     },
+     "do": [
+      {
+       "devotion": 10
+      }
+     ],
+     "result": "The old stones disappear under the earth, still standing. Eleven thousand years later they will be found again."
+    },
+    {
+     "label": "Leave it open",
+     "do": [
+      {
+       "mood": 1
+      }
+     ],
+     "result": "The old ring stays, its carvings slowly wearing away."
+    }
+   ]
+  },
+  {
+   "id": "first_fields",
+   "title": "Sow the Wild Wheat",
+   "history": "real",
+   "when": {
+    "find": "wild_einkorn",
+    "pop": 11
+   },
+   "text": "So many people gather at the stones that the wild wheat on the hills is not enough. A woman scatters some of the gathered grain near the camp and waters it.",
+   "do": [
+    {
+     "insight": {
+      "farming": 0.3
+     }
+    },
+    {
+     "remember": "sowed the first wild wheat beside the camp",
+     "who": "best:forage",
+     "impact": 9
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "pillar_giants",
+   "name": "The Giants of Stone",
+   "history": "invented",
+   "source": "A story made up around the human-shaped T-pillars",
+   "when": {
+    "day": 2
+   },
+   "text": "Before people, the giants walked these hills. When they grew old, they did not die: they stood still in a circle, folded their hands over their belts, and turned to stone. We raise new stones beside them so that they will not be lonely.",
+   "moral": "the old ones still stand among us",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "vulture_sky",
+   "name": "The Vulture Carries the Dead",
+   "history": "invented",
+   "source": "A story made up around the vulture carvings",
+   "when": {
+    "deaths": 1
+   },
+   "text": "When one of us dies, the vulture comes down and carries the spirit up past the clouds to the river of stars. That is why we carve the vulture on the stones, holding the round soul on its wing.",
+   "moral": "the dead go up, not away",
+   "do": [
+    {
+     "devotion": 6
+    }
+   ]
+  },
+  {
+   "id": "fox_trickster",
+   "name": "The Fox Who Stole the Wheat",
+   "history": "invented",
+   "source": "A story made up around the fox carvings and the first wheat",
+   "when": {
+    "find": "wild_einkorn"
+   },
+   "text": "Fox stole a bundle of wheat from the sky-people and ran down the mountain with it. He dropped seeds all along the way, and wherever they fell, wheat grew. The sky-people were angry, but the wheat was already ours.",
+   "moral": "the clever share what they steal",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "insight": {
+      "farming": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "stone_feast",
+   "name": "The Feast of the Standing Stones",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the work feasts of Göbekli Tepe",
+   "text": "When a new pillar stands, every band that helped is fed. Gazelle roasts on the fires, the stone tubs foam with grain, and the young people dance between the giants until the morning star rises.",
+   "moral": "work shared is a feast",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}

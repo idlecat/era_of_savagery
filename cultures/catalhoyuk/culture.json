@@ -1,0 +1,640 @@
+{
+ "id": "catalhoyuk",
+ "order": 81,
+ "name": "Çatalhöyük",
+ "period": "c. 7100–5700 BCE",
+ "place": "the Konya plain of central Anatolia",
+ "desc": "One of the first towns: thousands of people in mud-brick houses packed wall to wall with no streets, coming and going over the rooftops by ladder. They painted bulls and vultures on their walls, set horns in the plaster, buried their dead under the floors and made the first mirrors of polished obsidian.",
+ "history": "real",
+ "source": "Excavations by James Mellaart (1961–65) and Ian Hodder (1993–2017); a UNESCO World Heritage site",
+ "tribe_names": [
+  "Abu",
+  "Dari",
+  "Elun",
+  "Hesa",
+  "Iru",
+  "Kana",
+  "Lom",
+  "Mesi",
+  "Neru",
+  "Osa",
+  "Pelu",
+  "Ramu",
+  "Sika",
+  "Telu",
+  "Uma",
+  "Wesi"
+ ],
+ "birth_names": [
+  "Ani",
+  "Bo",
+  "Diri",
+  "Ena",
+  "Hura",
+  "Ilo",
+  "Keni",
+  "Mo",
+  "Nia",
+  "Tiri"
+ ],
+ "epithets": {
+  "cautious": [
+   "Plasterer of Walls",
+   "Polisher of Black Mirrors"
+  ],
+  "devout": [
+   "Painter of Bulls"
+  ],
+  "gluttonous": [
+   "Keeper of the Bins"
+  ]
+ },
+ "memories": {
+  "cautious": [
+   "replastered the house white for the fortieth time"
+  ],
+  "devout": [
+   "painted a great red bull on the north wall"
+  ],
+  "gluttonous": [
+   "filled the clay bins with lentils for the winter"
+  ]
+ },
+ "inventions": [
+  {
+   "id": "roof_town",
+   "kind": "tool",
+   "name": "Rooftop Town",
+   "history": "real",
+   "source": "Çatalhöyük's houses stood wall to wall with no streets; people walked over the roofs and entered by ladders through the smoke hole",
+   "practice": {
+    "build": 250,
+    "hearth": 100
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "def",
+     "add": 2
+    },
+    {
+     "stat": "cold",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Houses packed so close that the outer walls make one great wall, with the doors on the roofs: +2 defence, the cold bites 10% less.",
+   "hint": "Comes from building and the hearth."
+  },
+  {
+   "id": "obsidian_mirror",
+   "kind": "goods",
+   "name": "Obsidian Mirrors",
+   "history": "real",
+   "source": "Polished obsidian mirrors from Çatalhöyük graves, about 8,000 years old, the oldest mirrors known",
+   "practice": {
+    "quarry": 150,
+    "ritual": 100
+   },
+   "needs": {
+    "finds": [
+     "hasan_obsidian"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "lore",
+     "add": 0.005
+    }
+   ],
+   "desc": "Black volcanic glass ground and polished until it shows a face: +2 mood, a little more lore.",
+   "hint": "Needs obsidian."
+  },
+  {
+   "id": "bull_horns",
+   "kind": "goods",
+   "name": "Plastered Bull Horns",
+   "history": "real",
+   "source": "Horns of wild aurochs were set in plaster benches and pillars inside the houses",
+   "practice": {
+    "hunt": 150,
+    "ritual": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "devotion",
+     "mul": 1.1
+    },
+    {
+     "stat": "atk",
+     "add": 1
+    }
+   ],
+   "desc": "The horns of the great wild bulls set into the walls, to keep their strength in the house: rites bring 10% more devotion, +1 attack.",
+   "hint": "Comes from hunting and the rites."
+  },
+  {
+   "id": "white_plaster",
+   "kind": "medicine",
+   "name": "Fresh White Plaster",
+   "history": "real",
+   "source": "Some house walls at Çatalhöyük were replastered more than a hundred times, perhaps every year",
+   "practice": {
+    "build": 100,
+    "hearth": 150
+   },
+   "needs": {},
+   "effects": [
+    {
+     "stat": "sick",
+     "mul": 1.1
+    },
+    {
+     "stat": "mood",
+     "add": 1
+    }
+   ],
+   "desc": "Walls and floors coated again and again with clean white clay: the sick recover 10% faster, +1 mood.",
+   "hint": "Comes from building and the hearth."
+  },
+  {
+   "id": "wall_paintings",
+   "kind": "goods",
+   "name": "Wall Paintings",
+   "history": "real",
+   "source": "Paintings of bull hunts, vultures and a town plan beneath a twin-peaked mountain, perhaps the volcano Hasan Dağ",
+   "practice": {
+    "ritual": 150,
+    "hearth": 100
+   },
+   "needs": {
+    "finds": [
+     "ochre"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 3
+    }
+   ],
+   "desc": "Red and black paintings of the hunt, the dead and the mountain on the white walls: +3 mood.",
+   "hint": "Needs red ochre."
+  }
+ ],
+ "foods": [
+  {
+   "id": "lentil_wheat",
+   "name": "Wheat and Lentil Stew",
+   "history": "real",
+   "source": "Çatalhöyük grew emmer, einkorn, barley, peas and lentils, and stored them in clay bins inside the houses",
+   "practice": {
+    "hearth": 150,
+    "berry": 100
+   },
+   "needs": {
+    "techs": [
+     "farming"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "hunger",
+     "mul": 0.9
+    }
+   ],
+   "desc": "Wheat and lentils simmered in a clay oven: hunger grows 10% slower.",
+   "hint": "Needs farming."
+  },
+  {
+   "id": "hackberry",
+   "name": "Hackberry Paste",
+   "history": "real",
+   "source": "Hackberry seeds are among the commonest plant remains at Çatalhöyük",
+   "practice": {
+    "berry": 150
+   },
+   "needs": {
+    "finds": [
+     "hackberry_tree"
+    ]
+   },
+   "effects": [
+    {
+     "stat": "mood",
+     "add": 2
+    },
+    {
+     "stat": "spoil",
+     "mul": 0.95
+    }
+   ],
+   "desc": "Sweet little berries pounded with their stones into a paste that keeps: +2 mood, food spoils 5% slower.",
+   "hint": "Needs hackberry trees."
+  }
+ ],
+ "finds": [
+  {
+   "id": "hasan_obsidian",
+   "name": "Obsidian of the Twin Mountain",
+   "group": "ore",
+   "res": "stone",
+   "history": "real",
+   "source": "Obsidian from the volcanoes of Cappadocia, Hasan Dağ and Göllü Dağ",
+   "amount": 22,
+   "rate": 0.6,
+   "regrow": 0.0,
+   "winter": true,
+   "where": "hills_far",
+   "count": 2,
+   "practice": "quarry",
+   "look": "obsidian",
+   "act": "Gathering obsidian",
+   "desc": "Black volcanic glass that breaks into the sharpest edges."
+  },
+  {
+   "id": "hackberry_tree",
+   "name": "Hackberry Trees",
+   "group": "food",
+   "res": "food",
+   "history": "real",
+   "amount": 20,
+   "rate": 0.9,
+   "regrow": 0.05,
+   "winter": false,
+   "where": "forest_edge",
+   "count": 3,
+   "practice": "berry",
+   "look": "honey",
+   "act": "Picking hackberries",
+   "desc": "Trees with small sweet berries and very hard stones."
+  }
+ ],
+ "people": [
+  {
+   "id": "plasterer",
+   "as": "founder",
+   "name": "Kerpic",
+   "epithet": "the Plasterer",
+   "history": "invented",
+   "desc": "Every spring she makes every house in the row white again.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 50,
+    "atk": 4,
+    "def": 3,
+    "spd": 1.0,
+    "color": "#e0d8c8",
+    "skills": {
+     "forage": 2,
+     "craft": 4,
+     "combat": 0,
+     "lore": 2
+    }
+   },
+   "memory": [
+    "plastered over the old painting and began a new one"
+   ]
+  },
+  {
+   "id": "bull_hunter_cat",
+   "as": "founder",
+   "name": "Boğa",
+   "epithet": "Baiter of the Bull",
+   "history": "invented",
+   "desc": "He was in the painting of the bull hunt, teasing its tail.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "hp": 58,
+    "atk": 6,
+    "def": 3,
+    "spd": 1.15,
+    "color": "#a04030",
+    "skills": {
+     "forage": 3,
+     "craft": 0,
+     "combat": 4,
+     "lore": 0
+    }
+   },
+   "memory": [
+    "grabbed the tail of a wild bull and lived"
+   ]
+  },
+  {
+   "id": "seated_woman",
+   "as": "ancestor",
+   "name": "The Seated Woman",
+   "epithet": "between the leopards",
+   "history": "real",
+   "source": "A clay figurine of a heavy woman seated between two leopards, found in a grain bin in 1961 (Museum of Anatolian Civilizations, Ankara)",
+   "desc": "An old woman of great size, her hands resting on two leopards: a goddess to some, an honoured elder to others."
+  },
+  {
+   "id": "volcano_painter",
+   "as": "ancestor",
+   "name": "The Painter of the Mountain",
+   "epithet": "who drew the first map",
+   "history": "real",
+   "source": "A wall painting of houses beneath a twin-peaked mountain, read by some as the oldest map and an eruption of Hasan Dağ",
+   "desc": "An unknown artist who painted the town's houses, and above them a mountain with two peaks, perhaps spitting fire."
+  },
+  {
+   "id": "obsidian_trader_cat",
+   "as": "wanderer",
+   "name": "Kara Taş",
+   "epithet": "Carrier of Black Stone",
+   "history": "invented",
+   "when": {
+    "day": 5,
+    "pop": 9
+   },
+   "chance": 0.4,
+   "text": "a trader who comes down from the volcano with black glass, and climbs in through the roof like everyone else.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "hp": 52,
+    "atk": 5,
+    "def": 3,
+    "spd": 1.05,
+    "color": "#303030",
+    "skills": {
+     "forage": 3,
+     "craft": 3,
+     "combat": 2,
+     "lore": 1,
+     "trade": 4
+    }
+   },
+   "memory": [
+    "chipped a hundred blades from one block of black glass"
+   ],
+   "desc": "An obsidian trader of the kind who supplied Çatalhöyük."
+  },
+  {
+   "id": "leopard_mother",
+   "as": "chosen",
+   "name": "Pars",
+   "epithet": "Mother of Leopards",
+   "label": "Pars, Mother of Leopards",
+   "history": "invented",
+   "desc": "She sits between leopards and they obey her. Lore 8, Foraging 5.",
+   "stats": {
+    "traits": [
+     "devout"
+    ],
+    "color": "#c8a8ff",
+    "hp": 66,
+    "atk": 5,
+    "def": 5,
+    "spd": 1.0,
+    "skills": {
+     "forage": 5,
+     "craft": 2,
+     "combat": 2,
+     "lore": 8
+    }
+   }
+  },
+  {
+   "id": "roof_builder",
+   "as": "chosen",
+   "name": "Dam",
+   "epithet": "Builder of the Rooftops",
+   "label": "Dam, Builder of the Rooftops",
+   "history": "invented",
+   "desc": "His houses fit together like the cells of a honeycomb. Crafting 8.",
+   "stats": {
+    "traits": [
+     "cautious"
+    ],
+    "color": "#6bd3ff",
+    "hp": 68,
+    "atk": 5,
+    "def": 6,
+    "spd": 1.0,
+    "skills": {
+     "forage": 2,
+     "craft": 8,
+     "combat": 2,
+     "lore": 3
+    }
+   }
+  },
+  {
+   "id": "aurochs_baiter",
+   "as": "chosen",
+   "name": "Yaban Boğa",
+   "epithet": "Who Teases the Wild Bull",
+   "label": "Yaban Boğa, Who Teases the Wild Bull",
+   "history": "invented",
+   "desc": "He leaps around the great bull until it tires. Combat 8.",
+   "stats": {
+    "traits": [
+     "belligerent"
+    ],
+    "color": "#ff6b6b",
+    "hp": 85,
+    "atk": 11,
+    "def": 5,
+    "spd": 1.2,
+    "skills": {
+     "forage": 4,
+     "craft": 1,
+     "combat": 8,
+     "lore": 0
+    }
+   }
+  }
+ ],
+ "events": [
+  {
+   "id": "under_the_floor",
+   "title": "Beneath the Floor",
+   "history": "real",
+   "source": "At Çatalhöyük the dead were buried under the platforms of the houses where the living slept",
+   "when": {
+    "deaths": 1
+   },
+   "text": "A grandmother has died. As always, she will be buried under the sleeping platform of her own house, so she stays with her family.",
+   "do": [
+    {
+     "devotion": 6
+    },
+    {
+     "culture": {
+      "settled": 4,
+      "spiritual": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "mountain_fire",
+   "title": "The Mountain Breathes Fire",
+   "history": "real",
+   "source": "Hasan Dağ erupted around 6900 BCE, within the lifetime of Çatalhöyük",
+   "when": {
+    "after": "eruption"
+   },
+   "text": "The twin mountain on the horizon is smoking and glowing at night. A painter climbs to the roofs to watch, and wants to paint it on the wall above the town's houses.",
+   "options": [
+    {
+     "label": "Paint the mountain",
+     "do": [
+      {
+       "mood": 3
+      },
+      {
+       "insight": {
+        "code": 0.1
+       }
+      },
+      {
+       "feat": "Painted the first map"
+      }
+     ],
+     "result": "The houses of the town, row on row, and above them the mountain spitting fire: the first picture of a place."
+    },
+    {
+     "label": "Pray it stays far away",
+     "do": [
+      {
+       "devotion": 8
+      }
+     ],
+     "result": "The smoke drifts away east."
+    }
+   ]
+  },
+  {
+   "id": "no_chiefs",
+   "title": "No House Bigger Than Another",
+   "history": "real",
+   "source": "Ian Hodder found little sign of rank at Çatalhöyük: houses were similar in size, and men and women ate much the same food",
+   "when": {
+    "pop": 12,
+    "era": 2
+   },
+   "chance": 0.5,
+   "text": "A family has grown rich in grain and wants to build a house twice as big as the others. The neighbours are unhappy.",
+   "options": [
+    {
+     "label": "All houses alike",
+     "do": [
+      {
+       "culture": {
+        "ranked": -6
+       }
+      },
+      {
+       "mood": 3
+      }
+     ],
+     "result": "The family builds a house like everyone else's, and shares its grain at the feast."
+    },
+    {
+     "label": "Let them build big",
+     "do": [
+      {
+       "culture": {
+        "ranked": 5
+       }
+      },
+      {
+       "mood": -2
+      }
+     ],
+     "result": "The big house rises over the rooftops. Things will be different now."
+    }
+   ]
+  }
+ ],
+ "tales": [
+  {
+   "id": "vultures_dead",
+   "name": "The Vultures and the Headless",
+   "history": "invented",
+   "source": "A story made up around the vulture paintings of Çatalhöyük",
+   "when": {
+    "day": 2
+   },
+   "text": "On the wall of the old house, great vultures with spread wings stoop over small headless people. The grandmothers say: they are not eating the dead, they are lifting them, carrying the body to the sky while the head stays home with us under the floor.",
+   "moral": "the dead are both gone and here",
+   "do": [
+    {
+     "devotion": 5
+    }
+   ]
+  },
+  {
+   "id": "ladder_town",
+   "name": "Why We Walk on the Roofs",
+   "history": "invented",
+   "source": "A story made up around the roof-entry houses",
+   "when": {
+    "invention": "roof_town"
+   },
+   "text": "When the first families came to the plain, each built its house touching its neighbour's, so that no one would ever be left outside. There was no room for paths, so they walked on the roofs, and the whole town became one house with many rooms.",
+   "moral": "close neighbours keep each other safe",
+   "do": [
+    {
+     "mood": 2
+    },
+    {
+     "culture": {
+      "ranked": -2
+     }
+    }
+   ]
+  },
+  {
+   "id": "leopard_lady",
+   "name": "The Lady Between the Leopards",
+   "history": "invented",
+   "source": "A story made up around the Seated Woman figurine",
+   "when": {
+    "pop": 10
+   },
+   "text": "The oldest woman of the town was so wise that even leopards lay down beside her. When she sat in the grain bin to rest, the grain never ran out. When she died, the people made her in clay and kept her among the grain.",
+   "moral": "wisdom keeps the stores full",
+   "do": [
+    {
+     "boon": [
+      {
+       "stat": "store",
+       "add": 5
+      }
+     ]
+    },
+    {
+     "devotion": 3
+    }
+   ]
+  },
+  {
+   "id": "plaster_spring",
+   "name": "The Whitening",
+   "history": "invented",
+   "tell": "festival",
+   "source": "A story made up around the yearly replastering of houses",
+   "text": "Every spring the whole town whitens its walls. The old paintings disappear under fresh clay, and each family paints something new: a bull, a hand, a leopard, the mountain. Then everyone climbs to the roofs to eat together in the sun.",
+   "moral": "each year begins clean",
+   "do": [
+    {
+     "mood": 4
+    }
+   ]
+  }
+ ]
+}
