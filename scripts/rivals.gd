@@ -316,62 +316,34 @@ func _hunters(c: Dictionary, dt: float) -> void:
 	_spawn(c, "hunter")
 
 # ------------------------------------------------------------ first-contact choice
+## The clan dilemmas (contact, demand, call, submit) are config/dilemmas.json, run by the
+## shared runner with the clan's values; the trader's offers (computed goods) are coded.
 func event_def(ev: String) -> Dictionary:
-	if ev.begins_with("demand_"): return _demand_def(ev.trim_prefix("demand_"))
 	if ev.begins_with("trade_"): return _trade_def(ev.trim_prefix("trade_"))
-	if ev.begins_with("call_"): return _call_def(ev.trim_prefix("call_"))
-	if ev.begins_with("submit_"): return _submit_def(ev.trim_prefix("submit_"))
-	var id := ev.trim_prefix("contact_")
-	var c: Dictionary = clans[id]
-	return {"title": tr("First Contact: the %s") % tr(c["name"]),
-		"text": tr("Our scouts have found the %s, led by %s %s. %s What face do we show them?") % [tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), tr(c["desc"])],
-		"options": [
-			{"label": tr("Offer gifts"), "desc": tr("Send 20 food and fine furs. They will think well of us. (+20 relations)"), "enabled": sim.stock["food"] >= 20},
-			{"label": tr("Show our strength"), "desc": tr("Our warriors stand tall at the border. Martial clans respect it; others take it as a threat."), "enabled": true},
-			{"label": tr("Keep our distance"), "desc": tr("Watch them, say nothing."), "enabled": true},
-		]}
+	var d := _dilemma(ev)
+	return sim.story.dilemma_view(sim.DILEMMAS[d[0]], d[1])
 
 func resolve(ev: String, idx: int) -> String:
-	if ev.begins_with("demand_"): return _demand_resolve(ev.trim_prefix("demand_"), idx)
 	if ev.begins_with("trade_"): return _trade_resolve(ev.trim_prefix("trade_"), idx)
-	if ev.begins_with("call_"): return _call_resolve(ev.trim_prefix("call_"), idx)
-	if ev.begins_with("submit_"): return _submit_resolve(ev.trim_prefix("submit_"), idx)
-	var id := ev.trim_prefix("contact_")
-	var c: Dictionary = clans[id]
-	match idx:
-		0:
-			if sim.stock["food"] < 20: return tr("We have no food to spare for gifts. We watch the %s from afar.") % tr(c["name"])
-			sim.stock["food"] -= 20
-			change(id, 20.0)
-			return tr("The %s accept our gifts. %s nods: \"Your people may pass in peace.\"") % [tr(c["name"]), tr(c["chief"])]
-		1:
-			var martial: bool = c["culture"] == "martial"
-			change(id, 8.0 if martial else -12.0, "" if martial else tr("you came to us with spears raised"))
-			return tr("%s eyes our warriors. \"Strong. Good.\" The %s will think twice before raiding us.") % [tr(c["chief"]), tr(c["name"])] if martial \
-				else tr("The %s take our display as a threat and pull back into their lands.") % tr(c["name"])
-	return tr("We watch the %s from afar, and they watch us.") % tr(c["name"])
+	var d := _dilemma(ev)
+	var out: Dictionary = sim.story.dilemma_choose(sim.DILEMMAS[d[0]], idx, d[1])
+	if out["vars"].get("open", "") == "war": sim.flags["open_war"] = d[1].get("foe", "")
+	return out["text"]
 
-# ------------------------------------------------------------ demands (a messenger before a raid)
-func _demand_def(id: String) -> Dictionary:
+## [dilemma id, vars] for a clan event id ("demand_<clan>", "contact_<clan>"...).
+func _dilemma(ev: String) -> Array:
+	var kind := "contact"
+	for k in ["demand", "call", "submit"]:
+		if ev.begins_with(k + "_"): kind = k
+	var id := ev.trim_prefix(kind + "_")
 	var c: Dictionary = clans[id]
-	var amt: int = c["demand"]
-	return {"title": tr("A Messenger from the %s") % tr(c["name"]),
-		"text": tr("A painted runner stops at the edge of the firelight. \"%s %s says: give us %d food, or our spears will come and take it.\"") % [tr(c["chief"]), tr(c["epithet"]), amt],
-		"options": [
-			{"label": tr("Pay"), "desc": tr("Hand over %d food. No raid for now (+5 relations).") % amt, "enabled": sim.stock["food"] >= amt},
-			{"label": tr("Refuse"), "desc": tr("Send the runner away. Their war band will come."), "enabled": true},
-		]}
-
-func _demand_resolve(id: String, idx: int) -> String:
-	var c: Dictionary = clans[id]
-	if idx == 0 and sim.stock["food"] >= c["demand"]:
-		sim.stock["food"] -= c["demand"]
-		change(id, 5.0)
-		c["raid_t"] = D.DAY_LEN * 4.0
-		return tr("The runner leaves with our food. %s is satisfied - for now.") % tr(c["chief"])
-	change(id, -5.0, tr("you sent our messenger away empty-handed"))
-	launch_raid(c)
-	return tr("The runner spits at our fire and is gone. The %s are coming.") % tr(c["name"])
+	var v := {"clan": id, "clan_name": tr(c["name"]), "chief": tr(c["chief"]), "epithet": tr(c["epithet"]), "clan_desc": tr(c["desc"]),
+		"clan_pos": c["pos"], "demand": c["demand"], "martial": c["culture"] == "martial"}
+	if kind == "call":
+		v["foe"] = c["call_target"]
+		v["foe_name"] = tr(clans[c["call_target"]]["name"])
+	if kind == "submit" and not (c["warriors"] <= 1 or c["pop"] <= 7 or c.get("defeats", 0) >= 2): kind = "submit_unbroken"
+	return [kind, v]
 
 # ------------------------------------------------------------ envoys and parley
 ## Why u can't go as envoy to this clan right now ("" = they can).
@@ -768,69 +740,3 @@ func _daily_bonds(c: Dictionary) -> void:
 				c["call_target"] = other
 				pending.append("call_" + id)
 				break
-
-func _call_def(id: String) -> Dictionary:
-	var c: Dictionary = clans[id]
-	var foe: Dictionary = clans[c["call_target"]]
-	return {"title": tr("The %s Call Us to War") % tr(c["name"]),
-		"text": tr("A runner of our allies the %s arrives breathless: \"%s %s asks: will our brothers send spears against the %s?\"") % [tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), tr(foe["name"])],
-		"options": [
-			{"label": tr("Send a war party"), "desc": tr("Choose a leader to plan a raid on the %s (+10 with our allies).") % tr(foe["name"]), "enabled": true},
-			{"label": tr("Send gifts instead"), "desc": tr("15 food for their warriors; they go alone (+3).") , "enabled": sim.stock["food"] >= 15},
-			{"label": tr("Refuse"), "desc": tr("This is not our fight (-12 with our allies)."), "enabled": true},
-		]}
-
-func _call_resolve(id: String, idx: int) -> String:
-	var c: Dictionary = clans[id]
-	var foe: Dictionary = clans[c["call_target"]]
-	match idx:
-		0:
-			change(id, 10.0)
-			sim.flags["open_war"] = c["call_target"]
-			return tr("We will march with the %s against the %s. Choose who leads our spears.") % [tr(c["name"]), tr(foe["name"])]
-		1:
-			sim.stock["food"] -= 15
-			change(id, 3.0)
-			foe["pop"] = maxi(3, foe["pop"] - 1)
-			change(foe["id"], -5.0)
-			return tr("The %s raid the %s alone, fed by our food.") % [tr(c["name"]), tr(foe["name"])]
-	change(id, -12.0, tr("you left us to fight alone"))
-	return tr("The runner leaves without a word. The %s will remember.") % tr(c["name"])
-
-func _submit_def(id: String) -> Dictionary:
-	var c: Dictionary = clans[id]
-	var broken: bool = c["warriors"] <= 1 or c["pop"] <= 7 or c.get("defeats", 0) >= 2
-	var opts: Array = []
-	if broken:
-		opts = [
-			{"label": tr("Accept their submission"), "desc": tr("They become our vassals: 3 food a day, no more raids."), "enabled": true},
-			{"label": tr("Demand a heavy tribute"), "desc": tr("6 food a day - but they will hate us, and may rise again."), "enabled": true},
-			{"label": tr("Spare them freely"), "desc": tr("Make peace with no tribute (+20 relations, 20 days of peace)."), "enabled": true},
-		]
-	else:
-		opts = [{"label": tr("Let them lick their wounds"), "desc": tr("They are beaten, but not yet broken."), "enabled": true}]
-	return {"title": tr("The %s After the Battle") % tr(c["name"]),
-		"text": (tr("%s %s comes out of the smoke, unarmed. \"Enough. The %s will bow to your fire, if you let our children live.\"") % [tr(c["chief"]), tr(c["epithet"]), tr(c["name"])]) if broken
-			else tr("The %s pull back behind their huts, bloodied but still defiant.") % tr(c["name"]),
-		"options": opts}
-
-func _submit_resolve(id: String, idx: int) -> String:
-	var c: Dictionary = clans[id]
-	if _submit_def(id)["options"].size() == 1: return tr("We leave them to mourn.")
-	match idx:
-		0:
-			c["vassal"] = 3
-			c["relation"] = maxf(c["relation"], -30.0)
-			c["treaties"].clear()
-			sim.evo.drift("ranked", 6.0) # lords over another people
-			sim.alert(tr("The %s are now our vassals.") % tr(c["name"]), c["pos"], "info")
-			return tr("%s lays down their weapons at our fire. The %s are ours.") % [tr(c["chief"]), tr(c["name"])]
-		1:
-			c["vassal"] = 6
-			c["relation"] = minf(c["relation"], -60.0)
-			c["grudges"].append(tr("you crushed us under a heavy tribute"))
-			sim.alert(tr("The %s are now our vassals.") % tr(c["name"]), c["pos"], "info")
-			return tr("They will pay, and they will hate us for it.")
-	c["relation"] = maxf(c["relation"], -10.0) + 20.0
-	c["treaties"]["peace"] = {"until": sim.time + 20 * D.DAY_LEN, "tribute": 0}
-	return tr("We let them go in peace. The tale of our mercy will travel far.")

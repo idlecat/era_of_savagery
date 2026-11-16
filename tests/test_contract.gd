@@ -61,6 +61,7 @@ func _initialize() -> void:
 	test_reactions()
 	test_config()
 	test_gm_operations()
+	test_dilemma_config()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -317,7 +318,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -1743,3 +1744,53 @@ func test_gm_operations() -> void:
 	check(sim3.pending_event == "posed:gift" and sim3.event_def("posed:gift")["options"].size() == 2, "it comes up as a dilemma")
 	var res: Dictionary = sim3.resolve_event("posed:gift", 0)
 	check(sim3.stock["food"] >= food0 + 10 and res["text"].ends_with("shares out the food."), "and choosing runs its actions (%s)" % res["text"])
+
+func test_dilemma_config() -> void:
+	print("\n== The chieftain's dilemmas come from config ==")
+	var Story = preload("res://scripts/story.gd")
+	var sim = _new_sim()
+	var dl: Dictionary = sim.DILEMMAS
+	var bad: Array = []
+	for id in dl:
+		if id.begins_with("_"): continue
+		for o in sim.story.options(dl[id]):
+			for k in o:
+				if not k in ["label", "desc", "cost", "cost_note", "needs", "chance", "when", "do", "result", "result_add", "else_do", "else_result"]: bad.append("%s: option key %s" % [id, k])
+			for a in o.get("do", []) + o.get("else_do", []):
+				for k in a:
+					if not k in Story.ACTIONS: bad.append("%s: action %s" % [id, k])
+	check(bad.is_empty(), "every dilemma uses known option keys and actions (%s)" % str(bad))
+	# every one renders with its values filled in
+	var cid: String = sim.rivals.clans.keys()[0]
+	var other: String = sim.rivals.clans.keys()[-1]
+	sim.rivals.clans[cid]["call_target"] = other
+	sim.rivals.clans[cid]["demand"] = 20
+	var ids := ["flood", "overpop", "chosen", "era2", "era3", "festival", "contact_" + cid, "demand_" + cid, "call_" + cid, "submit_" + cid]
+	var leftover: Array = []
+	for id in ids:
+		var d: Dictionary = sim.event_def(id)
+		var all: String = d.get("title", "") + d.get("text", "")
+		for o in d.get("options", []): all += o["label"] + o["desc"]
+		if d.get("options", []).is_empty() or all.contains("%s") or all.contains("%d"): leftover.append(id)
+	check(leftover.is_empty(), "all of them render, with every value filled in (%s)" % str(leftover))
+	var fl: Dictionary = sim.event_def("flood")
+	check(fl["options"][1]["desc"].contains("%"), "the offering's chance is shown (%s)" % fl["options"][1]["desc"])
+	# the festival's cost scales with the tribe
+	sim.stock["food"] = 1000
+	var food0: float = sim.stock["food"]
+	sim.resolve_event("festival", 0)
+	check(is_equal_approx(food0 - sim.stock["food"], sim.living().size() * 2) and sim.folk.festival_on(), "a great festival costs 2 food a head and starts the dancing")
+	# a demand: pay, and the raid waits; refuse, and it comes
+	var c: Dictionary = sim.rivals.clans[cid]
+	c["met"] = true
+	food0 = sim.stock["food"]
+	sim.resolve_event("demand_" + cid, 0)
+	check(is_equal_approx(food0 - sim.stock["food"], 20.0) and c["raid_t"] >= D.DAY_LEN * 3.9, "paying a demand hands over the food and puts off the raid")
+	var war0: int = sim.predators.filter(func(p): return p.clan == cid and p.kind == "warrior").size()
+	sim.resolve_event("demand_" + cid, 1)
+	check(sim.predators.filter(func(p): return p.clan == cid and p.kind == "warrior").size() > war0, "refusing it brings their war band")
+	# change the data, change the dilemma
+	var old: String = dl["overpop"]["options"][0]["label"]
+	dl["overpop"]["options"][0]["label"] = "Found a colony"
+	check(sim.event_def("overpop")["options"][0]["label"] == "Found a colony", "editing config/dilemmas.json changes the dilemma")
+	dl["overpop"]["options"][0]["label"] = old

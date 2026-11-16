@@ -22,7 +22,6 @@ const CHILD_DAYS := 3
 const ART_TIME := 18.0
 ## What things are worth in a trade, in food.
 const VALUE := {"goods": 6.0, "food": 1.0, "wood": 1.0, "stone": 1.5, "copper": 3.0, "tin": 4.0, "herbs": 2.0}
-const FESTIVALS := {0: "Festival of Renewal", 2: "Harvest Festival", 3: "Long Night Fire"}
 const TREASURE_KINDS := {
 	"carve": ["Owl Figurine", "Ivory Mother Figure", "Antler Spear-Thrower", "Lion-Headed Carving"],
 	"beads": ["Shell Necklace", "Bear-Tooth Collar", "Amber Bead String"],
@@ -95,7 +94,7 @@ func update(dt: float) -> void:
 		if si != season_seen:
 			var first := season_seen < 0
 			season_seen = si
-			if not first and FESTIVALS.has(sim.hz.season_idx()): pending = "festival"
+			if not first and _festival_def().has(str(sim.hz.season_idx())): pending = "festival"
 
 # ------------------------------------------------------------ children
 ## A newborn: a child of the tribe who plays until they come of age.
@@ -229,52 +228,36 @@ func festival_on() -> bool: return sim.time < festival_until
 
 func owns_event(id: String) -> bool: return id == "festival"
 
-func event_def(_id: String) -> Dictionary:
+## The festival dilemma is config/dilemmas.json "festival"; its "seasons" say which
+## seasons have one, its name and the elders' question.
+func _festival_def() -> Dictionary: return sim.DILEMMAS["festival"].get("seasons", {})
+
+func _festival_vars() -> Dictionary:
+	var f: Dictionary = _festival_def().get(str(sim.hz.season_idx()), _festival_def().values()[0])
 	var pop: int = sim.living().size()
-	var fname: String = FESTIVALS.get(sim.hz.season_idx(), "Harvest Festival")
-	var text: String = {
-		"Festival of Renewal": tr("The first green shoots are up and the birds are back. The elders ask whether the tribe will hold the Festival of Renewal."),
-		"Harvest Festival": tr("The berries are heavy and the herds are fat. The elders ask whether the tribe will hold the Harvest Festival before the cold."),
-		"Long Night Fire": tr("Winter has come. The elders ask whether the tribe will light the Long Night Fire, to sing the sun back."),
-	}[fname]
-	return {"title": tr(fname), "text": text, "options": [
-		{"label": tr("A great festival"), "desc": tr("Feast, dance and drum around the bonfire. Costs %d food and an afternoon's work. (Mood +25, devotion +8, friendly clans come.)") % (pop * 2), "enabled": sim.stock["food"] >= pop * 2},
-		{"label": tr("A small gathering"), "desc": tr("Songs at the fire. Costs %d food. (Mood +12, devotion +3)") % pop, "enabled": sim.stock["food"] >= pop},
-		{"label": tr("No festival this time"), "desc": tr("Keep everyone working. (Mood -10, devotion -3)"), "enabled": true},
-	]}
+	return {"festival": tr(f["name"]), "festival_text": tr(f["text"]), "feast_cost": pop * 2, "gather_cost": pop}
+
+func event_def(_id: String) -> Dictionary: return sim.story.dilemma_view(sim.DILEMMAS["festival"], _festival_vars())
 
 func resolve(_id: String, idx: int) -> String:
-	var pop: int = sim.living().size()
-	festival_name = FESTIVALS.get(sim.hz.season_idx(), "Harvest Festival")
-	match idx:
-		0:
-			sim.stock["food"] -= pop * 2
-			festival_until = sim.time + 30.0
-			glow_until = sim.time + D.DAY_LEN * 2.0
-			lift(25.0)
-			sim.devotion = minf(100.0, sim.devotion + 8)
-			sim.evo.drift("ranked", -4.0) # (more communal)
-			sim.birth_timer += 20.0 # (festivals make for children)
-			var guests: Array = []
-			for id in sim.rivals.clans:
-				var c: Dictionary = sim.rivals.clans[id]
-				if c["met"] and (sim.rivals.at_peace(id) or c["relation"] >= 15):
-					sim.rivals.change(id, 4.0)
-					guests.append(tr(c["name"]))
-			for u in sim.living(): sim.remember(u, tr("danced at the %s on Day %d") % [tr(festival_name), sim.day()], 5)
-			var g := (" " + tr("Guests of the %s come to share it.") % ", ".join(guests)) if not guests.is_empty() else ""
-			return tr("Drums and fire until dusk: the %s is a night the tribe will remember.") % tr(festival_name) + g
-		1:
-			sim.stock["food"] -= pop
-			festival_until = sim.time + 15.0
-			glow_until = sim.time + D.DAY_LEN
-			lift(12.0)
-			sim.devotion = minf(100.0, sim.devotion + 3)
-			for u in sim.living(): sim.remember(u, tr("sang at the %s on Day %d") % [tr(festival_name), sim.day()], 3)
-			return tr("The tribe gathers at the fire for songs and stories.")
-	lift(-10.0)
-	sim.devotion = maxf(0.0, sim.devotion - 3)
-	return tr("No festival this time. The people work on, but their hearts are heavy.")
+	return sim.story.dilemma_choose(sim.DILEMMAS["festival"], idx, _festival_vars())["text"]
+
+## The "festival" action: dancing for `length` s, and the glow of it for `glow_days`.
+func hold(cfg: Dictionary, vars: Dictionary) -> void:
+	festival_name = str(vars.get("festival", tr("Harvest Festival")))
+	festival_until = sim.time + float(cfg.get("length", 30))
+	glow_until = sim.time + D.DAY_LEN * float(cfg.get("glow_days", 1))
+
+## The "guests" action: friendly clans we have met come (relations +amount); returns the
+## line that says so ("" if none).
+func invite(amount: float) -> String:
+	var guests: Array = []
+	for id in sim.rivals.clans:
+		var c: Dictionary = sim.rivals.clans[id]
+		if c["met"] and (sim.rivals.at_peace(id) or c["relation"] >= 15):
+			sim.rivals.change(id, amount)
+			guests.append(tr(c["name"]))
+	return (" " + tr("Guests of the %s come to share it.") % ", ".join(guests)) if not guests.is_empty() else ""
 
 ## During a festival everyone at the village dances in a ring around the bonfire.
 func dance(u: E.Unit, dt: float) -> void:

@@ -6,6 +6,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 |---|---|---|
 | `config/events.json` | `hazards.gd`, `nature.gd` | seasons, weather, wolves, tiger raids, sickness, famine, lightning, wildfire, flood, Fire Mountain, earthquake, eclipse: when they happen, how strong they are, what the tribe is told |
 | `config/reactions.json` | `reactions.gd` (`sim.react`) | for each happening, what people do about it |
+| `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
 `scripts/config.gd` loads them (`Config.load_cfg("events")`, cached). A file of the same name in `user://config/` is **merged over** the game's one: it only needs the keys it changes. For example, to make wolves tougher and stop anyone fighting fires:
 
@@ -32,16 +33,21 @@ Each section's keys are documented by their names; the ones that shape the game:
 
 ## Dilemmas
 
-Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view()` for the HUD, `dilemma_choose()` to resolve): culture pack events, the eclipse, and dilemmas posed from outside.
+Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view()` for the HUD, `dilemma_choose()` to resolve): `config/dilemmas.json`, culture pack events, the eclipse, and dilemmas posed from outside. (Only the rival trader's market, whose choices are the goods he brings, is coded.)
 
 ```json
-{"title": "...", "text": "...", "speaker": "best:lore", "speaker_default": "The elders",
- "options": [{"label": "...", "desc": "...", "cost": {"food": 15},
-   "needs": {"best": "lore", "lv": 3, "or_tech": "totems"},
-   "do": [actions], "result": "...", "else_do": [actions], "else_result": "..."}]}
+{"title": "...", "text": ["... %s ... %d ...", "clan_name", "demand"], "speaker": "best:lore",
+ "options": [{"label": "...", "desc": "...", "cost": {"food": 15}, "cost_note": false,
+   "when": {"pop": 3}, "needs": {"best": "lore", "lv": 3, "or_tech": "totems"},
+   "chance": {"base": 0.35, "skill": "lore", "per_lv": 0.1, "max": 0.9},
+   "do": [actions], "result": "...", "else_do": [actions], "else_result": "...", "result_add": ["guests_line"]}]}
 ```
 
-`%s` in the title, text, labels and results is the speaker's name. A cost is added to the description and disables the option when the tribe can't pay. An option whose `needs` are not met runs `else_do`/`else_result`. Actions are those of scenario scripts (`story.gd run()`): `log`, `alert`, `give`, `spawn`, `reveal`, `mood`, `devotion`, `insight`, `culture`, `invent`, `boon`, `remember` (`%d` is the day; `who` = `all` or `best:<skill>`), `xp`, `panic`, `weather`, `react`, `feat`, `tale`, `join`.
+- **Texts** are English translation keys, or `[key, var names...]` filled in the key's placeholder order. Vars: `speaker` (with `"speaker": "best:<skill>"`; a lone `%s` in a plain text is the speaker), `pop`, `day`, `choice` (the option chosen), `fighters` (the three hardest hitters), `chance_pct`, and what the rules supply: `era`, `voices` (era2/era3: one line per kind of person, from `voices`), `festival`, `festival_text`, `feast_cost`, `gather_cost`, `clan_name`, `chief`, `epithet`, `clan_desc`, `demand`, `foe_name`, `martial`. Actions can add vars (`chosen_name`/`chosen_epithet`, `guests_line`).
+- **cost**: `{resource: number | var name | {"per_pop": k}}`, added to the description unless `cost_note` is false, and disables the option when the tribe can't pay. **when**: conditions (as in scenario scripts) that enable the option.
+- **needs** and **chance** decide between `do`/`result` and `else_do`/`else_result`. `needs` is a skilled person (`best`, `lv`, or a tech `or_tech`) or `{"var": name}`. `chance` scales with the best person at a `skill` (`per_lv`) or with the attack of `power: "fighters:<n>"` (`div`), clamped to `min`/`max`.
+- `"options_from": "chosen"` builds the options from the culture's mythic bloodlines.
+- **Actions** (`story.gd run()`, all listed in `story.ACTIONS`): `log`, `alert` (`at`, `level`), `give`, `spawn`, `reveal`, `mood`, `devotion`, `insight`, `culture`, `invent`, `boon`, `remember` (`%d` is the day; `impact`), `xp`, `hurt` (fraction of max HP), all with `who` = `all`, `best:<skill>` or `fighters:<n>`; `panic`, `weather`, `react`, `great_flood`, `open` (`contract`/`war`: the rules open that planning), `chosen`, `festival` (`length`, `glow_days`), `births`, `guests`; on the rival clan in var `clan` (or the one named by `"clan": "foe"`): `relation` (+`reason`), `relation_min`/`relation_max`, `raid`, `raid_delay_days`, `vassal`, `clear_treaties`, `grudge`, `peace_days`, `clan_pop`; and `feat`, `tale`, `join`. Culture packs and posed dilemmas may use the subset in `Cultures.DO_KEYS`.
 
 ## reactions.json
 

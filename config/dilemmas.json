@@ -1,0 +1,764 @@
+{
+ "_doc": "The chieftain's dilemmas, in the shared format run by story.gd (dilemma_view / dilemma_choose); see docs/CONFIG.md. A text is an English translation key, or [key, var names...] filled in order. Vars: speaker, pop, day, choice, fighters, chance_pct, plus those the rules supply (clan_name, chief, demand, festival...). Costs are numbers, var names or {per_pop: k}; cost_note false leaves the cost out of the description (it already says it).",
+ "flood": {
+  "title": "The Great Flood Warning",
+  "speaker": "best:lore",
+  "speaker_default": "The elders",
+  "text": "%s wakes screaming: in the vision, black rains fall for nine nights and the river swallows the low camps. The elders look to you, Great Chieftain.",
+  "options": [
+   {
+    "label": "The Ark Plan",
+    "desc": "Spend 40 wood on highland rafts and shelters. Everyone and everything is saved.",
+    "cost": {
+     "wood": 40
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "remember": "built highland rafts on the Ark Plan before the Great Flood",
+      "impact": 7
+     }
+    ],
+    "result": "Rafts are lashed and shelters raised on the highland. When the waters come, the tribe watches from safety."
+   },
+   {
+    "label": "Sacrifice to the River Deity",
+    "desc": [
+     "Offer 25 food and relics. %d%% chance (scales with %s's Shamanism).",
+     "chance_pct",
+     "speaker"
+    ],
+    "cost": {
+     "food": 25
+    },
+    "cost_note": false,
+    "chance": {
+     "base": 0.35,
+     "skill": "lore",
+     "per_lv": 0.1,
+     "max": 0.9
+    },
+    "do": [
+     {
+      "xp": {
+       "lore": 25
+      },
+      "who": "best:lore"
+     },
+     {
+      "remember": "appeased the River Deity and turned aside the Great Flood",
+      "who": "best:lore",
+      "impact": 9
+     },
+     {
+      "devotion": 20
+     }
+    ],
+    "result": "The river deity accepts the offering. The rains pass the tribe by.",
+    "else_do": [
+     {
+      "great_flood": true
+     }
+    ],
+    "else_result": "The deity is not appeased. The Great Flood strikes!"
+   },
+   {
+    "label": "Trust the riverbanks",
+    "desc": "Do nothing and hope the vision is false.",
+    "do": [
+     {
+      "great_flood": true
+     }
+    ],
+    "result": "The tribe ignores the vision. Nine nights later, the river rises."
+   }
+  ]
+ },
+ "overpop": {
+  "title": "Overpopulation Crisis",
+  "text": [
+   "The tribe now numbers %d. Game is thinning around the bonfire and quarrels break out over the last berries.",
+   "pop"
+  ],
+  "options": [
+   {
+    "label": "Frontier Colonization",
+    "desc": "Appoint an experienced leader via a Task Contract to found a sister settlement on the frontier.",
+    "do": [
+     {
+      "open": "contract"
+     }
+    ],
+    "result": "Choose a leader for the frontier. Their Task Contract negotiation begins now."
+   },
+   {
+    "label": "Territorial Conquest",
+    "desc": "Rally your 3 best warriors to raid a rival tribe for food and timber. Risky.",
+    "when": {
+     "pop": 3
+    },
+    "chance": {
+     "power": "fighters:3",
+     "div": 40,
+     "min": 0.2,
+     "max": 0.85
+    },
+    "do": [
+     {
+      "give": {
+       "food": 60,
+       "wood": 40
+      }
+     },
+     {
+      "xp": {
+       "combat": 30
+      },
+      "who": "fighters:3"
+     },
+     {
+      "remember": "raided a rival tribe and returned victorious on Day %d",
+      "who": "fighters:3",
+      "impact": 8
+     }
+    ],
+    "result": [
+     "%s return victorious, hauling 60 food and 40 timber from the rival camp.",
+     "fighters"
+    ],
+    "else_do": [
+     {
+      "hurt": 0.4,
+      "who": "fighters:3"
+     },
+     {
+      "remember": "was beaten back in a failed raid on a rival tribe on Day %d",
+      "who": "fighters:3",
+      "impact": 8
+     }
+    ],
+    "else_result": [
+     "The raid fails. %s limp home, bloodied and empty-handed.",
+     "fighters"
+    ]
+   }
+  ]
+ },
+ "chosen": {
+  "title": "Birth of the Chosen One",
+  "text": "Under a sky split by lightning, a child is born bearing the mark of the totem. Which mythic bloodline awakens?",
+  "options_from": "chosen",
+  "result": [
+   "%s %s is born! The whole tribe feels the totem's favor.",
+   "chosen_name",
+   "chosen_epithet"
+  ]
+ },
+ "era2": {
+  "title": "Dawn of the Tribe & Agrarian Era",
+  "text": [
+   "New wisdom changes how the tribe lives, and not everyone is glad. %s",
+   "voices"
+  ],
+  "voices": {
+   "warrior": "\"Digging in the dirt? We are hunters!\"",
+   "agrarian": "\"Full stores mean no hungry winters.\"",
+   "mystic": "\"The forest spirits will not forgive the axe and the flame.\"",
+   "cautious": "\"Walls and stores - that is how a tribe lasts.\"",
+   "lazy": "\"If the food grows by itself, I like it.\""
+  },
+  "options": [
+   {
+    "label": "Put down roots",
+    "desc": "Fields, pens and stores come first. (Settled +30, Spiritual -10)",
+    "do": [
+     {
+      "culture": {
+       "settled": 30,
+       "spiritual": -10
+      }
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   },
+   {
+    "label": "Honor the hunt",
+    "desc": "The tribe stays hunters at heart. (Roaming +30, Martial +15)",
+    "do": [
+     {
+      "culture": {
+       "settled": -30,
+       "martial": 15
+      }
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   },
+   {
+    "label": "Let the shamans decide",
+    "desc": "Ask the spirits before every change. (Spiritual +30, +15 lore)",
+    "do": [
+     {
+      "culture": {
+       "spiritual": 30
+      }
+     },
+     {
+      "give": {
+       "lore": 15
+      }
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   }
+  ]
+ },
+ "era3": {
+  "title": "Dawn of the Bronze & Mythic Era",
+  "text": [
+   "Great works are now within reach, and the elders argue over what the tribe should become. %s",
+   "voices"
+  ],
+  "voices": {
+   "warrior": "\"Arm every hand and no beast will trouble us again!\"",
+   "mystic": "\"Raise the great totems so the ancestors see us.\"",
+   "cautious": "\"Laws, not spears, keep a people whole.\"",
+   "agrarian": "\"More fields, more mouths fed.\"",
+   "lazy": "\"Whatever needs the least hauling.\""
+  },
+  "options": [
+   {
+    "label": "The Bronze Oath",
+    "desc": "A warrior people under strong chiefs. (Martial +30, Ranked +15)",
+    "do": [
+     {
+      "culture": {
+       "martial": 30,
+       "ranked": 15
+      }
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   },
+   {
+    "label": "The Totem Covenant",
+    "desc": "A people of the spirits. (Spiritual +30, +20 devotion)",
+    "do": [
+     {
+      "culture": {
+       "spiritual": 30
+      }
+     },
+     {
+      "devotion": 20
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   },
+   {
+    "label": "The Elders' Law",
+    "desc": "Rule by council and shared stores. (Ranked +20, Settled +15)",
+    "do": [
+     {
+      "culture": {
+       "ranked": 20,
+       "settled": 15
+      }
+     },
+     {
+      "remember": [
+       "lived through the dawn of the %s, when the tribe chose '%s'",
+       "era",
+       "choice"
+      ],
+      "impact": 6
+     }
+    ],
+    "result": [
+     "The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.",
+     "choice",
+     "era"
+    ]
+   }
+  ]
+ },
+ "festival": {
+  "title": [
+   "%s",
+   "festival"
+  ],
+  "text": [
+   "%s",
+   "festival_text"
+  ],
+  "seasons": {
+   "0": {
+    "name": "Festival of Renewal",
+    "text": "The first green shoots are up and the birds are back. The elders ask whether the tribe will hold the Festival of Renewal."
+   },
+   "2": {
+    "name": "Harvest Festival",
+    "text": "The berries are heavy and the herds are fat. The elders ask whether the tribe will hold the Harvest Festival before the cold."
+   },
+   "3": {
+    "name": "Long Night Fire",
+    "text": "Winter has come. The elders ask whether the tribe will light the Long Night Fire, to sing the sun back."
+   }
+  },
+  "options": [
+   {
+    "label": "A great festival",
+    "desc": [
+     "Feast, dance and drum around the bonfire. Costs %d food and an afternoon's work. (Mood +25, devotion +8, friendly clans come.)",
+     "feast_cost"
+    ],
+    "cost": {
+     "food": {
+      "per_pop": 2
+     }
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "festival": {
+       "length": 30,
+       "glow_days": 2
+      }
+     },
+     {
+      "mood": 25
+     },
+     {
+      "devotion": 8
+     },
+     {
+      "culture": {
+       "ranked": -4
+      }
+     },
+     {
+      "births": 20
+     },
+     {
+      "guests": 4
+     },
+     {
+      "remember": [
+       "danced at the %s on Day %d",
+       "festival",
+       "day"
+      ],
+      "impact": 5
+     }
+    ],
+    "result": [
+     "Drums and fire until dusk: the %s is a night the tribe will remember.",
+     "festival"
+    ],
+    "result_add": [
+     "guests_line"
+    ]
+   },
+   {
+    "label": "A small gathering",
+    "desc": [
+     "Songs at the fire. Costs %d food. (Mood +12, devotion +3)",
+     "gather_cost"
+    ],
+    "cost": {
+     "food": {
+      "per_pop": 1
+     }
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "festival": {
+       "length": 15,
+       "glow_days": 1
+      }
+     },
+     {
+      "mood": 12
+     },
+     {
+      "devotion": 3
+     },
+     {
+      "remember": [
+       "sang at the %s on Day %d",
+       "festival",
+       "day"
+      ],
+      "impact": 3
+     }
+    ],
+    "result": "The tribe gathers at the fire for songs and stories."
+   },
+   {
+    "label": "No festival this time",
+    "desc": "Keep everyone working. (Mood -10, devotion -3)",
+    "do": [
+     {
+      "mood": -10
+     },
+     {
+      "devotion": -3
+     }
+    ],
+    "result": "No festival this time. The people work on, but their hearts are heavy."
+   }
+  ]
+ },
+ "contact": {
+  "title": [
+   "First Contact: the %s",
+   "clan_name"
+  ],
+  "text": [
+   "Our scouts have found the %s, led by %s %s. %s What face do we show them?",
+   "clan_name",
+   "chief",
+   "epithet",
+   "clan_desc"
+  ],
+  "options": [
+   {
+    "label": "Offer gifts",
+    "desc": "Send 20 food and fine furs. They will think well of us. (+20 relations)",
+    "cost": {
+     "food": 20
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "relation": 20
+     }
+    ],
+    "result": [
+     "The %s accept our gifts. %s nods: \"Your people may pass in peace.\"",
+     "clan_name",
+     "chief"
+    ]
+   },
+   {
+    "label": "Show our strength",
+    "desc": "Our warriors stand tall at the border. Martial clans respect it; others take it as a threat.",
+    "needs": {
+     "var": "martial"
+    },
+    "do": [
+     {
+      "relation": 8
+     }
+    ],
+    "result": [
+     "%s eyes our warriors. \"Strong. Good.\" The %s will think twice before raiding us.",
+     "chief",
+     "clan_name"
+    ],
+    "else_do": [
+     {
+      "relation": -12,
+      "reason": "you came to us with spears raised"
+     }
+    ],
+    "else_result": [
+     "The %s take our display as a threat and pull back into their lands.",
+     "clan_name"
+    ]
+   },
+   {
+    "label": "Keep our distance",
+    "desc": "Watch them, say nothing.",
+    "result": [
+     "We watch the %s from afar, and they watch us.",
+     "clan_name"
+    ]
+   }
+  ]
+ },
+ "demand": {
+  "title": [
+   "A Messenger from the %s",
+   "clan_name"
+  ],
+  "text": [
+   "A painted runner stops at the edge of the firelight. \"%s %s says: give us %d food, or our spears will come and take it.\"",
+   "chief",
+   "epithet",
+   "demand"
+  ],
+  "options": [
+   {
+    "label": "Pay",
+    "desc": [
+     "Hand over %d food. No raid for now (+5 relations).",
+     "demand"
+    ],
+    "cost": {
+     "food": "demand"
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "relation": 5
+     },
+     {
+      "raid_delay_days": 4
+     }
+    ],
+    "result": [
+     "The runner leaves with our food. %s is satisfied - for now.",
+     "chief"
+    ]
+   },
+   {
+    "label": "Refuse",
+    "desc": "Send the runner away. Their war band will come.",
+    "do": [
+     {
+      "relation": -5,
+      "reason": "you sent our messenger away empty-handed"
+     },
+     {
+      "raid": true
+     }
+    ],
+    "result": [
+     "The runner spits at our fire and is gone. The %s are coming.",
+     "clan_name"
+    ]
+   }
+  ]
+ },
+ "call": {
+  "title": [
+   "The %s Call Us to War",
+   "clan_name"
+  ],
+  "text": [
+   "A runner of our allies the %s arrives breathless: \"%s %s asks: will our brothers send spears against the %s?\"",
+   "clan_name",
+   "chief",
+   "epithet",
+   "foe_name"
+  ],
+  "options": [
+   {
+    "label": "Send a war party",
+    "desc": [
+     "Choose a leader to plan a raid on the %s (+10 with our allies).",
+     "foe_name"
+    ],
+    "do": [
+     {
+      "relation": 10
+     },
+     {
+      "open": "war"
+     }
+    ],
+    "result": [
+     "We will march with the %s against the %s. Choose who leads our spears.",
+     "clan_name",
+     "foe_name"
+    ]
+   },
+   {
+    "label": "Send gifts instead",
+    "desc": "15 food for their warriors; they go alone (+3).",
+    "cost": {
+     "food": 15
+    },
+    "cost_note": false,
+    "do": [
+     {
+      "relation": 3
+     },
+     {
+      "clan_pop": -1,
+      "clan": "foe"
+     },
+     {
+      "relation": -5,
+      "clan": "foe"
+     }
+    ],
+    "result": [
+     "The %s raid the %s alone, fed by our food.",
+     "clan_name",
+     "foe_name"
+    ]
+   },
+   {
+    "label": "Refuse",
+    "desc": "This is not our fight (-12 with our allies).",
+    "do": [
+     {
+      "relation": -12,
+      "reason": "you left us to fight alone"
+     }
+    ],
+    "result": [
+     "The runner leaves without a word. The %s will remember.",
+     "clan_name"
+    ]
+   }
+  ]
+ },
+ "submit": {
+  "title": [
+   "The %s After the Battle",
+   "clan_name"
+  ],
+  "text": [
+   "%s %s comes out of the smoke, unarmed. \"Enough. The %s will bow to your fire, if you let our children live.\"",
+   "chief",
+   "epithet",
+   "clan_name"
+  ],
+  "options": [
+   {
+    "label": "Accept their submission",
+    "desc": "They become our vassals: 3 food a day, no more raids.",
+    "do": [
+     {
+      "vassal": 3,
+      "relation_min": -30,
+      "clear_treaties": true
+     },
+     {
+      "culture": {
+       "ranked": 6
+      }
+     },
+     {
+      "alert": [
+       "The %s are now our vassals.",
+       "clan_name"
+      ],
+      "at": "clan_pos",
+      "level": "info"
+     }
+    ],
+    "result": [
+     "%s lays down their weapons at our fire. The %s are ours.",
+     "chief",
+     "clan_name"
+    ]
+   },
+   {
+    "label": "Demand a heavy tribute",
+    "desc": "6 food a day - but they will hate us, and may rise again.",
+    "do": [
+     {
+      "vassal": 6,
+      "relation_max": -60,
+      "grudge": "you crushed us under a heavy tribute"
+     },
+     {
+      "alert": [
+       "The %s are now our vassals.",
+       "clan_name"
+      ],
+      "at": "clan_pos",
+      "level": "info"
+     }
+    ],
+    "result": "They will pay, and they will hate us for it."
+   },
+   {
+    "label": "Spare them freely",
+    "desc": "Make peace with no tribute (+20 relations, 20 days of peace).",
+    "do": [
+     {
+      "relation_min": -10
+     },
+     {
+      "relation": 20,
+      "peace_days": 20
+     }
+    ],
+    "result": "We let them go in peace. The tale of our mercy will travel far."
+   }
+  ]
+ },
+ "submit_unbroken": {
+  "title": [
+   "The %s After the Battle",
+   "clan_name"
+  ],
+  "text": [
+   "The %s pull back behind their huts, bloodied but still defiant.",
+   "clan_name"
+  ],
+  "options": [
+   {
+    "label": "Let them lick their wounds",
+    "desc": "They are beaten, but not yet broken.",
+    "result": "We leave them to mourn."
+   }
+  ]
+ }
+}

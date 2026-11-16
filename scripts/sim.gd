@@ -1971,32 +1971,40 @@ func event_def(id: String) -> Dictionary:
 	if folk.owns_event(id): return folk.event_def(id)
 	if cult.owns_event(id): return cult.event_def(id)
 	if story.owns_event(id): return story.event_def(id)
-	var shaman := best_unit("lore", false)
-	var sname: String = shaman.name if shaman else "The elders"
-	match id:
-		"flood":
-			var chance := clampf(0.35 + 0.1 * (shaman.lv("lore") if shaman else 0), 0.0, 0.9)
-			return {"title": tr("The Great Flood Warning"),
-				"text": tr("%s wakes screaming: in the vision, black rains fall for nine nights and the river swallows the low camps. The elders look to you, Great Chieftain.") % sname,
-				"options": [
-					{"label": tr("The Ark Plan"), "desc": tr("Spend 40 wood on highland rafts and shelters. Everyone and everything is saved."), "enabled": stock["wood"] >= 40},
-					{"label": tr("Sacrifice to the River Deity"), "desc": tr("Offer 25 food and relics. %d%% chance (scales with %s's Shamanism).") % [roundi(chance * 100), sname], "enabled": stock["food"] >= 25},
-					{"label": tr("Trust the riverbanks"), "desc": tr("Do nothing and hope the vision is false."), "enabled": true},
-				]}
-		"overpop":
-			return {"title": tr("Overpopulation Crisis"),
-				"text": tr("The tribe now numbers %d. Game is thinning around the bonfire and quarrels break out over the last berries.") % living().size(),
-				"options": [
-					{"label": tr("Frontier Colonization"), "desc": tr("Appoint an experienced leader via a Task Contract to found a sister settlement on the frontier."), "enabled": true},
-					{"label": tr("Territorial Conquest"), "desc": tr("Rally your 3 best warriors to raid a rival tribe for food and timber. Risky."), "enabled": living().size() >= 3},
-				]}
-		"era2", "era3":
-			return _era_event_def(id)
-		"chosen":
-			return {"title": tr("Birth of the Chosen One"),
-				"text": tr("Under a sky split by lightning, a child is born bearing the mark of the totem. Which mythic bloodline awakens?"),
-				"options": D.CHOSEN.slice(0, 4).map(func(h): return {"label": tr(h["label"]), "desc": tr(h["desc"]), "enabled": true})}
+	if DILEMMAS.has(id): return story.dilemma_view(DILEMMAS[id], _dilemma_vars(id))
 	return {}
+
+## The chieftain's dilemmas from config/dilemmas.json (flood, overpop, chosen, era2, era3;
+## folk and rivals read theirs too).
+var DILEMMAS: Dictionary = preload("res://scripts/config.gd").load_cfg("dilemmas")
+
+## The named values a built-in dilemma's texts use.
+func _dilemma_vars(id: String) -> Dictionary:
+	var v := {}
+	if id in ["era2", "era3"]:
+		v["era"] = tr(D.ERA_NAMES[evo.era])
+		var voices: Array = []
+		var seen := {}
+		for u in living():
+			var a := arch(u)
+			if seen.has(a) or not DILEMMAS[id]["voices"].has(a): continue
+			seen[a] = true
+			voices.append("%s: %s" % [tr(u.name), tr(DILEMMAS[id]["voices"][a])])
+			if voices.size() >= 3: break
+		v["voices"] = "  ".join(voices)
+	return v
+
+## A Chosen One of bloodline i (D.CHOSEN) is born: the "chosen" action.
+func birth_chosen(i: int) -> Dictionary:
+	var def: Dictionary = D.CHOSEN[clampi(i, 0, D.CHOSEN.size() - 1)].duplicate(true)
+	def["hero"] = true
+	cult.on_chosen(def)
+	var u := make_unit(def, D.VILLAGE + Vector2(0, 40))
+	remember(u, tr("was born under a lightning sky, bearing a mythic bloodline"), 10)
+	units.append(u)
+	evo.on_birth(u)
+	popup(u.pos + Vector2(0, -30), tr("%s is born!") % tr(def["name"]), Color("#ffd36b"), true)
+	return {"chosen_name": tr(def["name"]), "chosen_epithet": tr(def["epithet"])}
 
 ## Returns {"text": outcome, "open_contract": bool}
 func resolve_event(id: String, idx: int) -> Dictionary:
@@ -2022,112 +2030,13 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 	if legacy.owns_event(id):
 		var lr: Dictionary = legacy.resolve(id, idx)
 		return {"text": lr["text"], "open_contract": false, "restart": lr["restart"]}
-	var shaman := best_unit("lore", false)
-	var out := {"text": tr(""), "open_contract": false}
-	match id:
-		"flood":
-			if idx == 0 and stock["wood"] >= 40:
-				stock["wood"] -= 40
-				out["text"] = tr("Rafts are lashed and shelters raised on the highland. When the waters come, the tribe watches from safety.")
-				for u in living(): remember(u, tr("built highland rafts on the Ark Plan before the Great Flood"), 7)
-			elif idx == 1 and stock["food"] >= 25:
-				stock["food"] -= 25
-				var chance := 0.35 + 0.1 * (shaman.lv("lore") if shaman else 0)
-				if randf() < chance:
-					out["text"] = tr("The river deity accepts the offering. The rains pass the tribe by.")
-					if shaman:
-						gain_xp(shaman, "lore", 25)
-						remember(shaman, tr("appeased the River Deity and turned aside the Great Flood"), 9)
-					devotion = minf(100, devotion + 20)
-				else:
-					out["text"] = tr("The deity is not appeased. The Great Flood strikes!")
-					flood_strike()
-			else:
-				out["text"] = tr("The tribe ignores the vision. Nine nights later, the river rises.")
-				flood_strike()
-		"overpop":
-			if idx == 0:
-				out["text"] = tr("Choose a leader for the frontier. Their Task Contract negotiation begins now.")
-				out["open_contract"] = true
-			else:
-				var raiders := living().filter(func(u): return u.role != "contract")
-				raiders.sort_custom(func(a, b): return unit_atk(a) > unit_atk(b))
-				raiders = raiders.slice(0, 3)
-				var power := 0.0
-				for u in raiders: power += unit_atk(u)
-				var chance := clampf(power / 40.0, 0.2, 0.85)
-				var names := ", ".join(raiders.map(func(u): return u.name))
-				if randf() < chance:
-					stock["food"] += 60
-					stock["wood"] += 40
-					out["text"] = tr("%s return victorious, hauling 60 food and 40 timber from the rival camp.") % names
-					for u in raiders:
-						gain_xp(u, "combat", 30)
-						remember(u, tr("raided a rival tribe and returned victorious on Day %d") % day(), 8)
-				else:
-					out["text"] = tr("The raid fails. %s limp home, bloodied and empty-handed.") % names
-					for u in raiders:
-						hurt_unit(u, u.max_hp * 0.4, null)
-						remember(u, tr("was beaten back in a failed raid on a rival tribe on Day %d") % day(), 8)
-		"chosen":
-			var def: Dictionary = D.CHOSEN[clampi(idx, 0, mini(D.CHOSEN.size(), 4) - 1)].duplicate(true)
-			def["hero"] = true
-			cult.on_chosen(def)
-			var u := make_unit(def, D.VILLAGE + Vector2(0, 40))
-			remember(u, tr("was born under a lightning sky, bearing a mythic bloodline"), 10)
-			units.append(u)
-			evo.on_birth(u)
-			out["text"] = tr("%s %s is born! The whole tribe feels the totem's favor.") % [tr(def["name"]), tr(def["epithet"])]
-			popup(u.pos + Vector2(0, -30), tr("%s is born!") % tr(def["name"]), Color("#ffd36b"), true)
-		"era2", "era3":
-			out["text"] = _era_event_resolve(id, idx)
+	var out := {"text": "", "open_contract": false}
+	if DILEMMAS.has(id):
+		var r: Dictionary = story.dilemma_choose(DILEMMAS[id], idx, _dilemma_vars(id))
+		out["text"] = r["text"]
+		out["open_contract"] = r["vars"].get("open", "") == "contract"
 	add_log(out["text"], "story")
 	return out
-
-# ------------------------------------------------------------------ era transitions (culture-defining dilemmas)
-const ERA_EVENTS := {
-	"era2": {"title": "Dawn of the Tribe & Agrarian Era",
-		"text": "New wisdom changes how the tribe lives, and not everyone is glad. %s",
-		"voices": {"warrior": "\"Digging in the dirt? We are hunters!\"", "agrarian": "\"Full stores mean no hungry winters.\"",
-			"mystic": "\"The forest spirits will not forgive the axe and the flame.\"", "cautious": "\"Walls and stores - that is how a tribe lasts.\"", "lazy": "\"If the food grows by itself, I like it.\""},
-		"options": [
-			{"label": "Put down roots", "desc": "Fields, pens and stores come first. (Settled +30, Spiritual -10)", "shift": {"settled": 30, "spiritual": -10}},
-			{"label": "Honor the hunt", "desc": "The tribe stays hunters at heart. (Roaming +30, Martial +15)", "shift": {"settled": -30, "martial": 15}},
-			{"label": "Let the shamans decide", "desc": "Ask the spirits before every change. (Spiritual +30, +15 lore)", "shift": {"spiritual": 30}, "lore": 15},
-		]},
-	"era3": {"title": "Dawn of the Bronze & Mythic Era",
-		"text": "Great works are now within reach, and the elders argue over what the tribe should become. %s",
-		"voices": {"warrior": "\"Arm every hand and no beast will trouble us again!\"", "mystic": "\"Raise the great totems so the ancestors see us.\"",
-			"cautious": "\"Laws, not spears, keep a people whole.\"", "agrarian": "\"More fields, more mouths fed.\"", "lazy": "\"Whatever needs the least hauling.\""},
-		"options": [
-			{"label": "The Bronze Oath", "desc": "A warrior people under strong chiefs. (Martial +30, Ranked +15)", "shift": {"martial": 30, "ranked": 15}},
-			{"label": "The Totem Covenant", "desc": "A people of the spirits. (Spiritual +30, +20 devotion)", "shift": {"spiritual": 30}, "devotion": 20},
-			{"label": "The Elders' Law", "desc": "Rule by council and shared stores. (Ranked +20, Settled +15)", "shift": {"ranked": 20, "settled": 15}},
-		]},
-}
-
-func _era_event_def(id: String) -> Dictionary:
-	var ev: Dictionary = ERA_EVENTS[id]
-	var voices: Array = []
-	var seen := {}
-	for u in living():
-		var a := arch(u)
-		if seen.has(a) or not ev["voices"].has(a): continue
-		seen[a] = true
-		voices.append("%s: %s" % [tr(u.name), tr(ev["voices"][a])])
-		if voices.size() >= 3: break
-	var opts: Array = []
-	for o in ev["options"]: opts.append({"label": tr(o["label"]), "desc": tr(o["desc"]), "enabled": true})
-	return {"title": tr(ev["title"]), "text": tr(ev["text"]) % "  ".join(voices), "options": opts}
-
-func _era_event_resolve(id: String, idx: int) -> String:
-	var o: Dictionary = ERA_EVENTS[id]["options"][clampi(idx, 0, 2)]
-	for a in o["shift"]: evo.drift(a, o["shift"][a])
-	stock["lore"] += o.get("lore", 0)
-	devotion = minf(100.0, devotion + o.get("devotion", 0))
-	for u in living(): remember(u, tr("lived through the dawn of the %s, when the tribe chose '%s'") % [tr(D.ERA_NAMES[evo.era]), tr(o["label"])], 6)
-	return tr("The tribe chooses '%s'. The %s begins. Homes can now be rebuilt in the new style.") % [tr(o["label"]), tr(D.ERA_NAMES[evo.era])]
-
 
 # ------------------------------------------------------------------ exploration / fog of war
 func _fog_init() -> void:

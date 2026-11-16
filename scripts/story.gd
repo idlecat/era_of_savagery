@@ -99,9 +99,10 @@ func holds(w: Dictionary) -> bool:
 	if w.has("happened") and not (cu and cu.fired.has(w["happened"])): return false
 	return true
 
-func _at(where: Variant, c) -> Vector2:
+func _at(where: Variant, c, vars: Dictionary = {}) -> Vector2:
 	if where is Vector2: return where
 	if where is Array and where.size() == 2: return Vector2(where[0], where[1]) # (from JSON)
+	if vars.get(str(where)) is Vector2: return vars[str(where)]
 	match str(where):
 		"site": return c.site if c else D.VILLAGE
 		"village": return D.VILLAGE
@@ -109,20 +110,53 @@ func _at(where: Variant, c) -> Vector2:
 		if lm["id"] == str(where): return lm["pos"]
 	return D.VILLAGE
 
-func run(actions: Array, c) -> void:
+## Every action run() knows (culture packs may use Cultures.DO_KEYS, a subset; the rule
+## configs in config/ may use them all).
+const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn", "offsets", "give", "reveal", "r", "flag",
+	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
+	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
+	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
+	"grudge", "peace_days", "clan_pop"]
+
+## A text: an English key, or [key, var names...] filled from `vars` (GDScript % is
+## positional: the names are in the key's placeholder order).
+func text(v, vars: Dictionary = {}) -> String:
+	if v is Array:
+		if v.is_empty(): return ""
+		var key: String = tr(str(v[0]))
+		var args: Array = v.slice(1).map(func(n): return vars.get(n, ""))
+		return key % args if not args.is_empty() else key
+	return tr(str(v))
+
+## The people an action is for: "all" (grown-ups), "best:<skill>", "fighters:<n>" (the
+## n hardest hitters at home).
+func people(who: String) -> Array:
+	var out: Array = sim.living().filter(func(u): return u.role != "child")
+	if who.begins_with("best:"):
+		var b = sim.best_unit(who.substr(5), false)
+		return [b] if b else []
+	if who.begins_with("fighters:"):
+		out = out.filter(func(u): return u.role != "contract")
+		out.sort_custom(func(a, b): return sim.unit_atk(a) > sim.unit_atk(b))
+		return out.slice(0, int(who.substr(9)))
+	return out
+
+## Run actions. `vars` are the named values of the moment (a dilemma's clan, festival...);
+## actions may add to them (e.g. "chosen" sets chosen_name for the result text).
+func run(actions: Array, c, vars: Dictionary = {}) -> void:
 	for a in actions:
 		if a.has("event"):
 			if not sim.flags.has(a["event"]): # (also lets a demo switch an event off)
 				sim.flags[a["event"]] = true
 				pending.append(a["event"])
 		if a.has("log"):
-			var text: String = tr(a["log"])
-			if a.get("arg", "") == "plan" and c: text = text % c.plan["plan_id"]
-			sim.add_log(text, a.get("kind", "story"))
+			var t: String = text(a["log"], vars)
+			if a.get("arg", "") == "plan" and c: t = t % c.plan["plan_id"]
+			sim.add_log(t, a.get("kind", "story"))
 		if a.has("alert"):
-			sim.alert(tr(a["alert"]), _at(a.get("at", "village"), c), a.get("level", "warn"))
+			sim.alert(text(a["alert"], vars), _at(a.get("at", "village"), c, vars), a.get("level", "warn"))
 		if a.has("spawn"):
-			var base := _at(a.get("at", "village"), c)
+			var base := _at(a.get("at", "village"), c, vars)
 			if c: c.ambushed = true
 			for off in a.get("offsets", [Vector2.ZERO]):
 				var p: Vector2 = base + (Vector2(off[0], off[1]) if off is Array else off) # (JSON gives [x, y])
@@ -135,7 +169,7 @@ func run(actions: Array, c) -> void:
 		if a.has("give"):
 			for r in a["give"]: sim.stock[r] = maxf(0.0, sim.stock.get(r, 0.0) + float(a["give"][r]))
 		if a.has("reveal"):
-			sim.reveal(_at(a["reveal"], c), float(a.get("r", 400.0)))
+			sim.reveal(_at(a["reveal"], c, vars), float(a.get("r", 400.0)))
 		if a.has("flag"):
 			sim.flags[a["flag"]] = true
 		if a.has("mood"): sim.folk.lift(float(a["mood"]))
@@ -146,30 +180,45 @@ func run(actions: Array, c) -> void:
 			sim.inv.discover(a["invent"], sim.best_unit("craft", false))
 		if a.has("boon") and sim.cult: sim.cult.add_boon(a["boon"])
 		if a.has("remember"):
-			var who: String = a.get("who", "all")
-			var people: Array = sim.living().filter(func(u): return u.role != "child")
-			if who.begins_with("best:"):
-				var b = sim.best_unit(who.substr(5), false)
-				people = [b] if b else []
-			var mem: String = tr(a["remember"])
-			if mem.contains("%d"): mem = mem % sim.day()
-			for u in people: sim.remember(u, mem, int(a.get("impact", 6)))
+			var mem: String = text(a["remember"], vars)
+			if not a["remember"] is Array and mem.contains("%d"): mem = mem % sim.day()
+			for u in people(a.get("who", "all")): sim.remember(u, mem, int(a.get("impact", 6)))
 		if a.has("xp"):
-			var who2: String = a.get("who", "all")
-			var crew: Array = sim.living().filter(func(u): return u.role != "child")
-			if who2.begins_with("best:"):
-				var b2 = sim.best_unit(who2.substr(5), false)
-				crew = [b2] if b2 else []
-			for u in crew:
+			for u in people(a.get("who", "all")):
 				for k in a["xp"]: sim.gain_xp(u, k, float(a["xp"][k]))
+		if a.has("hurt"): # (a fraction of max HP)
+			for u in people(a.get("who", "all")): sim.hurt_unit(u, u.max_hp * float(a["hurt"]), null)
 		if a.has("panic"):
 			sim.nat.panic_until = maxf(sim.nat.panic_until, sim.time + float(a["panic"]))
 			sim.react.trigger("panic", {"at": D.VILLAGE, "until": sim.nat.panic_until})
 		if a.has("weather"): sim.hz.set_weather(str(a["weather"]))
-		if a.has("react"): sim.react.trigger(str(a["react"]), {"at": _at(a.get("at", "village"), c)})
+		if a.has("react"): sim.react.trigger(str(a["react"]), {"at": _at(a.get("at", "village"), c, vars)})
+		if a.has("great_flood"): sim.flood_strike()
+		if a.has("open"): vars["open"] = str(a["open"]) # (the caller opens a Task Contract / war plan)
+		if a.has("chosen"): vars.merge(sim.birth_chosen(int(a["chosen"])), true)
+		if a.has("festival"): sim.folk.hold(a["festival"], vars)
+		if a.has("births"): sim.birth_timer += float(a["births"])
+		if a.has("guests"): vars["guests_line"] = sim.folk.invite(float(a["guests"]))
+		_clan_actions(a, vars)
 		if a.has("feat"): sim.inv.feat("story", tr(a["feat"]))
 		if a.has("tale") and sim.cult: sim.cult.tell(a["tale"])
 		if a.has("join") and sim.cult: sim.cult.join(a["join"])
+
+## Actions on a rival clan: vars[a.clan] ("clan" by default) is its id.
+func _clan_actions(a: Dictionary, vars: Dictionary) -> void:
+	var cid: String = str(vars.get(str(a.get("clan", "clan")), ""))
+	if cid == "" or not sim.rivals.clans.has(cid): return
+	var cl: Dictionary = sim.rivals.clans[cid]
+	if a.has("relation_min"): cl["relation"] = maxf(cl["relation"], float(a["relation_min"]))
+	if a.has("relation_max"): cl["relation"] = minf(cl["relation"], float(a["relation_max"]))
+	if a.has("relation"): sim.rivals.change(cid, float(a["relation"]), text(a["reason"], vars) if a.has("reason") else "")
+	if a.has("raid_delay_days"): cl["raid_t"] = D.DAY_LEN * float(a["raid_delay_days"])
+	if a.has("raid"): sim.rivals.launch_raid(cl)
+	if a.has("clear_treaties"): cl["treaties"].clear()
+	if a.has("vassal"): cl["vassal"] = int(a["vassal"])
+	if a.has("grudge"): cl["grudges"].append(text(a["grudge"], vars))
+	if a.has("peace_days"): cl["treaties"]["peace"] = {"until": sim.time + float(a["peace_days"]) * D.DAY_LEN, "tribute": 0}
+	if a.has("clan_pop"): cl["pop"] = maxi(3, cl["pop"] + int(a["clan_pop"]))
 
 # ------------------------------------------------------------ dilemmas (the shared format)
 ## The speaker of a dilemma ("best:<skill>"), or null.
@@ -177,55 +226,114 @@ func speaker(ev: Dictionary) -> Variant:
 	var sp: String = str(ev.get("speaker", ""))
 	return sim.best_unit(sp.substr(5), false) if sp.begins_with("best:") else null
 
-func _say(text: String, ev: Dictionary) -> String:
-	var t: String = tr(text)
-	if not t.contains("%s") or not ev.has("speaker"): return t
-	var u = speaker(ev)
-	return t % (tr(u.name) if u else tr(ev.get("speaker_default", "The elders")))
+## The named values a dilemma's texts and costs can use: the caller's, plus speaker,
+## pop and day.
+func _vars(ev: Dictionary, vars: Dictionary) -> Dictionary:
+	var v := vars.duplicate()
+	if ev.has("speaker") and not v.has("speaker"):
+		var u = speaker(ev)
+		v["speaker"] = tr(u.name) if u else tr(ev.get("speaker_default", "The elders"))
+	v["pop"] = sim.living().size()
+	v["day"] = sim.day()
+	if not v.has("fighters"): v["fighters"] = ", ".join(people("fighters:3").map(func(u): return tr(u.name)))
+	return v
 
-func affords(o: Dictionary) -> bool:
-	for r in o.get("cost", {}):
-		if sim.stock.get(r, 0.0) < float(o["cost"][r]): return false
+## A text of a dilemma: [key, vars...], or a key whose lone "%s" is the speaker.
+func _say(t, ev: Dictionary, vars: Dictionary = {}) -> String:
+	if t is Array: return text(t, vars)
+	var s: String = tr(str(t))
+	if s.contains("%s") and ev.has("speaker") and s.count("%") == 1: return s % vars.get("speaker", tr("The elders"))
+	return s
+
+## A number in a dilemma: a number, the name of a var, or {"per_pop": k}.
+func _num(v, vars: Dictionary) -> float:
+	if v is String: return float(vars.get(v, 0))
+	if v is Dictionary: return float(v.get("per_pop", 0)) * sim.living().size()
+	return float(v)
+
+func _cost(o: Dictionary, vars: Dictionary) -> Dictionary:
+	var out := {}
+	for r in o.get("cost", {}): out[r] = _num(o["cost"][r], vars)
+	return out
+
+func affords(o: Dictionary, vars: Dictionary = {}) -> bool:
+	var cost := _cost(o, vars)
+	for r in cost:
+		if sim.stock.get(r, 0.0) < cost[r]: return false
 	return true
 
-## Are an option's "needs" met (else it runs else_do)? A need for a "best" person also
-## disables the option when there is nobody at all.
-func needs_met(o: Dictionary) -> bool:
+## Are an option's "needs" met (else it runs else_do)? {"best": skill, "lv", "or_tech"}
+## or {"var": name} (a true value of the caller's).
+func needs_met(o: Dictionary, vars: Dictionary = {}) -> bool:
 	var nd: Dictionary = o.get("needs", {})
 	if nd.is_empty(): return true
+	if nd.has("var"): return bool(vars.get(nd["var"], false))
 	if nd.has("or_tech") and sim.has_tech(nd["or_tech"]): return true
 	var b = sim.best_unit(str(nd.get("best", "lore")), false)
 	return b != null and b.lv(str(nd.get("best", "lore"))) >= int(nd.get("lv", 0))
 
-func _opt_desc(o: Dictionary) -> String:
+## The chance an option works: {"base", "skill", "per_lv"} (the best at that skill) or
+## {"power": "fighters:<n>", "div"} (their summed attack / div), clamped to min..max.
+func chance(o: Dictionary) -> float:
+	var ch: Dictionary = o.get("chance", {})
+	if ch.is_empty(): return 1.0
+	var p := float(ch.get("base", 0.0))
+	if ch.has("skill"):
+		var b = sim.best_unit(ch["skill"], false)
+		p += float(ch.get("per_lv", 0.0)) * (b.lv(ch["skill"]) if b else 0)
+	if ch.has("power"):
+		var pw := 0.0
+		for u in people(ch["power"]): pw += sim.unit_atk(u)
+		p += pw / maxf(1.0, float(ch.get("div", 40)))
+	return clampf(p, float(ch.get("min", 0.0)), float(ch.get("max", 1.0)))
+
+func _opt_desc(o: Dictionary, ev: Dictionary, vars: Dictionary) -> String:
 	var parts: Array = []
-	if o.has("desc"): parts.append(tr(o["desc"]))
-	var cost: Dictionary = o.get("cost", {})
-	if not cost.is_empty():
+	if o.has("desc"): parts.append(_say(o["desc"], ev, vars))
+	var cost := _cost(o, vars)
+	if not cost.is_empty() and o.get("cost_note", true):
 		parts.append(tr("Costs %s.") % ", ".join(cost.keys().map(func(r): return "%d %s" % [int(cost[r]), tr(r)])))
 	return " ".join(parts)
 
-## What the HUD shows: {title, text, options: [{label, desc, enabled}]}.
-func dilemma_view(ev: Dictionary) -> Dictionary:
-	var opts: Array = []
-	for o in ev.get("options", []):
-		var ok := affords(o)
-		if o.has("needs") and not o["needs"].has("or_tech"): ok = ok and sim.best_unit(str(o["needs"].get("best", "lore")), false) != null
-		opts.append({"label": _say(o["label"], ev), "desc": _opt_desc(o), "enabled": ok})
-	return {"title": _say(ev.get("title", ""), ev), "text": _say(ev.get("text", ""), ev), "options": opts}
+## The options of a dilemma: its own, or generated ("options_from": "chosen" = the
+## mythic bloodlines of D.CHOSEN).
+func options(ev: Dictionary) -> Array:
+	if ev.get("options_from", "") == "chosen":
+		var out: Array = []
+		for i in mini(D.CHOSEN.size(), 4):
+			out.append({"label": D.CHOSEN[i]["label"], "desc": D.CHOSEN[i]["desc"], "cost_note": false, "do": [{"chosen": i}], "result": ev.get("result", "")})
+		return out
+	return ev.get("options", [])
 
-## Choose option idx: pay, run its actions, and return {"text": result, "option": the
-## option chosen}.
-func dilemma_choose(ev: Dictionary, idx: int) -> Dictionary:
-	var opts: Array = ev.get("options", [])
-	if opts.is_empty(): return {"text": "", "option": {}}
+## What the HUD shows: {title, text, options: [{label, desc, enabled}]}.
+func dilemma_view(ev: Dictionary, vars: Dictionary = {}) -> Dictionary:
+	var v := _vars(ev, vars)
+	var opts: Array = []
+	for o in options(ev):
+		var ok := affords(o, v) and holds(o.get("when", {}))
+		if o.has("needs") and o["needs"].has("best") and not o["needs"].has("or_tech"): ok = ok and sim.best_unit(str(o["needs"]["best"]), false) != null
+		var ov := v.duplicate()
+		ov["chance_pct"] = roundi(chance(o) * 100.0)
+		opts.append({"label": _say(o["label"], ev, ov), "desc": _opt_desc(o, ev, ov), "enabled": ok})
+	return {"title": _say(ev.get("title", ""), ev, v), "text": _say(ev.get("text", ""), ev, v), "options": opts}
+
+## Choose option idx: pay, run its actions (or else_do when its needs or its chance fail),
+## and return {"text": result, "option": the option chosen, "vars": the values after}.
+func dilemma_choose(ev: Dictionary, idx: int, vars: Dictionary = {}) -> Dictionary:
+	var v := _vars(ev, vars)
+	var opts: Array = options(ev)
+	if opts.is_empty(): return {"text": "", "option": {}, "vars": v}
 	var o: Dictionary = opts[clampi(idx, 0, opts.size() - 1)]
-	if not affords(o): o = opts.back() # (can't pay: the last choice, usually "do nothing")
-	for r in o.get("cost", {}): sim.stock[r] -= float(o["cost"][r])
-	var good := needs_met(o)
-	run(o.get("do", []) if good else o.get("else_do", []), null)
-	var res: String = o.get("result", "") if good else o.get("else_result", o.get("result", ""))
-	return {"text": _say(res, ev) if res != "" else tr("The tribe chose: %s.") % _say(o["label"], ev), "option": o}
+	if not affords(o, v) or not holds(o.get("when", {})): o = opts.back() # (can't: the last choice, usually "do nothing")
+	var cost := _cost(o, v)
+	for r in cost: sim.stock[r] -= cost[r]
+	v["choice"] = _say(o["label"], ev, v)
+	var good := needs_met(o, v) and (not o.has("chance") or randf() < chance(o))
+	run(o.get("do", []) if good else o.get("else_do", []), null, v)
+	var res = o.get("result", "") if good else o.get("else_result", o.get("result", ""))
+	var t: String = _say(res, ev, v) if str(res) != "" else tr("The tribe chose: %s.") % v["choice"]
+	for k in o.get("result_add", []): t += str(v.get(k, ""))
+	return {"text": t, "option": o, "vars": v}
 
 ## Pose a dilemma from outside the rules (a game master): it is checked like a culture
 ## pack's event and queued. Returns the problems found ([] = posed).
