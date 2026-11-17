@@ -296,7 +296,7 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 - Era 2: mud-and-thatch huts
 - Era 3: timber longhouses on stone footings
 
-*Renovate* (right panel) rebuilds old homes in the new style. Foot traffic wears visible paths into the grass.
+*Renovate* (right panel) rebuilds old homes in the new style, in the village and every settlement; each settlement's own people rebuild its homes (or the people you have selected), and the Steward sends idle hands to the old homes near where they live. Foot traffic wears visible paths into the grass.
 
 **Culture.** Four values drift with what the tribe does: Martial/Peaceful, Spiritual/Practical, Settled/Roaming and Ranked/Communal. At ±35, a value adopts a permanent **tradition** with a bonus (e.g. Ancestor Rites, Wayfinders, Shared Hearth). Culture also shapes newborns' personalities.
 

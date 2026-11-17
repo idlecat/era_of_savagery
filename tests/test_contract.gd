@@ -65,6 +65,7 @@ func _initialize() -> void:
 	test_improvements()
 	test_audio()
 	test_save_load()
+	test_renovate_settlements()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1931,3 +1932,31 @@ func test_save_load() -> void:
 	check(SG.read("../evil") .is_empty() and SG.write("a/b", a, settings) != "", "slot names can't leave the saves folder")
 	SG.remove("test_slot")
 	check(SG.read("test_slot").is_empty(), "a save can be removed")
+
+func test_renovate_settlements() -> void:
+	print("\n== Renovating the settlements too ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var site: Vector2 = sim.contracts.next_site()
+	var c := E.Contract.new()
+	c.id = sim.uid(); c.kind = "settle"; c.status = "done"; c.site = site
+	sim.contracts.list.append(c)
+	var huts: Array = []
+	for i in 2: huts.append(sim.add_structure("hut", site + Vector2(60 * i - 30, 40), true, "contract:%d" % c.id))
+	var settlers: Array = sim.living().slice(0, 2)
+	for u in settlers:
+		u.home = site
+		u.pos = site + Vector2(10, 0)
+		sim.set_job(u, {})
+	sim.techs["fire"] = true
+	sim.techs["pottery"] = true
+	sim.evo.era = 2
+	var old: Array = sim.outdated()
+	check(huts.all(func(h): return h in old), "a settlement's old huts are outdated too (%d in all)" % old.size())
+	sim.stock["wood"] = 300
+	check(sim.renovate([]) == "", "renovation starts")
+	check(settlers.any(func(u): return u.job.get("type", "") == "build" and huts.any(func(h): return h.id == u.job.get("struct_id", -1))), "the settlers rebuild their own huts")
+	check(not sim.living().any(func(u): return u.home.distance_to(D.VILLAGE) < 60 and huts.any(func(h): return h.id == u.job.get("struct_id", -1))), "the village's people stay home")
+	_run(sim, 120)
+	check(huts.all(func(h): return h.style == 2 and not h.reno), "the settlement's huts are rebuilt in mud & thatch")
+	check(sim.structures.filter(func(s): return s.owner == "village" and s.type == "hut" and s.style == 2).size() >= 2, "and the village's too")

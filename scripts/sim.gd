@@ -1808,13 +1808,12 @@ func _update_vice(dt: float) -> void:
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = null
-			for s in structures:
-				if (not s.built or s.reno) and s.paid and s.owner == "village":
+			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
+			for s in structures: # a site near home: the village's new buildings, or any old home being renovated
+				if s.paid and ((not s.built and s.owner == "village" and not settler) or (s.reno and ours(s) and _settlement_of(s.pos) == _settlement_of(u.home))):
 					unbuilt = s
 					break
 			var choice: String
-			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
-			if settler: unbuilt = null # (the village's building sites are far away)
 			if unbuilt and randf() < 0.5: choice = "build"
 			elif stock["food"] >= pop * 6 and stock["wood"] >= 40 and randf() < 0.25: choice = "art" # (stores are healthy: time for crafts)
 			elif stock["food"] >= food_cap() * 0.95 and steward_policy != "lore": choice = "wood" # the stores are full
@@ -1874,7 +1873,7 @@ func research(tech_id: String) -> String:
 
 ## Bring every outdated home and wall up to the current era's style.
 func outdated() -> Array:
-	return structures.filter(func(s): return s.built and not s.reno and s.owner == "village" and s.type in D.STYLED and s.style < evo.era)
+	return structures.filter(func(s): return s.built and not s.reno and ours(s) and s.type in D.STYLED and s.style < evo.era) # (settlements too)
 
 func reno_cost(list: Array) -> Dictionary:
 	var w := 0
@@ -1895,12 +1894,25 @@ func renovate(helpers: Array) -> String:
 	for s in list:
 		s.reno = true
 		s.reno_progress = 0.0
-	if helpers.is_empty():
-		helpers = living().filter(func(u): return u.role != "contract" and D.home_side(u.pos) and u.job.get("type", "") in ["", "ritual"]).slice(0, 3)
-	var i := 0
-	for u in helpers:
-		assign_build(u, list[i % list.size()])
-		i += 1
+	if not helpers.is_empty(): # (the people the chieftain picked)
+		var i := 0
+		for u in helpers:
+			assign_build(u, list[i % list.size()])
+			i += 1
+	else: # each settlement's own free hands rebuild its homes
+		var taken := {}
+		for p in settlements():
+			var here: Array = list.filter(func(s): return _settlement_of(s.pos) == p)
+			if here.is_empty(): continue
+			var free: Array = living().filter(func(u): return u.role == "" and not taken.has(u.id) and u.job.get("type", "") in ["", "ritual"] and D.region_at(u.home) == D.region_at(p))
+			free.sort_custom(func(a, b): return a.home.distance_to(p) < b.home.distance_to(p))
+			var crew: Array = free.filter(func(u): return u.home.distance_to(p) < 450).slice(0, 3)
+			if crew.is_empty(): crew = free.slice(0, 1)
+			var i := 0
+			for u in crew:
+				taken[u.id] = true
+				assign_build(u, here[i % here.size()])
+				i += 1
 	add_log(tr("The tribe rebuilds %d homes and walls in the style of the %s.") % [list.size(), tr(D.ERA_NAMES[evo.era])], "build")
 	return ""
 
@@ -1909,10 +1921,23 @@ func _finish_reno(s: E.Structure, u: E.Unit) -> void:
 	s.style = evo.era
 	popup(s.pos + Vector2(0, -30), tr("Renovated"), Color("#b6f28a"))
 	gain_xp(u, "craft", 4)
+	var next: E.Structure = null # the nearest old home still waiting in this settlement
 	for o in structures:
-		if o.reno and o.owner == "village":
-			assign_build(u, o)
-			return
+		if o.reno and ours(o) and not _reno_taken(o) and _settlement_of(o.pos) == _settlement_of(s.pos) and (next == null or o.pos.distance_to(u.pos) < next.pos.distance_to(u.pos)): next = o
+	if next == null:
+		for o in structures:
+			if o.reno and ours(o) and _settlement_of(o.pos) == _settlement_of(s.pos): next = o
+	if next: assign_build(u, next)
+
+## The settlement (from settlements()) a point belongs to: the nearest one.
+func _settlement_of(p: Vector2) -> Vector2:
+	var best: Vector2 = D.VILLAGE
+	for q in settlements():
+		if q.distance_to(p) < best.distance_to(p): best = q
+	return best
+
+func _reno_taken(s: E.Structure) -> bool:
+	return living().any(func(w): return w.job.get("type", "") == "build" and w.job.get("struct_id", -1) == s.id)
 
 # ------------------------------------------------------------------ milestone events
 func _check_events() -> void:
