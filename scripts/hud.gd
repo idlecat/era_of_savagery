@@ -31,6 +31,7 @@ var clans_text: RichTextLabel
 var log_text: RichTextLabel
 var policy_opt: OptionButton
 var audio # audio.gd (set by main; null in tests)
+var game # main.gd: save_to(), load_from() (null in tests)
 var build_btns := {}
 var modal: Control = null
 # ---- achievement celebrations (one dialog per first, queued; see _show_feat)
@@ -218,6 +219,20 @@ func _on_alert(a: Dictionary) -> void:
 		alert_items[0][0].queue_free()
 		alert_items.pop_front()
 
+## A short note in the banner area (not written to the chronicle).
+func toast(text: String) -> void:
+	_on_alert({"level": "info", "text": text, "pos": Vector2.ZERO})
+
+## After a game is loaded: bring back the decision that was open, if any.
+func after_load() -> void:
+	if sim.pending_event != "": _on_event(sim.pending_event)
+	else:
+		for c in sim.contracts.list:
+			if c.status == "interrupted":
+				_on_interrupt(c)
+				break
+	toast(tr("Game loaded: Day %d") % sim.day())
+
 func _expire_alerts() -> void:
 	var now := Time.get_ticks_msec()
 	for it in alert_items.duplicate():
@@ -256,6 +271,7 @@ func _build_top(root: Control) -> void:
 	if sim.cult.on(): h.add_child(_button("Heritage", open_heritage, "Your people's history and legends: tools, foods, people, happenings and folk tales"))
 	h.add_child(_button("LLM Settings", _open_settings))
 	h.add_child(_button("Sound", _open_sound, "Music, sound effects and the sounds of the land"))
+	h.add_child(_button("Save / Load", open_saves, "F5: quick save · F9: quick load"))
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
 	h.add_child(_button("?", _show_intro))
@@ -1482,6 +1498,53 @@ func _tech_card(tdef: Dictionary, was_paused: bool) -> Control:
 	return p
 
 # ------------------------------------------------------------ settings
+const SaveGame = preload("res://scripts/save_game.gd")
+
+## The save slots: numbered ones to save into, the quick save and the autosaves to load.
+func open_saves() -> void:
+	if game == null: return
+	var was_paused: bool = sim.paused
+	var v := _open_modal("SAVE / LOAD", 760)
+	var cfg: Dictionary = game.SAVE_CFG
+	var heads := {}
+	for h in SaveGame.slots(): heads[h["slot"]] = h
+	var names: Array = []
+	for i in int(cfg.get("slots", 6)): names.append("slot%d" % (i + 1))
+	names.append(str(cfg.get("quick_slot", "quicksave")))
+	for i in int(cfg.get("autosave_keep", 3)): names.append("autosave%d" % (i + 1))
+	var block: String = game.save_block()
+	if block != "": v.add_child(_label(block, 14, Color("#ffb07a")))
+	var g := GridContainer.new()
+	g.columns = 4
+	g.add_theme_constant_override("h_separation", 12)
+	v.add_child(g)
+	for slot in names:
+		var h: Dictionary = heads.get(slot, {})
+		var title: String = tr("Autosave %s") % slot.trim_prefix("autosave") if slot.begins_with("autosave") else (tr("Quick save") if slot == cfg.get("quick_slot", "quicksave") else tr("Slot %s") % slot.trim_prefix("slot"))
+		g.add_child(_label(title, 15, COL_ACCENT))
+		g.add_child(_label(tr("Day %d · %d people · %s") % [int(h["day"]), int(h["pop"]), str(h["saved"])] if not h.is_empty() else tr("(empty)"), 14, COL_TEXT if not h.is_empty() else COL_DIM))
+		var sb := _button("Save", func():
+			var err: String = game.save_to(slot)
+			toast(tr("Saved to %s") % title if err == "" else tr(err))
+			if err == "": open_saves())
+		sb.disabled = block != "" or slot.begins_with("autosave")
+		g.add_child(sb)
+		var lb := _button("Load", func():
+			var err: String = game.load_from(slot)
+			if err != "": toast(tr(err)))
+		lb.disabled = h.is_empty()
+		g.add_child(lb)
+	var auto := CheckBox.new()
+	auto.text = tr("Autosave")
+	auto.button_pressed = game.autosave_on()
+	auto.toggled.connect(func(b):
+		var cf := ConfigFile.new()
+		cf.load(SETTINGS_CFG)
+		cf.set_value("save", "autosave", b)
+		cf.save(SETTINGS_CFG))
+	v.add_child(auto)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
 func _open_sound() -> void:
 	if audio == null: return
 	var v := _open_modal("SOUND", 520)

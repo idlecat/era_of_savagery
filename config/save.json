@@ -1,0 +1,7 @@
+{
+ "_doc": "Saving (save_game.gd, main.gd): autosave every `autosave_days` in-game days into the slots autosave1..autosave<autosave_keep> (the oldest is overwritten); `slots` numbered slots in the Save dialog; F5 saves to `quick_slot`, F9 loads it. The player can switch autosave off in the dialog (settings.cfg [save] autosave).",
+ "autosave_days": 1,
+ "autosave_keep": 3,
+ "slots": 6,
+ "quick_slot": "quicksave"
+}

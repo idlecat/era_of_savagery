@@ -14,6 +14,11 @@ const Scenarios = preload("res://scripts/scenarios.gd")
 const Cultures = preload("res://scripts/cultures.gd")
 const NewGameUI = preload("res://scripts/new_game_ui.gd")
 const Audio = preload("res://scripts/audio.gd")
+const SaveGame = preload("res://scripts/save_game.gd")
+var SAVE_CFG: Dictionary = preload("res://scripts/config.gd").load_cfg("save")
+
+## A save to load when the scene restarts (static: survives reload_current_scene).
+static var pending_load := ""
 
 const STEP := 0.05
 const NIGHT_FF := 12.0 # game-speed multiplier while the whole tribe sleeps
@@ -24,6 +29,8 @@ var hud
 var llm
 var art
 var audio
+var settings := {} # what this world was made from (saved with the game)
+var autosave_day := 0
 var ready_done := false
 
 func _ready() -> void:
@@ -41,7 +48,15 @@ func _ready() -> void:
 	art.progress.connect(func(d, n): loading.get_child(0).text = tr("Forging the world… %d%%  (first launch only)") % (100 * d / n))
 	await art.prepare()
 	loading.queue_free()
-	var settings: Dictionary = await _new_game_settings()
+	var data := {}
+	if pending_load != "":
+		data = SaveGame.read(pending_load)
+		pending_load = ""
+	if data.is_empty(): settings = await _new_game_settings()
+	if settings.has("load"):
+		data = SaveGame.read(settings["load"])
+		settings = data.get("settings", {"map": Scenarios.DEFAULT, "tribes": 0, "seed": 0, "culture": Scenarios.culture_of(Scenarios.DEFAULT)})
+	if not data.is_empty(): settings = data["settings"]
 	Cultures.apply(settings.get("culture", "")) # before the map: a random tribe takes the culture's names
 	if MapGen.SIZES.has(settings["map"]): # a random map
 		MapGen.generate(settings["map"], settings["tribes"], settings["seed"])
@@ -53,6 +68,10 @@ func _ready() -> void:
 	await get_tree().process_frame
 	sim = Sim.new()
 	sim.new_game()
+	if not data.is_empty():
+		SaveGame.decode_into(sim, data["sim"])
+		sim.paused = true
+	autosave_day = sim.day()
 	randomize()
 	llm = LLM.new()
 	llm.sim = sim
@@ -64,8 +83,14 @@ func _ready() -> void:
 	hud = HUD.new()
 	add_child(hud)
 	hud.audio = audio
+	hud.game = self
 	hud.setup(sim, world, llm)
 	audio.setup(sim, world)
+	if not data.is_empty():
+		var ex: Dictionary = data.get("extra", {})
+		if ex.get("cam") is Vector2: world.cam.position = ex["cam"]
+		if ex.has("zoom"): world.cam.zoom = Vector2.ONE * float(ex["zoom"])
+		hud.after_load()
 	world.blocked = hud.modal_open
 	loading.queue_free()
 	ready_done = true
@@ -111,7 +136,9 @@ func _loading_screen() -> CanvasLayer:
 	return cl
 
 func _process(delta: float) -> void:
-	if not ready_done or sim.paused or hud.modal_open(): return
+	if not ready_done: return
+	_autosave()
+	if sim.paused or hud.modal_open(): return
 	# A quiet night with the whole tribe asleep passes quickly; any alarm drops back to normal speed.
 	var ff: bool = sim.night_ff()
 	var dt: float = minf(delta, 0.1) * (maxf(sim.speed, NIGHT_FF) if ff else sim.speed)
@@ -144,6 +171,48 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 			if not hud.modal_open(): hud._start_contract_for_selected()
 		KEY_X:
 			if not hud.modal_open(): world.scout_selected()
+		KEY_F5:
+			if not hud.modal_open():
+				var err := save_to(str(SAVE_CFG.get("quick_slot", "quicksave")))
+				hud.toast(tr("Quick save") if err == "" else tr(err))
+		KEY_F9:
+			if not hud.modal_open():
+				var err := load_from(str(SAVE_CFG.get("quick_slot", "quicksave")))
+				if err != "": hud.toast(tr(err))
+
+# ------------------------------------------------------------ saving
+## Why the game can't be saved right now ("" = it can): an open decision would be lost.
+func save_block() -> String:
+	if sim.pending_event != "" or sim.contracts.list.any(func(c): return c.status == "interrupted"):
+		return "Decide the open question first."
+	return ""
+
+func save_to(slot: String) -> String:
+	var why := save_block()
+	if why != "": return why
+	return SaveGame.write(slot, sim, settings, {"cam": world.cam.position, "zoom": world.cam.zoom.x})
+
+## Load a save: the scene restarts and builds that world.
+func load_from(slot: String) -> String:
+	if SaveGame.read(slot).is_empty(): return "That save can't be read."
+	pending_load = slot
+	get_tree().reload_current_scene()
+	return ""
+
+func autosave_on() -> bool:
+	var cf := ConfigFile.new()
+	if cf.load("user://settings.cfg") == OK: return bool(cf.get_value("save", "autosave", true))
+	return true
+
+func _autosave() -> void:
+	if sim.day() < autosave_day + int(SAVE_CFG.get("autosave_days", 1)): return
+	if hud.modal_open() or save_block() != "" or not autosave_on(): return
+	autosave_day = sim.day()
+	var keep := maxi(1, int(SAVE_CFG.get("autosave_keep", 3)))
+	var slot := "autosave%d" % (1 + (sim.day() / maxi(1, int(SAVE_CFG.get("autosave_days", 1)))) % keep)
+	var err := SaveGame.write(slot, sim, settings, {"cam": world.cam.position, "zoom": world.cam.zoom.x})
+	if err == "": hud.toast(tr("Autosaved (Day %d)") % sim.day())
+	else: push_warning("autosave: " + err)
 
 func toggle_fullscreen() -> void:
 	var fs := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]

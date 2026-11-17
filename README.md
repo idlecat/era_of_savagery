@@ -92,6 +92,10 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Also baked:** construction stages (staked plan, materials, frame, walls with a scaffold); animation sets (gather, build, spear attack, ritual and death for villagers; pounce and death for beasts; stone or bronze tools); ground cover and rock outcrops; seasonal crop fields, the dock, Hot Spring, bones, flint and Yinglong.
 - **Lighting:** a time-of-day tint (golden dusk, blue night, pink dawn), additive fire and torch glow, and a soft vignette.
 
+## Saving
+
+**Save / Load** in the top bar lists the save slots, the quick save (**F5** saves, **F9** loads) and the autosaves. The game autosaves at the start of every day into three rotating slots; you can switch that off in the dialog. The New Game screen has **Continue** (the newest save) and a list of all saves. A save holds the settings the world was made from and the whole simulation, so a loaded game plays on exactly as it would have. You can't save while a decision (a dilemma or an emergency) is waiting. Saves are in `user://saves/`.
+
 ## Sound and music (`audio.gd`, `synth.gd`)
 
 Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes.

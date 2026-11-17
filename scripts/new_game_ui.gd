@@ -12,6 +12,7 @@ const MapGen = preload("res://scripts/mapgen.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 const HUD = preload("res://scripts/hud.gd")
 const Cultures = preload("res://scripts/cultures.gd")
+const SaveGame = preload("res://scripts/save_game.gd")
 const CFG := "user://newgame.cfg"
 const MODES := ["random", "scenario"]
 
@@ -107,6 +108,23 @@ func _ready() -> void:
 	start.add_theme_font_size_override("font_size", 18)
 	start.pressed.connect(_start)
 	v.add_child(start)
+	var saves := SaveGame.slots()
+	if not saves.is_empty(): # carry on with a saved game
+		var lh := HBoxContainer.new()
+		var pick := OptionButton.new()
+		pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for h in saves: pick.add_item(tr("%s · Day %d · %s") % [h["slot"], int(h["day"]), str(h["saved"])])
+		lh.add_child(pick)
+		var lb := Button.new()
+		lb.text = tr("Load")
+		lb.pressed.connect(func(): chosen.emit({"load": saves[maxi(0, pick.selected)]["slot"]}))
+		lh.add_child(lb)
+		var cont := Button.new()
+		cont.text = tr("Continue (Day %d)") % int(saves[0]["day"])
+		cont.custom_minimum_size = Vector2(0, 40)
+		cont.pressed.connect(func(): chosen.emit({"load": saves[0]["slot"]}))
+		v.add_child(cont)
+		v.add_child(lh)
 	_load()
 	_fill_maps()
 	start.grab_focus()

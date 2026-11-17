@@ -64,6 +64,7 @@ func _initialize() -> void:
 	test_dilemma_config()
 	test_improvements()
 	test_audio()
+	test_save_load()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1894,3 +1895,39 @@ func test_audio() -> void:
 	sim.cult.on_event("lightning")
 	check(heard == ["lightning"], "nature's happenings reach the sound (sim.happened)")
 
+func test_save_load() -> void:
+	print("\n== Save and load ==")
+	var SG = preload("res://scripts/save_game.gd")
+	var a = _new_sim()
+	a.appoint(a.living()[0], "steward")
+	var u = a.unit_by_name("Panshi")
+	var r := Persona.propose(a.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false))
+	a.contracts.create(a.contracts.sanitize(r["blueprint"], {}, u)["blueprint"], u, "Found a new settlement on the frontier")
+	for i in 600: a.tick(0.05)
+	var settings := {"map": "the_ford", "tribes": 0, "seed": 1, "culture": ""}
+	check(SG.write("test_slot", a, settings, {"cam": Vector2(1, 2)}) == "", "the game is written to a slot")
+	var data: Dictionary = SG.read("test_slot")
+	check(not data.is_empty() and data["settings"]["map"] == "the_ford" and data["extra"]["cam"] == Vector2(1, 2), "and read back with its settings")
+	check(SG.slots().any(func(h): return h["slot"] == "test_slot" and h["day"] == a.day()), "the save list shows it (day %d)" % a.day())
+	var b = _new_sim()
+	SG.decode_into(b, data["sim"])
+	check(is_equal_approx(b.time, a.time) and b.units.size() == a.units.size() and b.structures.size() == a.structures.size() and b.nodes.size() == a.nodes.size(), "time, people, buildings and nature come back")
+	var same := true
+	for i in a.units.size():
+		if a.units[i].pos != b.units[i].pos or a.units[i].name != b.units[i].name or a.units[i].job != b.units[i].job: same = false
+	check(same, "everyone is where they were, doing what they did")
+	check(b.stock == a.stock and b.techs == a.techs and b.vice == a.vice and b.explored == a.explored, "stocks, wisdom, roles and the explored land")
+	check(b.evo.sim == b and b.improve.sim == b and b.contracts.list.size() == a.contracts.list.size(), "the sub-systems point at the loaded game")
+	check(b.unit_by_id(a.living()[0].id).title == "Steward", "the Steward is still the Steward")
+	# the same future: both games run on from the same random seed
+	seed(99)
+	for i in 400: a.tick(0.05)
+	seed(99)
+	for i in 400: b.tick(0.05)
+	var drift: Array = []
+	for i in mini(a.units.size(), b.units.size()):
+		if a.units[i].pos.distance_to(b.units[i].pos) > 0.01: drift.append(a.units[i].name)
+	check(drift.is_empty() and a.units.size() == b.units.size() and is_equal_approx(a.stock["food"], b.stock["food"]), "a loaded game plays on exactly as the saved one would (%s)" % str(drift))
+	check(SG.read("../evil") .is_empty() and SG.write("a/b", a, settings) != "", "slot names can't leave the saves folder")
+	SG.remove("test_slot")
+	check(SG.read("test_slot").is_empty(), "a save can be removed")
