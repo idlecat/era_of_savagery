@@ -1723,4 +1723,12 @@ const STRINGS := {
 	"oxen would carry our loads.": "牛能替我们驮东西。",
 	"Steward lays out improvements": "管家规划新建筑",
 	"The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.": "村子需要时，管家会规划新建筑（仓储快满时建粮仓，床铺不够时建小屋……），并从库存里支付。接入 LLM 节点时，由管家在其中做选择。",
+	# sound (audio.gd)
+	"Sound": "声音",
+	"SOUND": "声音",
+	"Music, sound effects and the sounds of the land": "音乐、音效与大地之声",
+	"Volume": "音量",
+	"Music": "音乐",
+	"Sound effects": "音效",
+	"Sounds of the land": "大地之声",
 }

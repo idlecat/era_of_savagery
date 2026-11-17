@@ -24,6 +24,8 @@ signal log_added()
 signal alert_raised(alert)
 signal envoy_arrived(unit, clan_id)
 signal advice_wanted(ctx) # improve.gd asks which improvement to build; answer: improve.choose()
+signal happened(id) # weather and nature, the ids of `after` conditions (culture.on_event)
+signal sound_cue(id, at) # the story action "sound" (audio.gd plays it)
 signal feat_added(feat) # one of the tribe's firsts (inv.feat): the HUD celebrates it
 
 var next_id := 1

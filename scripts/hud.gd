@@ -30,6 +30,7 @@ var tip_t := 0.0
 var clans_text: RichTextLabel
 var log_text: RichTextLabel
 var policy_opt: OptionButton
+var audio # audio.gd (set by main; null in tests)
 var build_btns := {}
 var modal: Control = null
 # ---- achievement celebrations (one dialog per first, queued; see _show_feat)
@@ -254,6 +255,7 @@ func _build_top(root: Control) -> void:
 	h.add_child(_button("Achievements", open_achievements, "The tribe's inventions and everything it did first"))
 	if sim.cult.on(): h.add_child(_button("Heritage", open_heritage, "Your people's history and legends: tools, foods, people, happenings and folk tales"))
 	h.add_child(_button("LLM Settings", _open_settings))
+	h.add_child(_button("Sound", _open_sound, "Music, sound effects and the sounds of the land"))
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
 	h.add_child(_button("?", _show_intro))
@@ -1480,6 +1482,25 @@ func _tech_card(tdef: Dictionary, was_paused: bool) -> Control:
 	return p
 
 # ------------------------------------------------------------ settings
+func _open_sound() -> void:
+	if audio == null: return
+	var v := _open_modal("SOUND", 520)
+	var was_paused: bool = sim.paused
+	var g := GridContainer.new()
+	g.columns = 2
+	v.add_child(g)
+	for k in [["master", "Volume"], ["music", "Music"], ["sfx", "Sound effects"], ["ambience", "Sounds of the land"]]:
+		g.add_child(_label(k[1], 15, COL_DIM))
+		var sl := HSlider.new()
+		sl.min_value = 0.0
+		sl.max_value = 1.0
+		sl.step = 0.05
+		sl.value = float(audio.vol.get(k[0], 0.7))
+		sl.custom_minimum_size = Vector2(300, 0)
+		sl.value_changed.connect(func(x): audio.set_volume(k[0], x))
+		g.add_child(sl)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
 func _open_settings() -> void:
 	var v := _open_modal("LLM NODE SETTINGS", 760)
 	var was_paused: bool = sim.paused

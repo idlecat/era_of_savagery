@@ -63,6 +63,7 @@ func _initialize() -> void:
 	test_gm_operations()
 	test_dilemma_config()
 	test_improvements()
+	test_audio()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1856,3 +1857,40 @@ func test_improvements() -> void:
 	var sm: Dictionary = imp.summary()
 	check(sm["on"] and sm["planner"] == st.name and sm.has("wanted"), "the planner's state is readable (%s)" % str(sm))
 	check("granary" in D.CONTRACT_STRUCTURES, "settlement contracts may build a Granary")
+
+func test_audio() -> void:
+	print("\n== Sound and music (config/audio.json, synth.gd) ==")
+	var C: Dictionary = preload("res://scripts/config.gd").load_cfg("audio")
+	var sounds: Dictionary = C["sounds"]
+	var silent: Array = []
+	for id in ["chop", "flute", "wind", "drum_low"]:
+		var w: AudioStreamWAV = preload("res://scripts/synth.gd").render(sounds[id])
+		var pk := 0
+		for i in range(0, w.data.size(), 2): pk = maxi(pk, absi(w.data.decode_s16(i)))
+		if pk < 1000 or w.get_length() <= 0.0: silent.append(id)
+	check(silent.is_empty(), "recipes render to audible sounds (%s)" % str(silent))
+	var w2: AudioStreamWAV = preload("res://scripts/synth.gd").render(sounds["wind"])
+	check(w2.loop_mode == AudioStreamWAV.LOOP_FORWARD, "loops loop")
+	# every sound the rules name exists
+	var used: Array = []
+	for k in ["on_log", "on_alert", "on_signal", "on_happening"]: used += C[k].values()
+	used.append(C["ui_click"])
+	for j in C["jobs"]["list"]: used.append(j["sound"])
+	used.append(C["jobs"]["beasts"]["sound"])
+	for a in C["ambience"] + C["random"]: used.append(a["sound"])
+	for m in C["music"]["moods"]: used += m["drums"].keys()
+	used += ["flute", "drone"]
+	var missing: Array = used.filter(func(id): return not sounds.has(id))
+	check(missing.is_empty(), "every sound named in the rules has a recipe (%s)" % str(missing))
+	var sim = _new_sim()
+	var bad: Array = C["on_signal"].keys().filter(func(sg): return not sim.has_signal(sg))
+	check(bad.is_empty(), "on_signal names real sim signals (%s)" % str(bad))
+	var cues := []
+	sim.sound_cue.connect(func(id, at): cues.append([id, at]))
+	sim.story.run([{"sound": "horn", "at": "village"}], null)
+	check(cues.size() == 1 and cues[0][0] == "horn" and cues[0][1] == D.VILLAGE, "the story action \"sound\" cues a sound at a place")
+	var heard := []
+	sim.happened.connect(func(id): heard.append(id))
+	sim.cult.on_event("lightning")
+	check(heard == ["lightning"], "nature's happenings reach the sound (sim.happened)")
+

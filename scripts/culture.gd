@@ -142,6 +142,7 @@ func add_boon(effects: Array) -> void:
 ## Called for every game event that fires (sim._fire_event), for "after" conditions.
 func on_event(id: String) -> void:
 	if not seen.has(id): seen[id] = sim.day()
+	sim.happened.emit(id)
 
 # ------------------------------------------------------------ dilemmas
 func owns_event(id: String) -> bool: return id.begins_with("culture:")

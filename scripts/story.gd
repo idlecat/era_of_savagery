@@ -122,7 +122,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop"]
+	"grudge", "peace_days", "clan_pop", "sound"]
 
 ## A text: an English key, or [key, var names...] filled from `vars` (GDScript % is
 ## positional: the names are in the key's placeholder order).
@@ -207,6 +207,7 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 		if a.has("guests"): vars["guests_line"] = sim.folk.invite(float(a["guests"]))
 		_clan_actions(a, vars)
 		if a.has("feat"): sim.inv.feat("story", tr(a["feat"]))
+		if a.has("sound"): sim.sound_cue.emit(str(a["sound"]), _at(a["at"], c, vars) if a.has("at") else Vector2.INF)
 		if a.has("tale") and sim.cult: sim.cult.tell(a["tale"])
 		if a.has("join") and sim.cult: sim.cult.join(a["join"])
 

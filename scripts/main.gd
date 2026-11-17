@@ -13,6 +13,7 @@ const MapGen = preload("res://scripts/mapgen.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 const Cultures = preload("res://scripts/cultures.gd")
 const NewGameUI = preload("res://scripts/new_game_ui.gd")
+const Audio = preload("res://scripts/audio.gd")
 
 const STEP := 0.05
 const NIGHT_FF := 12.0 # game-speed multiplier while the whole tribe sleeps
@@ -22,6 +23,7 @@ var world
 var hud
 var llm
 var art
+var audio
 var ready_done := false
 
 func _ready() -> void:
@@ -31,6 +33,8 @@ func _ready() -> void:
 		if arg.begins_with("--lang="): lang = arg.trim_prefix("--lang=")
 	I.setup(lang)
 	get_window().title = tr("Era of Savagery · Clan Chronicles")
+	audio = Audio.new() # (renders its sounds while the art bakes)
+	add_child(audio)
 	art = ArtBaker.new()
 	add_child(art)
 	var loading := _loading_screen()
@@ -59,7 +63,9 @@ func _ready() -> void:
 	world.setup(sim)
 	hud = HUD.new()
 	add_child(hud)
+	hud.audio = audio
 	hud.setup(sim, world, llm)
+	audio.setup(sim, world)
 	world.blocked = hud.modal_open
 	loading.queue_free()
 	ready_done = true

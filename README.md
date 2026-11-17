@@ -92,6 +92,10 @@ About 500 sprites take a few seconds to bake and are cached in `user://art_cache
 - **Also baked:** construction stages (staked plan, materials, frame, walls with a scaffold); animation sets (gather, build, spear attack, ritual and death for villagers; pounce and death for beasts; stone or bronze tools); ground cover and rock outcrops; seasonal crop fields, the dock, Hot Spring, bones, flint and Yinglong.
 - **Lighting:** a time-of-day tint (golden dusk, blue night, pink dawn), additive fire and torch glow, and a soft vignette.
 
+## Sound and music (`audio.gd`, `synth.gd`)
+
+Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes.
+
 ## Day and night
 
 - **Night rest:** at nightfall everyone without a mission walks to bed and sleeps until dawn. A hut holds as many sleepers as it houses (3, or 5 for a Large Hut) and keeps them warm and hidden from wolves. The rest sleep around a bonfire, and anyone far from both camps where they stand. The job they had waits for them in the morning.

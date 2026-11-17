@@ -9,6 +9,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/rivals.json` | `rivals.gd` | the rival clans: how our deeds change their feelings, stances, raids and demands, theft, trespass, their people's strength, traders, war spoils, and how a chief weighs a deal at a parley |
 | `config/rules.json` | `sim.gd`, `folk.gd` | everyday life: eating and hunger, food storage and rot, births, the aurochs pens, burials, beds, when the overpopulation and Chosen One dilemmas come up, and folk life (children, art and treasures, mood, trade values) |
 | `config/legacy.json` | `legacy.gd` | the endgames: each victory path's conditions (`count`: vassals, allies or techs, all of them; `built`: a structure), the event and saga texts, and the defeat |
+| `config/audio.json` | `audio.gd`, `synth.gd` | the sounds (recipes rendered in code), what plays on which happening, the sounds of people at work, ambience, and the music's moods |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
 `scripts/config.gd` loads them (`Config.load_cfg("events")`, cached). A file of the same name in `user://config/` is **merged over** the game's one: it only needs the keys it changes. For example, to make wolves tougher and stop anyone fighting fires:
@@ -50,7 +51,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 - **cost**: `{resource: number | var name | {"per_pop": k}}`, added to the description unless `cost_note` is false, and disables the option when the tribe can't pay. **when**: conditions (as in scenario scripts) that enable the option.
 - **needs** and **chance** decide between `do`/`result` and `else_do`/`else_result`. `needs` is a skilled person (`best`, `lv`, or a tech `or_tech`) or `{"var": name}`. `chance` scales with the best person at a `skill` (`per_lv`) or with the attack of `power: "fighters:<n>"` (`div`), clamped to `min`/`max`.
 - `"options_from": "chosen"` builds the options from the culture's mythic bloodlines.
-- **Actions** (`story.gd run()`, all listed in `story.ACTIONS`): `log`, `alert` (`at`, `level`), `give`, `spawn`, `reveal`, `mood`, `devotion`, `insight`, `culture`, `invent`, `boon`, `remember` (`%d` is the day; `impact`), `xp`, `hurt` (fraction of max HP), all with `who` = `all`, `best:<skill>` or `fighters:<n>`; `panic`, `weather`, `react`, `great_flood`, `open` (`contract`/`war`: the rules open that planning), `chosen`, `festival` (`length`, `glow_days`), `births`, `guests`; on the rival clan in var `clan` (or the one named by `"clan": "foe"`): `relation` (+`reason`), `relation_min`/`relation_max`, `raid`, `raid_delay_days`, `vassal`, `clear_treaties`, `grudge`, `peace_days`, `clan_pop`; and `feat`, `tale`, `join`. Culture packs and posed dilemmas may use the subset in `Cultures.DO_KEYS`.
+- **Actions** (`story.gd run()`, all listed in `story.ACTIONS`): `log`, `alert` (`at`, `level`), `give`, `spawn`, `reveal`, `mood`, `devotion`, `insight`, `culture`, `invent`, `boon`, `remember` (`%d` is the day; `impact`), `xp`, `hurt` (fraction of max HP), all with `who` = `all`, `best:<skill>` or `fighters:<n>`; `panic`, `weather`, `react`, `great_flood`, `open` (`contract`/`war`: the rules open that planning), `chosen`, `festival` (`length`, `glow_days`), `births`, `guests`; on the rival clan in var `clan` (or the one named by `"clan": "foe"`): `relation` (+`reason`), `relation_min`/`relation_max`, `raid`, `raid_delay_days`, `vassal`, `clear_treaties`, `grudge`, `peace_days`, `clan_pop`; and `feat`, `tale`, `join`, `sound` (a sound from `audio.json`, `at` a place). Culture packs and posed dilemmas may use the subset in `Cultures.DO_KEYS`.
 
 ## rivals.json
 
@@ -108,3 +109,16 @@ Everything above can be set off from data or from outside the rules, through the
 | `sim.hz.set_weather(kind)` | brings that weather now (`"clear"` ends it); false for an unknown kind |
 
 Their input is checked like a culture pack's: unknown ids and malformed actions are refused, not run.
+
+## audio.json
+
+There are no sound files: every sound is a **recipe** in `sounds`, rendered by `synth.gd` into a 22 kHz WAV on a worker thread at startup and cached in `user://sound_cache/` (named by a hash of the recipe, so an edited recipe is rendered again). A recipe is `{"dur", "loop", "gain", "layers": [...]}`; each layer is a `wave` (`sine`, `tri`, `square`, `saw`, `noise`, `crackle`) with `freq` → `to` (a glide), `at`/`len`, an envelope (`attack`, `decay`), `vol`, filters (`lp` → `lp_to`, `hp`), `vib` and `am` (`[Hz, depth]`), `harm` (`[[multiple, vol]...]`) and `density` (crackle).
+
+- `volume`: the default volumes (the Sound dialog saves the player's own in `user://settings.cfg`).
+- `on_log` (chronicle kind → sound), `on_alert` (level), `on_signal` (any `sim` signal), `on_happening` (the ids of `after` conditions: weather and nature), `ui_click`.
+- `jobs`: the sounds of people near the camera at work, by the start of their activity (`act`), `every` `[min, max]` seconds; at most `max_voices` at once; `beasts` for wild animals.
+- `ambience`: loops faded in while `when` holds; `near` a structure type or `river` makes it come from the nearest one.
+- `random`: one-shots now and then (`every`, `spread` around the camera, `pitch` range).
+- `music.moods`: the first whose `when` holds plays (it changes on the bar): `bpm`, `root` (semitones), a pentatonic `scale`, `drums` (16-step patterns per sound, `x` = hit), the `flute` (a wandering melody: `density`, `octave`, `leap`) and the `drone` level.
+
+`when` takes audio's own keys `night`, `danger`, `festival`, `paused` (true/false), `weather` and `seasons` (lists), and any condition of scenario scripts. Scenario scripts, dilemmas and a game master can play a sound with the story action `{"sound": id, "at": place}`.
