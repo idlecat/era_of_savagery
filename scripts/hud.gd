@@ -541,8 +541,8 @@ func _build_right(root: Control) -> void:
 	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ph.add_child(policy_opt)
 	var auto := CheckBox.new()
-	auto.text = tr("Steward lays out improvements")
-	auto.tooltip_text = tr("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
+	auto.text = "Steward lays out improvements" # (an English key: Godot re-translates it when the language changes)
+	auto.tooltip_text = ("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
 	auto.button_pressed = sim.improve.on
 	auto.toggled.connect(func(b): sim.improve.on = b)
 	v.add_child(auto)
@@ -941,6 +941,7 @@ func _refresh_right() -> void:
 	if contracts_text.text != s: contracts_text.text = s # (only when it changed: a click on a name isn't lost to a refresh)
 	var running: int = sim.contracts.list.filter(func(c): return sim.contracts.is_running(c)).size()
 	var alarm: bool = sim.contracts.list.any(func(c): return c.status in ["interrupted", "defending"])
+	log_tabs.set_tab_title(0, tr("Chronicle")) # (both titles follow a change of language)
 	log_tabs.set_tab_title(1, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
 	clans_text.text = _clans_bbcode()
 	var met: Array = sim.rivals.clans.keys().filter(func(id): return sim.rivals.clans[id]["met"])
