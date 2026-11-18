@@ -18,6 +18,11 @@ var left_title: Label
 var roster_box: VBoxContainer
 var roster_buttons := {}
 var sheet_box: VBoxContainer
+var bld_box: VBoxContainer # the building panel (a building selected on the map)
+var bld_text: RichTextLabel
+var bld_btns: VBoxContainer
+var bld_sig := ""
+var bld_confirm := -1 # a building whose Demolish was pressed once
 var sheet_text: RichTextLabel
 var sheet_contract_btn: Button
 var sheet_steward_btn: Button
@@ -343,6 +348,16 @@ func _build_left(root: Control) -> void:
 	hb.add_child(sheet_steward_btn)
 	hb.add_child(sheet_chief_btn)
 	sheet_box.add_child(_button("← Back to tribe roster", func(): world.select_only(null)))
+	bld_box = VBoxContainer.new()
+	bld_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bld_box.visible = false
+	inner.add_child(bld_box)
+	bld_text = _rich(0, true)
+	bld_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bld_box.add_child(bld_text)
+	bld_btns = VBoxContainer.new()
+	bld_box.add_child(bld_btns)
+	bld_box.add_child(_button("← Back to tribe roster", func(): world.select_only(null)))
 
 # ------------------------------------------------------------ minimap
 func _build_minimap(root: Control) -> void:
@@ -555,6 +570,15 @@ func _refresh_top() -> void:
 func _refresh_left() -> void:
 	var sel: Array = world.selected_units()
 	var single: bool = sel.size() == 1
+	var bld = _selected_building()
+	bld_box.visible = bld != null
+	bld_sig = ""
+	if bld:
+		roster_box.visible = false
+		roster_bar.visible = false
+		sheet_box.visible = false
+		_refresh_building(bld)
+		return
 	roster_box.visible = not single
 	roster_bar.visible = not single
 	for i in roster_bar.get_child_count():
@@ -573,6 +597,7 @@ func _refresh_left() -> void:
 			var members: Array = g["units"]
 			var hb := _button("", func():
 				world.selected = members.map(func(u): return u.id)
+				world.selected_struct = -1
 				world.selection_changed.emit()
 				world.focus_on(g["focus"]))
 			hb.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -731,6 +756,11 @@ func _group_title(key: String, units: Array) -> String:
 	return tr("⚑ %s · %s %d%% (%d)") % [c.plan["plan_id"], tr(c.status), roundi(c.progress * 100), units.size()]
 
 func _refresh_left_content() -> void:
+	var bsel = _selected_building()
+	if bsel or bld_box.visible:
+		if bsel and bld_box.visible: _refresh_building(bsel)
+		else: _refresh_left()
+		return
 	var sel: Array = world.selected_units()
 	if sel.size() != 1:
 		left_title.text = tr("TRIBE (%d)%s") % [sim.living().size(), tr("  · %d selected") % sel.size() if sel.size() > 1 else ""]
@@ -808,7 +838,8 @@ func _refresh_right() -> void:
 		var bb: Button = build_btns[k]
 		bb.text = "%s\n%s" % [tr(sd["name"]), why if why != "" else _cost_long(sd)]
 		bb.disabled = why != ""
-		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd) + "\n" + tr(sd.get("desc", ""))
+		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd) + "\n" + tr(sd.get("desc", "")) \
+			+ ("\n" + tr("Click its middle, then click again (or drag) to set its size. A bigger ring costs more.") if sd.get("ring", false) else "")
 	var old: Array = sim.outdated()
 	reno_btn.visible = not old.is_empty()
 	if not old.is_empty():
@@ -909,6 +940,85 @@ func _cost_short(sd: Dictionary) -> String:
 	return tr("%d") % sd["wood"] if sd.get("stone", 0) == 0 else tr("%dw %ds") % [sd["wood"], sd["stone"]]
 
 ## What we still lack to afford a cost ("" = affordable), e.g. "12 wood and 5 stone".
+# ------------------------------------------------------------ the building panel
+func _selected_building():
+	if world.selected_struct < 0 or not world.selected_units().is_empty(): return null
+	var s = sim.struct_by_id(world.selected_struct)
+	if s == null: world.selected_struct = -1
+	return s
+
+const STYLE_WORDS := ["", "hide", "mud & thatch", "timber & stone"]
+
+## What a building is and does, and what can be done with it (the same operations a game
+## master has: sim.renovate_one, sim.upgrade, sim.demolish).
+func _refresh_building(s) -> void:
+	var sd: Dictionary = D.STRUCTURES[s.type]
+	var ours: bool = sim.ours(s)
+	left_title.text = tr("BUILDING")
+	var t := "[font_size=20][color=#ffd36b]%s[/color][/font_size]\n" % tr(sd["name"])
+	if ours: t += "[color=#b8a888]%s[/color]\n" % (tr("In %s") % tr(sim.settlement_name(sim._settlement_of(s.pos))))
+	else:
+		var cl: Dictionary = sim.rivals.clans.get(s.owner.trim_prefix("rival:"), {})
+		t += "[color=#ff9b8a]%s[/color]\n" % (tr("Of the %s") % tr(cl.get("name", "")))
+	t += tr(sd.get("desc", "")) + "\n\n"
+	if not s.built: t += tr("Being built: %d%%%s") % [roundi(100.0 * s.progress / s.work), tr(" (awaiting wood)") if not s.paid else ""] + "\n"
+	elif s.reno and s.upgrade != "": t += tr("Becoming a %s: %d%%") % [tr(D.STRUCTURES[s.upgrade]["name"]), roundi(100.0 * s.reno_progress / sim.reno_need(s))] + "\n"
+	elif s.reno: t += tr("Being renovated: %d%%") % roundi(100.0 * s.reno_progress / sim.reno_need(s)) + "\n"
+	if s.type in D.STYLED and s.built: t += tr("Style: %s") % tr(STYLE_WORDS[clampi(s.style, 1, 3)]) + "\n"
+	if sd.get("ring", false): t += tr("Radius: %d") % roundi(sim.struct_r(s)) + "\n"
+	if sd.has("cap") and ours:
+		var who: Array = sim.living().filter(func(u): return u.bed_id == s.id).map(func(u): return tr(u.name))
+		t += tr("Beds: %d") % sd["cap"] + ("  ·  " + tr("Sleeping here: %s") % ", ".join(who) if not who.is_empty() else "") + "\n"
+	if s.decor > 0: t += tr("Painted decorations: %d") % s.decor + "\n"
+	var workers: Array = sim.living().filter(func(u): return u.job.get("struct_id", -1) == s.id).map(func(u): return tr(u.name))
+	if not workers.is_empty(): t += tr("At work: %s") % ", ".join(workers) + "\n"
+	bld_text.text = t
+	# actions: rebuilt only when what is possible changes
+	var acts: Array = []
+	if ours and s.built and not s.reno:
+		if s in sim.outdated():
+			var rc: Dictionary = sim.reno_cost([s])
+			var short := _shortfall(rc["wood"], rc["stone"])
+			acts.append(["reno", tr("Renovate in %s style (%dw%s)") % [tr(STYLE_WORDS[sim.evo.era]), rc["wood"], (tr(" %ds") % rc["stone"]) if rc["stone"] > 0 else ""], short])
+		for o in sim.upgrades_for(s):
+			acts.append(["up:" + o["to"], tr("Upgrade to %s (%dw%s)") % [tr(D.STRUCTURES[o["to"]]["name"]), o["wood"], (tr(" %ds") % o["stone"]) if o["stone"] > 0 else ""], o["why"]])
+	if ours and sim.demolish_block(s) == "":
+		var conf: bool = bld_confirm == s.id
+		acts.append(["demolish", tr("Really pull it down?") if conf else (tr("Demolish") if s.built else tr("Cancel this building site")), ""])
+	if s.type == "burial_ground": acts.append(["graves", tr("Visit the graves"), ""])
+	var sig := JSON.stringify([s.id, acts])
+	if sig == bld_sig: return
+	bld_sig = sig
+	for c in bld_btns.get_children(): c.queue_free()
+	for a in acts:
+		var b := _button(a[1], _building_action.bind(s.id, a[0]), a[2])
+		b.disabled = a[2] != ""
+		if a[2] != "": b.text += "\n" + a[2]
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if a[0] == "demolish": b.add_theme_color_override("font_color", Color("#ff9b8a"))
+		bld_btns.add_child(b)
+
+func _building_action(id: int, what: String) -> void:
+	var s = sim.struct_by_id(id)
+	if s == null: return
+	var helpers: Array = world.selected_units().filter(func(u): return u.role != "contract")
+	var err := ""
+	if what == "reno": err = sim.renovate_one(id, helpers)
+	elif what.begins_with("up:"): err = sim.upgrade(id, what.trim_prefix("up:"), helpers)
+	elif what == "graves": open_graves(s)
+	elif what == "demolish":
+		if bld_confirm != id:
+			bld_confirm = id
+			bld_sig = ""
+			_refresh_building(s)
+			return
+		bld_confirm = -1
+		err = sim.demolish(id)
+		if err == "": world.select_only(null)
+	if err != "": sim.popup(s.pos, err, Color("#ff8080"))
+	bld_sig = ""
+	if sim.struct_by_id(id) and world.selected_struct == id: _refresh_building(s)
+
 func _shortfall(wood: int, stone: int) -> String:
 	var parts: Array = []
 	if sim.stock["wood"] < wood: parts.append(tr("%d wood") % ceili(wood - sim.stock["wood"]))

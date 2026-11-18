@@ -111,6 +111,7 @@
    {"act": "Quarrying stone", "sound": "stone_hit", "every": [0.7, 1.1]},
    {"act": "Building", "sound": "hammer", "every": [0.6, 1.0]},
    {"act": "Renovating", "sound": "hammer", "every": [0.7, 1.1]},
+   {"act": "Upgrading", "sound": "hammer", "every": [0.7, 1.1]},
    {"act": "Butchering game", "sound": "chop", "every": [1.2, 1.8], "pitch": 1.5},
    {"act": "Picking berries", "sound": "rustle", "every": [1.5, 2.5]},
    {"act": "Fighting", "sound": "hit", "every": [0.5, 0.9]}

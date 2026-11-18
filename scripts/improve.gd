@@ -54,7 +54,7 @@ func update(dt: float) -> void:
 
 ## The planner's building sites not finished yet.
 func open_sites() -> int:
-	sites = sites.filter(func(id): return sim.structures.any(func(s): return s.id == id and not s.built))
+	sites = sites.filter(func(id): return sim.structures.any(func(s): return s.id == id and (not s.built or s.reno)))
 	return sites.size()
 
 ## The entries wanted now and possible (known, affordable with the reserve, a spot found),
@@ -63,6 +63,9 @@ func wanted() -> Array:
 	var out: Array = []
 	var reserve := float(C.get("wood_reserve", 10))
 	for r in C.get("list", []):
+		if r.has("upgrade"):
+			if _upgrade_target(r) != null and sim.story.holds(r.get("when", {})): out.append(r)
+			continue
 		var st: String = r.get("structure", "")
 		if not D.STRUCTURES.has(st) or not st in D.VILLAGE_BUILDS: continue
 		var sd: Dictionary = D.STRUCTURES[st]
@@ -73,6 +76,20 @@ func wanted() -> Array:
 		if spot(st, str(r.get("near", "village"))) == Vector2.INF: continue
 		out.append(r)
 	return out
+
+## For an upgrade entry ({"upgrade": from type, "structure": to}): the village's building
+## to upgrade (the one nearest the village that can be upgraded now), or null.
+func _upgrade_target(r: Dictionary):
+	var to: String = r.get("structure", "")
+	var from: String = r.get("upgrade", "")
+	if sim.structures.any(func(s): return s.reno and s.upgrade == to and sim.ours(s)): return null # one at a time
+	var reserve := float(C.get("wood_reserve", 10))
+	var best = null
+	for s in sim.structures:
+		if s.type != from or not sim.ours(s) or s.pos.distance_to(D.VILLAGE) > float(C.get("reach", 450)): continue
+		for o in sim.upgrades_for(s):
+			if o["to"] == to and o["why"] == "" and sim.stock["wood"] >= o["wood"] + reserve and (best == null or s.pos.distance_to(D.VILLAGE) < best.pos.distance_to(D.VILLAGE)): best = s
+	return best
 
 func _rule(st: String) -> Dictionary:
 	for r in C.get("list", []):
@@ -85,7 +102,15 @@ func advice_ctx() -> Dictionary:
 	var opts: Array = []
 	for id in asking.get("options", []):
 		var sd: Dictionary = D.STRUCTURES[id]
-		opts.append({"structure": id, "name": sd["name"], "does": sd["desc"], "wood": sd["wood"], "stone": sd.get("stone", 0), "why": _rule(id).get("reason", "")})
+		var o := {"structure": id, "name": sd["name"], "does": sd["desc"], "wood": sd["wood"], "stone": sd.get("stone", 0), "why": _rule(id).get("reason", "")}
+		var t = _upgrade_target(_rule(id)) if _rule(id).has("upgrade") else null
+		if t: # (an existing building made bigger: costs only the difference)
+			o["upgrade_of"] = D.STRUCTURES[t.type]["name"]
+			for u in sim.upgrades_for(t):
+				if u["to"] == id:
+					o["wood"] = u["wood"]
+					o["stone"] = u["stone"]
+		opts.append(o)
 	return {
 		"leader": sim.contracts.leader_profile(who) if who else {},
 		"world": sim.evo.world_ctx(), "season": sim.hz.summary(),
@@ -129,6 +154,12 @@ func order(structure: String, why := "") -> String:
 
 func _build(r: Dictionary, speech: String, by: String) -> void:
 	var st: String = r["structure"]
+	if r.has("upgrade"):
+		var t = _upgrade_target(r)
+		if t == null or sim.upgrade(t.id, st) != "": return
+		sites.append(t.id)
+		_note(st, str(r.get("reason", "")), speech, by, r["upgrade"])
+		return
 	var p := spot(st, str(r.get("near", "village")))
 	if p == Vector2.INF or sim.can_place(st, p) != "": return
 	_place(st, p, str(r.get("reason", "")), speech, by)
@@ -137,11 +168,19 @@ func _place(st: String, p: Vector2, reason: String, speech: String, by: String) 
 	var s: E.Structure = sim.place_structure(st, p)
 	if s == null: return
 	sites.append(s.id)
+	_note(st, reason, speech, by)
+
+## Tell the chronicle what was planned and why.
+func _note(st: String, reason: String, speech: String, by: String, from := "") -> void:
 	var who := planner()
 	last = {"structure": st, "reason": reason, "by": by, "day": sim.day()}
 	if speech != "": _say(speech)
 	var name: String = sim.tr(D.STRUCTURES[st]["name"])
-	if who: sim.add_log(sim.tr("%s lays out a %s: %s") % [sim.tr(who.name), name, sim.tr(reason)], "build", [who])
+	if from != "":
+		var was: String = sim.tr(D.STRUCTURES[from]["name"])
+		if who: sim.add_log(sim.tr("%s has a %s made into a %s: %s") % [sim.tr(who.name), was, name, sim.tr(reason)], "build", [who])
+		else: sim.add_log(sim.tr("The tribe makes a %s into a %s: %s") % [was, name, sim.tr(reason)], "build")
+	elif who: sim.add_log(sim.tr("%s lays out a %s: %s") % [sim.tr(who.name), name, sim.tr(reason)], "build", [who])
 	else: sim.add_log(sim.tr("The tribe lays out a %s: %s") % [name, sim.tr(reason)], "build")
 	if who: sim.gain_xp(who, "lore", 1.0)
 
@@ -180,7 +219,7 @@ func _free(p: Vector2, r: float, structs: Array, obstacles: Array) -> bool:
 	if D.is_water(p) or D.river_dist(p) < sim._wet_reach() + r: return false
 	var gap := float(C.get("gap", 14))
 	for s in structs:
-		var sr: float = D.STRUCTURES[s.type]["r"]
+		var sr: float = sim.struct_r(s)
 		var dist: float = s.pos.distance_to(p)
 		if D.STRUCTURES[s.type].get("ring", false):
 			if absf(dist - sr) < r + gap: return false # (inside the ring is fine, not on it)

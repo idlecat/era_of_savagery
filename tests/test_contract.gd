@@ -66,6 +66,8 @@ func _initialize() -> void:
 	test_audio()
 	test_save_load()
 	test_renovate_settlements()
+	test_building_panel()
+	test_wall_radius()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1960,3 +1962,89 @@ func test_renovate_settlements() -> void:
 	_run(sim, 120)
 	check(huts.all(func(h): return h.style == 2 and not h.reno), "the settlement's huts are rebuilt in mud & thatch")
 	check(sim.structures.filter(func(s): return s.owner == "village" and s.type == "hut" and s.style == 2).size() >= 2, "and the village's too")
+
+func test_building_panel() -> void:
+	print("\n== One building at a time: renovate, upgrade, demolish ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var hut = sim.structures.filter(func(s): return s.type == "hut" and s.built)[0]
+	sim.stock["wood"] = 100
+	var ups: Array = sim.upgrades_for(hut)
+	check(ups.size() == 1 and ups[0]["to"] == "large_hut" and ups[0]["why"] == "", "a Hut can become a Large Hut (%s)" % str(ups))
+	var diff: int = ups[0]["wood"]
+	check(diff == D.STRUCTURES["large_hut"]["wood"] - D.STRUCTURES["hut"]["wood"], "for the difference in wood (%d)" % diff)
+	var shrine = sim.add_structure("totem_shrine", D.VILLAGE + Vector2(-150, 120), true)
+	check(sim.upgrades_for(shrine)[0]["why"] != "", "a Grand Altar needs its wisdom first")
+	check(sim.upgrade(hut.id, "palisade") != "", "only the upgrade paths in config")
+	var w0: float = sim.stock["wood"]
+	check(sim.upgrade(hut.id, "large_hut") == "" and is_equal_approx(w0 - sim.stock["wood"], diff), "the upgrade starts and is paid")
+	check(hut.reno and hut.upgrade == "large_hut" and hut.built, "the hut stays a home while it is rebuilt")
+	check(sim.living().any(func(u): return u.job.get("struct_id", -1) == hut.id), "someone goes to do the work")
+	check(sim.upgrades_for(hut)[0]["why"] != "", "no second upgrade while one is going")
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(sim)
+	var sim2 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(sim2, data)
+	check(sim2.struct_by_id(hut.id).upgrade == "large_hut", "an upgrade under way is saved")
+	_run(sim, 90)
+	check(hut.type == "large_hut" and not hut.reno and hut.upgrade == "" and hut.work == D.STRUCTURES["large_hut"]["work"], "it becomes a Large Hut")
+	# renovate one
+	sim.techs["fire"] = true
+	sim.techs["pottery"] = true
+	sim.evo.era = 2
+	var other = sim.structures.filter(func(s): return s.type == "hut" and s.built and s.style == 1)[0]
+	var n_old: int = sim.outdated().size()
+	check(sim.renovate_one(other.id) == "" and other.reno and sim.outdated().size() == n_old - 1, "one old hut can be renovated on its own")
+	# demolish
+	var bonfire = sim.add_structure("bonfire", D.VILLAGE + Vector2(200, 200), true)
+	w0 = sim.stock["wood"]
+	check(sim.demolish(bonfire.id) == "" and sim.struct_by_id(bonfire.id) == null, "a building can be pulled down")
+	check(is_equal_approx(sim.stock["wood"] - w0, floorf(D.STRUCTURES["bonfire"]["wood"] * 0.5)), "giving back half its wood")
+	var site = sim.place_structure("hut", D.VILLAGE + Vector2(260, -200))
+	w0 = sim.stock["wood"]
+	sim.demolish(site.id)
+	check(is_equal_approx(sim.stock["wood"] - w0, D.STRUCTURES["hut"]["wood"]), "a cancelled building site gives all its wood back")
+	var sleeper = sim.living()[0]
+	sleeper.bed_id = other.id
+	sim.demolish(other.id)
+	check(sleeper.bed_id == -1, "whoever slept there needs a new bed")
+	var bg = sim.add_structure("burial_ground", D.VILLAGE + Vector2(-300, -300), true)
+	check(sim.demolish(bg.id) != "" and sim.struct_by_id(bg.id) != null, "the burial ground is never pulled down")
+	# the Steward upgrades a hut when beds run short
+	var s3 = _new_sim()
+	s3.time = D.DAY_LEN * 0.3
+	s3.stock["wood"] = 200
+	s3.appoint(s3.living()[0], "steward")
+	var kid := 0
+	while s3.living().size() <= s3.pop_cap():
+		kid += 1
+		s3.units.append(s3.folk.make_child("Kid%d" % kid, null))
+	var wants: Array = s3.improve.wanted().map(func(r): return r["structure"])
+	check("large_hut" in wants, "with people sleeping out, a bigger hut is wanted (%s; %d people, %d beds)" % [str(wants), s3.living().size(), s3.pop_cap()])
+	s3.improve.choose("", "") # (nothing asked: no-op)
+	s3.improve.update(100.0)
+	check(s3.structures.any(func(s): return s.upgrade == "large_hut"), "and the Steward has one made bigger")
+
+func test_wall_radius() -> void:
+	print("\n== A palisade of the size you choose ==")
+	var sim = _new_sim()
+	sim.stock["wood"] = 200
+	var base: Dictionary = D.STRUCTURES["palisade"]
+	check(sim.ring_radius("palisade", 0.0) == base["r"] and sim.ring_radius("palisade", 1000.0) == 300.0 and sim.ring_radius("palisade", 7.0) == 60.0 and sim.ring_radius("palisade", 173.0) == 170.0, "radii are clamped and snapped (config buildings.ring)")
+	var w0: float = sim.stock["wood"]
+	var p = sim.place_structure("palisade", D.VILLAGE, 200.0)
+	check(p != null and p.size == 200.0, "a wall is laid out at the chosen radius")
+	check(is_equal_approx(w0 - sim.stock["wood"], base["wood"] * 2) and is_equal_approx(p.work, base["work"] * 2), "twice the ring, twice the wood and work")
+	check(sim.place_structure("palisade", D.VILLAGE, 300.0) == null or sim.stock["wood"] >= 0, "and it must be affordable")
+	p.built = true
+	var u = sim.living()[0]
+	u.pos = D.VILLAGE + Vector2(190, 0)
+	check(sim.inside_wall(u.pos), "someone 190 from the middle is inside a 200 ring")
+	var d_in: float = sim.unit_def(u)
+	u.pos = D.VILLAGE + Vector2(260, 0)
+	check(not sim.inside_wall(u.pos) and sim.unit_def(u) < d_in, "and outside it loses the wall's defence")
+	var small = sim.place_structure("palisade", D.VILLAGE + Vector2(600, 0))
+	check(small and small.size == base["r"], "without a choice it is the usual size")
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(sim)
+	var s2 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(s2, data)
+	check(s2.struct_by_id(p.id).size == 200.0, "the chosen size is saved")

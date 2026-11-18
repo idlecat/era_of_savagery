@@ -121,6 +121,8 @@ class Structure:
 	var style: int = 1 # era look (1 hide & branch, 2 mud & thatch, 3 timber & stone)
 	var reno: bool = false # being renovated to the current era's style
 	var reno_progress: float = 0.0
+	var upgrade: String = "" # being rebuilt into this structure type (with reno = true)
+	var size: float = 0.0 # a wall's chosen radius (0 = the type's own r)
 	var decor: int = 0 # painted decorations, 0..3
 	var graves: Array = [] # burial ground: [{name, day, lost, pos}]
 

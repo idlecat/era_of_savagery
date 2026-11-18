@@ -382,6 +382,29 @@ func near_warmth(u: E.Unit) -> bool:
 		if s.built and ours(s) and s.type == "bonfire" and s.pos.distance_to(u.pos) < r: return true
 	return false
 
+## A building's radius: a wall's chosen one, else its type's.
+func struct_r(s: E.Structure) -> float:
+	return s.size if s.size > 0.0 else float(D.STRUCTURES[s.type]["r"])
+
+## A wall's radius clamped and snapped to the allowed ones (config "buildings.ring"); 0 = default.
+func ring_radius(type: String, want: float) -> float:
+	var sd: Dictionary = D.STRUCTURES[type]
+	if not sd.get("ring", false) or want <= 0.0: return float(sd["r"])
+	var rc: Dictionary = BLD["ring"]
+	return clampf(snappedf(want, float(rc["step"])), float(rc["min"]), float(rc["max"]))
+
+## What laying out `type` costs (a wall's cost and work scale with its radius).
+func place_cost(type: String, size := 0.0) -> Dictionary:
+	var sd: Dictionary = D.STRUCTURES[type]
+	var k := ring_radius(type, size) / float(sd["r"]) if sd.get("ring", false) else 1.0
+	return {"wood": ceili(sd["wood"] * k), "stone": ceili(sd.get("stone", 0) * k), "work": float(sd["work"]) * k}
+
+## Inside one of our walls (people there fight better).
+func inside_wall(p: Vector2) -> bool:
+	for s in structures:
+		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0: return true
+	return false
+
 func _struct_near(type: String, p: Vector2, r: float) -> bool:
 	for s in structures:
 		if s.built and ours(s) and s.type == type and s.pos.distance_to(p) < r: return true
@@ -406,7 +429,7 @@ func unit_def(u: E.Unit) -> float:
 	if has_tech("hide"): d += 2
 	d += inv.add("def")
 	if has_bronze(): d += 3
-	if _struct_near("palisade", u.pos, 115): d += 3
+	if inside_wall(u.pos): d += 3
 	for o in units: # Centurion Aura
 		if not o.dead and o != u and o.lv("combat") >= 5 and o.pos.distance_to(u.pos) < 110:
 			d *= 1.2
@@ -636,7 +659,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				return
 			var sd: Dictionary = D.STRUCTURES[s.type]
 			var ring: bool = sd.get("ring", false)
-			var tgt: Vector2 = s.pos + Vector2(cos(u.id), sin(u.id)) * sd["r"] if ring else s.pos
+			var tgt: Vector2 = s.pos + Vector2(cos(u.id), sin(u.id)) * struct_r(s) if ring else s.pos
 			var near: float = 18.0 if ring else sd["r"] + 10.0
 			if not s.paid:
 				u.act = "Waiting for materials"
@@ -647,9 +670,9 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				evo.practice(u, "build", dt)
 				evo.drift("spiritual", -0.005 * dt)
 				if s.reno:
-					u.act = "Renovating " + sd["name"]
+					u.act = ("Upgrading " if s.upgrade != "" else "Renovating ") + sd["name"]
 					s.reno_progress += speed
-					if s.reno_progress >= s.work * 0.6: _finish_reno(s, u)
+					if s.reno_progress >= reno_need(s): _finish_reno(s, u)
 				else:
 					u.act = "Building " + sd["name"]
 					s.progress += speed
@@ -1841,19 +1864,25 @@ func _update_vice(dt: float) -> void:
 			add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
 
 # ------------------------------------------------------------------ village building (Tier 1)
-func can_place(type: String, p: Vector2) -> String:
+func can_place(type: String, p: Vector2, size := 0.0) -> String:
 	var sd: Dictionary = D.STRUCTURES[type]
+	var cost := place_cost(type, size)
 	if sd.has("tech") and not has_tech(sd["tech"]): return "Requires tech"
-	if stock["wood"] < sd["wood"]: return "Not enough wood"
-	if stock["stone"] < sd.get("stone", 0): return "Not enough stone"
+	if stock["wood"] < cost["wood"]: return "Not enough wood"
+	if stock["stone"] < cost["stone"]: return "Not enough stone"
 	if D.river_dist(p) < D.RIVER_HALF + 15: return "Too close to the river"
 	return ""
 
-func place_structure(type: String, p: Vector2) -> E.Structure:
-	if can_place(type, p) != "": return null
-	stock["wood"] -= D.STRUCTURES[type]["wood"]
-	stock["stone"] -= D.STRUCTURES[type].get("stone", 0)
+## Lay out a building site (`size`: a wall's radius, 0 = the default one).
+func place_structure(type: String, p: Vector2, size := 0.0) -> E.Structure:
+	if can_place(type, p, size) != "": return null
+	var cost := place_cost(type, size)
+	stock["wood"] -= cost["wood"]
+	stock["stone"] -= cost["stone"]
 	var s := add_structure(type, p, false, "village", true)
+	if D.STRUCTURES[type].get("ring", false):
+		s.size = ring_radius(type, size)
+		s.work = cost["work"]
 	rivals.on_structure_placed(s)
 	add_log(tr("Construction site laid out: %s.") % tr(D.STRUCTURES[type]["name"]), "build")
 	return s
@@ -1875,13 +1904,96 @@ func research(tech_id: String) -> String:
 func outdated() -> Array:
 	return structures.filter(func(s): return s.built and not s.reno and ours(s) and s.type in D.STYLED and s.style < evo.era) # (settlements too)
 
+var BLD: Dictionary = RULES["buildings"] # one building at a time: renovate, upgrade, demolish
+
 func reno_cost(list: Array) -> Dictionary:
 	var w := 0
 	var st := 0
 	for s in list:
-		w += ceili(D.STRUCTURES[s.type]["wood"] * 0.5)
-		if evo.era >= 3: st += 6
+		w += ceili(place_cost(s.type, s.size)["wood"] * float(BLD["renovate_wood"]))
+		if evo.era >= 3: st += int(BLD["stone_era3"])
 	return {"wood": w, "stone": st}
+
+## Work it takes to finish a renovation or an upgrade.
+func reno_need(s: E.Structure) -> float:
+	if s.upgrade != "": return float(D.STRUCTURES[s.upgrade]["work"]) * float(BLD["upgrade_work"])
+	return s.work * float(BLD["renovate_work"])
+
+## What a building can be made into: [{to, wood, stone, why}] ("why" = "" when it can be done now).
+func upgrades_for(s: E.Structure) -> Array:
+	var out: Array = []
+	for o in BLD["upgrades"].get(s.type, []):
+		var to: String = o.get("to", "")
+		if not D.STRUCTURES.has(to): continue
+		var a: Dictionary = D.STRUCTURES[s.type]
+		var b: Dictionary = D.STRUCTURES[to]
+		var k := float(BLD.get("upgrade_cost", 1.0))
+		var w := maxi(int(BLD.get("min_wood", 0)), ceili((b["wood"] - a["wood"]) * k))
+		var st := maxi(0, ceili((b.get("stone", 0) - a.get("stone", 0)) * k))
+		var why := ""
+		if b.has("tech") and not has_tech(b["tech"]): why = tr("Requires %s") % tr(evo.tech_def(b["tech"])["name"])
+		elif not s.built or s.reno: why = tr("Busy")
+		elif stock["wood"] < w or stock["stone"] < st: why = tr("Needs %d wood and %d stone") % [w, st] if st > 0 else tr("Needs %d wood") % w
+		out.append({"to": to, "wood": w, "stone": st, "why": why})
+	return out
+
+## Rebuild one building into structure type `to` (an upgrade path in config). Returns "" or why not.
+func upgrade(id: int, to: String, helpers: Array = []) -> String:
+	var s := struct_by_id(id)
+	if s == null or not ours(s): return tr("No such building")
+	for o in upgrades_for(s):
+		if o["to"] != to: continue
+		if o["why"] != "": return o["why"]
+		stock["wood"] -= o["wood"]
+		stock["stone"] -= o["stone"]
+		s.reno = true
+		s.reno_progress = 0.0
+		s.upgrade = to
+		_send_renovators([s], helpers)
+		add_log(tr("Work begins to make the %s into a %s.") % [tr(D.STRUCTURES[s.type]["name"]), tr(D.STRUCTURES[to]["name"])], "build")
+		return ""
+	return tr("It can't become that")
+
+## Rebuild one old building in the current era's style. Returns "" or why not.
+func renovate_one(id: int, helpers: Array = []) -> String:
+	var s := struct_by_id(id)
+	if s == null or not s in outdated(): return tr("Nothing to renovate")
+	var cost := reno_cost([s])
+	if stock["wood"] < cost["wood"] or stock["stone"] < cost["stone"]:
+		return tr("Needs %d wood and %d stone") % [cost["wood"], cost["stone"]] if cost["stone"] > 0 else tr("Needs %d wood") % cost["wood"]
+	stock["wood"] -= cost["wood"]
+	stock["stone"] -= cost["stone"]
+	s.reno = true
+	s.reno_progress = 0.0
+	_send_renovators([s], helpers)
+	return ""
+
+## Why a building can't be pulled down ("" = it can).
+func demolish_block(s: E.Structure) -> String:
+	if s == null or not ours(s): return tr("No such building")
+	if s.type in BLD["demolish"].get("never", []): return tr("The tribe will not pull this down")
+	return ""
+
+## Pull a building down (a building site is cancelled): part of its wood and stone back.
+func demolish(id: int) -> String:
+	var s := struct_by_id(id)
+	var why := demolish_block(s)
+	if why != "": return why
+	var sd: Dictionary = D.STRUCTURES[s.type]
+	var k := float(BLD["demolish"].get("refund", 0.5)) if s.built else (1.0 if s.paid and s.progress <= 0.0 else float(BLD["demolish"].get("refund", 0.5)))
+	if s.paid:
+		var pc := place_cost(s.type, s.size)
+		stock["wood"] += floorf(pc["wood"] * k)
+		stock["stone"] += floorf(pc["stone"] * k)
+	for u in units:
+		if u.bed_id == s.id:
+			u.bed_id = -1
+			u.bed_pos = null
+		if u.job.get("struct_id", -1) == s.id: set_job(u, {})
+	if s.type == "aurochs_pen": oxen = mini(oxen, OX_PER_PEN * maxi(0, structures.filter(func(o): return o != s and o.built and ours(o) and o.type == "aurochs_pen").size()))
+	structures.erase(s)
+	add_log(tr("The %s is pulled down.") % tr(sd["name"]), "build")
+	return ""
 
 func renovate(helpers: Array) -> String:
 	var list := outdated()
@@ -1894,6 +2006,12 @@ func renovate(helpers: Array) -> String:
 	for s in list:
 		s.reno = true
 		s.reno_progress = 0.0
+	_send_renovators(list, helpers)
+	add_log(tr("The tribe rebuilds %d homes and walls in the style of the %s.") % [list.size(), tr(D.ERA_NAMES[evo.era])], "build")
+	return ""
+
+## Send people to rebuild `list`: the chieftain's picks, else each settlement's own free hands.
+func _send_renovators(list: Array, helpers: Array) -> void:
 	if not helpers.is_empty(): # (the people the chieftain picked)
 		var i := 0
 		for u in helpers:
@@ -1913,13 +2031,16 @@ func renovate(helpers: Array) -> String:
 				taken[u.id] = true
 				assign_build(u, here[i % here.size()])
 				i += 1
-	add_log(tr("The tribe rebuilds %d homes and walls in the style of the %s.") % [list.size(), tr(D.ERA_NAMES[evo.era])], "build")
-	return ""
 
 func _finish_reno(s: E.Structure, u: E.Unit) -> void:
 	s.reno = false
 	s.style = evo.era
-	popup(s.pos + Vector2(0, -30), tr("Renovated"), Color("#b6f28a"))
+	if s.upgrade != "": # it becomes the new building, with everything that brings
+		s.type = s.upgrade
+		s.upgrade = ""
+		s.work = D.STRUCTURES[s.type]["work"]
+		complete_structure(s, u)
+	else: popup(s.pos + Vector2(0, -30), tr("Renovated"), Color("#b6f28a"))
 	gain_xp(u, "craft", 4)
 	var next: E.Structure = null # the nearest old home still waiting in this settlement
 	for o in structures:

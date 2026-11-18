@@ -22,7 +22,12 @@ var heading := {} # "u12" -> last screen-space movement direction
 var attacking := {} # predator keys currently biting someone (attack animation)
 var sprite_dirs: Array = [] # screen direction each of the 8 baked facings looks along
 var selected: Array = [] # unit ids
+const PALISADE_GAP := 8.0 # clearance between a wall's stakes and a building on its line
+var selected_struct := -1 # a building picked for the building panel (units unselected)
 var build_type := ""
+var build_size := 0.0 # radius for a wall being laid out
+var wall_center: Variant = null # a wall's middle, once picked: the cursor then sets its radius
+const WALL_DRAG := 12.0 # (screen px) a press moved this far before release lays the wall out on release
 var drag_start: Variant = null # screen-space
 var mid_drag := false
 var cam: Camera2D
@@ -555,11 +560,18 @@ func draw_ground_fx() -> void:
 		ci.draw_arc(cmd_marker["p"], 6 + 16 * k, 0, TAU, 24, Color(cmd_marker["c"], 1.0 - k), 3)
 	ghost_m = Vector2.ZERO
 	ghost_why = ""
+	if build_type == "" or not D.STRUCTURES[build_type].get("ring", false): wall_center = null
 	if build_type != "":
 		ghost_m = uniso(get_global_mouse_position())
-		ghost_why = sim.can_place(build_type, ghost_m)
+		var ring: bool = D.STRUCTURES[build_type].get("ring", false)
+		if ring: # first the middle, then the cursor's distance from it is the radius
+			if wall_center != null:
+				build_size = sim.ring_radius(build_type, ghost_m.distance_to(wall_center))
+				ghost_m = wall_center
+			else: build_size = sim.ring_radius(build_type, 0.0)
+		ghost_why = sim.can_place(build_type, ghost_m, build_size if ring else 0.0)
 		var col := Color(0.4, 1, 0.4, 0.45) if ghost_why == "" else Color(1, 0.3, 0.3, 0.45)
-		var r: float = D.STRUCTURES[build_type]["r"]
+		var r: float = build_size if ring else D.STRUCTURES[build_type]["r"]
 		ci.draw_circle(ghost_m, minf(r, 30), col)
 		if D.STRUCTURES[build_type].get("ring", false): ci.draw_arc(ghost_m, r, 0, TAU, 64, col, 6)
 	if sim.flood_fx > 0:
@@ -605,6 +617,12 @@ func draw_overlay() -> void:
 		if lm["found"] and _in_view(lm["pos"]):
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
 	for id in sim.rivals.clans: _draw_clan_banner(sim.rivals.clans[id])
+	var sst = sim.struct_by_id(selected_struct) if selected_struct >= 0 else null
+	if sst:
+		var sr: float = sim.struct_r(sst) + 6.0
+		ci.draw_set_transform(iso(sst.pos), 0.0, Vector2(1.0, 0.5))
+		ci.draw_arc(Vector2.ZERO, sr * 1.06, 0, TAU, 48, Color("#ffe066"), 2.5 / 0.75)
+		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	for s in sim.structures:
 		if _in_view(s.pos): _draw_structure_overlay(s)
 	for u in sim.units:
@@ -628,13 +646,17 @@ func draw_overlay() -> void:
 		var col: Color = p["color"]
 		col.a = a
 		_draw_label(iso(p["pos"]) - Vector2(0, 26), p["text"], 17 if p["big"] else 13, col, true)
-	if drag_start != null:
+	if drag_start != null and wall_center == null: # (a box select, not a wall being sized)
 		var m := get_global_mouse_position()
 		var r := Rect2(drag_start, m - drag_start).abs()
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.12))
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.7), false, 1.5)
 	if build_type != "":
-		_draw_label(iso(ghost_m) + Vector2(0, -44), tr(D.STRUCTURES[build_type]["name"]) + ("" if ghost_why == "" else " - " + tr(ghost_why)), 14, Color.WHITE, true)
+		var gname: String = tr(D.STRUCTURES[build_type]["name"])
+		if D.STRUCTURES[build_type].get("ring", false):
+			if wall_center == null: gname += "  " + tr("click the middle")
+			else: gname += "  " + tr("radius %d · %d wood · click to build") % [roundi(build_size), sim.place_cost(build_type, build_size)["wood"]]
+		_draw_label(iso(ghost_m) + Vector2(0, -44), gname + ("" if ghost_why == "" else " - " + tr(ghost_why)), 14, Color.WHITE, true)
 
 # ------------------------------------------------------------ seasons & weather
 func _draw_season_ground() -> void:
@@ -1411,11 +1433,11 @@ func _draw_structure_overlay(s) -> void:
 		return
 	if s.reno:
 		var rb := iso(s.pos)
-		_bar(Vector2(rb.x, rb.y + 10), 38, s.reno_progress / (s.work * 0.6), Color("#ffd36b"))
+		_bar(Vector2(rb.x, rb.y + 10), 38, s.reno_progress / sim.reno_need(s), Color("#9fd0ff") if s.upgrade != "" else Color("#ffd36b"))
 		return
 	if s.built: return
 	var sd: Dictionary = D.STRUCTURES[s.type]
-	var b := iso(s.pos) if not sd.get("ring", false) else iso(s.pos + Vector2(sd["r"], sd["r"]) * 0.707)
+	var b := iso(s.pos) if not sd.get("ring", false) else iso(s.pos + Vector2.ONE * sim.struct_r(s) * 0.707)
 	var by: float = b.y + 10
 	_bar(Vector2(b.x, by), 38, s.progress / s.work, Color("#b6f28a"))
 	if not s.paid: _draw_label(Vector2(b.x, by + 17), tr("awaiting wood"), 11, Color(1, 0.8, 0.6), true)
@@ -1921,17 +1943,28 @@ func _unhandled_input(ev: InputEvent) -> void:
 		var sm := get_global_mouse_position() # screen-space (iso)
 		var m := uniso(sm) # world-space
 		if mb.button_index == MOUSE_BUTTON_LEFT:
+			var ring: bool = build_type != "" and D.STRUCTURES[build_type].get("ring", false)
 			if mb.pressed:
-				if build_type != "":
+				if ring and wall_center == null: # a wall: first its middle...
+					wall_center = m
+					drag_start = sm
+				elif ring: # ...then a second click at the radius
+					_place(wall_center)
+					drag_start = null
+				elif build_type != "":
 					_place(m)
 				else:
 					drag_start = sm
+			elif ring and wall_center != null and drag_start != null: # (or press, drag and let go)
+				if (drag_start as Vector2).distance_to(sm) >= WALL_DRAG: _place(wall_center)
+				drag_start = null
 			elif drag_start != null:
 				if (drag_start as Vector2).distance_to(sm) < 6 / cam.zoom.x: _click_select(sm, mb.shift_pressed)
 				else: _box_select(Rect2(drag_start, sm - drag_start).abs(), mb.shift_pressed)
 				drag_start = null
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			if build_type != "": build_type = ""
+			if wall_center != null: wall_center = null # (back to picking the middle)
+			elif build_type != "": build_type = ""
 			else: _command(sm)
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
 			mid_drag = mb.pressed
@@ -1951,6 +1984,7 @@ func selected_units() -> Array:
 
 func select_only(u) -> void:
 	selected = [u.id] if u else []
+	selected_struct = -1
 	selection_changed.emit()
 
 ## p is a world-space point.
@@ -1973,18 +2007,41 @@ func _click_select(sm: Vector2, add: bool) -> void:
 			bd = d
 			best = u
 	if best == null:
-		var m := uniso(sm)
-		for s in sim.structures:
-			if s.type == "burial_ground" and s.built and s.pos.distance_to(m) < D.STRUCTURES[s.type]["r"] + 10:
-				structure_clicked.emit(s)
-				return
+		var bs = structure_at(uniso(sm))
+		if bs and bs.type == "burial_ground" and bs.built:
+			structure_clicked.emit(bs)
+			return
+		if bs and not add:
+			selected = []
+			selected_struct = bs.id
+			selection_changed.emit()
+			return
+	selected_struct = -1
 	if not add: selected = []
 	if best:
 		if best.id in selected: selected.erase(best.id)
 		else: selected.append(best.id)
 	selection_changed.emit()
 
+## The building at world point m (walls only near their ring), or null.
+func structure_at(m: Vector2):
+	var best = null
+	var bd := INF
+	for s in sim.structures:
+		if not sim.is_explored(s.pos): continue
+		var r: float = sim.struct_r(s)
+		var d: float = s.pos.distance_to(m)
+		if D.STRUCTURES[s.type].get("ring", false):
+			d = absf(d - r)
+			r = 14.0
+		elif d > r + 8.0: continue
+		if d < r + 8.0 and d < bd:
+			bd = d
+			best = s
+	return best
+
 func _box_select(r: Rect2, add: bool) -> void:
+	selected_struct = -1
 	if not add: selected = []
 	for u in sim.units:
 		if not u.dead and r.has_point(iso(u.pos) - Vector2(0, 15)) and u.id not in selected: selected.append(u.id)
@@ -2006,9 +2063,11 @@ func command_at(world_pos: Vector2) -> void:
 	_command(iso(world_pos))
 
 func _place(m: Vector2) -> void:
-	var s = sim.place_structure(build_type, m)
+	var size: float = build_size if D.STRUCTURES[build_type].get("ring", false) else 0.0
+	wall_center = null
+	var s = sim.place_structure(build_type, m, size)
 	if s == null:
-		sim.popup(m, tr(sim.can_place(build_type, m)), Color("#ff8080"))
+		sim.popup(m, tr(sim.can_place(build_type, m, size)), Color("#ff8080"))
 		return
 	for u in selected_units():
 		if u.role != "contract": sim.assign_build(u, s)
@@ -2041,7 +2100,7 @@ func _command(sm: Vector2) -> void:
 		for u in free: sim.assign_gather(u, node.res, {"node_id": node.id, "bank": D.region_at(node.pos)})
 		return
 	for s in sim.structures:
-		var r: float = D.STRUCTURES[s.type]["r"]
+		var r: float = sim.struct_r(s)
 		var hit: bool = absf(s.pos.distance_to(m) - r) < 16 if D.STRUCTURES[s.type].get("ring", false) else s.pos.distance_to(m) < r + 12
 		if not s.built and hit:
 			for u in free: sim.assign_build(u, s)
@@ -2077,7 +2136,7 @@ func hover_info() -> Array:
 	for s in sim.structures:
 		if not sim.is_explored(s.pos): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		var r: float = sd["r"]
+		var r: float = sim.struct_r(s)
 		var hit: bool = absf(s.pos.distance_to(m) - r) < 14 if sd.get("ring", false) else s.pos.distance_to(m) < r + 10
 		if hit: return _struct_info(s)
 	for lm in sim.landmarks:
@@ -2230,15 +2289,18 @@ func _sync_items() -> void:
 	for st in sim.structures:
 		var exp: bool = sim.is_explored(st.pos)
 		if st.type == "palisade":
-			var r: float = D.STRUCTURES["palisade"]["r"]
-			var cnt := 64
+			var r: float = sim.struct_r(st)
+			var cnt := maxi(16, roundi(64.0 * r / float(D.STRUCTURES["palisade"]["r"]))) # (stakes as close as ever)
 			var shown: int = cnt if st.built else int(cnt * st.progress / st.work)
+			# buildings standing on the wall's line make gates in it (no stakes through a hut)
+			var in_way: Array = sim.structures.filter(func(o): return o != st and not D.STRUCTURES[o.type].get("ring", false) \
+				and absf(o.pos.distance_to(st.pos) - r) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 			for i in cnt:
 				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
 				var key := "s%d_%d" % [st.id, i]
 				seen[key] = true
 				var it := _item(key, 5, [pp, i < shown, st.built, st.style], iso(pp), false)
-				it.visible = exp
+				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
 			var key := "s%d" % st.id

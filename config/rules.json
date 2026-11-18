@@ -170,6 +170,14 @@
     "reason": "the stores are nearly full and food would rot."
    },
    {
+    "upgrade": "hut",
+    "structure": "large_hut",
+    "when": {
+     "homeless": 1
+    },
+    "reason": "people sleep in the open: a hut can be made bigger."
+   },
+   {
     "structure": "hut",
     "when": {
      "homeless": 1,
@@ -220,5 +228,38 @@
     "reason": "oxen would carry our loads."
    }
   ]
+ },
+ "buildings": {
+  "_doc": "One building at a time (the building panel, and sim.renovate_one/upgrade/demolish for a game master). renovate_work: share of a building's work to rebuild it in the era's style (it costs half its wood, and stone_era3 stone from era 3). upgrades: what a built structure can become, in place; it costs the difference to the new one's wood and stone times upgrade_cost (at least min_wood), takes upgrade_work of the new one's work, needs its tech, and the building keeps working meanwhile. demolish: refund share of its wood and stone; never: kinds that can't be pulled down.",
+  "renovate_work": 0.6,
+  "renovate_wood": 0.5,
+  "stone_era3": 6,
+  "upgrades": {
+   "hut": [
+    {
+     "to": "large_hut"
+    }
+   ],
+   "totem_shrine": [
+    {
+     "to": "grand_altar"
+    }
+   ]
+  },
+  "upgrade_cost": 1.0,
+  "min_wood": 4,
+  "upgrade_work": 0.7,
+  "demolish": {
+   "refund": 0.5,
+   "never": [
+    "burial_ground"
+   ]
+  },
+  "ring": {
+   "_doc": "Walls (structures with \"ring\": the palisade) are laid out at a chosen radius, min-max in steps of step; their wood and work scale with it (the structure's own cost is for its own r).",
+   "min": 60,
+   "max": 300,
+   "step": 10
+  }
  }
 }

@@ -296,7 +296,7 @@ Whoever contributed most becomes the **inventor** and remembers it. Knowledge li
 - Era 2: mud-and-thatch huts
 - Era 3: timber longhouses on stone footings
 
-*Renovate* (right panel) rebuilds old homes in the new style, in the village and every settlement; each settlement's own people rebuild its homes (or the people you have selected), and the Steward sends idle hands to the old homes near where they live. Foot traffic wears visible paths into the grass.
+**Click a building** to open its panel: what it does, who sleeps there, its style and any work under way, with **Renovate** (just this one), **Upgrade** (a Hut into a Large Hut, a Totem Shrine into the Grand Altar: it costs the difference and the building keeps working meanwhile) and **Demolish** (half the wood back; a building site not started gives it all back). A **Palisade** can be any size: click its middle, then click again (or drag) to set its radius; right-click goes back a step (a bigger ring costs more wood and work), and buildings standing on its line make gates in it. *Renovate* (right panel) rebuilds old homes in the new style, in the village and every settlement; each settlement's own people rebuild its homes (or the people you have selected), and the Steward sends idle hands to the old homes near where they live. Foot traffic wears visible paths into the grass.
 
 **Culture.** Four values drift with what the tribe does: Martial/Peaceful, Spiritual/Practical, Settled/Roaming and Ranked/Communal. At ±35, a value adopts a permanent **tradition** with a bonus (e.g. Ancestor Rites, Wayfinders, Shared Hearth). Culture also shapes newborns' personalities.
 
