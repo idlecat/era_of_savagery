@@ -70,6 +70,7 @@ func _initialize() -> void:
 	test_wall_radius()
 	test_policies()
 	test_leaders_and_the_ways()
+	test_crisis()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -78,6 +79,7 @@ func _new_sim():
 	assert(s != null)
 	s.hz.level = "off" # deterministic: the hardship tests switch challenges on themselves
 	s.folk.festivals = false # (no festival events popping up mid-test)
+	s.crisis.on = false # (no emergency mode either; test_crisis switches it on)
 	s.new_game()
 	return s
 
@@ -326,7 +328,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2178,3 +2180,64 @@ func test_leaders_and_the_ways() -> void:
 	var rel0: float = s3.rivals.clans[wsan["blueprint"]["target"]]["relation"]
 	s3.contracts.create(wsan["blueprint"], wl, "Raid")
 	check(s3.folk.mood < mood0 and s3.rivals.clans[wsan["blueprint"]["target"]]["relation"] < rel0, "a war party under Peace first troubles the tribe and the clan remembers")
+
+func test_crisis() -> void:
+	print("\n== Emergency mode (config/emergency.json) ==")
+	var sim = _new_sim()
+	var K = sim.crisis
+	K.on = true
+	for p in sim.predators: p.fled = true
+	var v = sim.unit_by_name("Tuo")
+	v.pos = D.VILLAGE + Vector2(160, 60)
+	sim.assign_gather(v, "wood")
+	var job0: Dictionary = v.job.duplicate()
+	var tiger = sim.spawn_predator(v.pos + Vector2(30, 0), v.pos)
+	v.last_hit_t = sim.time
+	v.attacker_id = tiger.id
+	K.update(0.05)
+	check(K.active() and v in K.people() and K.title() != "", "a beast striking one of ours starts a crisis (%s, %d people)" % [K.title(), K.people().size()])
+	check(K.slow() < 1.0, "and time slows (x%.2f)" % K.slow())
+	check(K.order_block("torches") != "", "torches need fire first")
+	check(K.order("fight") == "" and v.job.get("type", "") == "attack" and v.job.get("crisis", false) and v.resume_job.get("type", "") == job0["type"], "Fight!: they go for the beast, and their work waits")
+	var d0: float = sim.unit_def(v)
+	check(K.order("rally") == "" and not K.buff.is_empty(), "Rally to me")
+	var best = null
+	for u in K.people():
+		if best == null or sim.unit_atk(u) > sim.unit_atk(best): best = u
+	check(sim.crisis.def_bonus(best) > 0.0 and sim.unit_def(best) > sim.unit_def(best) - 0.01, "close to the rally point, everyone defends better (+%.0f)" % sim.crisis.def_bonus(best))
+	sim.techs["fire"] = true
+	sim.stock["wood"] = 50
+	check(K.order("torches") == "" and tiger.fleeing and is_equal_approx(sim.stock["wood"], 44.0), "Torches!: the beast flees, for 6 wood")
+	var s0: int = K.summary()["threats"]
+	check(s0 == 0, "no threat left once it flees")
+	# it ends when all is quiet: everyone back to work, and they remember
+	for i in 140: K.update(0.05)
+	check(not K.active(), "when it is quiet, the crisis ends")
+	check(v.memory.any(func(m): return "stood together" in m["text"]), "the people in it remember it")
+	check(v.job.get("type", "") == job0["type"] and not v.job.get("crisis", false), "and go back to their work (%s)" % v.job.get("type", ""))
+	# no new crisis right away
+	var wolf = sim.spawn_predator(v.pos + Vector2(20, 0), v.pos)
+	wolf.kind = "wolf"
+	v.last_hit_t = sim.time
+	v.attacker_id = wolf.id
+	K.update(0.05)
+	check(not K.active(), "a cooldown before the next one")
+	sim.time += 60
+	v.last_hit_t = sim.time
+	K.update(0.05)
+	check(K.active() and K.cur["kind"] == "wolf", "then wolves start one of their own")
+	check(K.order("fall_back") == "" and K.people().all(func(u): return u.job.get("type", "") == "shelter"), "Fall back: everyone runs for the huts")
+	K.end("handed")
+	check(not K.active() and K.slow() == 1.0 and K.people().is_empty(), "the chieftain can hand it back")
+	check(v.job.get("type", "") != "shelter", "and the people come out again")
+	# taking command of a contract's crew
+	var s2 = _new_sim()
+	s2.crisis.on = true
+	var crew: Array = s2.living().slice(0, 3)
+	check(s2.crisis.start("contract", D.VILLAGE + Vector2(500, 0), crew, 7) and s2.crisis.people().size() == 3, "a contract's crew can be taken in hand")
+	check(s2.crisis.order("ring_fire") == "" and crew.all(func(u): return u.job.get("hold", false)), "To the fire: they run to the bonfire and stay")
+	check(s2.crisis.summary()["active"] and s2.crisis.summary()["people"].size() == 3, "a game master can read it")
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(s2)
+	var s3 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(s3, data)
+	check(s3.crisis.active() and s3.crisis.cur["kind"] == "contract", "a crisis under way is saved")

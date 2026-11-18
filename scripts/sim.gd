@@ -12,6 +12,7 @@ const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
 const Policy = preload("res://scripts/policy.gd")
+const Crisis = preload("res://scripts/crisis.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -27,6 +28,8 @@ signal envoy_arrived(unit, clan_id)
 signal advice_wanted(ctx) # improve.gd asks which improvement to build; answer: improve.choose()
 signal happened(id) # weather and nature, the ids of `after` conditions (culture.on_event)
 signal sound_cue(id, at) # the story action "sound" (audio.gd plays it)
+signal crisis_started(crisis) # emergency mode begins (crisis.gd): the HUD shows the orders
+signal crisis_ended(crisis)
 signal feat_added(feat) # one of the tribe's firsts (inv.feat): the HUD celebrates it
 
 var next_id := 1
@@ -89,6 +92,7 @@ var nat: Nature
 var folk: Folk
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
+var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
@@ -112,6 +116,7 @@ func _init() -> void:
 	folk = Folk.new(self)
 	improve = Improve.new(self)
 	policy = Policy.new(self)
+	crisis = Crisis.new(self)
 	story = Story.new(self)
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
@@ -433,6 +438,7 @@ func unit_def(u: E.Unit) -> float:
 	d += inv.add("def")
 	if has_bronze(): d += 3
 	if inside_wall(u.pos): d += 3
+	d += crisis.def_bonus(u) # (rallied together)
 	for o in units: # Centurion Aura
 		if not o.dead and o != u and o.lv("combat") >= 5 and o.pos.distance_to(u.pos) < 110:
 			d *= 1.2
@@ -627,7 +633,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		"move":
 			u.act = "Fleeing" if j.get("flee", false) else "Moving"
 			if approach(u, j["to"], 4, dt):
-				if u.resume_job.get("type", "") == "explore":
+				if j.get("hold", false): u.act = "Standing ready" # (a crisis order: stay until it is over)
+				elif u.resume_job.get("type", "") == "explore":
 					u.resume_job = {}
 					assign_explore(u)
 					u.job_t = u.resume_t
@@ -1772,6 +1779,7 @@ func tick(dt: float) -> void:
 	_update_vice(dt)
 	improve.update(dt)
 	policy.update(dt)
+	crisis.update(dt)
 	_update_births(dt)
 
 	for p in popups:

@@ -11,6 +11,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/legacy.json` | `legacy.gd` | the endgames: each victory path's conditions (`count`: vassals, allies or techs, all of them; `built`: a structure), the event and saga texts, and the defeat |
 | `config/audio.json` | `audio.gd`, `synth.gd` | the sounds (recipes rendered in code), what plays on which happening, the sounds of people at work, ambience, and the music's moods |
 | `config/policies.json` | `policy.gd` | the Council's standing policies: their choices, effects, culture drift, unlocks, who likes them and what they say |
+| `config/emergency.json` | `crisis.gd` | emergency mode: when it starts, how slow time runs, who is in it, when it ends, the orders and their numbers |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -141,3 +142,9 @@ The Council's standing policies (`policy.gd`, `sim.policy`; the **Council** butt
 **Objections:** a leader whose personality dislikes a way in force that touches the task, and likes another choice, says so first in the negotiation (the LLM voices it; offline, the choice's `con` line). The chieftain can change the way on the spot (the usual cost and delay) or let it stand: then the crew works at `objection.sullen_work` speed. Either way the leader remembers (`remember_heard` / `remember_stand`). The engine decides who objects (`sim.policy.objection(u, kind)`); `sim.policy.answer(u, objection, heard, contract)` settles it.
 
 `switch`: the mood a change costs, the days it takes to take hold (`settle_days`; the old way holds until then) and the days before the same policy can be changed again (`cooldown_days`). `council.speakers`: how many elders speak. A game master changes a policy with `sim.policy.set_choice(id, choice, by)` and reads them with `sim.policy.summary()`; every persona prompt lists them (`evo.world_ctx()["the_ways_the_tribe_lives_by"]`).
+
+## emergency.json
+
+Emergency mode (`crisis.gd`, `sim.crisis`). `triggers.attack`: a beast or raider of the listed `kinds` striking one of ours (not `skip_roles`) within `hit_ago` seconds starts a crisis, at most once per `cooldown` seconds. The chieftain can also take command of a contract crew in its emergency dialog. While it lasts, time runs at `slow`, the people within `radius` are the ones commanded, and it ends after `quiet` seconds without a threat (or `max_secs`, or **Hand back**). `titles`, `happened` (for memories, with `remember`), `start_log`, `end_log` and `outcome` are its texts.
+
+`orders`: `{"id", "label", "desc", "verb", "needs": conditions, "cost": {stock: n}, ...}`. The verbs are coded: `fight` (`min_hp`), `rally` (`def`, `close`, `secs`), `scare` (`scare_radius`, `"of": "beasts"`), `to_fire` (`reach`, `scare_radius`), `shelter` (`acts`), `aid` (`below`, `heal`, `time`, `count`, `acts`). A game master starts one with `sim.crisis.start(kind, at, people, contract)`, gives orders with `sim.crisis.order(id)`, ends it with `end()` and reads it with `summary()`.

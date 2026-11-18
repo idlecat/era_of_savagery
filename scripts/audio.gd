@@ -181,7 +181,7 @@ func _apply_volumes() -> void:
 
 # ------------------------------------------------------------ what is going on
 func _update_state() -> void:
-	var danger: bool = sim.nat.alarm() or not sim.active_predators_near(D.VILLAGE, 700).is_empty() \
+	var danger: bool = sim.crisis.active() or sim.nat.alarm() or not sim.active_predators_near(D.VILLAGE, 700).is_empty() \
 		or sim.living().any(func(u): return u.job.get("type", "") == "attack")
 	_state = {"night": sim.night_amt > 0.5, "danger": danger, "festival": sim.folk.festival_on(), "paused": sim.paused,
 		"weather": sim.hz.weather, "season": sim.hz.season()}

@@ -1,0 +1,110 @@
+{
+ "_doc": "Emergency mode (crisis.gd, sim.crisis): when a beast or raider strikes one of ours (or the chieftain takes command of a contract's emergency), time slows to `slow` and the chieftain gives orders to the people within `radius` of the danger. It ends when no threat is within radius for `quiet` seconds (or after max_secs, or when handed back); then everyone goes back to their work and remembers it. `cooldown`: seconds before an attack can start another one. Orders: verb (coded: fight, rally, scare, to_fire, shelter, aid), needs (conditions), cost (stock), and the verb's numbers. See docs/CONFIG.md.",
+ "slow": 0.35,
+ "radius": 420,
+ "quiet": 5,
+ "max_secs": 150,
+ "cooldown": 45,
+ "triggers": {
+  "attack": {
+   "on": true,
+   "kinds": [
+    "tiger",
+    "wolf",
+    "warrior"
+   ],
+   "hit_ago": 1.5,
+   "skip_roles": [
+    "contract",
+    "child"
+   ]
+  }
+ },
+ "titles": {
+  "tiger": "A saber-tooth attacks!",
+  "wolf": "Wolves attack!",
+  "warrior": "Raiders attack!",
+  "contract": "The crew is in danger!"
+ },
+ "happened": {
+  "tiger": "a saber-tooth attacked",
+  "wolf": "the wolves attacked",
+  "warrior": "raiders attacked",
+  "contract": "the crew was attacked"
+ },
+ "start_log": "The Chieftain takes command: %s",
+ "end_log": "The danger has passed: %s.",
+ "outcome": {
+  "won": "the threat is gone",
+  "fled": "the threat is driven off",
+  "lost": "%d fell",
+  "handed": "the Chieftain hands the fight back to the tribe"
+ },
+ "remember": "stood together when %s on Day %d",
+ "impact": 4,
+ "orders": [
+  {
+   "id": "fight",
+   "label": "Fight!",
+   "desc": "Everyone able goes for the nearest threat.",
+   "verb": "fight",
+   "min_hp": 0.3
+  },
+  {
+   "id": "rally",
+   "label": "Rally to me",
+   "desc": "Gather around the strongest fighter: close together, everyone defends better (+3 DEF) for a while.",
+   "verb": "rally",
+   "def": 3,
+   "close": 70,
+   "secs": 25
+  },
+  {
+   "id": "torches",
+   "label": "Torches!",
+   "desc": "Wave burning brands: beasts nearby turn and flee (6 wood). Raiders are not afraid of fire.",
+   "verb": "scare",
+   "needs": {
+    "tech": "fire"
+   },
+   "cost": {
+    "wood": 6
+   },
+   "of": "beasts",
+   "scare_radius": 260
+  },
+  {
+   "id": "ring_fire",
+   "label": "To the fire",
+   "desc": "Run to the nearest bonfire: no beast follows anyone into its light.",
+   "verb": "to_fire",
+   "scare_radius": 180,
+   "reach": 900
+  },
+  {
+   "id": "fall_back",
+   "label": "Fall back",
+   "desc": "Into the huts: beasts and raiders cannot reach those inside.",
+   "verb": "shelter",
+   "acts": [
+    "Running to hide",
+    "Hiding in a hut",
+    "Cowering in fear"
+   ]
+  },
+  {
+   "id": "wounded",
+   "label": "Tend the wounded",
+   "desc": "The unhurt carry and dress the badly wounded.",
+   "verb": "aid",
+   "below": 0.6,
+   "heal": 0.25,
+   "time": 4,
+   "count": 2,
+   "acts": [
+    "Running to help %s",
+    "Tending %s"
+   ]
+  }
+ ]
+}

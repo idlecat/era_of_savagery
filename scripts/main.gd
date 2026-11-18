@@ -141,7 +141,7 @@ func _process(delta: float) -> void:
 	if sim.paused or hud.modal_open(): return
 	# A quiet night with the whole tribe asleep passes quickly; any alarm drops back to normal speed.
 	var ff: bool = sim.night_ff()
-	var dt: float = minf(delta, 0.1) * (maxf(sim.speed, NIGHT_FF) if ff else sim.speed)
+	var dt: float = minf(delta, 0.1) * (maxf(sim.speed, NIGHT_FF) if ff else sim.speed) * sim.crisis.slow() # (emergency mode: slow motion)
 	var n := ceili(dt / STEP)
 	for i in n:
 		sim.tick(dt / n)

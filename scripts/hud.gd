@@ -90,6 +90,7 @@ func setup(s, w, l) -> void:
 	_build_left(root)
 	_build_right(root)
 	_build_alerts(root)
+	_build_crisis_bar(root)
 	sim.log_added.connect(func(): log_dirty = true)
 	sim.contract_interrupted.connect(_on_interrupt)
 	sim.event_fired.connect(_on_event)
@@ -98,6 +99,8 @@ func setup(s, w, l) -> void:
 	sim.alert_raised.connect(_on_alert)
 	sim.feat_added.connect(_on_feat)
 	sim.advice_wanted.connect(_on_advice_wanted)
+	sim.crisis_started.connect(_on_crisis)
+	sim.crisis_ended.connect(func(_c): _crisis_bar_update())
 	feat_popups = _feat_pref()
 	world.selection_changed.connect(_refresh_left)
 	world.structure_clicked.connect(func(s): if s.type == "burial_ground": open_graves(s))
@@ -237,6 +240,72 @@ func after_load() -> void:
 				_on_interrupt(c)
 				break
 	toast(tr("Game loaded: Day %d") % sim.day())
+
+# ------------------------------------------------------------ emergency mode (crisis.gd)
+var crisis_bar: PanelContainer
+var crisis_text: RichTextLabel
+var crisis_btns: HFlowContainer
+var crisis_sig := ""
+
+## A crisis begins: look at it, select the people in it, show the orders.
+func _on_crisis(_c: Dictionary) -> void:
+	world.focus_on(sim.crisis.cur["at"])
+	world.selected = sim.crisis.people().map(func(u): return u.id)
+	world.selected_struct = -1
+	world.selection_changed.emit()
+	_crisis_bar_update()
+
+func _build_crisis_bar(root: Control) -> void:
+	crisis_bar = PanelContainer.new()
+	crisis_bar.anchor_left = 0.5
+	crisis_bar.anchor_right = 0.5
+	crisis_bar.offset_left = -330
+	crisis_bar.offset_right = 330
+	crisis_bar.offset_top = 60
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.25, 0.06, 0.04, 0.92)
+	sb.border_color = Color("#ff8a7a")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(10)
+	crisis_bar.add_theme_stylebox_override("panel", sb)
+	crisis_bar.visible = false
+	root.add_child(crisis_bar)
+	var v := VBoxContainer.new()
+	crisis_bar.add_child(v)
+	crisis_text = _rich(0, true)
+	v.add_child(crisis_text)
+	crisis_btns = HFlowContainer.new()
+	v.add_child(crisis_btns)
+
+## Refresh the crisis bar: who is in it, the threats left, the orders that can be given.
+func _crisis_bar_update() -> void:
+	if crisis_bar == null: return
+	var K = sim.crisis
+	crisis_bar.visible = K.active()
+	if not K.active():
+		crisis_sig = ""
+		return
+	var names: Array = K.people().map(func(u): return tr(u.name))
+	crisis_text.text = tr("[color=#ffd36b][b]⚠ EMERGENCY · %s[/b][/color]  [color=#ffb0a0](time slowed)[/color]\nYou command: %s · threats left: %d · %ds") % [K.title(), ", ".join(names), K.threats().size(), roundi(sim.time - float(K.cur["t0"]))]
+	var orders: Array = K.C.get("orders", [])
+	var sig := JSON.stringify(orders.map(func(o): return K.order_block(o["id"])))
+	if sig == crisis_sig: return
+	crisis_sig = sig
+	for c in crisis_btns.get_children(): c.queue_free()
+	for o in orders:
+		var why: String = K.order_block(o["id"])
+		var b := _button(tr(o["label"]), func():
+			var err: String = sim.crisis.order(o["id"])
+			if err != "": toast(tr(err))
+			crisis_sig = ""
+			_crisis_bar_update(), tr(o.get("desc", "")) + ("\n" + tr(why) if why != "" else ""))
+		b.disabled = why != ""
+		b.focus_mode = Control.FOCUS_NONE
+		crisis_btns.add_child(b)
+	var hb := _button("Hand back", func(): sim.crisis.end("handed"), "Let the tribe handle it: time runs normally again")
+	hb.focus_mode = Control.FOCUS_NONE
+	crisis_btns.add_child(hb)
 
 func _expire_alerts() -> void:
 	var now := Time.get_ticks_msec()
@@ -535,6 +604,7 @@ func _process(delta: float) -> void:
 	refresh_t -= delta
 	if refresh_t > 0: return
 	refresh_t = 0.25
+	_crisis_bar_update()
 	_refresh_top()
 	_refresh_left_content()
 	_refresh_right()
@@ -1428,6 +1498,16 @@ func _on_interrupt(c) -> void:
 			sim.paused = false)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		opts.add_child(b)
+	if c.abort_reason in ["enemy_attack", "heavy_losses"] and not sim.crisis.active(): # or lead them yourself
+		var tb := _button(tr("⚔ Take command: lead the crew yourself (time slows)"), func():
+			sim.contracts.resolve(c, "hold", tr("The Chieftain takes command"))
+			_close_modal()
+			sim.paused = false
+			var crew: Array = sim.living().filter(func(u): return u.role == "contract" and u.contract_id == c.id)
+			sim.crisis.start("contract", c.site, crew, c.id))
+		tb.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		tb.add_theme_color_override("font_color", Color("#ffd36b"))
+		opts.add_child(tb)
 
 func _toast_contract_done(c) -> void:
 	if modal: return

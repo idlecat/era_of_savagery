@@ -100,7 +100,7 @@
  },
  "on_log": {"build": "done", "tech": "discovery", "combat": "hit", "danger": "drum_warn"},
  "on_alert": {"danger": "horn", "warn": "drum_warn"},
- "on_signal": {"event_fired": "boom", "feat_added": "fanfare", "contract_interrupted": "horn", "contract_finished": "discovery", "envoy_arrived": "horn_far"},
+ "on_signal": {"event_fired": "boom", "feat_added": "fanfare", "contract_interrupted": "horn", "contract_finished": "discovery", "envoy_arrived": "horn_far", "crisis_started": "horn", "crisis_ended": "drum_warn"},
  "on_happening": {"lightning": "thunder", "storm": "thunder", "earthquake": "quake", "eruption": "quake"},
  "ui_click": "click",
  "jobs": {
