@@ -30,6 +30,7 @@ uniform float tile = 150.0;      // world units one ground texture covers
 uniform float realism = 0.55;    // 0: the map's colour with the photo's detail; 1: the photo's own colour
 uniform float clouds = 0.16;     // how dark the drifting cloud shadows get
 uniform float use_photo = 1.0;
+uniform float dryness = 0.0;     // the land (config/lands.json): 0 green parkland or wetter, 1 dry steppe
 uniform vec3 sun_tint = vec3(1.2, 1.17, 0.9);   // land in the sun
 uniform vec3 shade_tint = vec3(0.78, 0.88, 0.76); // land in shade   // 0: the old procedural ground (no textures loaded)
 
@@ -74,7 +75,7 @@ void fragment() {
 		vec3 dry = tinted(photo(t_dry, wp, 1.2), m_dry, mix(col, vec3(0.62, 0.58, 0.36), 0.55));
 		landc = mix(grass, grass2, smoothstep(0.35, 0.65, p2));
 		landc = mix(landc, meadow, smoothstep(0.55, 0.8, p1) * 0.75 + mk.b * 0.4);
-		landc = mix(landc, dry, smoothstep(0.66, 0.86, p2 * 0.6 + p1 * 0.4) * 0.55);
+		landc = mix(landc, dry, smoothstep(0.66 - 0.3 * dryness, 0.86 - 0.2 * dryness, p2 * 0.6 + p1 * 0.4) * (0.55 + 0.35 * dryness));
 		// sun and shade across the land: sunny stretches warm and yellow, shaded hollows deep green
 		float lit = smoothstep(0.2, 0.8, p1 * 0.7 + p2 * 0.3);
 		landc *= mix(shade_tint, sun_tint, lit);

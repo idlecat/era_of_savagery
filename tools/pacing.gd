@@ -27,7 +27,7 @@ func _initialize() -> void:
 	var dt := float(a.get("dt", "0.1"))
 	var m: String = a.get("map", "the_ford")
 	Cultures.apply(a.get("culture", ""))
-	if MapGen.SIZES.has(m): MapGen.generate(m, int(a.get("tribes", "3")), sd)
+	if MapGen.SIZES.has(m): MapGen.generate(m, int(a.get("tribes", "3")), sd, a.get("land", "random"))
 	else: Scenarios.apply(m)
 	seed(sd)
 	var sim = Sim.new()

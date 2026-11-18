@@ -108,6 +108,10 @@ The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death
 
 **Save / Load** in the top bar lists the save slots, the quick save (**F5** saves, **F9** loads) and the autosaves. The game autosaves at the start of every day into three rotating slots; you can switch that off in the dialog. The New Game screen has **Continue** (the newest save) and a list of all saves. A save holds the settings the world was made from and the whole simulation, so a loaded game plays on exactly as it would have. You can't save while a decision (a dilemma or an emergency) is waiting. Saves are in `user://saves/`.
 
+## The land (`lands.gd`)
+
+A random map is one of four kinds of land, picked from its seed or on the New Game screen: **Steppe** (open grassland, a few copses by the water, big herds, dry grass, droughts and fast fires), **Parkland** (meadows and scattered woods, the classic map), **Woodland** (large woods with meadows between them, fewer deer, more rain) or **Old forest** (deep forest with a few clearings, damp, little game). Forests gather where a hidden moisture map is wet and along the rivers, and the grass colour, berry bushes, herds, weather and wildfire all follow the land; within a kind, each map varies a little. The numbers are in `config/lands.json`.
+
 ## Sound and music (`audio.gd`, `synth.gd`)
 
 Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes, or mutes everything (remembered between games).

@@ -257,7 +257,7 @@ func _fire_tick(dt: float) -> void:
 	spread_t -= dt
 	if spread_t <= 0 and fire_size < int(cw["max_trees"]):
 		spread_t = float(cw["spread_every"])
-		var p: float = float(cw["spread_chance"]) * (float(cw["drought_mult"]) if sim.hz.dry() else 1.0) * (float(cw["wet_mult"]) if wet or sim.hz.winter() else 1.0) * sim.inv.mul("wildfire")
+		var p: float = float(cw["spread_chance"]) * (float(cw["drought_mult"]) if sim.hz.dry() else 1.0) * (float(cw["wet_mult"]) if wet or sim.hz.winter() else 1.0) * sim.inv.mul("wildfire") * float(D.LAND.get("wildfire", 1.0))
 		var fresh: float = float(cw["burn_time"]) * 0.75
 		for id in burning.keys():
 			if burning[id] > fresh: continue # just caught

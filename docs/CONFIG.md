@@ -14,6 +14,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/emergency.json` | `crisis.gd` | emergency mode: when it starts, how slow time runs, who is in it, when it ends, the orders and their numbers |
 | `config/director.json` | `director.gd` | pacing: what each hardship weighs, how much the tribe can take per challenge level, when it is in distress, and the mercy gifts |
 | `config/names.json` | `names.gd` | names for the newborn once the culture's own are used up: the parts (adjectives, animals, plants and things of nature, old Chinese surnames) and how they combine |
+| `config/lands.json` | `lands.gd`, `sim.gd`, `world_view.gd` | the kinds of land (steppe, parkland, woodland, old forest): how wooded, and the grass, bushes, herds, weather and wildfire that go with it; which random maps get |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -160,3 +161,7 @@ The director (`director.gd`, `sim.director`) paces the hardships. Everything tha
 ## names.json
 
 Names for people born into the tribe once the culture's `birth_names` are all given (`names.gd`). `patterns` combine two lists of parts: `nature` puts an adjective before an animal, plant or thing of nature (`Little Fox`, 小狐) and `clan` an old Chinese surname before a nature word's pinyin (`Jiang Song`, 姜松); `weight` sets how often each is used. Parts are `[English, Chinese]` (and `given` adds the pinyin). The English form is the name and its translation key: every combination (about 11,000) is registered for Chinese at startup, so built names translate in loaded games too. A name is never given twice.
+
+## lands.json
+
+The kind of land a map is (`lands.gd`, `D.LAND`). Each land has `woods` (`count`: forests, x the base 80 per standard area; `trees` and `spread` per forest; `follow`: how strictly forests keep to the wet ground of a woodland noise map, so woods gather into woodlands with meadows between; `river`: more woods near rivers), `moisture` (0 dry, 1 wet: grass colour and dry patches), `bushes` and `herds` (multipliers), `weather` (chance multipliers per weather kind) and `wildfire` (spread). Random maps pick one by the weights in `random` (or the player's New Game choice) and vary `count`, `bushes`, `herds` and `moisture` by `jitter`, all from the map seed; scenarios name theirs (`"land"` in the map spec), else `default`. The Ford is parkland with `follow` 0, so its woods are as they always were. Personas are told the land (`evo.world_ctx()["the_land"]`).

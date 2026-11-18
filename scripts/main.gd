@@ -59,7 +59,7 @@ func _ready() -> void:
 	if not data.is_empty(): settings = data["settings"]
 	Cultures.apply(settings.get("culture", "")) # before the map: a random tribe takes the culture's names
 	if MapGen.SIZES.has(settings["map"]): # a random map
-		MapGen.generate(settings["map"], settings["tribes"], settings["seed"])
+		MapGen.generate(settings["map"], settings["tribes"], settings["seed"], str(settings.get("land", "random" if not settings.has("load") else "parkland")))
 		seed(settings["seed"]) # forests, herds and finds grow the same way for the same seed
 	else: # a scenario
 		Scenarios.apply(settings["map"])
@@ -119,7 +119,7 @@ func _new_game_settings() -> Dictionary:
 		if not MapGen.SIZES.has(m) and Scenarios.by_id(m) == null: m = "standard"
 		var tribes := int(args.get("tribes", str(MapGen.SIZES[m]["def"]) if MapGen.SIZES.has(m) else "0"))
 		var cu: String = args.get("culture", Scenarios.culture_of(m))
-		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000))), "culture": "" if cu == "none" else cu}
+		return {"map": m, "tribes": tribes, "seed": int(args.get("seed", str(randi() % 1000000))), "culture": "" if cu == "none" else cu, "land": args.get("land", "random")}
 	var ui := NewGameUI.new()
 	add_child(ui)
 	var s: Dictionary = await ui.chosen

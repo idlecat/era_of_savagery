@@ -148,6 +148,7 @@ func _herds_leave() -> void:
 	var deer: Array = sim.nodes.filter(func(n): return n.kind == "deer")
 	deer.shuffle()
 	for n in deer.slice(0, deer.size() / 2): sim.nodes.erase(n)
+	sim._cache_nodes_size = -1
 
 func _herds_return() -> void:
 	var want: Dictionary = sim.herd_sizes(26.0 * D.area_k())
@@ -173,7 +174,7 @@ func _weather(dt: float) -> void:
 	weather_roll = Config.rand_in(C["weather"]["roll_every"])
 	for w in WEATHER:
 		var kind: Dictionary = WEATHER[w]
-		if randf() < float(kind["chance"][season_idx()]) * mult():
+		if randf() < float(kind["chance"][season_idx()]) * mult() * float(D.LAND.get("weather", {}).get(w, 1.0)): # (the land: a steppe is drier)
 			if not sim.director.allow(w): return # (the director: not now, the tribe needs a breath)
 			if kind.has("warn_ahead"): # announced before it arrives
 				incoming = w

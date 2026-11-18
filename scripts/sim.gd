@@ -15,6 +15,7 @@ const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
 const Names = preload("res://scripts/names.gd")
+const Lands = preload("res://scripts/lands.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -152,7 +153,7 @@ func new_game() -> void:
 	wear_h = ceili(D.H / WEAR_CELL)
 	wear.resize(wear_w * wear_h)
 	wear.fill(0.0)
-	var herd := herd_sizes(70.0 * D.area_k()) # herds in proportion to each stretch of land
+	var herd := herd_sizes(70.0 * D.area_k() * Lands.num(D.LAND, "herds")) # herds in proportion to each stretch of land (and to how open it is)
 	for r in herd:
 		for i in herd[r]: spawn_deer(r, false)
 
@@ -208,7 +209,17 @@ func _wilds() -> void:
 	var home := Rect2(D.VILLAGE - Vector2(700, 600), Vector2(1700, 1200))
 	var placed := 0
 	var tries := 0
-	var n_forests := roundi(80 * D.area_k())
+	# how wooded the land is (config/lands.json): forests keep to the wet ground of a woodland
+	# map (and near rivers), so woods gather into woodlands with open meadows between
+	var wd: Dictionary = D.LAND.get("woods", {})
+	var follow := float(wd.get("follow", 0.0))
+	var river_k := float(wd.get("river", 1.0))
+	var tr_: Array = wd.get("trees", [10, 24])
+	var sp: Array = wd.get("spread", [110, 200])
+	var wet := FastNoiseLite.new()
+	wet.seed = int(D.MAP.get("seed", 0)) + 501
+	wet.frequency = 0.0009 / sqrt(maxf(0.3, D.area_k()))
+	var n_forests := roundi(80 * D.area_k() * float(wd.get("count", 1.0)))
 	while placed < n_forests and tries < n_forests * 15:
 		tries += 1
 		var c := Vector2(randf_range(120, D.W - 120), randf_range(120, D.H - 120))
@@ -217,9 +228,12 @@ func _wilds() -> void:
 		for lm in D.LANDMARKS:
 			if c.distance_to(lm["pos"]) < 230: near_lm = true
 		if near_lm: continue
-		_forest(c, randi_range(10, 24), randf_range(110, 200))
+		if follow > 0.0: # (on parkland, follow 0: forests fall anywhere, as they always have)
+			var w := wet.get_noise_2dv(c) * 0.5 + 0.5 + (river_k - 1.0) * 0.25 * clampf(1.0 - D.river_dist(c) / 700.0, 0.0, 1.0)
+			if randf() > lerpf(1.0, smoothstep(0.42, 0.72, w), follow): continue
+		_forest(c, randi_range(int(tr_[0]), int(tr_[1])), randf_range(float(sp[0]), float(sp[1])))
 		placed += 1
-	for i in roundi(24 * D.area_k()):
+	for i in roundi(24 * D.area_k() * Lands.num(D.LAND, "bushes")):
 		var c := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
 		if home.has_point(c) or D.river_dist(c) < 160: continue
 		for k in 3:
@@ -356,10 +370,22 @@ func struct_by_id(id: int) -> E.Structure:
 	for s in structures:
 		if s.id == id: return s
 	return null
+## A resource node by id: a lookup table rebuilt whenever the list of nodes changes (with
+## thousands of trees in a deep forest, scanning them for every gatherer every tick was slow).
+var _cache_nodes := {}
+var _cache_nodes_size := -1
+var _cache_nodes_upto := -1 # ids up to this existed when the table was made (ids only grow)
 func node_by_id(id: int) -> E.ResNode:
-	for n in nodes:
-		if n.id == id: return n
-	return null
+	if id < 0: return null
+	if _cache_nodes_size != nodes.size() or id > _cache_nodes_upto: _index_nodes()
+	return _cache_nodes.get(id)
+
+func _index_nodes() -> void:
+	_cache_nodes.clear()
+	for n in nodes: _cache_nodes[n.id] = n
+	_cache_nodes_size = nodes.size()
+	_cache_nodes_upto = next_id
+
 func pred_by_id(id: int) -> E.Predator:
 	for p in predators:
 		if p.id == id: return p
@@ -570,17 +596,20 @@ func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": nul
 func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResNode:
 	var best: E.ResNode = null
 	var best_score := INF
+	var claims_of := {} # node id -> people already working it (counted once, not per node)
+	for u in units:
+		if not u.dead and u.job.has("node_id"): claims_of[u.job["node_id"]] = claims_of.get(u.job["node_id"], 0) + 1
+	var prefer := {} # kind -> the ways' preference (looked up once per kind)
 	for n in nodes:
 		if n.res != res or n.amount < 1: continue
+		var d: float = n.pos.distance_to(from) # (cheap checks first: thousands of trees in a forest)
+		if d > max_dist: continue
 		if n.kind == "boulder" and not has_tech("tools"): continue
 		if D.FINDS.has(n.kind) and not _can_gather_find(n): continue
 		if bank >= 0 and D.region_at(n.pos) != bank: continue
-		var d: float = n.pos.distance_to(from)
-		if d > max_dist: continue
-		var claims := 0
-		for u in units:
-			if not u.dead and u.job.get("node_id", -2) == n.id: claims += 1
-		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0) - inv.add("prefer", n.kind)
+		var claims: int = claims_of.get(n.id, 0)
+		if not prefer.has(n.kind): prefer[n.kind] = inv.add("prefer", n.kind)
+		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0) - float(prefer[n.kind])
 		if score < best_score:
 			best_score = score
 			best = n
@@ -856,6 +885,7 @@ func _deplete(n: E.ResNode) -> void:
 		n.regrow_t = 140
 	elif n.kind == "carcass" or n.kind == "boulder" or (D.FINDS.has(n.kind) and D.FINDS[n.kind]["regrow"] <= 0.0):
 		nodes.erase(n) # (a worked-out seam is gone; plants grow back)
+		_cache_nodes_size = -1
 		if n.from_deer and not hz.winter(): # no new herds arrive in winter; how many do depends on the hunt
 			var hm := inv.mul("herd")
 			for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
@@ -1725,15 +1755,18 @@ func tick(dt: float) -> void:
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += (0.03 + inv.lore_rate()) * dt
 
+	var berry_k: float = hz.berry_mult() * nat.grow_mult() * inv.mul("regrow") # (once per tick, not per node)
+	var regrow_k: float = inv.mul("regrow")
 	for n in nodes:
+		if n.kind == "tree" or n.kind == "boulder": continue # (most nodes, and nothing to do: a deep forest is thousands)
 		match n.kind:
 			"bush":
-				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult() * nat.grow_mult() * inv.mul("regrow"))
+				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * berry_k)
 			"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "salt":
 				var fd: Dictionary = D.FINDS[n.kind]
 				if fd["winter"] or not hz.winter(): n.amount = minf(n.max_amount, n.amount + fd["regrow"] * dt)
 			"stump", "burnt":
-				n.regrow_t -= dt * inv.mul("regrow")
+				n.regrow_t -= dt * regrow_k
 				if n.regrow_t <= 0:
 					n.kind = "tree"
 					n.amount = n.max_amount

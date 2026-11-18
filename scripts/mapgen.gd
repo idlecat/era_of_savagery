@@ -30,7 +30,7 @@ static func max_tribes(size: String) -> int:
 	return mini(SIZES[size]["max"], clan_pool().size())
 
 ## Build a random map into data.gd's static vars.
-static func generate(size: String, tribes: int, seed_v: int) -> void:
+static func generate(size: String, tribes: int, seed_v: int, land := "random") -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var sz: Dictionary = SIZES[size]
@@ -62,6 +62,7 @@ static func generate(size: String, tribes: int, seed_v: int) -> void:
 	D.load_map({
 		"w": D.W, "h": D.H, "water_ready": true, "rivers": rivers, "fords": fords,
 		"village": D.VILLAGE, "home": _home(rng), "sites": sites, "clans": clans, "landmarks": lms,
+		"land": preload("res://scripts/lands.gd").resolve(land, seed_v, true),
 		"tribe": _tribe(rng), "children": _children(rng), "start_jobs": [], "labels": [], "script": [],
 		"info": {"kind": "random", "size": size, "tribes": tribes, "seed": seed_v, "name": "Random · %s" % sz["name"], "brief": "",
 			"intro": ["The tribe gathers around the bonfire, in a land no one has walked before."]},

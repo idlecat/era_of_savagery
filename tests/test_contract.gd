@@ -73,6 +73,7 @@ func _initialize() -> void:
 	test_crisis()
 	test_director()
 	test_names()
+	test_lands()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -331,7 +332,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2073,16 +2074,14 @@ func test_policies() -> void:
 	P.update(0.1)
 	check(P.chosen["way_of_life"] == "hunters" and sim.inv.mul("gather", "hunt/deer") > hunt0, "once it holds, hunting goes better (x%.2f)" % sim.inv.mul("gather", "hunt/deer"))
 	# hunters go for deer first
-	var u = sim.living()[0]
 	var deer = null
-	var bush = null
 	for n in sim.nodes:
 		if n.kind == "deer" and deer == null: deer = n
-		if n.kind == "bush" and bush == null: bush = n
-	if deer and bush:
-		var mid: Vector2 = (deer.pos + bush.pos) * 0.5
-		var pick = sim.find_node("food", mid, -1, 99999.0)
-		check(pick != null and pick.kind == "deer", "the hunters' way: gatherers seek deer before berries")
+	var mid: Vector2 = deer.pos + Vector2(60, 0) # a deer and a bush equally far from here, nothing else near
+	sim.nodes = sim.nodes.filter(func(n): return n == deer or n.res != "food" or n.pos.distance_to(mid) > 200)
+	var bush = sim._node("bush", "food", mid + Vector2(60, 0), 30)
+	var pick = sim.find_node("food", mid, -1, 150.0)
+	check(pick == deer, "the hunters' way: gatherers seek deer before berries (picked %s)" % (pick.kind if pick else "nothing"))
 	# the forest grows back faster when only dead wood is taken
 	sim.time += D.DAY_LEN * 3
 	P.set_choice("forest", "dead_wood")
@@ -2340,3 +2339,39 @@ func test_names() -> void:
 	var kids: Array = sim.units.slice(n0)
 	check(kids.size() >= 1 and kids.all(func(u): return u.name != "Nameless" and u.name != ""), "newborns get built names (%s)" % ", ".join(kids.map(func(u): return u.name)))
 	D.BIRTH_NAMES = D.BASE_BIRTH_NAMES.duplicate()
+
+func test_lands() -> void:
+	print("\n== The kind of land (config/lands.json) ==")
+	var Lands = preload("res://scripts/lands.gd")
+	Scenarios.apply()
+	check(D.LAND.get("id", "") == "parkland" and float(D.LAND["woods"]["follow"]) == 0.0, "The Ford is parkland, its woods as they always were")
+	var trees := {}
+	var deer := {}
+	var lands := {}
+	for land in ["steppe", "parkland", "woodland", "old_forest"]:
+		MapGen.generate("standard", 3, 4242, land)
+		seed(4242)
+		var sim = _new_sim()
+		trees[land] = sim.nodes.filter(func(n): return n.kind == "tree").size()
+		deer[land] = sim.nodes.filter(func(n): return n.kind == "deer").size()
+		lands[land] = D.LAND.duplicate(true)
+	print("   trees: ", trees, "  deer: ", deer)
+	check(trees["steppe"] < trees["parkland"] and trees["parkland"] < trees["woodland"] and trees["woodland"] < trees["old_forest"], "the steppe has the fewest trees, the old forest the most")
+	check(deer["steppe"] > deer["parkland"] and deer["old_forest"] < deer["parkland"], "open land carries more deer, deep forest fewer")
+	check(Lands.weather(lands["steppe"], "drought") > 1.0 and Lands.weather(lands["old_forest"], "drought") < 1.0 and Lands.weather(lands["parkland"], "drought") == 1.0, "a steppe has more droughts, a forest fewer")
+	check(float(lands["steppe"]["moisture"]) < 0.35 and float(lands["old_forest"]["moisture"]) > 0.7, "and the grass follows: dry steppe, damp forest")
+	# the same seed makes the same land; random picks vary between seeds
+	var a: Dictionary = Lands.resolve("random", 123)
+	var b: Dictionary = Lands.resolve("random", 123)
+	check(a == b, "the same seed, the same land")
+	var seen := {}
+	for s in 60: seen[Lands.resolve("random", s)["id"]] = true
+	check(seen.size() >= 3, "random maps get different lands (%s)" % str(seen.keys()))
+	var base: float = Lands.cfg()["lands"]["woodland"]["woods"]["count"]
+	var j: float = Lands.cfg()["jitter"]
+	var counts: Array = range(30).map(func(s): return Lands.resolve("woodland", s)["woods"]["count"])
+	check(counts.all(func(c): return c >= base * (1.0 - j) - 0.001 and c <= base * (1.0 + j) + 0.001) and counts.max() - counts.min() > base * j * 0.5, "a land's numbers vary a little from map to map, within its bounds")
+	MapGen.generate("standard", 3, 4242, "steppe")
+	var sim2 = _new_sim()
+	check(sim2.evo.world_ctx().get("the_land", "").contains("Steppe"), "the personas know the land they live on")
+	Scenarios.apply()

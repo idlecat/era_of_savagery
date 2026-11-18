@@ -23,7 +23,7 @@ static func install() -> void:
 			for b in C.get(form[1], []):
 				var en := _fill(str(p["en"]), a, b)
 				var zh := _fill(str(p["zh"]), a, b, true)
-				if en == "" or _table.has(en): continue # (two parts spelled alike: keep the first)
+				if en == "" or _table.has(en) or I.ZH.STRINGS.has(en): continue # (two parts spelled alike, or already a word of the game: "Wild Grain" is a find)
 				_table[en] = zh
 				list.append(en)
 		_by_pattern[p.get("id", "")] = list

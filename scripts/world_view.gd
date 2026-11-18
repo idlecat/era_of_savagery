@@ -184,6 +184,15 @@ func _build_terrain() -> void:
 	var g_west_b := Color("#56763a")
 	var g_east_a := Color("#4d6a34")
 	var g_east_b := Color("#3a5229")
+	# the land's moisture (config/lands.json): a steppe's grass is dry and yellow, an old forest's dark and lush
+	var moist := float(D.LAND.get("moisture", 0.5))
+	var dry_k := clampf((0.5 - moist) * 2.0, 0.0, 1.0)
+	var wet_k := clampf((moist - 0.5) * 2.0, 0.0, 1.0)
+	var gs: Array = [g_west_a, g_west_b, g_east_a, g_east_b].map(func(c0): return c0.lerp(Color("#9a9a52"), dry_k * 0.55).lerp(Color("#3c6a2c"), wet_k * 0.35))
+	g_west_a = gs[0]
+	g_west_b = gs[1]
+	g_east_a = gs[2]
+	g_east_b = gs[3]
 	var dirt := Color("#8c7650")
 	var sand := Color("#b09c6c")
 	var deep := Color("#2b5878")
@@ -439,6 +448,7 @@ func _ground_photos(gm: ShaderMaterial) -> void:
 		gm.set_shader_parameter("t_" + k, ImageTexture.create_from_image(img))
 		gm.set_shader_parameter("m_" + k, Vector3(mean.r, mean.g, mean.b))
 	gm.set_shader_parameter("use_photo", 1.0 if photo_ground else 0.0)
+	gm.set_shader_parameter("dryness", clampf((0.5 - float(D.LAND.get("moisture", 0.5))) * 2.0, 0.0, 1.0))
 
 ## Worn paths: foot traffic tints the grass toward bare earth.
 func _refresh_wear() -> void:
@@ -2303,8 +2313,16 @@ func _build_decor_chunks() -> void:
 	for k in chunks:
 		_item("d%d_%d" % [k.x, k.y], 7, chunks[k], Vector2.ZERO, false, decor_root)
 
+## Resource nodes are thousands in a deep forest: all of them are synced every few frames
+## (new and gone ones, fog, regrowth), the moving ones (deer, burning trees) every frame.
+const NODE_FULL_EVERY := 6
+var _node_frame := 0
+var _moving_nodes: Array = []
+
 func _sync_items() -> void:
 	var seen := {}
+	_node_frame += 1
+	var full := _node_frame % NODE_FULL_EVERY == 0 or _node_frame < 3
 	var snow_sig := 1 if sim.hz.snow > 0.5 else 0
 	for key in items:
 		if key.begins_with("d"): _touch(items[key], snow_sig)
@@ -2315,10 +2333,12 @@ func _sync_items() -> void:
 		var it := _item(key, 8, o, iso(o["p"]), false)
 		it.visible = sim.is_explored(o["p"])
 		_touch(it, snow_sig)
-	for n in sim.nodes:
+	if full: _moving_nodes.clear()
+	for n in (sim.nodes if full else _moving_nodes):
 		var key := "n%d" % n.id
 		seen[key] = true
 		var anim: bool = n.kind == "deer" or sim.nat.burning.has(n.id)
+		if full and anim: _moving_nodes.append(n)
 		var it := _item(key, 0, n, iso(n.pos), anim)
 		if it.dynamic != anim: it.dynamic = anim
 		it.visible = sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)
@@ -2368,7 +2388,7 @@ func _sync_items() -> void:
 		seen["g"] = true
 		_touch(_item("g", 4, sim.guardian, iso(sim.guardian.pos) + Vector2(0, 80), true), 0)
 	for key in items.keys():
-		if key.begins_with("d"): continue
+		if key.begins_with("d") or (not full and key.begins_with("n")): continue # (static nodes: checked on full passes)
 		if not seen.has(key):
 			items[key].queue_free()
 			items.erase(key)

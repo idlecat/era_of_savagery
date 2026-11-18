@@ -13,6 +13,7 @@ const Scenarios = preload("res://scripts/scenarios.gd")
 const HUD = preload("res://scripts/hud.gd")
 const Cultures = preload("res://scripts/cultures.gd")
 const SaveGame = preload("res://scripts/save_game.gd")
+const Lands = preload("res://scripts/lands.gd")
 const CFG := "user://newgame.cfg"
 const MODES := ["random", "scenario"]
 
@@ -21,6 +22,9 @@ var map_opt: OptionButton
 var tribe_opt: OptionButton
 var seed_edit: LineEdit
 var culture_opt: OptionButton
+var land_opt: OptionButton
+var land_ids: Array = [] # option index -> land id ("random" first)
+var picked_land := "random"
 var culture_ids: Array = [] # option index -> pack id ("" = none)
 var picked_culture := "" # the player's own pick (else: the scenario's culture)
 var desc: Label
@@ -86,6 +90,16 @@ func _ready() -> void:
 	dice.pressed.connect(func(): seed_edit.text = str(randi() % 1000000))
 	sh.add_child(dice)
 	_row(grid, tr("Seed"), sh)
+	land_opt = OptionButton.new()
+	land_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	land_ids = ["random"] + Lands.ids()
+	land_opt.add_item(tr("Random"))
+	for id in Lands.ids(): land_opt.add_item(tr(Lands.cfg()["lands"][id]["name"]))
+	land_opt.tooltip_text = tr("How wooded the land is, and all that goes with it: grass, herds, weather and fires.")
+	land_opt.item_selected.connect(func(i):
+		picked_land = land_ids[i]
+		_describe())
+	_row(grid, tr("Land"), land_opt)
 	culture_opt = OptionButton.new()
 	culture_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	culture_ids = Cultures.ids()
@@ -165,9 +179,11 @@ func _refresh_tribes() -> void:
 		tribe_opt.add_item(str(Scenarios.by_id(m).CLANS.size()))
 		tribe_opt.disabled = true
 		seed_edit.editable = false
+		land_opt.disabled = true # (a scenario's land is its own)
 	else:
 		tribe_opt.disabled = false
 		seed_edit.editable = true
+		land_opt.disabled = false
 		var mx: int = MapGen.max_tribes(m)
 		for i in mx: tribe_opt.add_item(str(i + 1))
 		tribe_opt.select(clampi(int(tribes_by_map.get(m, MapGen.SIZES[m]["def"])), 1, mx) - 1)
@@ -191,13 +207,16 @@ func _describe() -> void:
 		desc.text = tr(Scenarios.by_id(m).INFO["desc"]) + cdesc
 		return
 	var sz: Dictionary = MapGen.SIZES[m]
-	desc.text = tr("A new land every time, with nothing set in advance: %d × %d paces, rivers and their fords, a tribe of strangers and %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1] + cdesc
+	var ldesc := ""
+	if picked_land != "random": ldesc = "\n\n" + tr(Lands.cfg()["lands"][picked_land]["name"]) + ": " + tr(Lands.cfg()["lands"][picked_land]["desc"])
+	desc.text = tr("A new land every time, with nothing set in advance: %d × %d paces, rivers and their fords, a tribe of strangers and %d clans placed at random among forests, herds and landmarks.") % [int(sz["w"]), int(sz["h"]), tribe_opt.selected + 1] + ldesc + cdesc
 
 func _start() -> void:
 	var m := _map()
 	var random := _mode() == "random"
 	var s := {"map": m, "tribes": tribe_opt.selected + 1 if random else 0,
-		"seed": int(seed_edit.text) if seed_edit.text.strip_edges().is_valid_int() else randi() % 1000000, "culture": _culture()}
+		"seed": int(seed_edit.text) if seed_edit.text.strip_edges().is_valid_int() else randi() % 1000000, "culture": _culture(),
+		"land": picked_land}
 	_save(s)
 	chosen.emit(s)
 
@@ -212,6 +231,9 @@ func _load() -> void:
 	tribes_by_map = cf.get_value("new_game", "tribes_by_map", {})
 	picked_culture = str(cf.get_value("new_game", "culture", ""))
 	if bool(cf.get_value("new_game", "keep_seed", false)): seed_edit.text = str(cf.get_value("new_game", "seed", ""))
+	picked_land = str(cf.get_value("new_game", "land", "random"))
+	if not picked_land in land_ids: picked_land = "random"
+	land_opt.select(land_ids.find(picked_land))
 
 func _save(s: Dictionary) -> void:
 	var cf := ConfigFile.new()
@@ -220,5 +242,6 @@ func _save(s: Dictionary) -> void:
 	cf.set_value("new_game", "tribes_by_map", tribes_by_map)
 	cf.set_value("new_game", "seed", s["seed"])
 	cf.set_value("new_game", "culture", picked_culture)
+	cf.set_value("new_game", "land", picked_land)
 	cf.set_value("new_game", "keep_seed", seed_edit.text.strip_edges() != "")
 	cf.save(CFG)

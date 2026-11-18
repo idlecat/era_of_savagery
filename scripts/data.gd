@@ -24,6 +24,7 @@ static var CHILDREN: Array = [] # names of the starting children
 static var START_JOBS: Array = [] # [{"who", "job": "ritual"|"food"|"wood"}]; empty = chosen by trait
 static var LABELS: Array = [] # extra map labels [{"text", "pos", "size"}]
 static var SCRIPT: Array = [] # scenario triggers (story.gd); random maps have none
+static var LAND := {} # the kind of land (lands.gd, config/lands.json): woods, moisture, herds, weather...
 static var MAP := {} # how this map was made: {"kind": "scenario"|"random", "id", "name", "brief", "intro", ...}
 
 ## Fill the map from a spec (see scenarios/the_ford.gd for the fields).
@@ -45,6 +46,8 @@ static func load_map(spec: Dictionary) -> void:
 	LABELS = spec.get("labels", [])
 	SCRIPT = spec.get("script", [])
 	MAP = spec.get("info", {})
+	var land = spec.get("land", "") # (a resolved land, or a scenario's land id)
+	LAND = land if land is Dictionary and not land.is_empty() else preload("res://scripts/lands.gd").resolve(str(land), 0, false)
 	HOME_REGION = region_at(VILLAGE)
 
 static func is_ready() -> bool: return not MAP.is_empty()

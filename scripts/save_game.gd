@@ -90,7 +90,7 @@ static func _cls_name(o: Object, classes: Dictionary) -> String:
 	return s.resource_path # (a sub-system: "res://scripts/<x>.gd")
 
 static func _saved(name: String) -> bool:
-	return name != name.to_upper()
+	return name != name.to_upper() and not name.begins_with("_cache") # (lookup tables rebuild themselves)
 
 static func encode(root: Object) -> Dictionary:
 	var ctx := {"ids": {}, "classes": _classes()}
