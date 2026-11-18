@@ -174,6 +174,7 @@ func _weather(dt: float) -> void:
 	for w in WEATHER:
 		var kind: Dictionary = WEATHER[w]
 		if randf() < float(kind["chance"][season_idx()]) * mult():
+			if not sim.director.allow(w): return # (the director: not now, the tribe needs a breath)
 			if kind.has("warn_ahead"): # announced before it arrives
 				incoming = w
 				incoming_t = float(kind["warn_ahead"])
@@ -212,7 +213,7 @@ func _wolves() -> void:
 	var cw: Dictionary = C["wolves"]
 	if night and not last_night:
 		var chance: float = float(cw["chance_by_season"][season_idx()]) * mult()
-		if sim.day() >= int(cw["from_day"]) and randf() < chance: spawn_wolf_pack()
+		if sim.day() >= int(cw["from_day"]) and randf() < chance and sim.director.take("wolves"): spawn_wolf_pack()
 	if not night and last_night and cw.get("leave_at_dawn", true): # dawn: wolves slink away (except in winter)
 		for p in sim.predators:
 			if p.kind == "wolf" and not winter(): p.fleeing = true
@@ -253,6 +254,9 @@ func _raids(dt: float) -> void:
 	raid_t = D.DAY_LEN * Config.rand_in(ct["every_days"]) * (float(ct["winter_mult"]) if winter() else 1.0)
 	var tigers: Array = sim.predators.filter(func(p): return p.kind == "tiger" and p.den != null and not p.dead and not p.fleeing)
 	if tigers.is_empty(): return
+	if not sim.director.take("tiger_raid"):
+		raid_t = sim.director.retry()
+		return
 	var t = tigers.pick_random()
 	t.raid = true
 	t.raid_t = float(ct["length"])
@@ -272,7 +276,7 @@ func _sickness(dt: float) -> void:
 			+ crowd * float(cs["crowding"]) + sim.nat.sick_risk()
 		if randf() < risk * mult():
 			var cands: Array = alive.filter(func(u): return u.sick <= 0 and sim.time > u.immune_t and u.role != "contract")
-			if not cands.is_empty():
+			if not cands.is_empty() and sim.director.take("sickness"):
 				var p0 = cands.pick_random()
 				p0.sick = 1.0
 				sim.alert(tr(cs["alert"]) % tr(p0.name), p0.pos, "warn", [p0])

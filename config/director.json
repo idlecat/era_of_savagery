@@ -1,0 +1,27 @@
+{
+ "_doc": "The director (director.gd, sim.director) paces the hardships. Everything that goes wrong adds its weight to a tension score that eases by decay per day. Before a rolled hardship starts (weather, wolves, tiger raids, sickness, lightning, earthquakes, the volcano, eclipses, clan raids and demands, an emergency) it asks: it may start if tension + its weight stays within the level's cap, else it is put off (retry seconds) or skipped. Hardships that are not rolled (seasonal floods, scripted events, deaths) always happen and count. When the tribe is in distress (too little food, deaths, despair) the cap drops to mercy.cap, and once in a while a gift helps (mercy.gifts: conditions and story actions). Kinds not in weights are never held back. The challenge level sets the cap and decay (off: the director rests).",
+ "levels": {
+  "normal": {"cap": 3.0, "decay": 1.6},
+  "harsh": {"cap": 5.0, "decay": 2.4}
+ },
+ "weights": {
+  "storm": 1.0, "blizzard": 1.5, "drought": 1.0, "rain": 0.0,
+  "wolves": 1.0, "tiger_raid": 1.0, "sickness": 1.0,
+  "lightning": 0.5, "wildfire": 1.0, "earthquake": 1.5, "eruption": 2.5, "eclipse": 0.5,
+  "spring_flood": 1.5, "great_flood": 3.0, "flood": 1.5,
+  "clan_raid": 1.5, "demand": 0.5,
+  "crisis": 0.5, "death": 1.5
+ },
+ "same_secs": 30,
+ "retry": 30,
+ "distress": {"food_per_head": 0.5, "deaths": 2, "death_days": 2, "mood": 20, "check_every": 5},
+ "mercy": {
+  "cap": 0.5,
+  "days": 2,
+  "cooldown_days": 5,
+  "gifts": [
+   {"when": {"met_any": true}, "do": [{"give": {"food": 30}}, {"mood": 6}, {"log": "Word of our hunger has spread. A neighbouring clan sends baskets of roots and dried meat."}]},
+   {"when": {}, "do": [{"give": {"food": 20}}, {"mood": 4}, {"log": "In the worst of it, the children find a hollow full of nuts the squirrels forgot. The tribe eats."}]}
+  ]
+ }
+}

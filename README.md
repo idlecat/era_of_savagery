@@ -100,6 +100,10 @@ The **Council** button (or `P`) sets the tribe's standing policies: **Way of lif
 
 When a beast or raider strikes one of your people, the game drops into **emergency mode**: time slows to a third, the camera jumps to the danger, the people within reach are selected, and a red bar offers orders. **Fight!** (everyone able goes for the nearest threat), **Rally to me** (gather on the strongest fighter for +3 DEF), **Torches!** (with Friction Fire, 6 wood: beasts flee; raiders don't), **To the fire** (run to the bonfire; no beast follows into its light), **Fall back** (into the huts) and **Tend the wounded**. When the danger has passed, everyone goes back to the work they left and remembers the day; **Hand back** returns control to the tribe at any time. In a contract's emergency dialog, **Take command** leads the crew this way instead of picking an option. The orders and numbers are in `config/emergency.json`.
 
+## The director (`director.gd`)
+
+The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death) raises a tension score that eases day by day, and a new storm, raid, sickness or quake waits while the tribe is still reeling from the last ones: Normal lets about two hardships pile up, Harsh nearly twice that. A tribe in distress (out of food, losing people, in despair) gets a breath, and now and then a hand: a friendly clan sends food. The numbers are in `config/director.json`; `tools/pacing.gd` plays headless games and reports the rhythm.
+
 ## Saving
 
 **Save / Load** in the top bar lists the save slots, the quick save (**F5** saves, **F9** loads) and the autosaves. The game autosaves at the start of every day into three rotating slots; you can switch that off in the dialog. The New Game screen has **Continue** (the newest save) and a list of all saves. A save holds the settings the world was made from and the whole simulation, so a loaded game plays on exactly as it would have. You can't save while a decision (a dilemma or an emergency) is waiting. Saves are in `user://saves/`.

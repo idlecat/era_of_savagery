@@ -130,13 +130,17 @@ func update(dt: float) -> void:
 		strike_t -= dt
 		if strike_t <= 0:
 			strike_t = Config.rand_in(C["lightning"]["every"])
-			strike()
+			if sim.director.allow("lightning"): strike()
 	_flood_tick(dt)
 	_volcano_tick(dt)
-	if eclipse_t < 0 and sim.time >= eclipse_at and not sim.rest_time(): _start_eclipse()
+	if eclipse_t < 0 and sim.time >= eclipse_at and not sim.rest_time():
+		if sim.director.allow("eclipse"): _start_eclipse()
+		else: eclipse_at = sim.time + sim.director.retry()
 	if sim.time >= quake_at:
-		quake_at = sim.time + D.DAY_LEN * Config.rand_in(C["earthquake"]["every_days"])
-		if erupt_left <= 0: quake()
+		if not sim.director.allow("earthquake"): quake_at = sim.time + sim.director.retry()
+		else:
+			quake_at = sim.time + D.DAY_LEN * Config.rand_in(C["earthquake"]["every_days"])
+			if erupt_left <= 0: quake()
 
 ## Mark a natural disaster for Task Contracts working within `r` of `at` (r < 0: everywhere).
 func _disaster(kind: String, at: Vector2, r: float) -> void:
@@ -353,6 +357,9 @@ func _volcano_tick(dt: float) -> void:
 		shake = maxf(shake, 0.6)
 	var cv: Dictionary = C["volcano"]
 	if not tremor_warned and sim.time >= erupt_at - float(cv["tremor_lead"]):
+		if not sim.director.allow("eruption"): # (the mountain sleeps a little longer)
+			erupt_at = sim.time + float(cv["tremor_lead"]) + sim.director.retry()
+			return
 		tremor_warned = true
 		shake = 3.0
 		sim.alert(tr(cv["warn"]), D.VOLCANO, "warn")

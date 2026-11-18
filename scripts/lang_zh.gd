@@ -1994,4 +1994,7 @@ const STRINGS := {
 	"[color=#ffd36b][b]⚠ EMERGENCY · %s[/b][/color]  [color=#ffb0a0](time slowed)[/color]\nYou command: %s · threats left: %d · %ds": "[color=#ffd36b][b]⚠ 紧急 · %s[/b][/color]  [color=#ffb0a0]（时间放慢）[/color]\n你指挥：%s · 剩余威胁：%d · %d秒",
 	"Hand back": "交还指挥",
 	"Let the tribe handle it: time runs normally again": "让部落自行应对：时间恢复正常",
+	# the director's mercy (config/director.json)
+	"Word of our hunger has spread. A neighbouring clan sends baskets of roots and dried meat.": "我们挨饿的消息传开了。一个邻近的氏族送来了几篮根茎和肉干。",
+	"In the worst of it, the children find a hollow full of nuts the squirrels forgot. The tribe eats.": "最艰难的时候，孩子们发现了一个树洞，里面全是松鼠忘掉的坚果。部落有吃的了。",
 }

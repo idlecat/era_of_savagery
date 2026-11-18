@@ -13,6 +13,7 @@ const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
 const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
+const Director = preload("res://scripts/director.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -93,6 +94,7 @@ var folk: Folk
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
 var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
+var director: Director # paces the hardships (director.gd)
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
@@ -117,6 +119,7 @@ func _init() -> void:
 	improve = Improve.new(self)
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
+	director = Director.new(self)
 	story = Story.new(self)
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
@@ -1493,6 +1496,7 @@ func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
 	if u.hp <= 0: kill_unit(u, attacker)
 
 func kill_unit(u: E.Unit, killer) -> void:
+	director.note("death")
 	u.dead = true
 	u.hp = 0
 	u.job = {}
@@ -1780,6 +1784,7 @@ func tick(dt: float) -> void:
 	improve.update(dt)
 	policy.update(dt)
 	crisis.update(dt)
+	director.update(dt)
 	_update_births(dt)
 
 	for p in popups:

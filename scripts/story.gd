@@ -75,6 +75,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("pop") and sim.living().size() < int(w["pop"]): return false
 	if w.has("flag") and not sim.flags.has(w["flag"]): return false
 	if w.has("found") and not sim.landmarks.any(func(l): return l["id"] == w["found"] and l["found"]): return false
+	if w.has("met_any") and bool(w["met_any"]) != sim.rivals.clans.values().any(func(c): return c["met"]): return false
 	if w.has("met"):
 		var c: Dictionary = sim.rivals.clans.get(w["met"], {})
 		if c.is_empty() or not c["met"]: return false

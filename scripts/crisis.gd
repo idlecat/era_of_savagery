@@ -96,6 +96,9 @@ func _watch() -> void:
 		if u.role in tr_.get("skip_roles", []) or sim.time - u.last_hit_t > float(tr_.get("hit_ago", 1.5)) or u.attacker_id < 0: continue
 		var p = sim.pred_by_id(u.attacker_id)
 		if p == null or p.dead or not p.kind in tr_.get("kinds", []): continue
+		if not sim.director.allow("crisis"): # (the tribe handles this one itself)
+			ready_t = sim.time + sim.director.retry()
+			return
 		start(p.kind, u.pos)
 		return
 

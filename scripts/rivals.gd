@@ -304,11 +304,16 @@ func _raids(c: Dictionary, dt: float) -> void:
 	c["raid_t"] = D.DAY_LEN * lerpf(float(cr["every_days"][0]), float(cr["every_days"][1]), hostility) * Config.rand_in(cr["jitter"]) * (float(cr["winter_mult"]) if sim.hz.winter() else 1.0)
 	# a known clan often sends a messenger first: pay, or they come for it
 	var cd: Dictionary = C["demands"]
+	if not sim.director.allow("clan_raid"): # (the director: the tribe needs a breath)
+		c["raid_t"] = sim.director.retry()
+		return
 	if c["met"] and sim.time - c["last_demand"] > D.DAY_LEN * float(cd["every_days"]) and randf() < float(cd["chance"]) and not ("demand_" + c["id"]) in pending:
 		c["last_demand"] = sim.time
 		c["demand"] = int(float(cd["food"]["base"]) + hostility * float(cd["food"]["hostility"])) + (int(cd["food"]["winter"]) if sim.hz.winter() else 0)
 		pending.append("demand_" + c["id"])
+		sim.director.note("demand")
 		return
+	sim.director.note("clan_raid")
 	launch_raid(c)
 
 ## 0 (merely hostile) .. 1 (a full blood feud).

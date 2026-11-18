@@ -71,6 +71,7 @@ func _initialize() -> void:
 	test_policies()
 	test_leaders_and_the_ways()
 	test_crisis()
+	test_director()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -80,6 +81,7 @@ func _new_sim():
 	s.hz.level = "off" # deterministic: the hardship tests switch challenges on themselves
 	s.folk.festivals = false # (no festival events popping up mid-test)
 	s.crisis.on = false # (no emergency mode either; test_crisis switches it on)
+	s.director.on = false # (nor pacing: hardship tests roll their own; test_director switches it on)
 	s.new_game()
 	return s
 
@@ -328,7 +330,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2241,3 +2243,62 @@ func test_crisis() -> void:
 	var s3 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s3, data)
 	check(s3.crisis.active() and s3.crisis.cur["kind"] == "contract", "a crisis under way is saved")
+
+func test_director() -> void:
+	print("\n== The director paces the hardships (config/director.json) ==")
+	var sim = _new_sim()
+	var Dr = sim.director
+	Dr.on = true
+	check(not Dr.active() and Dr.allow("blizzard"), "with the challenges off it rests")
+	sim.hz.level = "normal"
+	check(Dr.active() and Dr.cap() == 3.0, "on Normal it allows up to 3 tension")
+	Dr.note("blizzard")
+	Dr.note("blizzard")
+	check(is_equal_approx(Dr.tension, 1.5), "a blizzard counts once, however often it is reported")
+	Dr.note("clan_raid")
+	check(not Dr.allow("eruption") and not Dr.allow("lightning") and Dr.allow("rain"), "after a blizzard and a raid (3.0): no eruption, not even lightning; rain still may (%.1f)" % Dr.tension)
+	Dr.note("death")
+	Dr.note("death")
+	check(is_equal_approx(Dr.tension, 6.0), "every death counts")
+	var t0: float = Dr.tension
+	Dr.update(D.DAY_LEN)
+	check(is_equal_approx(Dr.tension, t0 - 1.6), "tension eases by 1.6 a day")
+	# a held-back hardship waits: a tiger raid comes back later
+	sim.time = D.DAY_LEN * 10
+	sim.hz.raid_t = 0.0
+	sim.hz._raids(0.1)
+	check(is_equal_approx(sim.hz.raid_t, Dr.retry()), "a tiger raid is put off (retry in %ds)" % Dr.retry())
+	var cid: String = sim.rivals.clans.keys()[0]
+	var c: Dictionary = sim.rivals.clans[cid]
+	c["relation"] = -80.0
+	c["raid_t"] = 0.0
+	var preds0: int = sim.predators.size()
+	sim.rivals._raids(c, 0.1)
+	check(sim.predators.size() == preds0 and is_equal_approx(c["raid_t"], Dr.retry()), "a clan raid too")
+	Dr.tension = 0.0
+	c["raid_t"] = 0.0
+	sim.rivals._raids(c, 0.1)
+	check(sim.predators.size() > preds0 or "demand_" + cid in sim.rivals.pending, "once the tribe has breathed, it comes")
+	check(Dr.tension > 0.0, "and counts")
+	# harsh allows more
+	Dr.deaths.clear()
+	Dr.distress = false
+	sim.hz.level = "harsh"
+	check(Dr.cap() == 5.0, "Harsh allows up to 5")
+	# mercy: a tribe going under gets a breath and a gift
+	var s2 = _new_sim()
+	s2.director.on = true
+	s2.hz.level = "normal"
+	s2.stock["food"] = 1.0
+	s2.director.update(10.0)
+	check(s2.director.distress and s2.director.cap() == 0.5, "with the food gone the tribe is in distress: hardly anything more may come")
+	check(s2.stock["food"] >= 20.0, "and a gift helps it through (food %d)" % s2.stock["food"])
+	var f1: float = s2.stock["food"]
+	s2.stock["food"] = 1.0
+	s2.director.update(10.0)
+	check(s2.stock["food"] < 2.0, "not every time: the next gift waits days")
+	check(s2.director.summary()["distress"] and s2.director.summary().has("tension"), "a game master can read it")
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(s2)
+	var s3 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(s3, data)
+	check(s3.director.mercy_ready == s2.director.mercy_ready, "the director's state is saved")
