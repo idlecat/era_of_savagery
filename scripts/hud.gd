@@ -564,6 +564,7 @@ func _build_right(root: Control) -> void:
 	log_tabs.add_child(log_text)
 	contracts_text = _rich(0)
 	contracts_text.name = "Contracts"
+	contracts_text.meta_clicked.connect(_on_log_link)
 	contracts_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	log_tabs.add_child(contracts_text)
 	log_tabs.set_tab_title(0, tr("Chronicle"))
@@ -927,10 +928,17 @@ func _refresh_right() -> void:
 	for c in newest_first:
 		var ld = sim.unit_by_id(c.leader_id)
 		var col: String = {"done": "#b6f28a", "abandoned": "#999999", "failed": "#999999", "interrupted": "#ff6b6b", "defending": "#ff6b6b"}.get(c.status, "#ffd36b")
-		s += tr("[color=%s]■[/color] [b]%s[/b] — %s\n  %s · [color=%s]%s %d%%[/color] · step %d/%d\n") % [col, c.plan["plan_id"], tr(ld.name) if ld else "?", c.substate if c.status == "executing" else "", col, tr(c.status), roundi(c.progress * 100), mini(c.step_idx + 1, c.steps.size()), c.steps.size()]
+		var who: Array = [] # the crew, as links (clicking one selects them, like in the chronicle)
+		for id in c.crew_ids + c.reinforcement_ids:
+			var cu = sim.unit_by_id(id)
+			if cu and not who.any(func(w): return w["id"] == id): who.append({"id": id, "name": tr(cu.name)})
+		var ld_link: String = ("[url=u%d][color=#ffe6a8]%s[/color][/url]" % [ld.id, tr(ld.name)]) if ld else "?"
+		s += tr("[color=%s]■[/color] [b]%s[/b] — %s\n  %s · [color=%s]%s %d%%[/color] · step %d/%d\n") % [col, c.plan["plan_id"], ld_link, c.substate if c.status == "executing" else "", col, tr(c.status), roundi(c.progress * 100), mini(c.step_idx + 1, c.steps.size()), c.steps.size()]
+		var crew_links: Array = who.filter(func(w): return w["id"] != c.leader_id).map(func(w): return "[url=u%d][color=#ffe6a8]%s[/color][/url]" % [w["id"], w["name"]] + (" †" if sim.unit_by_id(w["id"]).dead else ""))
+		if not crew_links.is_empty(): s += "  " + tr("Crew: %s") % ", ".join(crew_links) + "\n"
 		s += tr("  [color=#8a9aa8]LLM calls: 1 negotiation + %d awakenings[/color]\n") % c.interruptions
-		for line in c.events.slice(0, 3): s += tr("  [color=#a89878]%s[/color]\n") % line
-	contracts_text.text = s
+		for line in c.events.slice(0, 3): s += tr("  [color=#a89878]%s[/color]\n") % _link_names({"text": line, "who": who})
+	if contracts_text.text != s: contracts_text.text = s # (only when it changed: a click on a name isn't lost to a refresh)
 	var running: int = sim.contracts.list.filter(func(c): return sim.contracts.is_running(c)).size()
 	var alarm: bool = sim.contracts.list.any(func(c): return c.status in ["interrupted", "defending"])
 	log_tabs.set_tab_title(1, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
@@ -1854,6 +1862,11 @@ func _open_sound() -> void:
 	if audio == null: return
 	var v := _open_modal("SOUND", 520)
 	var was_paused: bool = sim.paused
+	var mute := CheckBox.new()
+	mute.text = tr("Mute all sounds")
+	mute.button_pressed = audio.muted
+	mute.toggled.connect(func(b): audio.set_muted(b))
+	v.add_child(mute)
 	var g := GridContainer.new()
 	g.columns = 2
 	v.add_child(g)
@@ -1866,7 +1879,9 @@ func _open_sound() -> void:
 		sl.value = float(audio.vol.get(k[0], 0.7))
 		sl.custom_minimum_size = Vector2(300, 0)
 		sl.value_changed.connect(func(x): audio.set_volume(k[0], x))
+		sl.editable = not audio.muted
 		g.add_child(sl)
+		mute.toggled.connect(func(b): sl.editable = not b)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
 
 func _open_settings() -> void:

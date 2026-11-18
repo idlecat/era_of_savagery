@@ -1997,4 +1997,6 @@ const STRINGS := {
 	# the director's mercy (config/director.json)
 	"Word of our hunger has spread. A neighbouring clan sends baskets of roots and dried meat.": "我们挨饿的消息传开了。一个邻近的氏族送来了几篮根茎和肉干。",
 	"In the worst of it, the children find a hollow full of nuts the squirrels forgot. The tribe eats.": "最艰难的时候，孩子们发现了一个树洞，里面全是松鼠忘掉的坚果。部落有吃的了。",
+	"Mute all sounds": "全部静音",
+	"Crew: %s": "队员：%s",
 }

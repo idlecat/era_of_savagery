@@ -20,6 +20,7 @@ var world
 var blocked: Callable # true while a dialog is open (set by main): a dialog's pause keeps the sound going
 var _paused := false # the player paused the game: every sound holds still
 var vol := {} # master/music/sfx/ambience, 0-1
+var muted := false # every sound off (the Sound dialog), remembered in settings.cfg
 var _ready_ids := {} # recipe id -> AudioStreamWAV, filled by the worker
 var _mutex := Mutex.new()
 var _task := -1
@@ -176,6 +177,7 @@ func _load_volumes() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(SETTINGS) == OK:
 		for k in ["master", "music", "sfx", "ambience"]: vol[k] = float(cf.get_value("audio", k, vol.get(k, 0.7)))
+		muted = bool(cf.get_value("audio", "muted", false))
 	_apply_volumes()
 
 ## Set a volume (master, music, sfx or ambience; 0-1) and remember it.
@@ -187,6 +189,15 @@ func set_volume(k: String, v: float) -> void:
 	cf.set_value("audio", k, vol[k])
 	cf.save(SETTINGS)
 
+## Mute every sound (or not) and remember it.
+func set_muted(on: bool) -> void:
+	muted = on
+	_apply_volumes()
+	var cf := ConfigFile.new()
+	cf.load(SETTINGS)
+	cf.set_value("audio", "muted", on)
+	cf.save(SETTINGS)
+
 func _apply_volumes() -> void:
 	var names := {"master": "Master", "music": "Music", "sfx": "SFX", "ambience": "Ambience"}
 	for k in names:
@@ -194,7 +205,7 @@ func _apply_volumes() -> void:
 		if i < 0: continue
 		var v := float(vol.get(k, 0.7))
 		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(0.0001, v)))
-		AudioServer.set_bus_mute(i, v <= 0.001)
+		AudioServer.set_bus_mute(i, v <= 0.001 or (muted and k == "master"))
 
 # ------------------------------------------------------------ what is going on
 func _update_state() -> void:

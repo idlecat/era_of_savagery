@@ -110,7 +110,7 @@ The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death
 
 ## Sound and music (`audio.gd`, `synth.gd`)
 
-Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes.
+Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes, or mutes everything (remembered between games).
 
 ## Day and night
 
