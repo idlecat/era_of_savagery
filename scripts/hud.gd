@@ -1155,6 +1155,26 @@ func open_negotiation(leader, kind := "settle") -> void:
 	directive.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dh.add_child(directive)
 	neg["directive"] = directive
+	for w in sim.policy.warnings(kind): # the tribe's ways have something to say about this task
+		v.add_child(_label("⚑ " + tr(w), 14, Color("#ffb07a")))
+	# a leader who dislikes one of the ways says so; the chieftain may change it or let it stand
+	var ob: Dictionary = sim.policy.objection(leader, kind)
+	neg["objection"] = ob
+	neg["ob_answer"] = ""
+	var obox := HBoxContainer.new()
+	obox.visible = false
+	neg["obox"] = obox
+	if not ob.is_empty():
+		var ol := _label(tr("⚑ %s dislikes our way of %s (%s) and would have it be %s.") % [tr(leader.name), tr(ob["title"]), tr(ob["now_label"]), tr(ob["wants_label"])], 14, Color("#ffd36b"))
+		ol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		obox.add_child(ol)
+		var hb_heard := _button(tr("Change it: %s") % tr(ob["wants_label"]), func(): _neg_objection(true), "The Council's decision on the spot: it costs a little mood and takes a day to take hold. %s will remember being heard.")
+		hb_heard.tooltip_text = tr(hb_heard.tooltip_text) % tr(leader.name)
+		obox.add_child(hb_heard)
+		var hb_stand := _button("Our ways stand", func(): _neg_objection(false), "If you seal the contract without answering, the ways stand too: the crew works a little slower, and the leader remembers.")
+		obox.add_child(hb_stand)
+	v.add_child(obox)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 12)
 	v.add_child(cols)
@@ -1321,6 +1341,7 @@ func _neg_request(msg: String) -> void:
 		neg["chat"].append_text(tr("[color=#ff8a7a][i](cloud LLM failed: %s — used offline persona)[/i][/color]\n") % r["error"])
 	_neg_sync_terms(san["blueprint"])
 	_neg_show_bp(san)
+	if not neg["objection"].is_empty() and neg["ob_answer"] == "": neg["obox"].visible = true
 	neg["status"].text = tr("LLM node: %s · %d call(s) this negotiation%s. Adjust terms or reply, then seal.") % [r.get("source", "?"), neg["calls"], note]
 	neg["confirm"].disabled = false
 	neg["busy"] = false
@@ -1359,10 +1380,22 @@ func _neg_show_bp(san: Dictionary) -> void:
 	if neg.get("show_json", false): s += tr("\n[color=#7a8a98][code]%s[/code][/color]") % JSON.stringify(bp, "  ")
 	neg["bpview"].text = s
 
+## The chieftain answers the leader's objection (heard: the way changes now).
+func _neg_objection(heard: bool) -> void:
+	neg["ob_answer"] = "heard" if heard else "stand"
+	neg["obox"].visible = false
+	var leader = neg["leader"]
+	if heard:
+		var err: String = sim.policy.answer(leader, neg["objection"], true)
+		neg["chat"].append_text(tr("\n[color=#ffd36b][b]You:[/b][/color] %s\n") % (tr("So be it: %s.") % tr(neg["objection"]["wants_label"])) + (tr("[color=#ff8a7a][i]%s[/i][/color]\n") % tr(err) if err != "" else ""))
+	else:
+		neg["chat"].append_text(tr("\n[color=#ffd36b][b]You:[/b][/color] %s\n") % tr("Our ways stand."))
+
 func _neg_confirm() -> void:
 	if neg["bp"].is_empty() or neg["busy"]: return
 	var leader = neg["leader"]
-	sim.contracts.create(neg["bp"], leader, neg["directive"].text)
+	var c = sim.contracts.create(neg["bp"], leader, neg["directive"].text)
+	if not neg["objection"].is_empty() and neg["ob_answer"] != "heard": sim.policy.answer(leader, neg["objection"], false, c) # (unanswered: the ways stand)
 	_close_modal()
 	sim.paused = false
 	world.select_only(leader)

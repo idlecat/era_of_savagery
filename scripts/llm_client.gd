@@ -156,6 +156,9 @@ func negotiate(ctx: Dictionary) -> Dictionary:
 	if research: system += RESEARCH_RULES % mini(4, ctx.get("max_crew", 4))
 	elif ctx.get("kind", "settle") == "war": system += WAR_RULES % ctx.get("max_crew", 6)
 	else: system += RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
+	if not ctx.get("objection", {}).is_empty() and ctx.get("history", []).is_empty():
+		var ob: Dictionary = ctx["objection"]
+		system += "\nYou dislike one of the tribe's ways: %s is now \"%s\", and you would have it be \"%s\". Before your plan, tell the Chieftain so in one sentence, in character (you might say: %s / %s). Your plan still follows the ways in force." % [ob["way"], ob["now"], ob["you_want"], ob["your_complaint"], ob["your_plea"]]
 	var user := {
 		"directive": ctx["directive"],
 		"your_profile": ctx["leader"],

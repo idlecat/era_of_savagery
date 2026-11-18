@@ -130,6 +130,59 @@ func council_ctx(id: String, choice: String) -> Dictionary:
 		"proposed": cd.get("label", ""), "proposed_means": cd.get("desc", ""), "world": sim.evo.world_ctx(),
 		"speakers": council(id, choice).map(func(s): return {"name": sim.tr(s["who"].name), "side": s["side"], "profile": sim.contracts.leader_profile(s["who"]), "would_say": s["line"]})}
 
+# ------------------------------------------------------------ leaders and the ways
+## What leader `u` objects to before a contract of `kind`: the first way in force that
+## touches it, that their personality dislikes, with another choice they like.
+## {} or {"policy", "now", "wants", "title", "now_label", "wants_label", "complaint", "plea"}.
+func objection(u: E.Unit, kind: String) -> Dictionary:
+	if u == null: return {}
+	for id in open_ids():
+		if not kind in defs()[id].get("touches", []): continue
+		var now: String = chosen[id]
+		var cur := choice_def(id, now)
+		if not u.traits.any(func(t): return t in cur.get("disliked_by", [])): continue
+		for ch in defs()[id]["choices"]:
+			var cd := choice_def(id, ch)
+			if ch == now or not sim.story.holds(cd.get("unlock", {})): continue
+			if u.traits.any(func(t): return t in cd.get("liked_by", [])):
+				return {"policy": id, "now": now, "wants": ch, "title": defs()[id]["title"], "now_label": cur["label"],
+					"wants_label": cd["label"], "complaint": cur.get("con", ""), "plea": cd.get("pro", "")}
+	return {}
+
+## The chieftain answers a leader's objection: change the way now (`heard`), or let it
+## stand. The leader remembers; if it stands, contract `c` (when given) works sullenly.
+func answer(u: E.Unit, ob: Dictionary, heard: bool, c = null) -> String:
+	if ob.is_empty() or u == null: return ""
+	var O: Dictionary = C.get("objection", {})
+	var what: String = sim.tr(defs()[ob["policy"]]["title"])
+	var err := ""
+	if heard: err = set_choice(ob["policy"], ob["wants"], sim.tr(u.name))
+	var stood := not heard or err != ""
+	sim.remember(u, sim.tr(O.get("remember_stand" if stood else "remember_heard", "")) % [what, sim.day()], int(O.get("impact", 3)))
+	if stood and c: c.flags["sullen"] = true
+	return err
+
+## Warnings to show while negotiating a contract of `kind` under the ways in force.
+func warnings(kind: String) -> Array:
+	var out: Array = []
+	for id in chosen:
+		var w: String = choice_def(id, chosen[id]).get("warn", {}).get(kind, "")
+		if w != "": out.append(w)
+	return out
+
+## A contract was sealed: the ways in force may stir the tribe (on_contract actions).
+func on_contract(c: E.Contract) -> void:
+	var vars := {"clan": c.plan.get("target", "")}
+	for id in chosen:
+		var acts: Array = choice_def(id, chosen[id]).get("on_contract", {}).get(c.kind, [])
+		if not acts.is_empty(): sim.story.run(acts, c, vars)
+
+## How fast a contract's crew works under the ways (a sullen crew is slower).
+func crew_work(u: E.Unit) -> float:
+	if u.role != "contract": return 1.0
+	var c = sim.contracts.by_id(u.contract_id)
+	return float(C.get("objection", {}).get("sullen_work", 1.0)) if c and c.flags.get("sullen", false) else 1.0
+
 ## For a game master and the LLM personas: the ways the tribe lives by.
 func summary() -> Dictionary:
 	var out := {}

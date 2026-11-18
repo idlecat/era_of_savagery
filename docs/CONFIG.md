@@ -136,4 +136,8 @@ The Council's standing policies (`policy.gd`, `sim.policy`; the **Council** butt
 - `on_start`: `story.run()` actions when it takes hold.
 - `liked_by` / `disliked_by` (personality traits) and `pro` / `con` (their words): who speaks at the Council, and what they say offline.
 
+- `touches` (on the policy): the contract kinds whose leaders care about it. `on_contract` (`{kind: actions}`): run when such a contract is sealed under this choice (var `clan` = a war's target). `warn` (`{kind: text}`): shown while negotiating one.
+
+**Objections:** a leader whose personality dislikes a way in force that touches the task, and likes another choice, says so first in the negotiation (the LLM voices it; offline, the choice's `con` line). The chieftain can change the way on the spot (the usual cost and delay) or let it stand: then the crew works at `objection.sullen_work` speed. Either way the leader remembers (`remember_heard` / `remember_stand`). The engine decides who objects (`sim.policy.objection(u, kind)`); `sim.policy.answer(u, objection, heard, contract)` settles it.
+
 `switch`: the mood a change costs, the days it takes to take hold (`settle_days`; the old way holds until then) and the days before the same policy can be changed again (`cooldown_days`). `council.speakers`: how many elders speak. A game master changes a policy with `sim.policy.set_choice(id, choice, by)` and reads them with `sim.policy.summary()`; every persona prompt lists them (`evo.world_ctx()["the_ways_the_tribe_lives_by"]`).

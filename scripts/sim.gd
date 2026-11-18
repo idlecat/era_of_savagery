@@ -448,7 +448,7 @@ func unit_speed(u: E.Unit) -> float:
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
 	return s
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work")
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u)
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second (config/rules.json "survival").

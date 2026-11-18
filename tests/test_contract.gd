@@ -69,6 +69,7 @@ func _initialize() -> void:
 	test_building_panel()
 	test_wall_radius()
 	test_policies()
+	test_leaders_and_the_ways()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2129,3 +2130,51 @@ func test_policies() -> void:
 	var s7 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s7, data)
 	check(s7.policy.chosen["way_of_life"] == "hunters" and s7.policy.chosen["forest"] == "dead_wood" and is_equal_approx(s7.inv.mul("regrow"), 1.8), "the ways are saved")
+
+func test_leaders_and_the_ways() -> void:
+	print("\n== Leaders push back on the tribe's ways ==")
+	var sim = _new_sim()
+	var devout = null
+	for u in sim.living():
+		if "devout" in u.traits and u.role == "": devout = u
+	check(devout != null, "the tribe has a devout leader")
+	if devout == null: return
+	check(sim.policy.objection(devout, "settle").is_empty(), "under the default ways nobody objects")
+	sim.techs["fire"] = true
+	sim.policy.chosen["forest"] = "burn"
+	sim.policy.rev += 1
+	var ob: Dictionary = sim.policy.objection(devout, "settle")
+	check(ob.get("policy", "") == "forest" and ob.get("wants", "") == "dead_wood", "a devout leader objects to burning the forest and wants dead wood only (%s)" % str(ob))
+	check(sim.policy.objection(devout, "research").is_empty(), "but only for tasks the way touches")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(devout, "Found a new settlement on the frontier", {}, false)
+	check(not ctx["objection"].is_empty(), "the negotiation tells the persona")
+	var r := Persona.propose(ctx)
+	check(tr(sim.policy.choice_def("forest", "burn")["con"]) in r["speech"], "the offline persona voices it first (%s)" % r["speech"].left(120))
+	# the ways stand: a sullen crew
+	var san: Dictionary = sim.contracts.sanitize(r["blueprint"], {}, devout)
+	var c = sim.contracts.create(san["blueprint"], devout, "x")
+	var w0: float = sim.work_mul(devout)
+	sim.policy.answer(devout, ob, false, c)
+	check(c.flags.get("sullen", false) and sim.work_mul(devout) < w0, "if the ways stand, the crew works slower (%.2f -> %.2f)" % [w0, sim.work_mul(devout)])
+	check(devout.memory.any(func(m): return "not heard" in m["text"]), "and the leader remembers")
+	# heard: the way changes
+	var s2 = _new_sim()
+	var d2 = s2.unit_by_name(devout.name)
+	s2.techs["fire"] = true
+	s2.policy.chosen["forest"] = "burn"
+	check(s2.policy.answer(d2, s2.policy.objection(d2, "settle"), true) == "" and s2.policy.pending.get("forest", {}).get("choice", "") == "dead_wood", "hearing them out changes the way (after a day)")
+	check(d2.memory.any(func(m): return "was heard" in m["text"]), "and they remember being heard")
+	# a war party under Peace first
+	var s3 = _new_sim()
+	s3.policy.chosen["clans"] = "peace"
+	check(not s3.policy.warnings("war").is_empty() and s3.policy.warnings("settle").is_empty(), "the negotiation warns of war under Peace first")
+	for id in ["ochre", "heron"]: s3.rivals.clans[id]["met"] = true
+	s3.rivals.pending.clear()
+	var wl = s3.unit_by_name("Alie")
+	var wterms := {"kind": "war", "target": "heron", "objective": "loot", "crew_size": 4}
+	var wctx: Dictionary = s3.contracts.negotiation_ctx(wl, "Raid", wterms, true, "", {}, [], "war")
+	var wsan: Dictionary = s3.contracts.sanitize(Persona.propose(wctx)["blueprint"], wterms, wl)
+	var mood0: float = s3.folk.mood
+	var rel0: float = s3.rivals.clans[wsan["blueprint"]["target"]]["relation"]
+	s3.contracts.create(wsan["blueprint"], wl, "Raid")
+	check(s3.folk.mood < mood0 and s3.rivals.clans[wsan["blueprint"]["target"]]["relation"] < rel0, "a war party under Peace first troubles the tribe and the clan remembers")

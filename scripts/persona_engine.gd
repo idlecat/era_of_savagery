@@ -31,6 +31,13 @@ const NUM := ["no one", "one", "two", "three", "four", "five"]
 ## ctx: {arch, leader:{...profile}, env, terms:{crew_size,capacity_target,focus}, terms_set:bool,
 ##       player_message:String, previous:Dictionary, has_farming:bool, max_crew:int}
 static func propose(ctx: Dictionary) -> Dictionary:
+	var r := _propose(ctx)
+	var ob: Dictionary = ctx.get("objection", {})
+	if not ob.is_empty() and ctx.get("history", []).is_empty() and r.get("speech") is String: # a word about the tribe's ways first
+		r["speech"] = I.t("%s Chieftain, about %s: I would have us choose %s.") % [ob["your_complaint"], ob["way"], ob["you_want"]] + " " + r["speech"]
+	return r
+
+static func _propose(ctx: Dictionary) -> Dictionary:
 	if ctx.get("kind", "settle") == "research": return propose_research(ctx)
 	if ctx.get("kind", "settle") == "war": return propose_war(ctx)
 	var arch: String = ctx["arch"]

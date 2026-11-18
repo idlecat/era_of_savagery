@@ -1,5 +1,5 @@
 {
- "_doc": "The Council's standing policies (policy.gd, sim.policy). Each policy has a default choice (with no effects: the base game) and choices with: label/desc, unlock (conditions as in scenario scripts), effects (the shared effect stats, like inventions: {stat, mul|add, of}), culture (drift per day on the culture axes), on_start (story.run actions when it takes hold), liked_by/disliked_by (personality traits: who speaks for or against it at the Council and grumbles in negotiations), pro/con (what they say). A change costs switch.mood and takes switch.settle_days days to take hold (until then the old choice holds); at most one change is waiting per policy. See docs/CONFIG.md.",
+ "_doc": "The Council's standing policies (policy.gd, sim.policy). Each policy has a default choice (with no effects: the base game) and choices with: label/desc, unlock (conditions as in scenario scripts), effects (the shared effect stats, like inventions: {stat, mul|add, of}), culture (drift per day on the culture axes), on_start (story.run actions when it takes hold), liked_by/disliked_by (personality traits: who speaks for or against it at the Council and grumbles in negotiations), pro/con (what they say), touches (contract kinds whose leaders care about it), on_contract ({kind: actions} run when such a contract is sealed under this choice; var clan = a war's target) and warn ({kind: text} shown while negotiating one). A change costs switch.mood and takes switch.settle_days days to take hold (until then the old choice holds); at most one change is waiting per policy. See docs/CONFIG.md.",
  "switch": {
   "mood": -4,
   "settle_days": 1,
@@ -8,10 +8,20 @@
  "council": {
   "speakers": 3
  },
+ "objection": {
+  "_doc": "A contract leader whose personality dislikes a way in force that touches the task (`touches`: contract kinds) and likes another choice objects in the negotiation. The chieftain can change the way on the spot (it costs the usual mood and time) or let it stand: the crew then works at sullen_work speed, and the leader remembers either.",
+  "sullen_work": 0.9,
+  "remember_heard": "was heard by the Chieftain about %s on Day %d",
+  "remember_stand": "was not heard by the Chieftain about %s on Day %d",
+  "impact": 3
+ },
  "policies": {
   "way_of_life": {
    "title": "Way of life",
    "desc": "How the tribe feeds itself: what the Steward sends people to, and which work they grow good at.",
+   "touches": [
+    "settle"
+   ],
    "default": "mixed",
    "choices": {
     "mixed": {
@@ -147,6 +157,9 @@
   "forest": {
    "title": "The forest",
    "desc": "How much the tribe takes from the trees.",
+   "touches": [
+    "settle"
+   ],
    "default": "fell",
    "choices": {
     "dead_wood": {
@@ -239,6 +252,10 @@
   "hunt": {
    "title": "The hunt",
    "desc": "Which beasts the hunters may take.",
+   "touches": [
+    "settle",
+    "war"
+   ],
    "default": "any",
    "choices": {
     "spare": {
@@ -309,6 +326,9 @@
   "spirits": {
    "title": "The spirits we honour",
    "desc": "Whom the tribe turns to: what its rituals bring and what it becomes.",
+   "touches": [
+    "research"
+   ],
    "default": "all",
    "choices": {
     "all": {
@@ -400,6 +420,9 @@
   "seek": {
    "title": "What to seek",
    "desc": "Where the tribe's curiosity goes: which ideas grow faster from everyday work.",
+   "touches": [
+    "research"
+   ],
    "default": "anything",
    "choices": {
     "anything": {
@@ -500,6 +523,10 @@
   "clans": {
    "title": "Stance toward clans",
    "desc": "How the tribe meets its neighbours.",
+   "touches": [
+    "war",
+    "settle"
+   ],
    "default": "wary",
    "choices": {
     "peace": {
@@ -526,7 +553,24 @@
       "belligerent"
      ],
      "pro": "A friend at the river is worth ten spears.",
-     "con": "They smile at us and count our food."
+     "con": "They smile at us and count our food.",
+     "on_contract": {
+      "war": [
+       {
+        "mood": -6
+       },
+       {
+        "relation": -10,
+        "reason": "they preached peace and came with spears"
+       },
+       {
+        "log": "The tribe sends out a war party though the Council chose peace. Many look away."
+       }
+      ]
+     },
+     "warn": {
+      "war": "The Council chose peace: a war party will trouble the tribe (mood -6) and the clan will remember the broken word."
+     }
     },
     "wary": {
      "label": "Wary",
@@ -564,7 +608,20 @@
       "devout"
      ],
      "pro": "Let them fear us, and they will leave us be.",
-     "con": "Make enemies of everyone, and we stand alone."
+     "con": "Make enemies of everyone, and we stand alone.",
+     "on_contract": {
+      "war": [
+       {
+        "mood": 4
+       },
+       {
+        "log": "The drums sound for the war party. The tribe cheers them on."
+       }
+      ]
+     },
+     "warn": {
+      "war": "The tribe is warlike: it cheers the war party on (mood +4)."
+     }
     }
    }
   }

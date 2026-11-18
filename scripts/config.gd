@@ -39,9 +39,9 @@ static func rand_in(v) -> float:
 
 const TEXT_KEYS := ["text", "title", "label", "desc", "result", "else_result", "alert", "warn", "done", "log",
 	"start_log", "end_log", "popup", "hit_popup", "out_popup", "hit_alert", "building_alert", "remember",
-	"hit_remember", "name", "acts", "reason", "grudge", "speaker_default", "pro", "con"]
+	"hit_remember", "name", "acts", "reason", "grudge", "speaker_default", "pro", "con", "remember_heard", "remember_stand"]
 ## Keys whose values are all texts ({id: text} or {id: [texts]}).
-const TEXT_TABLES := ["voices", "treasures"]
+const TEXT_TABLES := ["voices", "treasures", "warn"]
 ## Keys holding lists of texts (nested lists too; numbers in them are skipped).
 const TEXT_LISTS := ["acts", "words"]
 

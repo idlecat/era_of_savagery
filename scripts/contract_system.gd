@@ -162,7 +162,13 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 		"player_message": player_message, "previous": previous, "history": history,
 		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id).size() + 1),
 		"top_memory": top,
+		"objection": _objection_words(sim.policy.objection(u, kind)),
 	}
+
+## A leader's objection to the tribe's ways, in words for the persona.
+func _objection_words(ob: Dictionary) -> Dictionary:
+	if ob.is_empty(): return {}
+	return {"way": tr(ob["title"]), "now": tr(ob["now_label"]), "you_want": tr(ob["wants_label"]), "your_complaint": tr(ob["complaint"]), "your_plea": tr(ob["plea"])}
 
 ## Ideas a research contract may pursue: prerequisites known, tech itself not.
 func research_candidates() -> Array:
@@ -447,6 +453,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		sim.evo.drift("martial", 5.0)
 	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract", c.crew_ids.map(func(id): return sim.unit_by_id(id)))
 	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
+	sim.policy.on_contract(c)
 	return c
 
 func _clog(c: E.Contract, text: String) -> void:
