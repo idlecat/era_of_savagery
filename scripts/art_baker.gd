@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 15
+const ART_VERSION := 16
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -114,12 +114,12 @@ func _setup() -> void:
 	sun.light_energy = 1.45
 	sun.light_color = Color(1.0, 0.95, 0.85)
 	sun.shadow_enabled = true
-	sun.shadow_opacity = 0.85
-	sun.shadow_blur = 1.6
+	sun.shadow_opacity = 1.0
+	sun.shadow_blur = 1.1
 	sun.directional_shadow_max_distance = 600.0
 	# sunlight from the upper left of the screen: shadows fall to the right and a little down
 	var travel := (Vector3(1, 0, -1).normalized() * 0.75 + Vector3(1, 0, 1).normalized() * 0.35)
-	travel.y = -0.85
+	travel.y = -0.62 # (a lowish sun: long shadows across the ground)
 	sun.transform = Transform3D(Basis.looking_at(travel.normalized(), Vector3.UP), Vector3.ZERO)
 	vp.add_child(sun)
 	catcher = MeshInstance3D.new()
@@ -170,9 +170,22 @@ func _bake(job: Dictionary) -> void:
 	img = img.get_region(r)
 	img.convert(Image.FORMAT_RGBA8)
 	if job.get("mask", false): _to_mask(img)
+	elif catcher.visible: _deepen_shadow(img)
 	var keep := img.duplicate()
 	img.generate_mipmaps()
 	sprites[job["key"]] = {"tex": ImageTexture.create_from_image(img), "anchor": anchor - Vector2(r.position), "img": keep}
+
+## The ground shadow comes out pale (soft, partly lit): darken it. Shadow pixels are the
+## near-black, partly transparent ones of the invisible catcher; the model is opaque.
+const SHADOW_BOOST := 4.0 # (the catcher's shadow comes out ~5-12% opaque; a sunny day's is ~40%)
+func _deepen_shadow(img: Image) -> void:
+	var data := img.get_data()
+	for i in range(0, data.size(), 4):
+		var a: int = data[i + 3]
+		if a == 0 or a > 247: continue
+		if maxi(data[i], maxi(data[i + 1], data[i + 2])) > 60: continue # (a model's soft edge, not shadow)
+		data[i + 3] = mini(170, int(a * SHADOW_BOOST))
+	img.set_data(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8, data)
 
 ## Tint layer: keep only the white-lit cloth (everything else was rendered black).
 func _to_mask(img: Image) -> void:
@@ -481,38 +494,46 @@ func _pine(v: int, snowy: bool) -> Node3D:
 
 ## Broadleaf: a gnarled, forked trunk with branches and lumpy leaf clumps.
 func _leafy(v: int, snowy: bool) -> Node3D:
+	# A broadleaf tree: a short trunk forking into branches, each ending in many small leaf
+	# clusters; the crown is sunlit yellow-green on top and deep green underneath.
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 200 + v
 	var bark := mat(Color("#5e4129"), "streak", 0.14, Vector3(1, 5, 1), 0.6)
 	var lean := Vector3(rng.randf_range(-1.5, 1.5), 0, rng.randf_range(-1.5, 1.5))
-	var fork := Vector3(0, 13, 0) + lean
-	limb(root, [Vector3(0, -0.5, 0), Vector3(0, 2.5, 0), lean * 0.5 + Vector3(0, 8, 0), fork], [4.2, 2.6, 2.1, 1.9], bark, 9)
+	var fork := Vector3(0, 11, 0) + lean
+	limb(root, [Vector3(0, -0.5, 0), Vector3(0, 2.5, 0), lean * 0.5 + Vector3(0, 7, 0), fork], [4.0, 2.5, 2.0, 1.8], bark, 9)
 	for i in 4: # root flare
 		var a := i * TAU / 4 + rng.randf()
-		limb(root, [Vector3(0, 3.5, 0), Vector3(cos(a) * 5, 0.2, sin(a) * 5)], [1.7, 0.4], bark, 6)
+		limb(root, [Vector3(0, 3.5, 0), Vector3(cos(a) * 5, 0.2, sin(a) * 5)], [1.6, 0.4], bark, 6)
 	var tips: Array = []
-	for i in 3: # main forks, each splitting once
-		var a := i * TAU / 3 + rng.randf()
-		var tilt := deg_to_rad(rng.randf_range(38, 55))
+	for i in 5: # main branches, each splitting twice
+		var a := i * TAU / 5 + rng.randf_range(-0.3, 0.3)
+		var tilt := deg_to_rad(rng.randf_range(30, 58))
 		var dir := Vector3(cos(a) * sin(tilt), cos(tilt), sin(a) * sin(tilt))
-		var mid := fork + dir * rng.randf_range(6, 8)
-		var tip := mid + (dir + Vector3(0, 0.3, 0)).normalized() * rng.randf_range(6, 8)
-		var side := mid + Vector3(-dir.z, 0.5, dir.x).normalized() * 7.0
-		limb(root, [fork, mid, tip], [1.5, 1.0, 0.45], bark, 7)
-		limb(root, [mid, side], [0.8, 0.3], bark, 6)
-		tips.append(tip)
-		tips.append(side)
-	var greens := [Color("#356b30"), Color("#437a35"), Color("#2f6030"), Color("#4f8638")]
+		var mid := fork + dir * rng.randf_range(6, 9)
+		limb(root, [fork, mid], [1.4, 0.9], bark, 7)
+		for k in 2:
+			var d2 := (dir + Vector3(rng.randf_range(-0.6, 0.6), rng.randf_range(0.1, 0.5), rng.randf_range(-0.6, 0.6))).normalized()
+			var tip := mid + d2 * rng.randf_range(5, 8)
+			limb(root, [mid, tip], [0.8, 0.3], bark, 6)
+			tips.append(tip)
+	tips.append(fork + Vector3(0, 12, 0)) # (the top)
+	var lo := Color("#1f4220") # shaded underside
+	var mid_c := Color("#3a6527")
+	var hi := Color("#7a9a38") # sunlit top
 	var sn := 0.8 if snowy else 0.0
-	var k := 0
+	var top_y := fork.y + 16.0
+	var n := 0
 	for t in tips:
-		for j in 3:
-			var r := rng.randf_range(5.5, 8.0)
-			var off := Vector3(rng.randf_range(-5, 5), rng.randf_range(-1.5, 3.5), rng.randf_range(-5, 5))
-			clump(root, t + off, r, mat(greens[(j + k + v) % 4], "fine", 0.22, Vector3.ONE, 0.65, sn), 200 + v * 31 + k * 7 + j, Vector3(1, rng.randf_range(0.75, 0.95), 1))
-		k += 1
-	clump(root, Vector3(0, 29, 0) + lean, 10.0, mat(greens[(v + 1) % 4], "fine", 0.22, Vector3.ONE, 0.65, sn), 300 + v, Vector3(1, 0.8, 1))
+		for j in 6: # small clusters around each branch tip
+			var off := Vector3(rng.randf_range(-4.5, 4.5), rng.randf_range(-2.5, 3.5), rng.randf_range(-4.5, 4.5))
+			var p: Vector3 = t + off
+			var h := clampf((p.y - fork.y) / (top_y - fork.y), 0.0, 1.0)
+			var c := lo.lerp(mid_c, smoothstep(0.0, 0.55, h)).lerp(hi, smoothstep(0.7, 1.0, h) * 0.7)
+			c = c.lerp(Color("#4d6e2a"), rng.randf() * 0.3) # (a little variety)
+			clump(root, p, rng.randf_range(3.0, 4.6), mat(c, "fine", 0.3, Vector3.ONE, 0.8, sn), 200 + v * 97 + n, Vector3(1, rng.randf_range(0.7, 0.95), 1))
+			n += 1
 	return root
 
 func _bush(full: bool, snowy: bool) -> Node3D:

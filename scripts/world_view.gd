@@ -41,6 +41,9 @@ var fog_tex: ImageTexture
 var fog_img: Image
 var fog_refresh := 0.0
 var wear_tex: ImageTexture
+var mask_tex: ImageTexture # where the soil, forest floor and meadows are (terrain.gdshader)
+var photo_ground := false # CC0 ground textures loaded (assets/textures/terrain): paths are painted by the shader
+const GROUND_TEX := ["grass", "grass2", "meadow", "dry", "dirt", "forest"]
 var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
@@ -133,6 +136,7 @@ func setup(s) -> void:
 	gm.set_shader_parameter("grass_tex", _noise_tex(7, 0.012, FastNoiseLite.TYPE_PERLIN, 5))
 	gm.set_shader_parameter("grain_tex", _noise_tex(19, 0.06, FastNoiseLite.TYPE_CELLULAR, 1))
 	gm.set_shader_parameter("world_size", Vector2(D.W, D.H))
+	_ground_photos(gm)
 	ground.material = gm
 	add_child(ground)
 	ground_fx = GroundFX.new()
@@ -175,6 +179,7 @@ func _build_terrain() -> void:
 	var w := int(D.W / TEX_SCALE)
 	var h := int(D.H / TEX_SCALE)
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var mask := Image.create(w, h, false, Image.FORMAT_RGB8) # soil, forest floor, meadow (terrain.gdshader)
 	var g_west_a := Color("#6f8e3f")
 	var g_west_b := Color("#56763a")
 	var g_east_a := Color("#4d6a34")
@@ -207,18 +212,29 @@ func _build_terrain() -> void:
 				c = (g_east_a.lerp(g_east_b, n) if east else g_west_a.lerp(g_west_b, n))
 				c = c.lerp(c.darkened(0.18), f * 0.5)
 				var dv := p.distance_to(D.VILLAGE)
+				var mk := Color(0, 0, 0)
 				if dv < 170:
-					c = c.lerp(dirt.lerp(dirt.darkened(0.15), f), clampf((170 - dv) / 110.0, 0, 0.85) * (0.6 + 0.4 * n))
+					var k_dirt := clampf((170 - dv) / 110.0, 0, 0.85) * (0.6 + 0.4 * n)
+					c = c.lerp(dirt.lerp(dirt.darkened(0.15), f), k_dirt)
+					mk.r = k_dirt
 				var m := meadow.get_noise_2dv(p) * 0.5 + 0.5
 				var so := soil.get_noise_2dv(p) * 0.5 + 0.5
 				var fd := _forest_at(p)
-				if not east and m > 0.62: c = c.lerp(Color("#93a64e"), clampf((m - 0.62) * 3.0, 0, 0.6))
-				if so > 0.7: c = c.lerp(Color("#7d6a48").lerp(Color("#6a5c40"), f), clampf((so - 0.7) * 4.0, 0, 0.75))
+				if not east and m > 0.62:
+					c = c.lerp(Color("#93a64e"), clampf((m - 0.62) * 3.0, 0, 0.6))
+					mk.b = clampf((m - 0.62) * 3.0, 0, 1)
+				if so > 0.7:
+					c = c.lerp(Color("#7d6a48").lerp(Color("#6a5c40"), f), clampf((so - 0.7) * 4.0, 0, 0.75))
+					mk.r = maxf(mk.r, clampf((so - 0.7) * 4.0, 0, 0.75))
 				elif so < 0.22: c = c.lerp(Color("#7a7466").lerp(Color("#8a857a"), f), clampf((0.22 - so) * 4.0, 0, 0.6))
-				if fd > 0.05: c = c.lerp(Color("#3d4a28").lerp(Color("#4a4026"), f), clampf(fd * 0.8, 0, 0.7)) # forest floor and leaf litter
+				if fd > 0.05:
+					c = c.lerp(Color("#3d4a28").lerp(Color("#4a4026"), f), clampf(fd * 0.8, 0, 0.7)) # forest floor and leaf litter
+					mk.g = clampf(fd * 0.9, 0, 1)
+				mask.set_pixel(i, j, mk)
 				if dx < D.RIVER_HALF + 50: c = c.lerp(Color("#4f6a32"), clampf((D.RIVER_HALF + 50 - dx) / 40.0, 0, 0.5)) # lush riverbank
 			img.set_pixel(i, j, c)
 	terrain_tex = ImageTexture.create_from_image(img)
+	mask_tex = ImageTexture.create_from_image(mask)
 	_place_ground_cover()
 	var mini := img.duplicate() # minimap: same colours without the type data in alpha
 	mini.convert(Image.FORMAT_RGB8)
@@ -399,6 +415,31 @@ func _refresh_fog() -> void:
 	fog_img.set_data(sim.fog_w, sim.fog_h, false, Image.FORMAT_LA8, data)
 	fog_tex.update(fog_img)
 
+## The photographic ground (CC0, assets/textures/terrain): each texture with mipmaps (for
+## any zoom) and its mean colour (the shader tints it toward the map's own colours). Without
+## them the shader paints the old procedural ground.
+func _ground_photos(gm: ShaderMaterial) -> void:
+	gm.set_shader_parameter("mask_tex", mask_tex)
+	gm.set_shader_parameter("wear_tex", wear_tex)
+	gm.set_shader_parameter("wear_size", Vector2(maxi(sim.wear_w, 1) * sim.WEAR_CELL, maxi(sim.wear_h, 1) * sim.WEAR_CELL))
+	photo_ground = true
+	for k in GROUND_TEX:
+		var path := "res://assets/textures/terrain/%s.jpg" % k
+		var t = load(path) if ResourceLoader.exists(path) else null
+		if t == null:
+			photo_ground = false
+			break
+		var img: Image = t.get_image()
+		if img.is_compressed(): img.decompress()
+		img.convert(Image.FORMAT_RGB8)
+		var small := img.duplicate()
+		small.resize(1, 1, Image.INTERPOLATE_BILINEAR)
+		var mean: Color = small.get_pixel(0, 0)
+		img.generate_mipmaps()
+		gm.set_shader_parameter("t_" + k, ImageTexture.create_from_image(img))
+		gm.set_shader_parameter("m_" + k, Vector3(mean.r, mean.g, mean.b))
+	gm.set_shader_parameter("use_photo", 1.0 if photo_ground else 0.0)
+
 ## Worn paths: foot traffic tints the grass toward bare earth.
 func _refresh_wear() -> void:
 	var n: int = sim.wear_w * sim.wear_h
@@ -552,7 +593,7 @@ func draw_terrain() -> void:
 ## Flat things on the ground, above the terrain shader and below everything upright.
 func draw_ground_fx() -> void:
 	ci.draw_set_transform_matrix(GROUND)
-	ci.draw_texture_rect(wear_tex, Rect2(0, 0, sim.wear_w * sim.WEAR_CELL, sim.wear_h * sim.WEAR_CELL), false)
+	if not photo_ground: ci.draw_texture_rect(wear_tex, Rect2(0, 0, sim.wear_w * sim.WEAR_CELL, sim.wear_h * sim.WEAR_CELL), false)
 	_draw_season_ground()
 	_draw_water_fx()
 	for s in sim.structures: _draw_ground_part(s)
@@ -1041,7 +1082,7 @@ func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
 func _draw_node(n) -> void:
 	var b := iso(n.pos)
 	if sim.nat.burning.has(n.id): # a burning tree, then flames
-		if not _sprite(("pine_%d" if n.id % 3 != 2 else "leaf_%d") % (n.id % 4), b, n.sz, Color(0.55, 0.45, 0.4)): _draw_tree_shape(n, b)
+		if not _sprite(("pine_%d" if n.id % 3 == 2 else "leaf_%d") % (n.id % 4), b, n.sz, Color(0.55, 0.45, 0.4)): _draw_tree_shape(n, b)
 		var left: float = sim.nat.burning[n.id]
 		var hgt: float = 34.0 * n.sz * clampf(left / 6.0, 0.4, 1.0)
 		_flame(b + Vector2(0, -10 * n.sz), 9.0 * n.sz, hgt * (1.0 + 0.2 * sin(t * 12 + n.id)), Color("#ff8a2a"))
@@ -1050,7 +1091,7 @@ func _draw_node(n) -> void:
 		return
 	match n.kind:
 		"tree":
-			if _sprite(("pine_%d" if n.id % 3 != 2 else "leaf_%d") % (n.id % 4) + _snowy(), b, n.sz): return
+			if _sprite(("pine_%d" if n.id % 3 == 2 else "leaf_%d") % (n.id % 4) + _snowy(), b, n.sz): return
 		"bush":
 			if _sprite(("bush_full" if n.amount >= 5 else "bush_bare") + _snowy(), b): return
 		"stump":
