@@ -17,6 +17,8 @@ const CACHE := "user://sound_cache" # rendered recipes, named by a hash of the r
 var C: Dictionary = preload("res://scripts/config.gd").load_cfg("audio")
 var sim
 var world
+var blocked: Callable # true while a dialog is open (set by main): a dialog's pause keeps the sound going
+var _paused := false # the player paused the game: every sound holds still
 var vol := {} # master/music/sfx/ambience, 0-1
 var _ready_ids := {} # recipe id -> AudioStreamWAV, filled by the worker
 var _mutex := Mutex.new()
@@ -107,13 +109,25 @@ func _on_log() -> void:
 
 func _on_node_added(n: Node) -> void:
 	if n is BaseButton and C.has("ui_click"):
-		n.pressed.connect(func(): play(C["ui_click"], Vector2.INF, 1.0, randf_range(0.95, 1.05)))
+		n.pressed.connect(func(): play(C["ui_click"], Vector2.INF, 1.0, randf_range(0.95, 1.05), "SFX", true))
+
+## The player's pause (not a dialog's): everything playing holds still, nothing new starts.
+func paused() -> bool:
+	return sim != null and sim.paused and not (blocked.is_valid() and blocked.call())
+
+func _hold(on: bool) -> void:
+	_paused = on
+	for p in _pool + _pool2d + [_drone] + _amb.map(func(a): return a["player"]):
+		if on and p.playing: p.stream_paused = true
+		elif not on and p.stream_paused: p.stream_paused = false
 
 func _cue(id: String, at := Vector2.INF) -> void:
 	if id != "": play(id, at)
 
-## Play sound `id` (at a world point, or everywhere with Vector2.INF).
-func play(id: String, at := Vector2.INF, gain := 1.0, pitch := 1.0, bus := "SFX") -> void:
+## Play sound `id` (at a world point, or everywhere with Vector2.INF). While paused only
+## the interface's own sounds (ui) play.
+func play(id: String, at := Vector2.INF, gain := 1.0, pitch := 1.0, bus := "SFX", ui := false) -> void:
+	if _paused and not ui: return
 	var w := stream(id)
 	if w == null: return
 	var p
@@ -134,10 +148,13 @@ func play(id: String, at := Vector2.INF, gain := 1.0, pitch := 1.0, bus := "SFX"
 	p.stream = w
 	p.pitch_scale = clampf(pitch, 0.25, 4.0)
 	p.volume_db = linear_to_db(maxf(0.0001, gain))
+	p.stream_paused = false
 	p.play()
 
 func _free(pool: Array):
 	for p in pool:
+		if not p.playing and not p.stream_paused: return p
+	for p in pool: # (a sound held by the pause that never finished: reuse it)
 		if not p.playing: return p
 	return null
 
@@ -205,8 +222,10 @@ func _center() -> Vector2:
 	return WorldView.uniso(world.cam.position) if world and world.cam else D.VILLAGE
 
 func _process(delta: float) -> void:
-	_clock += delta
 	if sim == null: return
+	if paused() != _paused: _hold(paused())
+	if _paused: return # (music, ambience and the world's sounds wait for the game)
+	_clock += delta
 	_state_t -= delta
 	if _state_t <= 0:
 		_state_t = 1.0

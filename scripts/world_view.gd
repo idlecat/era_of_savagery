@@ -53,6 +53,7 @@ var facing := {} # "u12" -> 1 / -1  (screen-space left/right)
 var last_pos := {}
 var moving := {}
 var t := 0.0
+var anim_t := 0.0 # clock for people's and beasts' motions: stops while the game is paused, slows in emergencies
 var ci: CanvasItem # canvas currently being drawn (world, an Item, or the Overlay)
 var ghost_m := Vector2.ZERO
 var ghost_why := ""
@@ -264,6 +265,7 @@ func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 # ------------------------------------------------------------ frame
 func _process(delta: float) -> void:
 	t += delta
+	if not sim.paused and not (blocked.is_valid() and blocked.call()): anim_t += delta * sim.crisis.slow()
 	_pan_keys(delta)
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
 	night.color = _sky_tint()
@@ -736,9 +738,9 @@ func _draw_wolf(p) -> void:
 	var body := b - Vector2(0, 10)
 	for i in 4:
 		var lx := body.x + (-7 + i * 4.5) * f
-		var sw := sin(t * 15 + i * 1.9) * 3.0 if walk else 0.0
+		var sw := sin(anim_t * 15 + i * 1.9) * 3.0 if walk else 0.0
 		ci.draw_line(Vector2(lx, body.y + 2), Vector2(lx + sw, b.y), Color("#4a4a4e"), 2.2)
-	ci.draw_line(body + Vector2(-10 * f, -1), body + Vector2(-17 * f, 3 + sin(t * 4) * 2), Color("#6d6d72"), 3)
+	ci.draw_line(body + Vector2(-10 * f, -1), body + Vector2(-17 * f, 3 + sin(anim_t * 4) * 2), Color("#6d6d72"), 3)
 	_ell(body, 11, 5, Color("#76767c"))
 	_ell(body + Vector2(0, 2), 8, 2.5, Color("#a4a4aa"))
 	var head := body + Vector2(11 * f, -4)
@@ -1097,7 +1099,7 @@ func _draw_node(n) -> void:
 			var body := b - Vector2(0, 11)
 			for i in 4:
 				var lx := body.x + (-6 + i * 4) * f
-				var sw := sin(t * 14 + i * 1.7) * 2.5 if walk else 0.0
+				var sw := sin(anim_t * 14 + i * 1.7) * 2.5 if walk else 0.0
 				ci.draw_line(Vector2(lx, body.y + 2), Vector2(lx + sw, b.y), Color("#6e4a28"), 1.6)
 			_ell(body, 9, 4.5, Color("#9a6a3c"))
 			_ell(body + Vector2(0, 1.5), 7, 2.5, Color("#c09a70"))
@@ -1523,10 +1525,10 @@ func _draw_unit(u) -> void:
 	if art and art.has("man_idle_0_0"):
 		_draw_unit_sprite(u, b, key, walk, busy)
 		return
-	var bob := absf(sin(t * 12 + u.id)) * 1.5 if walk else 0.0
+	var bob := absf(sin(anim_t * 12 + u.id)) * 1.5 if walk else 0.0
 	var skin := Color("#d9a77c")
 	# legs
-	var sw := sin(t * 12 + u.id) * 3.0 if walk else 0.0
+	var sw := sin(anim_t * 12 + u.id) * 3.0 if walk else 0.0
 	ci.draw_line(b + Vector2(-2, -9 - bob), b + Vector2(-2 + sw, 0), skin.darkened(0.25), 2.5)
 	ci.draw_line(b + Vector2(2, -9 - bob), b + Vector2(2 - sw, 0), skin.darkened(0.15), 2.5)
 	# torso (fur tunic)
@@ -1541,7 +1543,7 @@ func _draw_unit(u) -> void:
 	ci.draw_line(hip + Vector2(-5, 1), hip + Vector2(5, 1), u.color.darkened(0.45), 1.5)
 	# arms / tool
 	var sh := hip + Vector2(0, -10)
-	var swing := sin(t * 9 + u.id) * 0.9 if busy else 0.0
+	var swing := sin(anim_t * 9 + u.id) * 0.9 if busy else 0.0
 	var hand := sh + Vector2(6 * f, 6).rotated(swing * -f * 0.6)
 	ci.draw_line(sh + Vector2(3 * f, 0), hand, skin, 2)
 	ci.draw_line(sh + Vector2(-3 * f, 0), sh + Vector2(-5 * f, 7 + sw * 0.4), skin.darkened(0.1), 2)
@@ -1601,8 +1603,8 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 	if art == null or not art.has(kind + "_idle_0_0"): return false
 	var di := _dir_index(key)
 	var name := "%s_idle_%d_0" % [kind, di]
-	if moving.get(key, false): name = "%s_walk_%d_%d" % [kind, di, int(t * 10.0 + key.hash() % 7) % 6]
-	if attacking.has(key) and art.has("%s_attack_%d_0" % [kind, di]): name = "%s_attack_%d_%d" % [kind, di, int(t * 8.0) % 4]
+	if moving.get(key, false): name = "%s_walk_%d_%d" % [kind, di, int(anim_t * 10.0 + key.hash() % 7) % 6]
+	if attacking.has(key) and art.has("%s_attack_%d_0" % [kind, di]): name = "%s_attack_%d_%d" % [kind, di, int(anim_t * 8.0) % 4]
 	return _sprite(name, b, sc)
 
 ## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
@@ -1640,7 +1642,7 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 	if anim in ["chop", "build", "attack"] and (walk and anim != "attack"): anim = "walk"
 	var frames: int = {"idle": 1, "walk": 8}.get(anim, 4)
 	var speed := 11.0 if anim == "walk" else 7.0
-	var name := "man_%s_%d_%d" % [anim, di, int(t * speed + u.id) % frames]
+	var name := "man_%s_%d_%d" % [anim, di, int(anim_t * speed + u.id) % frames]
 	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
 	var k := 0.95
 	_sprite(name, b, k)
@@ -1872,7 +1874,7 @@ func _draw_clansman(p, b: Vector2) -> void:
 		if attacking.has(key): anim = "attack"
 		elif walk: anim = "walk"
 		var frames: int = {"idle": 1, "walk": 8}.get(anim, 4)
-		var name := "man_%s_%d_%d" % [anim, di, int(t * (11.0 if anim == "walk" else 7.0) + p.id) % frames]
+		var name := "man_%s_%d_%d" % [anim, di, int(anim_t * (11.0 if anim == "walk" else 7.0) + p.id) % frames]
 		_sprite(name, b, 0.95, Color(0.86, 0.8, 0.76) if war else Color.WHITE)
 		_sprite(name + "_cloth", b, 0.95, col.darkened(0.15) if war else col)
 	else:
@@ -1908,7 +1910,7 @@ func _draw_guardian(g) -> void:
 		ci.draw_circle(iso(guardian_trail[i]) - Vector2(0, lift), 3 + 8 * k, Color(0.4, 0.95, 0.8, 0.2 + 0.45 * k))
 	var c := b - Vector2(0, lift)
 	if art != null and art.has("dragon_0_0"):
-		_sprite("dragon_%d_%d" % [_dir_index("g"), int(t * 6.0) % 4], c, 1.3)
+		_sprite("dragon_%d_%d" % [_dir_index("g"), int(anim_t * 6.0) % 4], c, 1.3)
 		_draw_label(c + Vector2(0, -34), tr("Yinglong"), 13, Color("#9ff0d0"), true)
 		return
 	var flap := sin(t * 6) * 10

@@ -86,6 +86,7 @@ func _ready() -> void:
 	hud.game = self
 	hud.setup(sim, world, llm)
 	audio.setup(sim, world)
+	audio.blocked = hud.modal_open
 	if not data.is_empty():
 		var ex: Dictionary = data.get("extra", {})
 		if ex.get("cam") is Vector2: world.cam.position = ex["cam"]

@@ -922,7 +922,9 @@ func _refresh_right() -> void:
 	var s := ""
 	if sim.contracts.list.is_empty():
 		s = tr("[color=#8a7a60]None yet. Select a tribesperson and press 'Assign Task Contract'.[/color]")
-	for c in sim.contracts.list:
+	var newest_first: Array = sim.contracts.list.duplicate()
+	newest_first.reverse()
+	for c in newest_first:
 		var ld = sim.unit_by_id(c.leader_id)
 		var col: String = {"done": "#b6f28a", "abandoned": "#999999", "failed": "#999999", "interrupted": "#ff6b6b", "defending": "#ff6b6b"}.get(c.status, "#ffd36b")
 		s += tr("[color=%s]■[/color] [b]%s[/b] — %s\n  %s · [color=%s]%s %d%%[/color] · step %d/%d\n") % [col, c.plan["plan_id"], tr(ld.name) if ld else "?", c.substate if c.status == "executing" else "", col, tr(c.status), roundi(c.progress * 100), mini(c.step_idx + 1, c.steps.size()), c.steps.size()]
