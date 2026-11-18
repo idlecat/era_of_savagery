@@ -1,0 +1,85 @@
+{
+ "_doc": "How the tribe discovers things (sim._finds_tick, inventions.gd). A find (D.FINDS) near someone is noticed by chance: per second, groups[group].chance x (1 + per_lv x their level in the group's skill) x the trait multipliers x what they are doing (activity) x the find's rarity (finds; 1 if not listed), if they can recognise it at all (its needs) and are within range (seekers: seek_range). An invention whose practice is complete comes by chance each check (every 2 s): inventions.chance x (1 + per_lv x the best contributor's level in the skill for its kind). seek: the search quests (below).",
+ "range": 80,
+ "seek_range": 140,
+ "groups": {
+  "food": {
+   "chance": 0.006,
+   "skill": "forage",
+   "per_lv": 0.35,
+   "traits": {
+    "gluttonous": 1.5,
+    "lazy": 0.7
+   }
+  },
+  "medicine": {
+   "chance": 0.004,
+   "skill": "lore",
+   "per_lv": 0.4,
+   "traits": {
+    "devout": 1.5,
+    "lazy": 0.7
+   }
+  },
+  "ore": {
+   "chance": 0.003,
+   "skill": "craft",
+   "per_lv": 0.4,
+   "traits": {
+    "cautious": 1.3,
+    "lazy": 0.7
+   }
+  }
+ },
+ "activity": {
+  "seek": 5.0,
+  "explore": 1.8,
+  "gather": 1.0,
+  "build": 0.6,
+  "default": 0.7
+ },
+ "finds": {
+  "obsidian": 0.6,
+  "tin": 0.6,
+  "salt": 0.8,
+  "honey": 1.3
+ },
+ "inventions": {
+  "chance": 0.05,
+  "per_lv": 0.25,
+  "skills": {
+   "tool": "craft",
+   "medicine": "lore",
+   "food": "forage",
+   "goods": "craft"
+  }
+ },
+ "seek": {
+  "_doc": "Search quests (a Task Contract kind): where each group of finds is looked for (the kinds of place: forest, meadow, riverbank, hills, volcano), how many days the leader may search (days), how far around the place the crew roams (radius), how long a day of searching is (secs_per_day) and how many may go (crew_max). Searchers notice their group's finds with activity.seek odds and seek_range reach.",
+  "groups": {
+   "food": [
+    "forest",
+    "meadow",
+    "riverbank"
+   ],
+   "medicine": [
+    "forest",
+    "riverbank",
+    "meadow"
+   ],
+   "ore": [
+    "hills",
+    "volcano",
+    "riverbank"
+   ]
+  },
+  "days": [
+   1,
+   3
+  ],
+  "radius": 320,
+  "secs_per_day": 45,
+  "crew_max": 4,
+  "places": 4
+ }
+}

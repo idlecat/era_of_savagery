@@ -66,9 +66,15 @@ func update(dt: float) -> void:
 	_t -= dt
 	if _t > 0: return
 	_t = 2.0
+	var cf: Dictionary = sim.DISC.get("inventions", {})
 	for d in D.INVENTIONS:
-		if not has(d["id"]) and frac(d["id"]) >= 1.0 and randf() < 0.15:
-			discover(d["id"], _inventor(d["id"]))
+		if has(d["id"]) or frac(d["id"]) < 1.0: continue
+		# the idea comes by chance; the more skilled the one who worked at it most, the sooner
+		var who := _inventor(d["id"])
+		var skill: String = str(cf.get("skills", {}).get(str(d.get("kind", "")), "craft"))
+		var lv: int = who.lv(skill) if who else 0
+		if randf() < float(cf.get("chance", 0.05)) * (1.0 + float(cf.get("per_lv", 0.25)) * lv):
+			discover(d["id"], who)
 			return # one at a time
 
 func _inventor(id: String) -> E.Unit:

@@ -102,6 +102,20 @@ Allowed steps: {"action": "gather_wood"|"gather_food", "target_amount": <5-60>},
 Pick the idea that fits YOUR personality and memories, unless the Chieftain names one. Describe the idea only in words your tribe could use - you have not discovered it yet.
 Mention at least one memory from your memory_stream naturally. Primal, vivid language; no modern words."""
 
+const SEEK_RULES := """The Chieftain asks you to lead a SEARCH (a Task Contract): go out and look for things the tribe has never found - new foods, healing plants, or useful stones and ores.
+You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
+{"speech": "<2-4 sentences, in character, addressed to the Great Chieftain: what you will look for, where and why>",
+ "blueprint": {
+   "kind": "seek",
+   "plan_id": "<snake_case name>",
+   "group": "food" | "medicine" | "ore",
+   "place": <index of ONE place from places_you_could_search>,
+   "days": <days to search, within days_you_may_search>,
+   "crew_size": <int 1-%d, including yourself>
+ }}
+Look for what the Chieftain asks (looking_for), else what YOUR personality and memories would seek. Choose the place as you would: the cautious stay near, the bold go far into land no one has seen. You do not know what you will find there - speak of hopes, not certainties.
+Mention at least one memory from your memory_stream naturally. Primal, vivid language; no modern words."""
+
 const WAR_RULES := """The Chieftain asks you to lead a WAR PARTY (a Task Contract) against a neighbouring clan.
 You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
 {"speech": "<2-4 sentences, in character, addressed to the Great Chieftain: how you will fight and why>",
@@ -154,6 +168,7 @@ func negotiate(ctx: Dictionary) -> Dictionary:
 	var research: bool = ctx.get("kind", "settle") == "research"
 	var system: String = _persona_header(ctx["leader"], ctx.get("world", {}))
 	if research: system += RESEARCH_RULES % mini(4, ctx.get("max_crew", 4))
+	elif ctx.get("kind", "settle") == "seek": system += SEEK_RULES % mini(4, ctx.get("max_crew", 4))
 	elif ctx.get("kind", "settle") == "war": system += WAR_RULES % ctx.get("max_crew", 6)
 	else: system += RULES % [ctx.get("max_crew", 5), ", ".join(D.FOCUSES), _structure_costs()]
 	if not ctx.get("objection", {}).is_empty() and ctx.get("history", []).is_empty():

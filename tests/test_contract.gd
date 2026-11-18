@@ -75,6 +75,7 @@ func _initialize() -> void:
 	test_names()
 	test_lands()
 	test_roads()
+	test_discovery_odds()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -333,7 +334,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -847,6 +848,8 @@ func test_finds() -> void:
 	print("\n== Natural finds ==")
 	var sim = _new_sim()
 	for p in sim.predators: p.fled = true
+	sim.DISC = sim.DISC.duplicate(true) # (this test checks who can recognise what, not luck: make noticing certain)
+	for g in sim.DISC["groups"]: sim.DISC["groups"][g]["chance"] = 50.0
 	var missing: Array = D.FINDS.keys().filter(func(id): return D.FINDS[id]["count"] > 0 and not sim.nodes.any(func(n): return n.kind == id))
 	check(missing.is_empty(), "every kind of find is somewhere on the map (missing: %s)" % ", ".join(missing))
 	check(sim.known_finds.is_empty(), "nothing is known at the start")
@@ -2443,3 +2446,58 @@ func test_roads() -> void:
 	var s3 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s3, data)
 	check(cells.all(func(c): return s3.roads.level[c] == 2), "roads are saved")
+
+func test_discovery_odds() -> void:
+	print("\n== Discovery by chance, and search quests (config/discovery.json) ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var a = sim.living().filter(func(u): return u.role == "")[0]
+	var b = sim.living().filter(func(u): return u.role == "")[1]
+	a.skills["forage"]["lv"] = 0
+	b.skills["forage"]["lv"] = 4
+	for t in ["gluttonous", "lazy"]:
+		a.traits.erase(t)
+		b.traits.erase(t)
+	sim.set_job(a, {})
+	sim.set_job(b, {})
+	check(sim.find_chance(b, "mushroom") > sim.find_chance(a, "mushroom") * 2.0, "a skilled forager notices new foods more readily (%.4f vs %.4f per second)" % [sim.find_chance(b, "mushroom"), sim.find_chance(a, "mushroom")])
+	a.skills["craft"]["lv"] = 0
+	check(sim.find_chance(a, "copper") < sim.find_chance(a, "mushroom"), "with no skill in either, ores are harder to notice than foods")
+	var idle: float = sim.find_chance(a, "mushroom")
+	sim.assign_seek(a, a.pos, 200.0, "food")
+	check(sim.find_chance(a, "mushroom") > idle * 4.0, "someone searching for foods is far keener (x%.1f)" % (sim.find_chance(a, "mushroom") / idle))
+	# passing by is no longer enough
+	var mush = sim.nodes.filter(func(n): return n.kind == "mushroom")[0]
+	sim.reveal(mush.pos, 200)
+	sim.set_job(a, {})
+	a.pos = mush.pos + Vector2(30, 0)
+	for i in 20: sim.tick(0.05)
+	check(not sim.knows_find("mushroom"), "a moment beside a find is not enough to notice it")
+	# a search quest
+	var s2 = _new_sim()
+	for p in s2.predators: p.fled = true
+	var ld = s2.unit_by_name("Panshi")
+	var ctx: Dictionary = s2.contracts.negotiation_ctx(ld, "Find something new", {"kind": "seek", "group": "food", "crew_size": 2}, true, "", {}, [], "seek")
+	check(not ctx["env"]["places_you_could_search"].is_empty(), "the leader is told where foods might be found (%s)" % ", ".join(ctx["env"]["places_you_could_search"].map(func(p): return p["place"])))
+	var r := Persona.propose(ctx)
+	check(r["blueprint"].get("kind", "") == "seek" and r["speech"] != "", "the leader proposes a search: %s" % r["speech"])
+	var san: Dictionary = s2.contracts.sanitize(r["blueprint"], {"kind": "seek", "group": "food", "crew_size": 2}, ld)
+	check(san["ok"] and san["blueprint"]["group"] == "food" and san["blueprint"]["steps"][0]["action"] == "seek", "the plan is checked: foods, a place, days")
+	var junk: Dictionary = s2.contracts.sanitize({"group": "gold", "place": 99, "days": 40, "crew_size": 30}, {"kind": "seek"}, ld)
+	check(junk["ok"] and junk["blueprint"]["group"] == "food" and junk["blueprint"]["days"] <= 3 and junk["blueprint"]["crew_size"] <= 4, "an LLM's wild plan is clamped")
+	var c = s2.contracts.create(san["blueprint"], ld, "Find something new")
+	check(c.kind == "seek" and c.site.distance_to(D.VILLAGE) > 100, "the crew sets out for %s" % san["blueprint"]["place_name"])
+	var searching := false
+	for i in 600:
+		s2.tick(0.1)
+		if s2.contracts.crew(c).any(func(u): return u.job.get("type", "") == "seek" and u.pos.distance_to(c.site) < 400): searching = true
+		if searching: break
+	check(searching, "and searches there, roaming the place")
+	var crewman = s2.contracts.crew(c)[0]
+	s2.discover_find("honey", crewman, crewman.pos)
+	check("honey" in c.flags.get("found", []), "what they find is credited to the search")
+	for i in 3000:
+		s2.tick(0.1)
+		if c.status == "done": break
+	check(c.status == "done" and not s2.living().any(func(u): return u.role == "contract" and u.contract_id == c.id), "the search ends and the crew comes home")
+	check(s2.log_lines.any(func(e): return "The search" in e["text"] and "Wild Honey" in e["text"]), "the chronicle tells what they found")

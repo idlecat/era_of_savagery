@@ -59,6 +59,7 @@ const SORT_COLS := [["lv", "Lv", "Overall level"], ["forage", "Fo", "Foraging & 
 const COL_W := 38.0
 var sheet_scout_btn: Button
 var sheet_research_btn: Button
+var sheet_seek_btn: Button
 var sheet_envoy_btn: Button
 var sheet_war_btn: Button
 var clans_btns: HFlowContainer
@@ -402,6 +403,10 @@ func _build_left(root: Control) -> void:
 		var sel: Array = world.selected_units()
 		if sel.size() == 1: open_negotiation(sel[0], "research"), "Tier 2: a research Task Contract - the leader proposes which idea to pursue and how")
 	sheet_box.add_child(sheet_research_btn)
+	sheet_seek_btn = _button("Search for new finds…", func():
+		var sel: Array = world.selected_units()
+		if sel.size() == 1: open_negotiation(sel[0], "seek"), "Tier 2: a search Task Contract - the leader takes a crew to look for new foods, healing plants or stones, where such things grow")
+	sheet_box.add_child(sheet_seek_btn)
 	sheet_envoy_btn = _button("Send as envoy…", func():
 		var sel: Array = world.selected_units()
 		if sel.size() == 1: open_envoy(sel[0], ""), "Diplomacy: walk to a neighbouring clan and parley with its chieftain")
@@ -894,6 +899,7 @@ func _refresh_left_content() -> void:
 	sheet_contract_btn.text = tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…")
 	sheet_scout_btn.disabled = on_contract or child
 	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or not D.home_side(u.pos)
+	sheet_seek_btn.disabled = on_contract or child or not D.home_side(u.pos)
 	sheet_envoy_btn.disabled = u.role != ""
 	sheet_war_btn.disabled = u.role != "" or not D.home_side(u.pos) or not sim.rivals.clans.values().any(func(c): return c["met"])
 	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
@@ -1237,16 +1243,17 @@ func open_negotiation(leader, kind := "settle") -> void:
 	for t in leader.traits: trs.append(tr(D.TRAITS[t]["name"]))
 	var research: bool = kind == "research"
 	var war: bool = kind == "war"
-	var v := _open_modal((tr("RESEARCH CONTRACT · Seeking new wisdom with %s") if research else (tr("WAR CONTRACT · Planning the raid with %s") if war else tr("TASK CONTRACT · Phase 1: Negotiation with %s"))) % tr(leader.name), 1080)
+	var seek: bool = kind == "seek"
+	var v := _open_modal((tr("RESEARCH CONTRACT · Seeking new wisdom with %s") if research else (tr("WAR CONTRACT · Planning the raid with %s") if war else (tr("SEARCH CONTRACT · Looking for new finds with %s") if seek else tr("TASK CONTRACT · Phase 1: Negotiation with %s")))) % tr(leader.name), 1080)
 	var token := modal_token
-	var max_crew := mini(4 if research else (6 if war else 5), sim.contracts.available_helpers(leader.id).size() + 1)
+	var max_crew := mini(4 if (research or seek) else (6 if war else 5), sim.contracts.available_helpers(leader.id).size() + 1)
 	neg = {"leader": leader, "kind": kind, "history": [], "bp": {}, "raw": {}, "terms_set": false, "syncing": false, "busy": false, "calls": 0, "token": token}
 	v.add_child(_label(tr("%s \"%s\" · %s · Lv%d · Craft %d / Combat %d / Lore %d · HP %d/%d") % [tr(leader.name), tr(leader.epithet), ", ".join(trs), sim.unit_level(leader), leader.lv("craft"), leader.lv("combat"), leader.lv("lore"), leader.hp, leader.max_hp], 14, Color("#e6b8ff")))
 	var dh := HBoxContainer.new()
 	v.add_child(dh)
 	dh.add_child(_label("Directive:", 15, COL_DIM))
 	var directive := LineEdit.new()
-	directive.text = tr("Find new wisdom for the tribe") if research else (tr("Raid a neighbouring clan") if war else tr("Found a new settlement on the frontier"))
+	directive.text = tr("Find new wisdom for the tribe") if research else (tr("Raid a neighbouring clan") if war else (tr("Find something new: foods, healing plants or stones") if seek else tr("Found a new settlement on the frontier")))
 	directive.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dh.add_child(directive)
 	neg["directive"] = directive
@@ -1327,6 +1334,16 @@ func open_negotiation(leader, kind := "settle") -> void:
 		g.add_child(obj)
 		neg["objective"] = obj
 		obj.item_selected.connect(mark)
+	elif seek:
+		g.add_child(_label("Look for", 14, COL_DIM))
+		var grp := OptionButton.new()
+		grp.add_item(tr("Let %s choose") % tr(leader.name))
+		var gids: Array = [""] + sim.contracts.SEEK_GROUPS
+		for gid in sim.contracts.SEEK_GROUPS: grp.add_item(tr(sim.contracts.SEEK_WORDS[gid]).capitalize() if not I.is_zh() else tr(sim.contracts.SEEK_WORDS[gid]))
+		g.add_child(grp)
+		neg["group"] = grp
+		neg["group_ids"] = gids
+		grp.item_selected.connect(mark)
 	elif research:
 		g.add_child(_label("Wisdom to seek", 14, COL_DIM))
 		var tech := OptionButton.new()
@@ -1391,6 +1408,8 @@ func _neg_terms() -> Dictionary:
 			"objective": sim.contracts.WAR_OBJECTIVES[maxi(0, neg["objective"].selected)]}
 	if neg.get("kind", "settle") == "research":
 		return {"kind": "research", "crew_size": int(neg["crew"].value), "tech": neg["tech_ids"][neg["tech"].selected]}
+	if neg.get("kind", "settle") == "seek":
+		return {"kind": "seek", "crew_size": int(neg["crew"].value), "group": neg["group_ids"][maxi(0, neg["group"].selected)]}
 	return {"crew_size": int(neg["crew"].value), "capacity_target": int(neg["cap"].value), "focus": neg["focus"].get_item_text(neg["focus"].selected)}
 
 func _neg_send() -> void:
@@ -1451,6 +1470,9 @@ func _neg_sync_terms(bp: Dictionary) -> void:
 	elif neg.get("kind", "settle") == "research":
 		var i: int = neg["tech_ids"].find(bp.get("tech", ""))
 		if i > 0: neg["tech"].select(i)
+	elif neg.get("kind", "settle") == "seek":
+		var gi: int = neg["group_ids"].find(bp.get("group", ""))
+		if gi > 0: neg["group"].select(gi)
 	else:
 		neg["cap"].value = bp["capacity_target"]
 		neg["focus"].select(D.FOCUSES.find(bp["focus"]))
@@ -1463,6 +1485,8 @@ func _neg_show_bp(san: Dictionary) -> void:
 	if bp.get("kind", "settle") == "war":
 		var rc: Dictionary = sim.rivals.clans[bp["target"]]
 		s = tr("[color=#ffd36b]%s[/color] · against [color=#ff9b7a]%s[/color] (%s) · crew %d\n[color=#b8a888]Goal: %s[/color]\n") % [bp["plan_id"], tr(rc["name"]), tr(sim.rivals.stance(bp["target"])), bp["crew_size"], tr(sim.contracts.WAR_OBJECTIVE_TEXT[bp["objective"]])]
+	elif bp.get("kind", "settle") == "seek":
+		s = tr("[color=#ffd36b]%s[/color] · looking for [color=#b6f28a]%s[/color] in %s · %d day%s · crew %d\n") % [bp["plan_id"], tr(sim.contracts.SEEK_WORDS[bp["group"]]), bp.get("place_name", ""), bp["days"], I.plural_s() if bp["days"] > 1 else "", bp["crew_size"]]
 	elif bp.get("kind", "settle") == "research":
 		var td: Dictionary = sim.evo.tech_def(bp["tech"])
 		s = tr("[color=#ffd36b]%s[/color] · seeking [color=#c8a8ff]%s[/color] (%d%% understood) · crew %d\n[color=#b8a888]%s[/color]\n") % [bp["plan_id"], tr(td["name"]), roundi(sim.evo.insight_frac(bp["tech"]) * 100), bp["crew_size"], tr(td["desc"])]
@@ -1544,6 +1568,9 @@ func _toast_contract_done(c) -> void:
 		r.text = tr("%s's war party is home from the %s: %s.") % [who, tr(sim.rivals.clans[c.plan["target"]]["name"]), c.flags.get("spoils", "")]
 	elif c.kind == "research":
 		r.text = tr("%s's crew has finished its experiments: the tribe now knows %s.") % [who, tr(sim.evo.tech_def(c.plan["tech"])["name"])]
+	elif c.kind == "seek":
+		var found: Array = c.flags.get("found", []).map(func(id): return tr(D.FINDS[id]["name"]))
+		r.text = (tr("%s's crew is back from %s with news: they found %s.") % [who, c.plan.get("place_name", ""), ", ".join(found)]) if not found.is_empty() else (tr("%s's crew is back from %s: they found nothing new this time.") % [who, c.plan.get("place_name", "")])
 	else:
 		r.text = tr("%s's crew has finished every step of the blueprint. The outpost now houses up to %d more tribespeople.") % [who, sim.contracts.housing(c.plan)]
 	v.add_child(r)

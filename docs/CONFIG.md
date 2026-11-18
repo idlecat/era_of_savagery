@@ -16,6 +16,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/names.json` | `names.gd` | names for the newborn once the culture's own are used up: the parts (adjectives, animals, plants and things of nature, old Chinese surnames) and how they combine |
 | `config/lands.json` | `lands.gd`, `sim.gd`, `world_view.gd` | the kinds of land (steppe, parkland, woodland, old forest): how wooded, and the grass, bushes, herds, weather and wildfire that go with it; which random maps get |
 | `config/roads.json` | `roads.gd` | trails that emerge from feet and fade when abandoned; the road levels the tribe can build (packed earth, stone): what they need, cost and take to build, and how much faster people walk on them |
+| `config/discovery.json` | `sim.gd`, `inventions.gd`, `contract_system.gd` | the odds of noticing a find (by group, skill, temperament, activity, rarity) and of an invention's breakthrough; the search quests: where each group is looked for, days, radius, crew |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -170,3 +171,9 @@ The kind of land a map is (`lands.gd`, `D.LAND`). Each land has `woods` (`count`
 ## roads.json
 
 Roads (`roads.gd`, `sim.roads`): a level for every cell of the foot-wear grid (30 paces). A **trail** (level 1) emerges where foot wear passes `emerge_wear` and fades after `fade_days` with wear under `keep_wear`. Built `levels` (2 and up) have `needs` (conditions; packed earth needs the Road Making invention, stone also Bronze Casting), `cost` per cell (times `trail_discount` over an existing trail or road), `work` per cell, `speed` (how much faster people walk) and `look` (how the terrain shader paints it: 1 worn dirt, 2 packed earth, 3 stone). The Road tool, the Steward (an `improvements` entry with `"road"`) and a game master lay roads with `sim.roads.lay(a, b, level)`: the cells along the route over the fords (at most `max_cells`), built cell by cell on a `roadworks` site; `sim.roads.summary()` reads them.
+
+## discovery.json
+
+Finds are noticed by chance (`sim.find_chance(u, id)`, checked twice a second for everyone within `range`, or `seek_range` when searching): per second `groups[group].chance` x (1 + `per_lv` x their level in the group's `skill`: forage for foods, lore for medicines, craft for ores) x `traits` multipliers x `activity` (`seek` when searching for that group, `explore`, `gather`, `build`, `default`) x the find's rarity (`finds`). The find's own `needs` (lore, tools) still decide whether they can recognise it at all. An invention whose practice is complete breaks through each 2-second check with `inventions.chance` x (1 + `per_lv` x the best contributor's level in the skill for its kind).
+
+`seek`: the **search quest** (a Task Contract of kind `"seek"`): the kinds of place each group is looked for in (`forest`, `meadow`, `riverbank`, `hills`, `volcano`; the game picks up to `places` real places of those kinds, nearest first, and the leader chooses), `days` the search may last (`secs_per_day` of searching each), the `radius` the crew roams, and `crew_max`. The crew's finds are tallied on the contract (`flags.found`) and reported when it ends.

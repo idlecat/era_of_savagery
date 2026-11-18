@@ -40,6 +40,7 @@ static func propose(ctx: Dictionary) -> Dictionary:
 static func _propose(ctx: Dictionary) -> Dictionary:
 	if ctx.get("kind", "settle") == "research": return propose_research(ctx)
 	if ctx.get("kind", "settle") == "war": return propose_war(ctx)
+	if ctx.get("kind", "settle") == "seek": return propose_seek(ctx)
 	var arch: String = ctx["arch"]
 	var df: Dictionary = DEFAULTS.get(arch, DEFAULTS["cautious"])
 	var prev: Dictionary = ctx.get("previous", {})
@@ -412,3 +413,46 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 	for o in opts:
 		if allowed.is_empty() or o[0] in allowed: options.append({"effect": o[0], "label": o[1]})
 	return {"speech": speech, "options": options}
+
+# ------------------------------------------------------------ search quests (kind "seek")
+## What each temperament looks for when the Chieftain leaves it to them.
+const SEEK_TASTE := {"agrarian": "food", "mystic": "medicine", "warrior": "ore", "cautious": "food", "lazy": "food"}
+
+static func propose_seek(ctx: Dictionary) -> Dictionary:
+	var arch: String = ctx["arch"]
+	var env: Dictionary = ctx.get("env", {})
+	var places: Array = env.get("places_you_could_search", [])
+	var t: Dictionary = ctx.get("terms", {}) if ctx.get("terms_set", false) else {}
+	var prev: Dictionary = ctx.get("previous", {})
+	var msg: String = str(ctx.get("player_message", "")).to_lower()
+	var group: String = str(t.get("group", ctx.get("seek_group", SEEK_TASTE.get(arch, "food"))))
+	if group == "": group = SEEK_TASTE.get(arch, "food")
+	if places.is_empty():
+		return {"speech": I.t("Chieftain, I know of nowhere to look for that."), "blueprint": {}}
+	# where: the cautious stay near, the bold go far, the devout to the hills and the fire mountain
+	var pick := 0
+	match arch:
+		"warrior": pick = places.size() - 1
+		"mystic":
+			for p in places:
+				if not p.get("seen_before", true): pick = p["index"]
+	if _any(msg, ["far", "farther", "远"]): pick = places.size() - 1
+	if _any(msg, ["near", "close", "近"]): pick = 0
+	var dr: Array = env.get("days_you_may_search", [1, 3])
+	var days: int = {"cautious": 1, "lazy": 1, "warrior": 2, "mystic": 2, "agrarian": 2}.get(arch, 2)
+	if _any(msg, ["long", "longer", "more days", "久", "多几天"]): days = int(dr[1])
+	if _any(msg, ["quick", "short", "fast", "快", "短"]): days = int(dr[0])
+	days = clampi(int(prev.get("days", days)) if msg == "" and not prev.is_empty() else days, int(dr[0]), int(dr[1]))
+	var crew: int = clampi(t.get("crew_size", prev.get("crew_size", 2 if arch != "lazy" else 1)), 1, ctx.get("max_crew", 4))
+	var place: String = places[pick]["place"]
+	var what: String = I.t({"food": "new foods", "medicine": "healing plants", "ore": "stones and ores"}[group])
+	var line: String = {
+		"cautious": "Great Chieftain, we will look for %s in %s, close enough to come home before dark: %d day%s, no more.",
+		"warrior": "Ha! %s? Then we go far, to %s, where no one has looked: %d day%s of hunting for them!",
+		"mystic": "The spirits hide %s in %s. Give us %d day%s; we will listen to the ground.",
+		"agrarian": "Something new to eat, Chieftain! Let us look for %s in %s for %d day%s.",
+		"lazy": "*yawns* Mm. %s, then. In %s, not far. %d day%s.",
+	}.get(arch, "Great Chieftain, we will look for %s in %s, close enough to come home before dark: %d day%s, no more.")
+	var speech: String = I.t(line) % [what, place, days, I.plural_s() if days > 1 else ""]
+	return {"speech": speech,
+		"blueprint": {"kind": "seek", "plan_id": "search_%s" % group, "group": group, "place": places[pick]["index"], "days": days, "crew_size": crew}}

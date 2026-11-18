@@ -591,6 +591,10 @@ func assign_gather(u: E.Unit, res: String, opts := {}) -> void:
 		"dropoff": opts.get("dropoff", -1), "area": opts.get("area", null), "area_r": opts.get("area_r", 2000.0),
 		"bank": opts.get("bank", -1), "phase": "collect"}, opts.get("key", ""))
 func assign_build(u: E.Unit, s: E.Structure, key := "") -> void: set_job(u, {"type": "build", "struct_id": s.id}, key)
+## Roam around `center` (within r) looking for finds of `group` (a search quest).
+func assign_seek(u: E.Unit, center: Vector2, r: float, group: String, key := "") -> void:
+	set_job(u, {"type": "seek", "seek": group, "center": center, "r": r, "to": center}, key)
+
 func assign_attack(u: E.Unit, p: E.Predator, key := "") -> void: set_job(u, {"type": "attack", "target_id": p.id}, key)
 func assign_ritual(u: E.Unit, p: Vector2, key := "") -> void: set_job(u, {"type": "ritual", "at": p, "elapsed": 0.0}, key)
 func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void: set_job(u, {"type": "experiment", "at": p, "label": label}, key)
@@ -731,6 +735,16 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					if s.progress >= s.work: complete_structure(s, u)
 			else:
 				u.act = "Walking to " + sd["name"]
+		"seek":
+			u.act = {"food": "Searching for new foods", "medicine": "Searching for healing plants", "ore": "Searching for stones and ores"}.get(j["seek"], "Searching for new foods")
+			if approach(u, j["to"], 8, dt): # there: on to another likely spot
+				var c: Vector2 = j["center"]
+				for k in 8:
+					var q: Vector2 = c + Vector2.from_angle(randf() * TAU) * sqrt(randf()) * float(j["r"])
+					q = Vector2(clampf(q.x, 30, D.W - 30), clampf(q.y, 40, D.H - 40))
+					if not D.in_river(q) and D.region_at(q) == D.region_at(c):
+						j["to"] = q
+						break
 		"attack":
 			var p := pred_by_id(j["target_id"])
 			if p == null or p.dead or p.fled or p.fleeing:
@@ -1018,12 +1032,17 @@ func _finds_tick(dt: float) -> void:
 	find_t -= dt
 	if find_t > 0: return
 	find_t = 0.5
+	var rng_: float = float(DISC.get("range", 80))
+	var seek_rng: float = float(DISC.get("seek_range", 140))
 	for n in nodes:
 		if not D.FINDS.has(n.kind) or knows_find(n.kind) or not is_explored(n.pos): continue
-		for u in units:
-			if u.dead or u.sleeping or u.pos.distance_to(n.pos) > 80 or not can_recognise(u, n.kind): continue
-			discover_find(n.kind, u, n.pos)
-			break
+		for u in units: # (noticed by chance: skill, temperament and what they are doing count)
+			if u.dead or u.sleeping or u.role == "child": continue
+			var seeking: bool = u.job.get("seek", "") != ""
+			if u.pos.distance_to(n.pos) > (seek_rng if seeking else rng_) or not can_recognise(u, n.kind): continue
+			if randf() < 1.0 - exp(-find_chance(u, n.kind) * 0.5):
+				discover_find(n.kind, u, n.pos)
+				break
 	if has_tech("bronze") and _struct_exists("smelter") and day() != smelter_day and not rest_time():
 		smelter_day = day()
 		if stock["copper"] >= 1 and stock["tin"] >= 1:
@@ -1032,9 +1051,30 @@ func _finds_tick(dt: float) -> void:
 		else:
 			alert(tr("The smelter is cold: it needs copper and tin. Without them, no bronze arms the tribe."), D.VILLAGE, "warn")
 
+var DISC: Dictionary = preload("res://scripts/config.gd").load_cfg("discovery") # how things are discovered (odds)
+
+## The chance per second that `u` notices find `id` when near it (config/discovery.json):
+## the find's group, their skill in it, their temperament, what they are doing, its rarity.
+func find_chance(u: E.Unit, id: String) -> float:
+	var g: Dictionary = DISC.get("groups", {}).get(str(D.FINDS[id].get("group", "food")), {})
+	var p := float(g.get("chance", 0.005)) * (1.0 + float(g.get("per_lv", 0.3)) * u.lv(str(g.get("skill", "forage"))))
+	for t in g.get("traits", {}):
+		if u.has_trait(t): p *= float(g["traits"][t])
+	var act: Dictionary = DISC.get("activity", {})
+	var seek: String = str(u.job.get("seek", ""))
+	var jt: String = u.job.get("type", "")
+	var k := "default"
+	if seek != "": k = "seek" if seek == str(D.FINDS[id].get("group", "")) or seek == "any" else "explore" # (looking for something else: still keen-eyed)
+	elif jt in ["explore", "gather", "build"]: k = jt
+	p *= float(act.get(k, act.get("default", 1.0)))
+	return p * float(DISC.get("finds", {}).get(id, 1.0))
+
 func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	if knows_find(id): return
 	known_finds[id] = day()
+	if u and u.role == "contract": # a search quest's crew keeps a tally of what it found
+		var sc = contracts.by_id(u.contract_id)
+		if sc and sc.kind == "seek": sc.flags["found"] = sc.flags.get("found", []) + [id]
 	var fd: Dictionary = D.FINDS[id]
 	add_log(tr("Discovery! %s found %s: %s") % [tr(u.name), tr(fd["name"]), tr(fd["desc"])], "story", [u])
 	popup(at + Vector2(0, -40), tr("Discovered: %s") % tr(fd["name"]), Color("#ffd36b"), true)
