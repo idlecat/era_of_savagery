@@ -1,5 +1,5 @@
 {
- "_doc": "The chieftain's dilemmas, in the shared format run by story.gd (dilemma_view / dilemma_choose); see docs/CONFIG.md. A text is an English translation key, or [key, var names...] filled in order. Vars: speaker, pop, day, choice, fighters, chance_pct, plus those the rules supply (clan_name, chief, demand, festival...). Costs are numbers, var names or {per_pop: k}; cost_note false leaves the cost out of the description (it already says it).",
+ "_doc": "The chieftain's dilemmas, in the shared format run by story.gd (dilemma_view / dilemma_choose); see docs/CONFIG.md. A text is an English translation key, or [key, var names...] filled in order. Vars: speaker, pop, day, choice, fighters, chance_pct, plus those the rules supply (clan_name, chief, demand, festival...). Costs are numbers, var names or {per_pop: k}; cost_note false leaves the cost out of the description (it already says it). routine: {prefer: [option indexes]} marks a routine matter the Steward may decide.",
  "flood": {
   "title": "The Great Flood Warning",
   "speaker": "best:lore",
@@ -468,7 +468,14 @@
     ],
     "result": "No festival this time. The people work on, but their hearts are heavy."
    }
-  ]
+  ],
+  "routine": {
+   "_doc": "A routine matter: with a Steward appointed (and the player letting the Steward decide routine matters), the Steward picks the first of these options that can be chosen, and it is only reported, not asked.",
+   "prefer": [
+    1,
+    2
+   ]
+  }
  },
  "contact": {
   "title": [

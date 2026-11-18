@@ -76,6 +76,7 @@ func _initialize() -> void:
 	test_lands()
 	test_roads()
 	test_discovery_odds()
+	test_routine_matters()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2501,3 +2502,29 @@ func test_discovery_odds() -> void:
 		if c.status == "done": break
 	check(c.status == "done" and not s2.living().any(func(u): return u.role == "contract" and u.contract_id == c.id), "the search ends and the crew comes home")
 	check(s2.log_lines.any(func(e): return "The search" in e["text"] and "Wild Honey" in e["text"]), "the chronicle tells what they found")
+
+func test_routine_matters() -> void:
+	print("\n== The Steward decides routine matters ==")
+	var sim = _new_sim()
+	sim.stock["food"] = 200
+	var asked := []
+	sim.event_fired.connect(func(id): asked.append(id))
+	sim._fire_event("festival")
+	check(asked == ["festival"] and sim.pending_event == "festival", "without a Steward, the festival is asked")
+	sim.resolve_event("festival", 2)
+	sim.paused = false # (the HUD unpauses after a choice)
+	sim.appoint(sim.living()[0], "steward")
+	asked.clear()
+	var food0: float = sim.stock["food"]
+	sim._fire_event("festival")
+	check(asked.is_empty() and sim.pending_event == "" and not sim.paused, "with a Steward it is decided, not asked")
+	check(sim.stock["food"] < food0 and sim.log_lines.any(func(e): return "routine matter" in e["text"]), "a small gathering, reported in the chronicle")
+	sim.stock["food"] = 0
+	sim._fire_event("festival")
+	check(asked.is_empty() and sim.log_lines[0]["text"].contains("No festival"), "with no food to spare, no festival this time")
+	sim.steward_routine = false
+	sim._fire_event("festival")
+	check(asked == ["festival"], "and the player can take routine matters back")
+	sim.resolve_event("festival", 2)
+	sim._fire_event("overpop")
+	check(sim.pending_event == "overpop", "matters that are not routine are always asked")

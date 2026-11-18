@@ -2205,11 +2205,33 @@ func _check_events() -> void:
 	elif not rivals.pending.is_empty():
 		_fire_event(rivals.pending.pop_front())
 
+var steward_routine := true # the Steward decides routine matters (dilemmas with "routine"); a player setting
+
 func _fire_event(id: String) -> void:
 	cult.on_event(id)
+	if _decide_routine(id): return
 	pending_event = id
 	paused = true
 	event_fired.emit(id)
+
+## A routine dilemma (config "routine": {"prefer": [option indexes]}) is the Steward's to
+## decide when one is appointed: the first preferred option that can be chosen, reported in
+## the chronicle and as a notice instead of asked. Returns true if it was decided.
+func _decide_routine(id: String) -> bool:
+	if not steward_routine or not DILEMMAS.has(id) or not DILEMMAS[id].has("routine"): return false
+	var st := unit_by_id(vice["steward"])
+	if st == null or st.dead: return false
+	var view: Dictionary = event_def(id)
+	for idx in DILEMMAS[id]["routine"].get("prefer", []):
+		var i := int(idx)
+		if i < 0 or i >= view.get("options", []).size() or not view["options"][i].get("enabled", true): continue
+		var label: String = view["options"][i]["label"]
+		pending_event = id
+		resolve_event(id, i)
+		add_log(tr("Steward %s decided the routine matter of %s: %s.") % [tr(st.name), view.get("title", id), label], "vice", [st])
+		alert(tr("Steward %s decided: %s") % [tr(st.name), label], D.VILLAGE, "info", [st])
+		return true
+	return false
 
 func flood_strike() -> void:
 	cult.on_event("great_flood")

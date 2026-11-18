@@ -2067,4 +2067,10 @@ const STRINGS := {
 	"The spirits hide %s in %s. Give us %d day%s; we will listen to the ground.": "神灵把%s藏在%s。给我们 %d 天%s，我们会倾听大地。",
 	"Something new to eat, Chieftain! Let us look for %s in %s for %d day%s.": "有新东西可吃了，首领！让我们去找%s，地点在%s，找 %d 天%s。",
 	"*yawns* Mm. %s, then. In %s, not far. %d day%s.": "*打哈欠* 嗯。那就%s吧。在%s，不远。%d 天%s。",
+	"Steward %s decided the routine matter of %s: %s.": "管家%s决定了例行事务“%s”：%s。",
+	"Steward %s decided: %s": "管家%s决定：%s",
+	"Task Contract complete: '%s' (%s)": "任务契约完成：“%s”（%s）",
+	"Steward decides routine matters": "管家处理例行事务",
+	"Routine questions, like whether to hold a festival this season, are decided by the Steward and only reported. Without a Steward they are asked.": "例行事务（比如这个季节是否举办节庆）由管家决定，只做汇报。没有管家时会询问你。",
+	"A trader of the %s has come: click to trade": "%s的商人来了：点击进行交易",
 }

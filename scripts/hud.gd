@@ -41,6 +41,8 @@ var build_btns := {}
 var modal: Control = null
 # ---- achievement celebrations (one dialog per first, queued; see _show_feat)
 var feat_popups := true # the player can switch them off; the screenshot harness does
+var NOTICES: Dictionary = preload("res://scripts/config.gd").load_cfg("notices") # what opens a dialog, what only a banner
+var last_modal_closed := -1000000 # (msec) a waiting achievement dialog keeps its distance
 var feat_queue: Array = []
 var feat_token := -1 # modal_token of the open achievement dialog (-1: none)
 var feat_resume = null # sim.paused before the first dialog of a run
@@ -216,9 +218,10 @@ func _build_alerts(root: Control) -> void:
 	root.add_child(alert_box)
 
 func _on_alert(a: Dictionary) -> void:
-	var col: Color = {"danger": Color("#ff8a7a"), "warn": Color("#ffd36b")}.get(a["level"], Color("#cfe8ff"))
+	var col: Color = {"danger": Color("#ff8a7a"), "warn": Color("#ffd36b"), "feat": Color("#f0d070")}.get(a["level"], Color("#cfe8ff"))
 	var b := _button(("⚠ " if a["level"] == "danger" else "") + a["text"], func():
-		if a["pos"] != Vector2.ZERO: world.focus_on(a["pos"]), tr("Click to look") if a["pos"] != Vector2.ZERO else "")
+		if a.get("action") is Callable: a["action"].call() # (a notice with something to do: open it)
+		elif a["pos"] != Vector2.ZERO: world.focus_on(a["pos"]), tr("Click to look") if a["pos"] != Vector2.ZERO else "")
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.add_theme_color_override("font_color", col)
 	b.add_theme_font_size_override("font_size", 16)
@@ -557,6 +560,12 @@ func _build_right(root: Control) -> void:
 	auto.button_pressed = sim.improve.on
 	auto.toggled.connect(func(b): sim.improve.on = b)
 	v.add_child(auto)
+	var routine := CheckBox.new()
+	routine.text = "Steward decides routine matters"
+	routine.tooltip_text = "Routine questions, like whether to hold a festival this season, are decided by the Steward and only reported. Without a Steward they are asked."
+	routine.button_pressed = sim.steward_routine
+	routine.toggled.connect(func(b): sim.steward_routine = b)
+	v.add_child(routine)
 	v.add_child(_header("NEIGHBORING CLANS"))
 	clans_text = _rich(0, true)
 	v.add_child(clans_text)
@@ -611,6 +620,12 @@ func _map_tip(delta: float) -> void:
 func _process(delta: float) -> void:
 	if minimap: minimap.queue_redraw()
 	_feat_tick()
+	if not trader_wait.is_empty() and (sim.pending_event != trader_wait["id"] or sim.time > float(trader_wait["until"])) and modal == null:
+		if sim.pending_event == trader_wait["id"]: # nobody came to trade: the trader goes home
+			var opts: Array = sim.event_def(trader_wait["id"]).get("options", [])
+			sim.resolve_event(trader_wait["id"], opts.size() - 1)
+			sim.paused = false
+		trader_wait = {}
 	_map_tip(delta)
 	_expire_alerts()
 	refresh_t -= delta
@@ -1200,6 +1215,7 @@ func _close_modal() -> void:
 	if modal:
 		modal.queue_free()
 		modal = null
+		last_modal_closed = Time.get_ticks_msec()
 
 func _show_intro() -> void:
 	var v := _open_modal(tr("Era of Savagery · Clan Chronicles"))
@@ -1559,6 +1575,10 @@ func _on_interrupt(c) -> void:
 		opts.add_child(tb)
 
 func _toast_contract_done(c) -> void:
+	if NOTICES.get("contract_done", "notice") != "dialog": # (a banner: click it to look at the site)
+		var ld0 = sim.unit_by_id(c.leader_id)
+		_on_alert({"level": "info", "text": tr("Task Contract complete: '%s' (%s)") % [c.plan["plan_id"], tr(ld0.name) if ld0 else ""], "pos": c.site})
+		return
 	if modal: return
 	var v := _open_modal(tr("Task Contract Complete · %s") % c.plan["plan_id"], 700)
 	var ld = sim.unit_by_id(c.leader_id)
@@ -1579,10 +1599,21 @@ func _toast_contract_done(c) -> void:
 	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = was_paused))
 
 # ------------------------------------------------------------ milestone events
-func _on_event(id: String) -> void:
+var trader_wait := {} # a trader's market waiting behind a notice: {"id", "until"}
+
+func _on_event(id: String, open_now := false) -> void:
 	if sim.legacy.owns_event(id):
 		_show_ending(id)
 		return
+	if id.begins_with("trade_") and not open_now and NOTICES.get("trader", "notice") == "notice":
+		# an offer, not a crisis: a banner; the game goes on, and the trader leaves after a while
+		sim.paused = false
+		trader_wait = {"id": id, "until": sim.time + float(NOTICES.get("trader_wait", 60))}
+		var c: Dictionary = sim.rivals.clans.get(id.trim_prefix("trade_"), {})
+		_on_alert({"level": "warn", "text": tr("A trader of the %s has come: click to trade") % tr(c.get("name", "")), "pos": D.VILLAGE,
+			"action": func(): if sim.pending_event == id and modal == null: _on_event(id, true)})
+		return
+	trader_wait = {}
 	var d: Dictionary = sim.event_def(id)
 	var v := _open_modal("☼ " + d["title"], 820)
 	var txt := _rich(0, true)
@@ -2319,8 +2350,12 @@ func _set_feat_pref(on: bool) -> void:
 	cf.set_value("ui", "feat_popups", on)
 	cf.save(SETTINGS_CFG)
 
+## A first of the tribe: the big ones (config/notices.json feat_dialog) get a dialog, the
+## others a banner that shows where it happened.
 func _on_feat(f: Dictionary) -> void:
-	if feat_popups: feat_queue.append(f)
+	if not feat_popups: return
+	if f.get("kind", "") in NOTICES.get("feat_dialog", []): feat_queue.append(f)
+	else: _on_alert({"level": "feat", "text": "%s %s" % [FEAT_SYMBOLS.get(f.get("kind", ""), "★"), f.get("text", "")], "pos": f.get("at", Vector2.ZERO) if f.get("at") is Vector2 else Vector2.ZERO})
 
 ## Once a frame: notice when the achievement dialog was closed (button or Esc), and show
 ## the next one when nothing else is on screen.
@@ -2333,7 +2368,7 @@ func _feat_tick() -> void:
 			sim.paused = feat_resume
 			feat_resume = null
 		return
-	if modal == null and sim.pending_event == "": _show_feat()
+	if modal == null and sim.pending_event == "" and Time.get_ticks_msec() - last_modal_closed >= int(float(NOTICES.get("gap", 25)) * 1000): _show_feat()
 
 ## A picture of the world around `at` (world space), drawn by a second camera that shares
 ## the world but not the HUD.
