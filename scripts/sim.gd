@@ -14,6 +14,7 @@ const Improve = preload("res://scripts/improve.gd")
 const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
+const Names = preload("res://scripts/names.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -120,6 +121,7 @@ func _init() -> void:
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
 	director = Director.new(self)
+	Names.install() # (built names are translation keys: a loaded game needs them too)
 	story = Story.new(self)
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
@@ -1794,6 +1796,12 @@ func tick(dt: float) -> void:
 	if flood_fx > 0: flood_fx = maxf(0, flood_fx - dt * 0.08)
 	_check_events()
 
+## Every name already given in this game (the living and the dead).
+func _names_taken() -> Dictionary:
+	var out := {}
+	for u in units: out[u.name] = true
+	return out
+
 func _update_births(dt: float) -> void:
 	var pop := living().size()
 	var cb: Dictionary = RULES["births"]
@@ -1803,7 +1811,7 @@ func _update_births(dt: float) -> void:
 			birth_timer = 0
 			stock["food"] -= float(cb["cost"])
 			var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
-			var nm: String = free.pick_random() if not free.is_empty() else "Nameless"
+			var nm: String = free.pick_random() if not free.is_empty() else Names.pick(_names_taken()) # (the culture's names first, then names built from parts)
 			var parents: Array = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
 			var u: E.Unit = folk.make_child(nm, parents.pick_random() if not parents.is_empty() else null)
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)

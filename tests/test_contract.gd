@@ -72,6 +72,7 @@ func _initialize() -> void:
 	test_leaders_and_the_ways()
 	test_crisis()
 	test_director()
+	test_names()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2302,3 +2303,40 @@ func test_director() -> void:
 	var s3 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s3, data)
 	check(s3.director.mercy_ready == s2.director.mercy_ready, "the director's state is saved")
+
+func test_names() -> void:
+	print("\n== Names for the newborn (config/names.json) ==")
+	var N = preload("res://scripts/names.gd")
+	check(N.count() > 5000, "the parts make thousands of names (%d)" % N.count())
+	var sim = _new_sim()
+	var taken := {}
+	for u in sim.units: taken[u.name] = true
+	var made: Array = []
+	for i in 400:
+		var nm: String = N.pick(taken)
+		taken[nm] = true
+		made.append(nm)
+	var uniq := {}
+	for nm in made: uniq[nm] = true
+	check(uniq.size() == 400 and not made.has("Nameless"), "400 newborns, 400 different names (%s...)" % ", ".join(made.slice(0, 6)))
+	var Ncfg: Dictionary = preload("res://scripts/config.gd").load_cfg("names")
+	var surnames: Array = Ncfg["surnames"].map(func(s): return s[0] + " ")
+	var adjs: Array = Ncfg["adjectives"].map(func(a): return a[0] + " ")
+	var clan: int = made.filter(func(n): return surnames.any(func(s): return n.begins_with(s))).size()
+	var nature: int = made.filter(func(n): return adjs.any(func(a): return n.begins_with(a))).size()
+	check(clan > 50 and nature > 150, "both nature names (%d) and clan names (%d)" % [nature, clan])
+	I18N.setup("zh")
+	var bad: Array = made.filter(func(n): return I18N.t(n) == n or I18N.t(n).length() != 2)
+	check(bad.is_empty(), "every one has a two-character Chinese name (%s)" % ", ".join(made.slice(0, 6).map(func(n): return I18N.t(n))))
+	I18N.setup("en")
+	# when the culture's names run out, the tribe still names its children
+	D.BIRTH_NAMES = []
+	sim.stock["food"] = 500
+	sim.birth_timer = 9999.0
+	var n0: int = sim.units.size()
+	for i in 3:
+		sim.birth_timer = 9999.0
+		sim._update_births(0.1)
+	var kids: Array = sim.units.slice(n0)
+	check(kids.size() >= 1 and kids.all(func(u): return u.name != "Nameless" and u.name != ""), "newborns get built names (%s)" % ", ".join(kids.map(func(u): return u.name)))
+	D.BIRTH_NAMES = D.BASE_BIRTH_NAMES.duplicate()

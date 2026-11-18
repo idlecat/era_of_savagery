@@ -13,6 +13,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/policies.json` | `policy.gd` | the Council's standing policies: their choices, effects, culture drift, unlocks, who likes them and what they say |
 | `config/emergency.json` | `crisis.gd` | emergency mode: when it starts, how slow time runs, who is in it, when it ends, the orders and their numbers |
 | `config/director.json` | `director.gd` | pacing: what each hardship weighs, how much the tribe can take per challenge level, when it is in distress, and the mercy gifts |
+| `config/names.json` | `names.gd` | names for the newborn once the culture's own are used up: the parts (adjectives, animals, plants and things of nature, old Chinese surnames) and how they combine |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -155,3 +156,7 @@ Emergency mode (`crisis.gd`, `sim.crisis`). `triggers.attack`: a beast or raider
 The director (`director.gd`, `sim.director`) paces the hardships. Everything that goes wrong adds its `weights` entry to a tension score, which eases by the level's `decay` per day (a kind counts once per `same_secs`; every death counts). Before a rolled hardship starts (weather, wolves, tiger raids, sickness, lightning, earthquakes, the volcano, eclipses, clan raids and demands, an emergency) the rule asks `sim.director.allow(kind)`: it may if tension plus its weight stays within the level's `cap`; else it is put off by `retry` seconds or skips its roll. Unrolled hardships (the seasons' floods, scripted events, deaths) always happen and count. A kind without a weight is never held back; with the challenges off the director rests.
 
 `distress` (food under `food_per_head` a person, `deaths` within `death_days`, or mood under `mood`) drops the cap to `mercy.cap`, and every `mercy.cooldown_days` the first `mercy.gifts` entry whose `when` holds runs its `do` actions. `tools/pacing.gd` measures the result (per-day CSV from headless games).
+
+## names.json
+
+Names for people born into the tribe once the culture's `birth_names` are all given (`names.gd`). `patterns` combine two lists of parts: `nature` puts an adjective before an animal, plant or thing of nature (`Little Fox`, 小狐) and `clan` an old Chinese surname before a nature word's pinyin (`Jiang Song`, 姜松); `weight` sets how often each is used. Parts are `[English, Chinese]` (and `given` adds the pinyin). The English form is the name and its translation key: every combination (about 11,000) is registered for Chinese at startup, so built names translate in loaded games too. A name is never given twice.
