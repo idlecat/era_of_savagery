@@ -123,6 +123,7 @@ class Structure:
 	var reno_progress: float = 0.0
 	var upgrade: String = "" # being rebuilt into this structure type (with reno = true)
 	var size: float = 0.0 # a wall's chosen radius (0 = the type's own r)
+	var cells: Array = [] # road works: [[wear cell, road level]...] in building order (roads.gd)
 	var decor: int = 0 # painted decorations, 0..3
 	var graves: Array = [] # burial ground: [{name, day, lost, pos}]
 

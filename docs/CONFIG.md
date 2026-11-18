@@ -15,6 +15,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/director.json` | `director.gd` | pacing: what each hardship weighs, how much the tribe can take per challenge level, when it is in distress, and the mercy gifts |
 | `config/names.json` | `names.gd` | names for the newborn once the culture's own are used up: the parts (adjectives, animals, plants and things of nature, old Chinese surnames) and how they combine |
 | `config/lands.json` | `lands.gd`, `sim.gd`, `world_view.gd` | the kinds of land (steppe, parkland, woodland, old forest): how wooded, and the grass, bushes, herds, weather and wildfire that go with it; which random maps get |
+| `config/roads.json` | `roads.gd` | trails that emerge from feet and fade when abandoned; the road levels the tribe can build (packed earth, stone): what they need, cost and take to build, and how much faster people walk on them |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -165,3 +166,7 @@ Names for people born into the tribe once the culture's `birth_names` are all gi
 ## lands.json
 
 The kind of land a map is (`lands.gd`, `D.LAND`). Each land has `woods` (`count`: forests, x the base 80 per standard area; `trees` and `spread` per forest; `follow`: how strictly forests keep to the wet ground of a woodland noise map, so woods gather into woodlands with meadows between; `river`: more woods near rivers), `moisture` (0 dry, 1 wet: grass colour and dry patches), `bushes` and `herds` (multipliers), `weather` (chance multipliers per weather kind) and `wildfire` (spread). Random maps pick one by the weights in `random` (or the player's New Game choice) and vary `count`, `bushes`, `herds` and `moisture` by `jitter`, all from the map seed; scenarios name theirs (`"land"` in the map spec), else `default`. The Ford is parkland with `follow` 0, so its woods are as they always were. Personas are told the land (`evo.world_ctx()["the_land"]`).
+
+## roads.json
+
+Roads (`roads.gd`, `sim.roads`): a level for every cell of the foot-wear grid (30 paces). A **trail** (level 1) emerges where foot wear passes `emerge_wear` and fades after `fade_days` with wear under `keep_wear`. Built `levels` (2 and up) have `needs` (conditions; packed earth needs the Road Making invention, stone also Bronze Casting), `cost` per cell (times `trail_discount` over an existing trail or road), `work` per cell, `speed` (how much faster people walk) and `look` (how the terrain shader paints it: 1 worn dirt, 2 packed earth, 3 stone). The Road tool, the Steward (an `improvements` entry with `"road"`) and a game master lay roads with `sim.roads.lay(a, b, level)`: the cells along the route over the fords (at most `max_cells`), built cell by cell on a `roadworks` site; `sim.roads.summary()` reads them.

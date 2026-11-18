@@ -1,0 +1,15 @@
+{
+ "_doc": "Roads (roads.gd, sim.roads): a level for every 30-pace cell of the land (the foot-wear grid). Level 0 is open ground. A trail emerges by itself where people walk again and again (foot wear above emerge_wear) and fades after fade_days without enough feet (below keep_wear). Built levels come from the Road tool (or the Steward): needs (conditions), cost per cell (cheaper by trail_discount over an existing trail or road), work per cell; they never fade. speed: how much faster people walk on it. look: how the terrain shader paints it (1 worn dirt, 2 packed earth, 3 stone).",
+ "emerge_wear": 0.5,
+ "keep_wear": 0.12,
+ "fade_days": 4,
+ "trail_discount": 0.5,
+ "max_cells": 160,
+ "levels": [
+  {"id": "trail", "name": "Trail", "speed": 1.1, "look": 1},
+  {"id": "packed", "name": "Packed-earth road", "desc": "Stamped earth with ditches at its sides: people walk a quarter faster.", "speed": 1.25, "look": 2,
+   "needs": {"invention": "road_making"}, "cost": {"wood": 1}, "work": 2.5},
+  {"id": "stone", "name": "Stone road", "desc": "Flat stones laid in packed earth: people walk 40% faster, in any weather.", "speed": 1.4, "look": 3,
+   "needs": {"invention": "road_making", "tech": "bronze"}, "cost": {"stone": 1}, "work": 4.0}
+ ]
+}

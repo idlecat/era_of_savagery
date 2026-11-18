@@ -63,6 +63,9 @@ func wanted() -> Array:
 	var out: Array = []
 	var reserve := float(C.get("wood_reserve", 10))
 	for r in C.get("list", []):
+		if r.has("road"):
+			if not _road_cells(r).is_empty() and sim.story.holds(r.get("when", {})): out.append(r)
+			continue
 		if r.has("upgrade"):
 			if _upgrade_target(r) != null and sim.story.holds(r.get("when", {})): out.append(r)
 			continue
@@ -76,6 +79,20 @@ func wanted() -> Array:
 		if spot(st, str(r.get("near", "village"))) == Vector2.INF: continue
 		out.append(r)
 	return out
+
+## For a road entry ({"road": level id, "cells": n}): the busiest trails near the village to
+## make into that road ([] if none worth it, it can't be built or paid for yet, or a road is
+## already being built).
+func _road_cells(r: Dictionary) -> Array:
+	var R = sim.roads
+	var lv: int = R.index_of(str(r["road"]))
+	if R.build_block(lv) != "" or sim.structures.any(func(s): return s.type == "roadworks"): return []
+	var cells: Array = R.busiest_trails(D.VILLAGE, float(C.get("reach", 450)) * 1.5, int(r.get("cells", 40)), lv)
+	if cells.size() < int(r.get("min_cells", 8)): return []
+	var c: Dictionary = R.cost(cells, lv)
+	for k in c:
+		if sim.stock.get(k, 0.0) < float(c[k]) + float(C.get("wood_reserve", 10)): return []
+	return cells
 
 ## For an upgrade entry ({"upgrade": from type, "structure": to}): the village's building
 ## to upgrade (the one nearest the village that can be upgraded now), or null.
@@ -154,6 +171,13 @@ func order(structure: String, why := "") -> String:
 
 func _build(r: Dictionary, speech: String, by: String) -> void:
 	var st: String = r["structure"]
+	if r.has("road"):
+		var cells := _road_cells(r)
+		if cells.is_empty() or sim.roads.lay_cells(cells, sim.roads.index_of(str(r["road"]))) != "": return
+		var rw = sim.structures.filter(func(s): return s.type == "roadworks").back()
+		if rw: sites.append(rw.id)
+		_note(st, str(r.get("reason", "")), speech, by)
+		return
 	if r.has("upgrade"):
 		var t = _upgrade_target(r)
 		if t == null or sim.upgrade(t.id, st) != "": return

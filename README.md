@@ -112,6 +112,10 @@ The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death
 
 A random map is one of four kinds of land, picked from its seed or on the New Game screen: **Steppe** (open grassland, a few copses by the water, big herds, dry grass, droughts and fast fires), **Parkland** (meadows and scattered woods, the classic map), **Woodland** (large woods with meadows between them, fewer deer, more rain) or **Old forest** (deep forest with a few clearings, damp, little game). Forests gather where a hidden moisture map is wet and along the rivers, and the grass colour, berry bushes, herds, weather and wildfire all follow the land; within a kind, each map varies a little. The numbers are in `config/lands.json`.
 
+## Trails and roads (`roads.gd`)
+
+Where people walk again and again, a **trail** appears by itself (they walk 10% faster on it) and fades if no one uses it for days. Once the tribe has stone tools and enough building and walking behind it, it discovers **Road Making**, and the **Road** tool lays a **packed-earth road** (25% faster; a little wood a stretch, half over a trail): click where it begins and where it ends, and the workers build it stretch by stretch along the route, over the fords. In the Bronze Age the same tool lays **stone roads** (40% faster, stone). The Steward also makes the most trodden trails near the village into roads. The levels and numbers are in `config/roads.json`.
+
 ## Sound and music (`audio.gd`, `synth.gd`)
 
 Every sound is made in code from a recipe in `config/audio.json`; there are no sound files. The music is drums, a bone flute that wanders over a pentatonic scale, and a drone, and it changes mood with the day, night, winter, danger and festivals. People near the camera can be heard at work (chopping, quarrying, building, fighting), wild beasts growl, and the land has wind, rain, storms, crickets at night, the crackle of bonfires and the river. Alerts, discoveries, finished buildings, dilemmas and achievements each have their cue. The **Sound** button sets the master, music, effects and ambience volumes, or mutes everything (remembered between games).

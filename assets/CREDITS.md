@@ -13,3 +13,5 @@ redistribute, no attribution required. It is listed here anyway, with thanks.
 | `dry.jpg` | [Withered Grass](https://polyhaven.com/a/withered_grass) (1K diffuse) |
 | `dirt.jpg` | [Brown Mud Dry](https://polyhaven.com/a/brown_mud_dry) (1K diffuse) |
 | `forest.jpg` | [Forest Leaves 02](https://polyhaven.com/a/forest_leaves_02) (1K diffuse) |
+| `road_packed.jpg` | [Rocky Trail](https://polyhaven.com/a/rocky_trail) (1K diffuse) |
+| `road_stone.jpg` | [Grey Stone Path](https://polyhaven.com/a/grey_stone_path) (1K diffuse) |

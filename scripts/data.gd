@@ -491,6 +491,8 @@ const STRUCTURES := {
 	"smelter":      {"name": "Bronze Smelter", "desc": "Arms the tribe in bronze (+60% ATK, +3 DEF) while it has copper and tin; it uses one of each per day.", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
 	"council_ring": {"name": "Council Ring", "desc": "A trickle of lore. Where the chiefs of the clans can meet: needed for Victory by Unity.", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
 	# laid out by the tribe itself when the first of them dies (not in the build menu)
+	# a road being built, cell by cell (roads.gd lay(); not in the build menu: the Road tool)
+	"roadworks": {"name": "Road works", "desc": "A road being laid, stretch by stretch.", "wood": 0, "work": 1.0, "r": 12.0},
 	"burial_ground": {"name": "Burial Ground", "desc": "Where the tribe lays its dead to rest.", "wood": 0, "work": 1.0, "r": 40.0},
 }
 ## Homes and walls get a new look per era (style = era they were built or renovated in).
@@ -529,6 +531,8 @@ const BASE_INVENTIONS := [
 		"desc": "Stones hurled from afar: +2 attack for everyone.", "hint": "Comes to hunters who also work stone."},
 	{"id": "carrying_frame", "kind": "tool", "name": "Carrying Frame", "practice": {"chop": 300.0}, "needs": {}, "effects": [{"stat": "carry", "add": 3}],
 		"desc": "A frame of bent poles worn on the back: everyone carries 3 more.", "hint": "Comes from hauling a great deal of timber."},
+	{"id": "road_making", "kind": "tool", "name": "Road Making", "practice": {"build": 200.0, "explore": 60.0}, "needs": {"techs": ["tools"]}, "effects": [],
+		"desc": "Stamped earth over the worn trails: the tribe can build roads (the Road tool), and walk faster on them.", "hint": "After stone tools: much building, and long walks."},
 	{"id": "bone_needle", "kind": "tool", "name": "Bone Needle", "practice": {"hunt": 120.0}, "needs": {"techs": ["hide"]}, "effects": [{"stat": "cold", "mul": 0.7}],
 		"desc": "Fitted, stitched clothes: the cold bites 30% less.", "hint": "Needs Hide Tailoring, and many hides."},
 	{"id": "baskets", "kind": "goods", "name": "Woven Baskets", "practice": {"berry": 250.0, "chop": 100.0}, "needs": {}, "effects": [{"stat": "store", "add": 30}],

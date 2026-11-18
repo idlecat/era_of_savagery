@@ -18,14 +18,19 @@ uniform sampler2D t_meadow : repeat_enable, filter_linear_mipmap_anisotropic;
 uniform sampler2D t_dry : repeat_enable, filter_linear_mipmap_anisotropic;
 uniform sampler2D t_dirt : repeat_enable, filter_linear_mipmap_anisotropic;
 uniform sampler2D t_forest : repeat_enable, filter_linear_mipmap_anisotropic;
+uniform sampler2D t_road_packed : repeat_enable, filter_linear_mipmap_anisotropic;
+uniform sampler2D t_road_stone : repeat_enable, filter_linear_mipmap_anisotropic;
 uniform vec3 m_grass = vec3(0.4);  // the textures' mean colours (to tint them toward the map)
 uniform vec3 m_grass2 = vec3(0.4);
 uniform vec3 m_meadow = vec3(0.4);
 uniform vec3 m_dry = vec3(0.4);
 uniform vec3 m_dirt = vec3(0.4);
 uniform vec3 m_forest = vec3(0.4);
+uniform vec3 m_road_packed = vec3(0.4);
+uniform vec3 m_road_stone = vec3(0.4);
 uniform vec2 world_size = vec2(3600.0, 2400.0);
 uniform vec2 wear_size = vec2(3600.0, 2400.0);
+uniform float cell_size = 30.0; // a wear/road cell, in world units
 uniform float tile = 150.0;      // world units one ground texture covers
 uniform float realism = 0.55;    // 0: the map's colour with the photo's detail; 1: the photo's own colour
 uniform float clouds = 0.16;     // how dark the drifting cloud shadows get
@@ -65,7 +70,15 @@ void fragment() {
 	vec3 landc;
 	if (use_photo > 0.5) {
 		vec4 mk = texture(mask_tex, UV);
-		float worn = texture(wear_tex, wp / wear_size).a;
+		vec4 wt = texture(wear_tex, wp / wear_size);
+		float worn = wt.a;
+		// the road's look (roads.gd): 1 trail, 2 packed earth, 3 stone. Roads are laid in square
+		// cells: taking the strongest of five nearby samples fills their diagonal steps into a
+		// smooth band (and gives the road a little width).
+		vec2 wc = wp / wear_size;
+		vec2 hc = vec2(cell_size * 0.45) / wear_size;
+		float road = max(max(wt.r, max(texture(wear_tex, wc + vec2(hc.x, hc.y)).r, texture(wear_tex, wc + vec2(-hc.x, hc.y)).r)),
+			max(texture(wear_tex, wc + vec2(hc.x, -hc.y)).r, texture(wear_tex, wc + vec2(-hc.x, -hc.y)).r)) * 255.0 / 80.0;
 		// large slow patches: lush green, olive, dry (like sun and soil differ across a meadow)
 		float p1 = texture(grass_tex, wp / 1300.0 + vec2(0.13, 0.71)).r;
 		float p2 = texture(grass_tex, wp / 620.0 + vec2(0.55, 0.29)).r;
@@ -86,6 +99,16 @@ void fragment() {
 		float soil = clamp(max(mk.r, smoothstep(0.08, 0.45, worn)), 0.0, 1.0);
 		soil *= 0.75 + 0.5 * smoothstep(0.3, 0.7, g2); // (ragged edges: grass creeps in)
 		landc = mix(landc, dirt, clamp(soil, 0.0, 0.95));
+		// built roads: packed earth with darker ditch edges, then laid stone (ragged edges)
+		float jag = (g2 - 0.5) * 0.35;
+		float packed_k = smoothstep(1.3 + jag, 1.75 + jag, road);
+		float stone_k = smoothstep(2.3 + jag, 2.75 + jag, road);
+		float ditch = smoothstep(0.95, 1.35, road + jag) * (1.0 - smoothstep(1.45, 1.8, road + jag));
+		landc *= 1.0 - 0.22 * ditch;
+		vec3 packed = tinted(photo(t_road_packed, wp, 0.5), m_road_packed, vec3(0.56, 0.48, 0.36));
+		landc = mix(landc, packed, packed_k);
+		vec3 stone = tinted(photo(t_road_stone, wp, 0.35), m_road_stone, vec3(0.52, 0.50, 0.46));
+		landc = mix(landc, stone, stone_k);
 	} else {
 		landc = col * (0.80 + 0.36 * g1) * (0.90 + 0.20 * g2);
 		landc += vec3(0.07, 0.08, 0.02) * smoothstep(0.62, 0.92, g3);

@@ -74,6 +74,7 @@ func _initialize() -> void:
 	test_director()
 	test_names()
 	test_lands()
+	test_roads()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -332,7 +333,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2375,3 +2376,70 @@ func test_lands() -> void:
 	var sim2 = _new_sim()
 	check(sim2.evo.world_ctx().get("the_land", "").contains("Steppe"), "the personas know the land they live on")
 	Scenarios.apply()
+
+func test_roads() -> void:
+	print("\n== Trails and roads (config/roads.json) ==")
+	var sim = _new_sim()
+	var R = sim.roads
+	check(R.level.size() == sim.wear.size() and R.summary()["cells"].is_empty(), "the land starts without roads")
+	# feet make a trail
+	var p: Vector2 = D.VILLAGE + Vector2(200, 0)
+	var k: int = R.cell(p)
+	sim.wear[k] = 0.7
+	R._t = 0.0
+	R.update(0.1)
+	check(R.level[k] == 1 and R.speed_at(p) > 1.0, "where people walk again and again, a trail appears (x%.2f speed)" % R.speed_at(p))
+	var u = sim.living()[0]
+	u.pos = p
+	var on_trail: float = sim.unit_speed(u)
+	u.pos = D.VILLAGE + Vector2(-600, 300)
+	check(on_trail > sim.unit_speed(u), "and people walk faster on it")
+	sim.wear[k] = 0.05
+	for i in int(R.C["fade_days"] * D.DAY_LEN) + 5:
+		R._t = 0.0
+		R.update(0.1)
+	check(R.level[k] == 0, "an abandoned trail fades back into grass")
+	# roads must be learned
+	check(R.build_block(2) != "" and R.lay(D.VILLAGE, D.VILLAGE + Vector2(300, 0), "packed") != "", "roads can't be built before Road Making")
+	sim.techs["tools"] = true
+	sim.inv.discover("road_making", u)
+	check(R.build_block(2) == "" and R.build_block(3) != "", "Road Making allows packed-earth roads; stone needs bronze")
+	# a trail makes the road cheaper
+	var a: Vector2 = D.VILLAGE + Vector2(60, 200)
+	var b: Vector2 = D.VILLAGE + Vector2(420, 200)
+	var cells: Array = R.plan(a, b, 2)
+	var full: Dictionary = R.cost(cells, 2)
+	for c in cells.slice(0, cells.size() / 2): R.level[c] = 1
+	check(R.cost(cells, 2)["wood"] < full["wood"], "over a trail a road costs less (%d vs %d wood)" % [R.cost(cells, 2)["wood"], full["wood"]])
+	sim.stock["wood"] = 200
+	var w0: float = sim.stock["wood"]
+	var workers: Array = sim.living().filter(func(x): return x.role == "").slice(0, 3)
+	check(R.lay(a, b, "packed", workers) == "" and sim.stock["wood"] < w0, "a packed-earth road is laid out and paid for")
+	var rw = sim.structures.filter(func(s): return s.type == "roadworks")
+	check(rw.size() == 1 and rw[0].cells.size() == cells.size() and workers.all(func(x): return x.job.get("struct_id", -1) == rw[0].id), "the workers set out to build it")
+	_run(sim, 200)
+	check(cells.all(func(c): return R.level[c] == 2) and not sim.structures.any(func(s): return s.type == "roadworks"), "they build it stretch by stretch, and the site is gone when it is done")
+	u.pos = R.cell_pos(cells[2])
+	check(R.speed_at(u.pos) >= 1.25, "on the road people walk a quarter faster")
+	# the Steward makes the busiest trails a road
+	var s2 = _new_sim()
+	s2.time = D.DAY_LEN * 0.3
+	s2.techs["tools"] = true
+	s2.inv.discover("road_making", s2.living()[0])
+	s2.stock["wood"] = 300
+	for i in 20:
+		var kk: int = s2.roads.cell(D.VILLAGE + Vector2(80 + i * 25, 120))
+		s2.roads.level[kk] = 1
+		s2.wear[kk] = 0.9
+	s2.appoint(s2.living()[0], "steward")
+	var road_rule := {}
+	for r in s2.improve.C["list"]:
+		if r.has("road"): road_rule = r
+	check(not s2.improve._road_cells(road_rule).is_empty(), "the Steward sees trails worth making a road")
+	s2.improve._build(road_rule, "", "")
+	check(s2.structures.any(func(s): return s.type == "roadworks"), "and has them made one")
+	# saved with the game
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(sim)
+	var s3 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(s3, data)
+	check(cells.all(func(c): return s3.roads.level[c] == 2), "roads are saved")

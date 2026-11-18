@@ -64,6 +64,7 @@ var sheet_war_btn: Button
 var clans_btns: HFlowContainer
 var clans_sig := ""
 var reno_btn: Button
+var road_btn: Button
 var lang_btn: Button
 var alert_box: VBoxContainer
 var alert_items: Array = [] # [Control, expires_at_msec]
@@ -523,6 +524,11 @@ func _build_right(root: Control) -> void:
 		b.custom_minimum_size = Vector2(60, 0)
 		build_btns[k] = b
 		grid.add_child(b)
+	road_btn = _button("", func(): world.build_type = "road", "")
+	road_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	road_btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	road_btn.custom_minimum_size = Vector2(60, 0)
+	grid.add_child(road_btn)
 	reno_btn = _button("", func():
 		var free: Array = world.selected_units().filter(func(u): return u.role != "contract")
 		var err: String = sim.renovate(free)
@@ -912,6 +918,14 @@ func _refresh_right() -> void:
 		bb.disabled = why != ""
 		bb.tooltip_text = (why + "\n" if why != "" else "") + tr("Costs %s") % _cost_long(sd) + "\n" + tr(sd.get("desc", "")) \
 			+ ("\n" + tr("Click its middle, then click again (or drag) to set its size. A bigger ring costs more.") if sd.get("ring", false) else "")
+	# the Road tool: the best road the tribe can build (trails need no building: feet make them)
+	var R = sim.roads
+	var rl: int = R.best_buildable()
+	var rd: Dictionary = R.def_of(rl if rl > 0 else 2)
+	var rwhy: String = R.build_block(2) if rl == 0 else ""
+	road_btn.text = "%s\n%s" % [tr(rd.get("name", "Road")), tr(rwhy) if rwhy != "" else tr("%s a stretch") % ", ".join(rd.get("cost", {}).keys().map(func(r): return "%d %s" % [rd["cost"][r], tr(r)]))]
+	road_btn.disabled = rl == 0
+	road_btn.tooltip_text = tr(rd.get("desc", "")) + "\n" + tr("Click where the road begins, then where it ends; it follows the fords. Over a trail it costs half. Trails need no building: where people walk again and again, one appears by itself.")
 	var old: Array = sim.outdated()
 	reno_btn.visible = not old.is_empty()
 	if not old.is_empty():

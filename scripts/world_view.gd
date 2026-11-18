@@ -26,6 +26,7 @@ const PALISADE_GAP := 8.0 # clearance between a wall's stakes and a building on 
 var selected_struct := -1 # a building picked for the building panel (units unselected)
 var build_type := ""
 var build_size := 0.0 # radius for a wall being laid out
+var road_start: Variant = null # the Road tool: where the road begins, once clicked
 var wall_center: Variant = null # a wall's middle, once picked: the cursor then sets its radius
 const WALL_DRAG := 12.0 # (screen px) a press moved this far before release lays the wall out on release
 var drag_start: Variant = null # screen-space
@@ -43,7 +44,7 @@ var fog_refresh := 0.0
 var wear_tex: ImageTexture
 var mask_tex: ImageTexture # where the soil, forest floor and meadows are (terrain.gdshader)
 var photo_ground := false # CC0 ground textures loaded (assets/textures/terrain): paths are painted by the shader
-const GROUND_TEX := ["grass", "grass2", "meadow", "dry", "dirt", "forest"]
+const GROUND_TEX := ["grass", "grass2", "meadow", "dry", "dirt", "forest", "road_packed", "road_stone"]
 var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
@@ -431,6 +432,7 @@ func _ground_photos(gm: ShaderMaterial) -> void:
 	gm.set_shader_parameter("mask_tex", mask_tex)
 	gm.set_shader_parameter("wear_tex", wear_tex)
 	gm.set_shader_parameter("wear_size", Vector2(maxi(sim.wear_w, 1) * sim.WEAR_CELL, maxi(sim.wear_h, 1) * sim.WEAR_CELL))
+	gm.set_shader_parameter("cell_size", sim.WEAR_CELL)
 	photo_ground = true
 	for k in GROUND_TEX:
 		var path := "res://assets/textures/terrain/%s.jpg" % k
@@ -456,12 +458,15 @@ func _refresh_wear() -> void:
 	if n == 0: return
 	var data := PackedByteArray()
 	data.resize(n * 4)
+	var lv: PackedByteArray = sim.roads.level
+	var has_roads: bool = photo_ground and lv.size() == n
 	for k in n:
 		var w: float = sim.wear[k]
-		data[k * 4] = 120
+		var look: int = int(sim.roads.def_of(lv[k]).get("look", 0)) if has_roads and lv[k] > 0 else 0
+		data[k * 4] = look * 80 if photo_ground else 120 # (the photo ground reads the road's look from red)
 		data[k * 4 + 1] = 98
 		data[k * 4 + 2] = 66
-		data[k * 4 + 3] = int(clampf((w - 0.12) * 1.1, 0.0, 0.62) * 255)
+		data[k * 4 + 3] = int(clampf(maxf((w - 0.12) * 1.1, 0.5 if look == 1 else 0.0), 0.0, 0.62) * 255)
 	wear_img.set_data(sim.wear_w, sim.wear_h, false, Image.FORMAT_RGBA8, data)
 	wear_tex.update(wear_img)
 
@@ -613,8 +618,17 @@ func draw_ground_fx() -> void:
 		ci.draw_arc(cmd_marker["p"], 6 + 16 * k, 0, TAU, 24, Color(cmd_marker["c"], 1.0 - k), 3)
 	ghost_m = Vector2.ZERO
 	ghost_why = ""
-	if build_type == "" or not D.STRUCTURES[build_type].get("ring", false): wall_center = null
-	if build_type != "":
+	if build_type != "road": road_start = null
+	if build_type == "road":
+		ghost_m = uniso(get_global_mouse_position())
+		var lv: int = sim.roads.best_buildable()
+		if road_start != null and lv > 0:
+			for k in sim.roads.plan(road_start, ghost_m, lv):
+				var c: Vector2 = sim.roads.cell_pos(k)
+				ci.draw_rect(Rect2(c - Vector2(12, 12), Vector2(24, 24)), Color(0.85, 0.7, 0.4, 0.45))
+		ci.draw_circle(ghost_m, 10, Color(0.9, 0.75, 0.45, 0.6))
+	elif build_type == "" or not D.STRUCTURES[build_type].get("ring", false): wall_center = null
+	if build_type != "" and build_type != "road":
 		ghost_m = uniso(get_global_mouse_position())
 		var ring: bool = D.STRUCTURES[build_type].get("ring", false)
 		if ring: # first the middle, then the cursor's distance from it is the radius
@@ -704,7 +718,16 @@ func draw_overlay() -> void:
 		var r := Rect2(drag_start, m - drag_start).abs()
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.12))
 		ci.draw_rect(r, Color(1, 1, 0.6, 0.7), false, 1.5)
-	if build_type != "":
+	if build_type == "road":
+		var lv: int = sim.roads.best_buildable()
+		var lbl: String = tr(sim.roads.def_of(lv).get("name", "Road"))
+		if road_start == null: lbl += "  " + tr("click where it begins")
+		else:
+			var cells: Array = sim.roads.plan(road_start, ghost_m, lv)
+			var cost: Dictionary = sim.roads.cost(cells, lv)
+			lbl += "  " + tr("%d paces · %s · click where it ends") % [roundi(cells.size() * sim.WEAR_CELL), ", ".join(cost.keys().map(func(r): return "%d %s" % [cost[r], tr(r)]))]
+		_draw_label(iso(ghost_m) + Vector2(0, -30), lbl, 14, Color.WHITE, true)
+	elif build_type != "":
 		var gname: String = tr(D.STRUCTURES[build_type]["name"])
 		if D.STRUCTURES[build_type].get("ring", false):
 			if wall_center == null: gname += "  " + tr("click the middle")
@@ -1165,6 +1188,13 @@ func _draw_node(n) -> void:
 			ci.draw_line(b + Vector2(-7, -1), b + Vector2(7, -4), Color("#e8dcc0"), 2)
 
 func _draw_ground_part(s) -> void:
+	if s.type == "roadworks": # the stretches still to build, marked out with pegs and string
+		var per: float = s.work / maxf(1.0, s.cells.size())
+		var done := int(s.progress / per)
+		for i in range(done, s.cells.size()):
+			var c: Vector2 = sim.roads.cell_pos(int(s.cells[i][0]))
+			ci.draw_rect(Rect2(c - Vector2(9, 9), Vector2(18, 18)), Color(0.55, 0.42, 0.25, 0.35))
+		return
 	var p: Vector2 = s.pos
 	var a := 1.0 if s.built else 0.5
 	if s.built and art != null and ((s.type == "farm_plot" and art.has("farm_spring")) or (s.type == "fishing_dock" and art.has("dock"))): return
@@ -1996,8 +2026,15 @@ func _unhandled_input(ev: InputEvent) -> void:
 		var sm := get_global_mouse_position() # screen-space (iso)
 		var m := uniso(sm) # world-space
 		if mb.button_index == MOUSE_BUTTON_LEFT:
-			var ring: bool = build_type != "" and D.STRUCTURES[build_type].get("ring", false)
-			if mb.pressed:
+			var ring: bool = build_type != "" and build_type != "road" and D.STRUCTURES[build_type].get("ring", false)
+			if mb.pressed and build_type == "road": # a road: its start, then its end
+				if road_start == null: road_start = m
+				else:
+					var err: String = sim.roads.lay(road_start, m, sim.roads.best_buildable(), selected_units().filter(func(u): return u.role != "contract"))
+					if err != "": sim.popup(m, tr(err), Color("#ff8080"))
+					road_start = null
+					if err == "" and not Input.is_key_pressed(KEY_SHIFT): build_type = ""
+			elif mb.pressed:
 				if ring and wall_center == null: # a wall: first its middle...
 					wall_center = m
 					drag_start = sm
@@ -2017,6 +2054,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 				drag_start = null
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
 			if wall_center != null: wall_center = null # (back to picking the middle)
+			elif road_start != null: road_start = null # (back to picking the start)
 			elif build_type != "": build_type = ""
 			else: _command(sm)
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
@@ -2365,6 +2403,7 @@ func _sync_items() -> void:
 				var it := _item(key, 5, [pp, i < shown, st.built, st.style], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
+		elif st.type == "roadworks": pass # (drawn on the ground: _draw_ground_part)
 		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
 			var key := "s%d" % st.id
 			seen[key] = true

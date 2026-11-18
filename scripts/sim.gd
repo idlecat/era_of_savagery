@@ -16,6 +16,7 @@ const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
 const Names = preload("res://scripts/names.gd")
 const Lands = preload("res://scripts/lands.gd")
+const Roads = preload("res://scripts/roads.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -97,6 +98,7 @@ var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
 var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
 var director: Director # paces the hardships (director.gd)
+var roads: Roads # trails that emerge from feet, and the roads the tribe builds (roads.gd)
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
@@ -122,6 +124,7 @@ func _init() -> void:
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
 	director = Director.new(self)
+	roads = Roads.new(self)
 	Names.install() # (built names are translation keys: a loaded game needs them too)
 	story = Story.new(self)
 	inv = Inventions.new(self)
@@ -151,6 +154,7 @@ func new_game() -> void:
 	rivals.setup()
 	wear_w = ceili(D.W / WEAR_CELL)
 	wear_h = ceili(D.H / WEAR_CELL)
+	roads.setup()
 	wear.resize(wear_w * wear_h)
 	wear.fill(0.0)
 	var herd := herd_sizes(70.0 * D.area_k() * Lands.num(D.LAND, "herds")) # herds in proportion to each stretch of land (and to how open it is)
@@ -483,7 +487,7 @@ func unit_speed(u: E.Unit) -> float:
 	if evo.has_trad("wayfinders"): s *= 1.1
 	s *= hz.speed_mult() * inv.mul("speed")
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
-	return s
+	return s * roads.speed_at(u.pos) # (trails and roads)
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u)
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
@@ -705,6 +709,9 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			var ring: bool = sd.get("ring", false)
 			var tgt: Vector2 = s.pos + Vector2(cos(u.id), sin(u.id)) * struct_r(s) if ring else s.pos
 			var near: float = 18.0 if ring else sd["r"] + 10.0
+			if s.type == "roadworks": # (a road: work along it, stretch by stretch)
+				tgt = roads.next_cell_pos(s) + Vector2(cos(u.id), sin(u.id)) * 8.0
+				near = 14.0
 			if not s.paid:
 				u.act = "Waiting for materials"
 				return
@@ -720,6 +727,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				else:
 					u.act = "Building " + sd["name"]
 					s.progress += speed
+					if s.type == "roadworks": roads.progress(s)
 					if s.progress >= s.work: complete_structure(s, u)
 			else:
 				u.act = "Walking to " + sd["name"]
@@ -902,6 +910,12 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
+	if s.type == "roadworks": # a finished road is part of the ground, not a building
+		s.progress = s.work
+		roads.progress(s)
+		structures.erase(s)
+		add_log(tr("The road is finished."), "build", [u] if u else [])
+		return
 	s.built = true
 	s.progress = s.work
 	s.style = evo.era
@@ -1820,6 +1834,7 @@ func tick(dt: float) -> void:
 	policy.update(dt)
 	crisis.update(dt)
 	director.update(dt)
+	roads.update(dt)
 	_update_births(dt)
 
 	for p in popups:
