@@ -1,0 +1,84 @@
+## Pacing report: plays whole games headless on autopilot and writes, per in-game day, how
+## much went wrong (hardships, deaths) and how the tribe stood (food, people, mood). Used to
+## see whether the game has long dead stretches or pile-ups of trouble (a director's job).
+##
+## $GODOT --headless --path . --script res://tools/pacing.gd -- --days=20 --seed=1 --level=normal [--map=the_ford|standard...] [--out=/path.csv] [--dt=0.1]
+##
+## Autopilot: a Steward is appointed (the economy runs), dilemmas take their first option,
+## contract emergencies their first allowed effect, and emergency mode runs with no orders.
+extends SceneTree
+
+const Sim = preload("res://scripts/sim.gd")
+const D = preload("res://scripts/data.gd")
+const MapGen = preload("res://scripts/mapgen.gd")
+const Scenarios = preload("res://scripts/scenarios.gd")
+const Cultures = preload("res://scripts/cultures.gd")
+
+var day_rows: Array = []
+var cur := {}
+
+func _initialize() -> void:
+	var a := {}
+	for s in OS.get_cmdline_user_args():
+		var kv := s.trim_prefix("--").split("=", true, 1)
+		a[kv[0]] = kv[1] if kv.size() > 1 else "1"
+	var days := int(a.get("days", "20"))
+	var sd := int(a.get("seed", "1"))
+	var dt := float(a.get("dt", "0.1"))
+	var m: String = a.get("map", "the_ford")
+	Cultures.apply(a.get("culture", ""))
+	if MapGen.SIZES.has(m): MapGen.generate(m, int(a.get("tribes", "3")), sd)
+	else: Scenarios.apply(m)
+	seed(sd)
+	var sim = Sim.new()
+	sim.hz.level = a.get("level", "normal")
+	sim.new_game()
+	var best = null
+	for u in sim.living():
+		if u.role == "" and (best == null or u.lv("lore") > best.lv("lore")): best = u
+	if best: sim.appoint(best, "steward")
+	_new_day(sim)
+	sim.event_fired.connect(func(id): cur["events"] += 1; cur["what"].append("event:" + id))
+	sim.alert_raised.connect(func(al):
+		if al["level"] == "danger": cur["danger"] += 1
+		elif al["level"] == "warn": cur["warn"] += 1)
+	sim.happened.connect(func(id): if not id.begins_with("policy:"): cur["nature"] += 1; cur["what"].append(id))
+	sim.crisis_started.connect(func(c): cur["crises"] += 1; cur["what"].append("crisis:" + c["kind"]))
+	var t0 := Time.get_ticks_msec()
+	var end_t := days * D.DAY_LEN
+	var last_day := sim.day()
+	while sim.time < end_t:
+		if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+		for c in sim.contracts.list:
+			if c.status == "interrupted": sim.contracts.resolve(c, sim.contracts.allowed_effects(c)[0])
+		sim.paused = false
+		sim.tick(dt)
+		if sim.day() != last_day:
+			_close_day(sim)
+			last_day = sim.day()
+			if sim.living().is_empty(): break
+			_new_day(sim)
+	if not cur.is_empty() and int(cur["day"]) <= days and sim.time >= end_t: _close_day(sim)
+	var out: String = a.get("out", "")
+	var csv := "seed,level,day,events,danger,warn,nature,crises,deaths,food,food_cap,pop,mood,what\n"
+	for r in day_rows:
+		csv += "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n" % [sd, sim.hz.level, r["day"], r["events"], r["danger"], r["warn"], r["nature"], r["crises"], r["deaths"], r["food"], r["food_cap"], r["pop"], r["mood"], " ".join(r["what"]).replace(",", ";")]
+	if out != "":
+		var f := FileAccess.open(out, FileAccess.WRITE)
+		f.store_string(csv)
+		f.close()
+	else: print(csv)
+	print("pacing: seed %d %s, %d days in %.1fs, %d alive" % [sd, sim.hz.level, day_rows.size(), (Time.get_ticks_msec() - t0) / 1000.0, sim.living().size()])
+	quit()
+
+func _new_day(sim) -> void:
+	cur = {"day": sim.day(), "events": 0, "danger": 0, "warn": 0, "nature": 0, "crises": 0, "what": [],
+		"dead0": sim.units.filter(func(u): return u.dead).size()}
+
+func _close_day(sim) -> void:
+	cur["deaths"] = sim.units.filter(func(u): return u.dead).size() - int(cur["dead0"])
+	cur["food"] = roundi(sim.stock["food"])
+	cur["food_cap"] = sim.food_cap()
+	cur["pop"] = sim.living().size()
+	cur["mood"] = roundi(sim.folk.mood)
+	day_rows.append(cur)
