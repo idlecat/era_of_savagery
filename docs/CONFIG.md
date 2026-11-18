@@ -10,6 +10,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 | `config/rules.json` | `sim.gd`, `folk.gd` | everyday life: eating and hunger, food storage and rot, births, the aurochs pens, burials, beds, when the overpopulation and Chosen One dilemmas come up, and folk life (children, art and treasures, mood, trade values) |
 | `config/legacy.json` | `legacy.gd` | the endgames: each victory path's conditions (`count`: vassals, allies or techs, all of them; `built`: a structure), the event and saga texts, and the defeat |
 | `config/audio.json` | `audio.gd`, `synth.gd` | the sounds (recipes rendered in code), what plays on which happening, the sounds of people at work, ambience, and the music's moods |
+| `config/policies.json` | `policy.gd` | the Council's standing policies: their choices, effects, culture drift, unlocks, who likes them and what they say |
 | `config/save.json` | `main.gd` | autosave interval and how many to keep, the number of save slots, the quick-save slot |
 | `config/dilemmas.json` | `sim.gd`, `folk.gd`, `rivals.gd` | the chieftain's choices: the Great Flood warning, overpopulation, the Chosen One, the dawn of each era, the festivals, and the rival clans' first contact, demands, calls to war and surrender |
 
@@ -124,3 +125,15 @@ There are no sound files: every sound is a **recipe** in `sounds`, rendered by `
 - `music.moods`: the first whose `when` holds plays (it changes on the bar): `bpm`, `root` (semitones), a pentatonic `scale`, `drums` (16-step patterns per sound, `x` = hit), the `flute` (a wandering melody: `density`, `octave`, `leap`) and the `drone` level.
 
 `when` takes audio's own keys `night`, `danger`, `festival`, `paused` (true/false), `weather` and `seasons` (lists), and any condition of scenario scripts. Scenario scripts, dilemmas and a game master can play a sound with the story action `{"sound": id, "at": place}`.
+
+## policies.json
+
+The Council's standing policies (`policy.gd`, `sim.policy`; the **Council** button or `P`). Each entry under `policies` has a `title`, `desc`, `unlock` (conditions), a `default` choice (with no effects, so the defaults are the base game) and `choices`. A choice has:
+
+- `label`, `desc`, `unlock` (e.g. `{"tech": "farming"}`).
+- `effects`: the shared effect stats (`D.EFFECT_STATS`), folded with the inventions' by `inv.mul()`/`inv.add()`. Added for policies: `regrow` (trees and bushes), `herd` (deer that come back per deer hunted), `wildfire` (spread), `insight` (`of`: tech ids, several as `"a|b"`), `relation` (what the clans' feelings settle toward), `prefer` (`of`: a node kind; how much gatherers favour it).
+- `culture`: drift per day on the culture axes while it holds.
+- `on_start`: `story.run()` actions when it takes hold.
+- `liked_by` / `disliked_by` (personality traits) and `pro` / `con` (their words): who speaks at the Council, and what they say offline.
+
+`switch`: the mood a change costs, the days it takes to take hold (`settle_days`; the old way holds until then) and the days before the same policy can be changed again (`cooldown_days`). `council.speakers`: how many elders speak. A game master changes a policy with `sim.policy.set_choice(id, choice, by)` and reads them with `sim.policy.summary()`; every persona prompt lists them (`evo.world_ctx()["the_ways_the_tribe_lives_by"]`).

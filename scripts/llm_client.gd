@@ -135,6 +135,8 @@ func _persona_header(leader: Dictionary, world: Dictionary = {}) -> String:
 		for nb in world.get("neighbors", []):
 			h += "A neighbouring clan, the %s (led by %s), is %s toward your tribe. Their ways: %s%s\n" % [nb["clan"], nb["chieftain"], nb["stance"].to_lower(), nb["their_ways"],
 				(" They hold these wrongs against you: " + "; ".join(nb["wrongs_remembered"]) + ".") if not nb["wrongs_remembered"].is_empty() else ""]
+		if not world.get("the_ways_the_tribe_lives_by", []).is_empty():
+			h += "The Council has set the tribe's ways: %s. You live by them, though you may grumble about the ones your personality dislikes.\n" % "; ".join(world["the_ways_the_tribe_lives_by"])
 		h += "Speak only of what your tribe knows. You have NO words for: %s - never mention them.\n" % ", ".join(world["unknown_things_you_have_no_words_for"])
 	if I.is_zh():
 		h += "LANGUAGE: write \"speech\" and every option \"label\" in Simplified Chinese (简体中文), in a primal, vivid voice. Keep all JSON keys, action names, structure ids, effect ids and tech ids exactly as specified, in English.\n"
@@ -265,6 +267,37 @@ Reply with ONLY one JSON object: {"choice": "<structure id from options, or wait
 	var res := await chat_json(system, JSON.stringify(user))
 	if res["ok"] and res["data"] is Dictionary and res["data"].get("choice") is String:
 		return {"choice": res["data"]["choice"], "speech": str(res["data"].get("speech", "")).left(200), "source": label(), "error": ""}
+	fb["source"] = "offline fallback"
+	fb["error"] = res.get("error", "invalid JSON shape")
+	return fb
+
+# ------------------------------------------------------------ the Council
+## The elders argue a change of policy. ctx from sim.policy.council_ctx(). Returns
+## {"lines": [{"name", "side", "say"}], "source", "error"}; offline: their lines from the config.
+func council(ctx: Dictionary) -> Dictionary:
+	var fb_lines: Array = ctx["speakers"].map(func(s): return {"name": s["name"], "side": s["side"], "say": I.t(s["would_say"])})
+	var fb := {"lines": fb_lines, "source": "offline", "error": ""}
+	if ctx["speakers"].is_empty(): return fb
+	_count_call()
+	if not is_online():
+		await get_tree().create_timer(0.4).timeout
+		return fb
+	var w: Dictionary = ctx.get("world", {})
+	var system := """You voice the elders of a prehistoric tribe at the Council fire, in the %s. The Chieftain proposes to change the tribe's way of "%s" (%s) from "%s" (%s) to "%s" (%s).
+Each speaker below argues once, in character (their personality and memories), for ("pro") or against ("con") the change, as their side says: one or two vivid, primal sentences each, speaking to the Chieftain. Use only words the tribe knows; it has NO words for: %s.
+Reply with ONLY one JSON object: {"lines": [{"name": "<speaker name>", "say": "<what they say>"}]} with one line per speaker, in the order given.""" % [
+		w.get("age", ""), ctx["policy"], ctx["about"], ctx["now"], ctx["now_means"], ctx["proposed"], ctx["proposed_means"], ", ".join(w.get("unknown_things_you_have_no_words_for", []))]
+	if I.is_zh():
+		system += "\nLANGUAGE: write every \"say\" in Simplified Chinese (简体中文), in a primal, vivid voice. Keep JSON keys and names as given."
+	var user := {"speakers": ctx["speakers"].map(func(s): return {"name": s["name"], "side": s["side"], "profile": s["profile"], "might_say": s["would_say"]})}
+	var res := await chat_json(system, JSON.stringify(user))
+	if res["ok"] and res["data"] is Dictionary and res["data"].get("lines") is Array:
+		var said := {}
+		for l in res["data"]["lines"]:
+			if l is Dictionary and l.get("say") is String: said[str(l.get("name", ""))] = str(l["say"]).left(240)
+		var lines: Array = []
+		for s in fb_lines: lines.append({"name": s["name"], "side": s["side"], "say": said.get(s["name"], s["say"])})
+		return {"lines": lines, "source": label(), "error": ""}
 	fb["source"] = "offline fallback"
 	fb["error"] = res.get("error", "invalid JSON shape")
 	return fb

@@ -162,6 +162,8 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 		KEY_1: sim.speed = 1
 		KEY_2: sim.speed = 2
 		KEY_3, KEY_4: sim.speed = 4
+		KEY_P:
+			if not hud.modal_open(): hud.open_council()
 		KEY_T:
 			if not hud.modal_open(): hud._open_tech()
 		KEY_ESCAPE:

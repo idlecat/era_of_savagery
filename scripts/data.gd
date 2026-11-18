@@ -560,6 +560,9 @@ const EFFECT_STATS := {
 	"build": ["mul", "building speed"], "work": ["mul", "work speed"], "speed": ["mul", "walking speed"],
 	"sight": ["add", "how far people see"], "devotion": ["mul", "devotion gained from rituals"],
 	"steady": ["add", "1: the badly hurt are not slowed"],
+	"regrow": ["mul", "how fast trees and bushes grow back"], "herd": ["mul", "deer that come back for each one hunted"],
+	"wildfire": ["mul", "how easily wildfire spreads"], "insight": ["mul", "insight from practice (of: tech ids, a|b)"],
+	"relation": ["add", "what the clans' feelings settle toward"], "prefer": ["add", "how much gatherers favour a kind of node (of: deer, bush, a find...)"],
 }
 
 const INSIGHT_RATE := 0.06

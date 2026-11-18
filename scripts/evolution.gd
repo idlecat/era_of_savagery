@@ -86,7 +86,7 @@ func practice(u: E.Unit, activity: String, amount: float) -> void:
 		var id: String = t["id"]
 		var w: float = t["practice"].get(activity, 0.0)
 		if w <= 0.0 or sim.has_tech(id) or not prereqs_met(id): continue
-		var pts := amount * w * D.INSIGHT_RATE
+		var pts: float = amount * w * D.INSIGHT_RATE * sim.inv.mul("insight", id)
 		insight[id] += pts
 		contrib[id][u.id] = contrib[id].get(u.id, 0.0) + pts
 		if insight[id] >= t["cost"]: breakthrough(id, _top_contributor(id, u))
@@ -266,4 +266,5 @@ func world_ctx() -> Dictionary:
 		"neighbors": sim.rivals.summary() if sim.rivals else [],
 		"found_in_the_land": sim.known_finds.keys().map(func(id): return tr(D.FINDS[id]["name"])),
 		"everyday_inventions": sim.inv.known.keys().map(func(id): return tr(sim.inv.def(id)["name"])),
+		"the_ways_the_tribe_lives_by": sim.policy.in_words() if sim.policy else [],
 	}.merged(sim.cult.ctx())

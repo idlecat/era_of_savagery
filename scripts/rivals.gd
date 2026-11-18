@@ -218,7 +218,7 @@ func update(dt: float) -> void:
 		var c: Dictionary = clans[id]
 		# drift back toward the clan's temperament (slowly)
 		var gw: Dictionary = C["relations"]["goodwill"]
-		var target: float = c["base"] + (float(gw["peace"]) if has_treaty(id, "peace") else 0.0) + (float(gw["alliance"]) if has_treaty(id, "alliance") else 0.0) + (float(gw["vassal"]) if c["vassal"] > 0 else 0.0)
+		var target: float = c["base"] + sim.inv.add("relation") + (float(gw["peace"]) if has_treaty(id, "peace") else 0.0) + (float(gw["alliance"]) if has_treaty(id, "alliance") else 0.0) + (float(gw["vassal"]) if c["vassal"] > 0 else 0.0)
 		c["relation"] += (target - c["relation"]) * dt * float(C["relations"]["drift"])
 		_treaties(c)
 		_contact(c)

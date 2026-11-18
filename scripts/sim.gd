@@ -11,6 +11,7 @@ const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
+const Policy = preload("res://scripts/policy.gd")
 const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
@@ -87,6 +88,7 @@ var hz: Hazards
 var nat: Nature
 var folk: Folk
 var improve: Improve # the village lays out improvements itself (improve.gd)
+var policy: Policy # the Council's standing policies (policy.gd)
 var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
@@ -109,6 +111,7 @@ func _init() -> void:
 	nat = Nature.new(self)
 	folk = Folk.new(self)
 	improve = Improve.new(self)
+	policy = Policy.new(self)
 	story = Story.new(self)
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
@@ -566,7 +569,7 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResN
 		var claims := 0
 		for u in units:
 			if not u.dead and u.job.get("node_id", -2) == n.id: claims += 1
-		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0)
+		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0) - inv.add("prefer", n.kind)
 		if score < best_score:
 			best_score = score
 			best = n
@@ -841,7 +844,9 @@ func _deplete(n: E.ResNode) -> void:
 		n.regrow_t = 140
 	elif n.kind == "carcass" or n.kind == "boulder" or (D.FINDS.has(n.kind) and D.FINDS[n.kind]["regrow"] <= 0.0):
 		nodes.erase(n) # (a worked-out seam is gone; plants grow back)
-		if n.from_deer and not hz.winter(): spawn_deer(n.bank, true) # no new herds arrive in winter
+		if n.from_deer and not hz.winter(): # no new herds arrive in winter; how many do depends on the hunt
+			var hm := inv.mul("herd")
+			for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
 
 func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	gain_xp(u, "forage", amt * 0.45)
@@ -1710,12 +1715,12 @@ func tick(dt: float) -> void:
 	for n in nodes:
 		match n.kind:
 			"bush":
-				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult() * nat.grow_mult())
+				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * hz.berry_mult() * nat.grow_mult() * inv.mul("regrow"))
 			"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "salt":
 				var fd: Dictionary = D.FINDS[n.kind]
 				if fd["winter"] or not hz.winter(): n.amount = minf(n.max_amount, n.amount + fd["regrow"] * dt)
 			"stump", "burnt":
-				n.regrow_t -= dt
+				n.regrow_t -= dt * inv.mul("regrow")
 				if n.regrow_t <= 0:
 					n.kind = "tree"
 					n.amount = n.max_amount
@@ -1766,6 +1771,7 @@ func tick(dt: float) -> void:
 			if wear[k] > 0.0: wear[k] *= 0.996
 	_update_vice(dt)
 	improve.update(dt)
+	policy.update(dt)
 	_update_births(dt)
 
 	for p in popups:

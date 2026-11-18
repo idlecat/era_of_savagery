@@ -120,10 +120,11 @@ func _sources() -> Array:
 	for f in sim.known_finds:
 		out.append_array(D.FINDS.get(f, {}).get("effects", []))
 	out.append_array(sim.cult.boons)
+	if sim.policy: out.append_array(sim.policy.effects()) # the Council's ways
 	return out
 
 func _fold(stat: String, of: String) -> Dictionary:
-	var sig: int = known.size() + sim.known_finds.size() * 1000 + sim.cult.boons.size() * 1000000
+	var sig: int = known.size() + sim.known_finds.size() * 1000 + sim.cult.boons.size() * 1000000 + (sim.policy.rev * 100000000 if sim.policy else 0)
 	if sig != _fx_sig:
 		_fx = {}
 		_fx_sig = sig
@@ -134,13 +135,14 @@ func _fold(stat: String, of: String) -> Dictionary:
 		for e in _sources():
 			if e.get("stat", "") != stat: continue
 			var o: String = e.get("of", "")
-			if o != "" and o != of and not (of.contains("/") and o in of.split("/")): continue
+			if o != "" and o != of and not (of.contains("/") and o in of.split("/")) and not (o.contains("|") and of in o.split("|")): continue
 			if e.has("mul"): m *= float(e["mul"])
 			if e.has("add"): a += float(e["add"])
 		_fx[key] = {"mul": m, "add": a}
 	return _fx[key]
 
-## Product of every known "mul" effect on `stat` (narrowed by `of`, "a/b" matches either).
+## Product of every known "mul" effect on `stat` (narrowed by `of`, "a/b" matches either;
+## an effect's own `of` may list several: "a|b").
 func mul(stat: String, of := "") -> float: return _fold(stat, of)["mul"]
 ## Sum of every known "add" effect on `stat`.
 func add(stat: String, of := "") -> float: return _fold(stat, of)["add"]

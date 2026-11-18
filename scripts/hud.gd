@@ -270,6 +270,7 @@ func _build_top(root: Control) -> void:
 		var b := _button(tr("%dx") % sp, func(): sim.speed = sp)
 		speed_btns.append(b)
 		h.add_child(b)
+	h.add_child(_button("Council", open_council, "P: the tribe's standing policies (way of life, the forest, the hunt, the spirits, what to seek, the clans)"))
 	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
 	h.add_child(_button("Legacy", _open_legacy, "The three paths to victory: conquest, unity and wisdom"))
 	h.add_child(_button("Achievements", open_achievements, "The tribe's inventions and everything it did first"))
@@ -1609,6 +1610,85 @@ func _tech_card(tdef: Dictionary, was_paused: bool) -> Control:
 
 # ------------------------------------------------------------ settings
 const SaveGame = preload("res://scripts/save_game.gd")
+
+# ------------------------------------------------------------ the Council (policy.gd)
+## The tribe's standing policies: what is in force, what is changing, and the choices.
+func open_council(was_paused = null) -> void:
+	if was_paused == null: was_paused = sim.paused
+	var v := _open_modal("THE COUNCIL", 900)
+	v.add_child(_label("The ways the tribe lives by. A change costs a little mood and takes a day to take hold; the leaders follow these ways, and those who dislike one will say so.", 14, COL_DIM))
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(860, 520)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(sc)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 6)
+	sc.add_child(list)
+	var P = sim.policy
+	for id in P.open_ids():
+		var d: Dictionary = P.defs()[id]
+		var cur: String = P.chosen.get(id, "")
+		var head := tr(d["title"]) + "  ·  " + tr(P.choice_def(id, cur).get("label", ""))
+		if P.pending.has(id):
+			head += "  →  " + tr(P.choice_def(id, P.pending[id]["choice"]).get("label", "")) + " " + tr("(taking hold)")
+		list.add_child(_header(head))
+		list.add_child(_label(tr(d.get("desc", "")), 13, COL_DIM))
+		var row := HFlowContainer.new()
+		list.add_child(row)
+		for ch in d["choices"]:
+			var cd: Dictionary = d["choices"][ch]
+			var why: String = P.block(id, ch)
+			var b := _button(tr(cd["label"]), func(): _council_debate(id, ch, was_paused), tr(cd.get("desc", "")) + _effects_tip(cd))
+			b.toggle_mode = true
+			b.set_pressed_no_signal(ch == cur and not P.pending.has(id) or P.pending.get(id, {}).get("choice", "") == ch)
+			b.disabled = why != "" and not (ch == cur and P.pending.has(id))
+			if why != "" and why != "Already the way" and why != "Already decided": b.tooltip_text += "\n" + tr(why)
+			b.focus_mode = Control.FOCUS_NONE
+			row.add_child(b)
+	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+## A choice's effects in words (for its tooltip).
+func _effects_tip(cd: Dictionary) -> String:
+	var parts: Array = []
+	for e in cd.get("effects", []):
+		var what: String = tr(D.EFFECT_STATS.get(e["stat"], ["", e["stat"]])[1])
+		var of: String = (" (%s)" % ", ".join(Array(str(e["of"]).split("|")).map(_thing_name))) if e.has("of") else ""
+		if e.has("mul"): parts.append("%s%s ×%.2f" % [what, of, float(e["mul"])])
+		elif e.has("add"): parts.append("%s%s %+.0f" % [what, of, float(e["add"])] if absf(float(e["add"])) >= 1.0 else "%s%s %+.2f" % [what, of, float(e["add"])])
+	return ("\n\n" + "\n".join(parts)) if not parts.is_empty() else ""
+
+## An id in an effect's "of" in words: a building, an idea, a find, or a kind of work.
+func _thing_name(id: String) -> String:
+	if D.STRUCTURES.has(id): return tr(D.STRUCTURES[id]["name"])
+	if not sim.evo.tech_def(id).is_empty(): return tr(sim.evo.tech_def(id)["name"])
+	if D.FINDS.has(id): return tr(D.FINDS[id]["name"])
+	return tr({"chop": "woodcutting", "hunt": "hunting", "berry": "berry picking", "quarry": "quarrying", "deer": "deer", "bush": "berry bushes"}.get(id, id))
+
+## The elders speak for and against the change; then the chieftain decides.
+func _council_debate(id: String, choice: String, was_paused) -> void:
+	var P = sim.policy
+	var cd: Dictionary = P.choice_def(id, choice)
+	var v := _open_modal(tr("THE COUNCIL · %s") % tr(P.defs()[id]["title"]), 820)
+	var token := modal_token
+	v.add_child(_label(tr("Proposed: %s. %s") % [tr(cd["label"]), tr(cd.get("desc", ""))], 15, COL_TEXT))
+	var r := _rich(0, true)
+	r.text = tr("[color=#8a7a60]The elders gather by the fire… (%s)[/color]") % llm.label()
+	v.add_child(r)
+	var res: Dictionary = await llm.council(P.council_ctx(id, choice))
+	if modal == null or modal_token != token: return # (closed meanwhile)
+	var t := ""
+	for l in res["lines"]:
+		t += "[color=%s]%s[/color] [color=#8a7a60](%s)[/color]: %s\n\n" % ["#b6f28a" if l["side"] == "pro" else "#ff9b8a", l["name"], tr("for") if l["side"] == "pro" else tr("against"), l["say"]]
+	if t == "": t = tr("[color=#8a7a60]No one speaks against it.[/color]")
+	r.text = t
+	var hb := HBoxContainer.new()
+	v.add_child(hb)
+	hb.add_child(_button(tr("Decide: %s") % tr(cd["label"]), func():
+		var err: String = P.set_choice(id, choice, "chieftain")
+		if err != "": toast(tr(err))
+		open_council(was_paused)))
+	hb.add_child(_button("Keep our ways", func(): open_council(was_paused)))
 
 ## The save slots: numbered ones to save into, the quick save and the autosaves to load.
 func open_saves() -> void:

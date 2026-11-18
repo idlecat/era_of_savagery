@@ -1,0 +1,572 @@
+{
+ "_doc": "The Council's standing policies (policy.gd, sim.policy). Each policy has a default choice (with no effects: the base game) and choices with: label/desc, unlock (conditions as in scenario scripts), effects (the shared effect stats, like inventions: {stat, mul|add, of}), culture (drift per day on the culture axes), on_start (story.run actions when it takes hold), liked_by/disliked_by (personality traits: who speaks for or against it at the Council and grumbles in negotiations), pro/con (what they say). A change costs switch.mood and takes switch.settle_days days to take hold (until then the old choice holds); at most one change is waiting per policy. See docs/CONFIG.md.",
+ "switch": {
+  "mood": -4,
+  "settle_days": 1,
+  "cooldown_days": 2
+ },
+ "council": {
+  "speakers": 3
+ },
+ "policies": {
+  "way_of_life": {
+   "title": "Way of life",
+   "desc": "How the tribe feeds itself: what the Steward sends people to, and which work they grow good at.",
+   "default": "mixed",
+   "choices": {
+    "mixed": {
+     "label": "A little of everything",
+     "desc": "Berries, game, whatever is near: no way of life above the others.",
+     "effects": [],
+     "pro": "Take what the day gives.",
+     "con": "A tribe that does everything does nothing well."
+    },
+    "foragers": {
+     "label": "Foragers",
+     "desc": "Berries, roots and the gifts of the land. Gatherers favour bushes and finds over the hunt.",
+     "effects": [
+      {
+       "stat": "gather",
+       "of": "berry",
+       "mul": 1.15
+      },
+      {
+       "stat": "prefer",
+       "of": "deer",
+       "add": -80
+      }
+     ],
+     "culture": {
+      "settled": 0.3
+     },
+     "liked_by": [
+      "cautious",
+      "lazy"
+     ],
+     "disliked_by": [
+      "belligerent"
+     ],
+     "pro": "The bushes do not bite back. We eat, and we live.",
+     "con": "Berries! Are we birds? The herds are out there for the taking."
+    },
+    "hunters": {
+     "label": "Hunters",
+     "desc": "The herds feed us. Gatherers go after deer first, and hunt better; but the hunt is dangerous.",
+     "effects": [
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 1.2
+      },
+      {
+       "stat": "prefer",
+       "of": "deer",
+       "add": 120
+      },
+      {
+       "stat": "gather",
+       "of": "berry",
+       "mul": 0.9
+      }
+     ],
+     "culture": {
+      "martial": 0.4
+     },
+     "liked_by": [
+      "belligerent"
+     ],
+     "disliked_by": [
+      "cautious"
+     ],
+     "pro": "Meat makes strong arms. Let the young ones learn the spear.",
+     "con": "Every hunt, someone comes back bleeding. Or does not come back."
+    },
+    "tillers": {
+     "label": "Tillers",
+     "desc": "We plant and wait. Fields give more; walking far for food matters less.",
+     "unlock": {
+      "tech": "farming"
+     },
+     "effects": [
+      {
+       "stat": "yield",
+       "of": "farm_plot",
+       "mul": 1.3
+      },
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 0.85
+      }
+     ],
+     "culture": {
+      "settled": 0.8
+     },
+     "liked_by": [
+      "gluttonous",
+      "cautious"
+     ],
+     "disliked_by": [
+      "belligerent"
+     ],
+     "pro": "A field remembers us. Plant once, eat many times.",
+     "con": "Tied to the dirt like a stake in the ground. Is this how our fathers lived?"
+    },
+    "herders": {
+     "label": "Herders",
+     "desc": "The aurochs are our wealth: pens give more, and loads are lighter on the long walks.",
+     "unlock": {
+      "tech": "domestication"
+     },
+     "effects": [
+      {
+       "stat": "yield",
+       "of": "aurochs_pen",
+       "mul": 1.4
+      },
+      {
+       "stat": "carry",
+       "add": 2
+      }
+     ],
+     "culture": {
+      "settled": 0.4,
+      "ranked": 0.2
+     },
+     "liked_by": [
+      "gluttonous"
+     ],
+     "disliked_by": [
+      "lazy"
+     ],
+     "pro": "A tame beast is food that walks to us.",
+     "con": "Beasts to feed, beasts to tend. Who tends us?"
+    }
+   }
+  },
+  "forest": {
+   "title": "The forest",
+   "desc": "How much the tribe takes from the trees.",
+   "default": "fell",
+   "choices": {
+    "dead_wood": {
+     "label": "Take only dead wood",
+     "desc": "The forest grows back quickly, but wood comes slower.",
+     "effects": [
+      {
+       "stat": "regrow",
+       "mul": 1.8
+      },
+      {
+       "stat": "gather",
+       "of": "chop",
+       "mul": 0.8
+      }
+     ],
+     "culture": {
+      "spiritual": 0.4
+     },
+     "liked_by": [
+      "devout",
+      "lazy"
+     ],
+     "disliked_by": [
+      "gluttonous"
+     ],
+     "pro": "The trees are old spirits. Take what they drop, and they keep giving.",
+     "con": "Twigs will not raise huts."
+    },
+    "fell": {
+     "label": "Fell freely",
+     "desc": "Cut what we need. The forest grows back at its own pace.",
+     "effects": [],
+     "liked_by": [],
+     "disliked_by": [],
+     "pro": "We need wood; the forest has wood.",
+     "con": "We take and take."
+    },
+    "burn": {
+     "label": "Burn to clear",
+     "desc": "Fire opens the land: wood comes fast and fields grow on the ash, but the forest is slow to return and fires spread easily.",
+     "unlock": {
+      "tech": "fire"
+     },
+     "effects": [
+      {
+       "stat": "gather",
+       "of": "chop",
+       "mul": 1.25
+      },
+      {
+       "stat": "regrow",
+       "mul": 0.5
+      },
+      {
+       "stat": "wildfire",
+       "mul": 1.6
+      },
+      {
+       "stat": "yield",
+       "of": "farm_plot",
+       "mul": 1.15
+      }
+     ],
+     "culture": {
+      "settled": 0.4,
+      "spiritual": -0.4
+     },
+     "on_start": [
+      {
+       "devotion": -8
+      },
+      {
+       "log": "The smoke of the burning hangs over the land. The elders look away."
+      }
+     ],
+     "liked_by": [
+      "belligerent",
+      "gluttonous"
+     ],
+     "disliked_by": [
+      "devout",
+      "cautious"
+     ],
+     "pro": "Fire is the tribe's servant. Let it clear the way.",
+     "con": "Fire has no master. One dry wind and it eats our huts too."
+    }
+   }
+  },
+  "hunt": {
+   "title": "The hunt",
+   "desc": "Which beasts the hunters may take.",
+   "default": "any",
+   "choices": {
+    "spare": {
+     "label": "Spare the mothers",
+     "desc": "Hunt less, but the herds grow back strong.",
+     "effects": [
+      {
+       "stat": "herd",
+       "mul": 1.6
+      },
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 0.85
+      }
+     ],
+     "culture": {
+      "spiritual": 0.3
+     },
+     "liked_by": [
+      "devout",
+      "cautious"
+     ],
+     "disliked_by": [
+      "belligerent",
+      "gluttonous"
+     ],
+     "pro": "Kill the mother, and next spring there is no calf.",
+     "con": "A hungry belly does not ask which deer it was."
+    },
+    "any": {
+     "label": "Hunt what comes",
+     "desc": "Take any beast. The herds come back as they will.",
+     "effects": [],
+     "pro": "The herds are many.",
+     "con": "The herds are fewer every year."
+    },
+    "all": {
+     "label": "Hunt everything",
+     "desc": "More meat now; fewer herds later.",
+     "effects": [
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 1.2
+      },
+      {
+       "stat": "herd",
+       "mul": 0.5
+      }
+     ],
+     "culture": {
+      "martial": 0.3,
+      "spiritual": -0.3
+     },
+     "liked_by": [
+      "belligerent",
+      "gluttonous"
+     ],
+     "disliked_by": [
+      "devout"
+     ],
+     "pro": "Every deer we leave, a wolf eats.",
+     "con": "When the plains are empty, what will our children hunt?"
+    }
+   }
+  },
+  "spirits": {
+   "title": "The spirits we honour",
+   "desc": "Whom the tribe turns to: what its rituals bring and what it becomes.",
+   "default": "all",
+   "choices": {
+    "all": {
+     "label": "All the spirits",
+     "desc": "A little smoke for every spirit: no favour, no grudge.",
+     "effects": [],
+     "pro": "Why anger any of them?",
+     "con": "A gift to everyone is a gift to no one."
+    },
+    "ancestors": {
+     "label": "The ancestors",
+     "desc": "The dead watch over us: lore comes more easily and the tribe takes comfort in its past.",
+     "effects": [
+      {
+       "stat": "lore",
+       "add": 0.01
+      },
+      {
+       "stat": "mood",
+       "add": 3
+      }
+     ],
+     "culture": {
+      "spiritual": 0.5,
+      "ranked": 0.2
+     },
+     "liked_by": [
+      "devout",
+      "cautious"
+     ],
+     "disliked_by": [],
+     "pro": "Those who came before us still walk beside us.",
+     "con": "The dead are dead. The living need food."
+    },
+    "sky": {
+     "label": "The sky",
+     "desc": "Sun, storm and stars: the cold bites less, and rituals bring more devotion.",
+     "effects": [
+      {
+       "stat": "cold",
+       "mul": 0.85
+      },
+      {
+       "stat": "devotion",
+       "mul": 1.25
+      }
+     ],
+     "culture": {
+      "spiritual": 0.7
+     },
+     "liked_by": [
+      "devout"
+     ],
+     "disliked_by": [
+      "lazy"
+     ],
+     "pro": "The sky sends rain and lightning both. Better it knows our names.",
+     "con": "The sky does not listen. It never has."
+    },
+    "beasts": {
+     "label": "The beast spirits",
+     "desc": "The tiger, the aurochs, the great serpent: hunters strike harder and the hunt goes better.",
+     "effects": [
+      {
+       "stat": "atk",
+       "add": 1
+      },
+      {
+       "stat": "gather",
+       "of": "hunt",
+       "mul": 1.1
+      }
+     ],
+     "culture": {
+      "martial": 0.5,
+      "spiritual": 0.3
+     },
+     "liked_by": [
+      "belligerent"
+     ],
+     "disliked_by": [
+      "cautious"
+     ],
+     "pro": "Wear the tiger's strength, and the tiger fears you.",
+     "con": "Call the beasts, and the beasts may come."
+    }
+   }
+  },
+  "seek": {
+   "title": "What to seek",
+   "desc": "Where the tribe's curiosity goes: which ideas grow faster from everyday work.",
+   "default": "anything",
+   "choices": {
+    "anything": {
+     "label": "Whatever comes",
+     "desc": "No direction: every idea grows at its own pace.",
+     "effects": []
+    },
+    "craft": {
+     "label": "Craft",
+     "desc": "Tools, pots, huts and the working of metal come faster.",
+     "effects": [
+      {
+       "stat": "insight",
+       "of": "tools|pottery|bronze",
+       "mul": 1.6
+      }
+     ],
+     "culture": {
+      "settled": 0.3
+     },
+     "liked_by": [
+      "cautious",
+      "gluttonous"
+     ],
+     "disliked_by": [],
+     "pro": "Good hands are worth more than good words.",
+     "con": "A better axe will not keep the spirits kind."
+    },
+    "herbs": {
+     "label": "Plants and healing",
+     "desc": "Fire, farming and the taming of beasts come faster.",
+     "effects": [
+      {
+       "stat": "insight",
+       "of": "fire|farming|domestication|hide",
+       "mul": 1.6
+      }
+     ],
+     "culture": {
+      "settled": 0.2,
+      "spiritual": 0.2
+     },
+     "liked_by": [
+      "gluttonous",
+      "devout"
+     ],
+     "disliked_by": [],
+     "pro": "Learn the green things, and they feed and heal us.",
+     "con": "Weeds and roots. The young want spears."
+    },
+    "stars": {
+     "label": "The stars and the spirits",
+     "desc": "Totems and the tribal code come faster.",
+     "effects": [
+      {
+       "stat": "insight",
+       "of": "totems|code",
+       "mul": 1.6
+      }
+     ],
+     "culture": {
+      "spiritual": 0.5
+     },
+     "liked_by": [
+      "devout"
+     ],
+     "disliked_by": [
+      "belligerent"
+     ],
+     "pro": "The sky is a book. We should learn to read it.",
+     "con": "Stargazers starve."
+    },
+    "war": {
+     "label": "War",
+     "desc": "Weapons, hides and bronze come faster; the warriors grow proud.",
+     "effects": [
+      {
+       "stat": "insight",
+       "of": "tools|hide|bronze",
+       "mul": 1.5
+      }
+     ],
+     "culture": {
+      "martial": 0.6
+     },
+     "liked_by": [
+      "belligerent"
+     ],
+     "disliked_by": [
+      "cautious",
+      "devout"
+     ],
+     "pro": "Our neighbours have spears. We need sharper ones.",
+     "con": "Seek war, and war will find us."
+    }
+   }
+  },
+  "clans": {
+   "title": "Stance toward clans",
+   "desc": "How the tribe meets its neighbours.",
+   "default": "wary",
+   "choices": {
+    "peace": {
+     "label": "Peace first",
+     "desc": "Gifts and open hands: the clans warm to us over time, but our warriors grow soft.",
+     "effects": [
+      {
+       "stat": "relation",
+       "add": 12
+      },
+      {
+       "stat": "atk",
+       "add": -1
+      }
+     ],
+     "culture": {
+      "martial": -0.4
+     },
+     "liked_by": [
+      "cautious",
+      "lazy"
+     ],
+     "disliked_by": [
+      "belligerent"
+     ],
+     "pro": "A friend at the river is worth ten spears.",
+     "con": "They smile at us and count our food."
+    },
+    "wary": {
+     "label": "Wary",
+     "desc": "Neither friend nor foe until they show us which.",
+     "effects": [],
+     "pro": "Watch, and wait.",
+     "con": "Waiting is not a plan."
+    },
+    "warlike": {
+     "label": "Warlike",
+     "desc": "We are the strong ones: warriors fight harder, but the clans come to hate us.",
+     "effects": [
+      {
+       "stat": "relation",
+       "add": -15
+      },
+      {
+       "stat": "atk",
+       "add": 1.5
+      }
+     ],
+     "culture": {
+      "martial": 0.8
+     },
+     "on_start": [
+      {
+       "log": "War paint is mixed by the fire. The neighbours will hear of it."
+      }
+     ],
+     "liked_by": [
+      "belligerent"
+     ],
+     "disliked_by": [
+      "cautious",
+      "devout"
+     ],
+     "pro": "Let them fear us, and they will leave us be.",
+     "con": "Make enemies of everyone, and we stand alone."
+    }
+   }
+  }
+ }
+}

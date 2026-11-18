@@ -68,6 +68,7 @@ func _initialize() -> void:
 	test_renovate_settlements()
 	test_building_panel()
 	test_wall_radius()
+	test_policies()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -324,7 +325,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2048,3 +2049,83 @@ func test_wall_radius() -> void:
 	var s2 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s2, data)
 	check(s2.struct_by_id(p.id).size == 200.0, "the chosen size is saved")
+
+func test_policies() -> void:
+	print("\n== The Council's policies (config/policies.json) ==")
+	var sim = _new_sim()
+	var P = sim.policy
+	check(P.open_ids().size() == 6 and P.chosen["way_of_life"] == "mixed" and P.chosen["clans"] == "wary", "six policies, each with its default way (%s)" % str(P.summary()))
+	check(P.effects().is_empty(), "the default ways change nothing: the base game")
+	check(P.block("way_of_life", "tillers") != "", "Tillers need Farming first")
+	check(P.set_choice("nonsense", "x") != "" and P.set_choice("forest", "nonsense") != "", "unknown policies and choices are refused")
+	var mood0: float = sim.folk.mood
+	var hunt0: float = sim.inv.mul("gather", "hunt/deer")
+	check(P.set_choice("way_of_life", "hunters", "test") == "", "the Council decides: Hunters")
+	check(sim.folk.mood < mood0 and P.pending.has("way_of_life") and P.chosen["way_of_life"] == "mixed", "it costs a little mood and takes time to take hold")
+	check(P.block("way_of_life", "foragers") != "", "and can't be changed again right away")
+	sim.time += D.DAY_LEN * 1.1
+	P.update(0.1)
+	check(P.chosen["way_of_life"] == "hunters" and sim.inv.mul("gather", "hunt/deer") > hunt0, "once it holds, hunting goes better (x%.2f)" % sim.inv.mul("gather", "hunt/deer"))
+	# hunters go for deer first
+	var u = sim.living()[0]
+	var deer = null
+	var bush = null
+	for n in sim.nodes:
+		if n.kind == "deer" and deer == null: deer = n
+		if n.kind == "bush" and bush == null: bush = n
+	if deer and bush:
+		var mid: Vector2 = (deer.pos + bush.pos) * 0.5
+		var pick = sim.find_node("food", mid, -1, 99999.0)
+		check(pick != null and pick.kind == "deer", "the hunters' way: gatherers seek deer before berries")
+	# the forest grows back faster when only dead wood is taken
+	sim.time += D.DAY_LEN * 3
+	P.set_choice("forest", "dead_wood")
+	sim.time += D.DAY_LEN * 1.1
+	P.update(0.1)
+	check(is_equal_approx(sim.inv.mul("regrow"), 1.8) and sim.inv.mul("gather", "chop/tree") < 1.0, "dead wood only: the forest regrows x1.8, wood comes slower")
+	# what to seek: insight on the chosen ideas grows faster
+	var s2 = _new_sim()
+	var u2 = s2.living()[0]
+	s2.evo.practice(u2, "chop", 10.0)
+	var plain: float = s2.evo.insight["tools"]
+	var s3 = _new_sim()
+	s3.policy.chosen["seek"] = "craft"
+	s3.policy.rev += 1
+	s3.evo.practice(s3.living()[0], "chop", 10.0)
+	check(s3.evo.insight["tools"] > plain * 1.5, "seeking Craft: Polished Stone Tools comes faster (%.2f vs %.2f)" % [s3.evo.insight["tools"], plain])
+	# the clans warm to a peaceful tribe
+	var s4 = _new_sim()
+	var s5 = _new_sim()
+	s5.policy.chosen["clans"] = "peace"
+	s5.policy.rev += 1
+	for i in 2000:
+		s4.rivals.update(0.5)
+		s5.rivals.update(0.5)
+	var cid: String = s4.rivals.clans.keys()[0]
+	check(s5.rivals.clans[cid]["relation"] > s4.rivals.clans[cid]["relation"] + 3, "Peace first: the clans' feelings settle warmer (%.1f vs %.1f)" % [s5.rivals.clans[cid]["relation"], s4.rivals.clans[cid]["relation"]])
+	# culture drifts with the ways, and a new way may run its on_start actions
+	var s6 = _new_sim()
+	s6.techs["fire"] = true
+	var dev0: float = s6.devotion + 20.0
+	s6.devotion = dev0
+	s6.policy.set_choice("forest", "burn")
+	s6.time += D.DAY_LEN * 1.1
+	s6.policy.update(0.1)
+	check(s6.devotion < dev0, "burning the forest troubles the spirits (devotion %.0f -> %.0f)" % [dev0, s6.devotion])
+	var mart0: float = s6.evo.culture["martial"]
+	s6.policy.chosen["clans"] = "warlike"
+	s6.time += D.DAY_LEN
+	s6.policy.update(0.1)
+	check(s6.evo.culture["martial"] > mart0, "a warlike tribe grows more martial every day")
+	# the Council: those who like and dislike it speak
+	var talk: Array = s6.policy.council("hunt", "all")
+	check(not talk.is_empty() and talk.all(func(t): return t["side"] in ["pro", "con"] and t["line"] != ""), "the elders speak for and against (%s)" % str(talk.map(func(t): return "%s:%s" % [t["who"].name, t["side"]])))
+	var bel: Array = talk.filter(func(t): return "belligerent" in t["who"].traits)
+	check(bel.all(func(t): return t["side"] == "pro"), "the belligerent want to hunt everything")
+	check(not s6.policy.council_ctx("hunt", "all")["speakers"].is_empty(), "the LLM gets the speakers and their profiles")
+	check("the_ways_the_tribe_lives_by" in s6.evo.world_ctx() and not s6.evo.world_ctx()["the_ways_the_tribe_lives_by"].is_empty(), "every persona knows the tribe's ways")
+	# saved with the game
+	var data: Dictionary = preload("res://scripts/save_game.gd").encode(sim)
+	var s7 = _new_sim()
+	preload("res://scripts/save_game.gd").decode_into(s7, data)
+	check(s7.policy.chosen["way_of_life"] == "hunters" and s7.policy.chosen["forest"] == "dead_wood" and is_equal_approx(s7.inv.mul("regrow"), 1.8), "the ways are saved")
