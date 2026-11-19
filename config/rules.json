@@ -1,5 +1,13 @@
 {
  "_doc": "Everyday rules of tribe life: eating, storing food, births, the aurochs pens, burials, beds, and the folk life of children, art, mood and trade. Times are seconds unless named *_days. Read by sim.gd and folk.gd; see docs/CONFIG.md.",
+ "day": {
+  "_doc": "The parts of the day, as [from, to] fractions of it (sim.day_frac(): 0 is midnight's other side of dawn; a part may wrap past 1.0, like [0.96, 0.12]). Read through sim.is_day_part(name) and sim.day_part(name). night: the rest hours (people sleep; orders given after night starts keep people up). dark: when the sky is dark (a little around the rest hours). dusk: golden light, people drift to the fire. dawn: pink light. morning: the first hours (waking talk, new calves). Meal times are in life.json.",
+  "dusk": [0.58, 0.74],
+  "night": [0.74, 0.96],
+  "dark": [0.72, 0.97],
+  "dawn": [0.94, 0.06],
+  "morning": [0.96, 0.2]
+ },
  "survival": {
   "hunger_rate": 0.33,
   "gluttonous": 1.25,

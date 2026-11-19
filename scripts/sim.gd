@@ -365,6 +365,13 @@ func popup(p: Vector2, text: String, color := Color("#ffe08a"), big := false) ->
 
 func day() -> int: return int(time / D.DAY_LEN) + 1
 func day_frac() -> float: return fmod(time, D.DAY_LEN) / D.DAY_LEN
+## The [from, to] of a part of the day (rules.json "day": dusk, night, dark, dawn, morning).
+func day_part(name: String) -> Array: return RULES["day"][name]
+## Whether it is now that part of the day (a part may wrap past midnight, like [0.96, 0.2]).
+func is_day_part(name: String) -> bool:
+	var w := day_part(name)
+	var f := day_frac()
+	return (f >= float(w[0]) and f < float(w[1])) if float(w[0]) <= float(w[1]) else (f >= float(w[0]) or f < float(w[1]))
 func has_tech(t: String) -> bool: return techs.has(t)
 ## Bronze arms the tribe only while a smelter stands and has copper and tin to work.
 func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1
@@ -1245,7 +1252,7 @@ func _herd(dt: float) -> void:
 		else:
 			ox_neglect = 0.0
 	# a new calf at dawn, if there is room, food and care
-	if day() != last_herd_day and not rest_time() and day_frac() < 0.2:
+	if day() != last_herd_day and not rest_time() and is_day_part("morning"):
 		last_herd_day = day()
 		if cap > oxen and oxen > 0 and ox_care >= 50 and stock["food"] >= 30:
 			oxen += 1
@@ -1424,15 +1431,14 @@ const SHELTERS := ["hut", "large_hut", "granary"] # everything that houses peopl
 var BED_FAR: float = float(RULES["beds"]["far"]) # further than this from a bed, people camp where they are
 
 ## Sleeping hours: a little inside the dark part of the day.
-func rest_time() -> bool:
-	var f := day_frac()
-	return f >= 0.74 and f < 0.96
+func rest_time() -> bool: return is_day_part("night")
 
 ## Start of tonight's rest (orders given after this keep people up).
 func night_start() -> float:
 	var base := floorf(time / D.DAY_LEN) * D.DAY_LEN
-	if day_frac() < 0.74: base -= D.DAY_LEN
-	return base + D.DAY_LEN * 0.74
+	var from := float(day_part("night")[0])
+	if day_frac() < from: base -= D.DAY_LEN
+	return base + D.DAY_LEN * from
 
 func in_hut(u: E.Unit) -> bool: return u.sleeping and u.bed_id >= 0
 
@@ -1849,8 +1855,7 @@ func tick(dt: float) -> void:
 	story.tick(dt)
 	cult.update(dt)
 	inv.update(dt)
-	var f := day_frac()
-	var target := maxf(1.0 if (f > 0.72 and f < 0.97) else 0.0, nat.darkness())
+	var target := maxf(1.0 if is_day_part("dark") else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
 	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult()

@@ -637,8 +637,7 @@ func _process(delta: float) -> void:
 	_refresh_right()
 
 func _refresh_top() -> void:
-	var f: float = sim.day_frac()
-	var phase := tr("Night") if sim.night_amt > 0.5 and sim.nat.eclipse_t < 0 else (tr("Dusk") if f > 0.65 else tr("Day"))
+	var phase := tr("Night") if sim.night_amt > 0.5 and sim.nat.eclipse_t < 0 else (tr("Dusk") if sim.is_day_part("dusk") else tr("Day"))
 	if sim.night_ff(): phase = "[color=#a8c8ff]%s[/color]" % tr("Night, all asleep")
 	if sim.hz.on():
 		phase += " · " + tr("Year %d") % sim.hz.year() + " " + tr(sim.hz.season())

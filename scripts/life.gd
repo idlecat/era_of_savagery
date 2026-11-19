@@ -361,10 +361,8 @@ func pick(u: E.Unit) -> Dictionary:
 
 func cond(u: E.Unit, c: String) -> bool:
 	if c.begins_with("trait:"): return u.has_trait(c.substr(6))
-	var f: float = sim.day_frac()
 	match c:
-		"dusk": return f >= 0.58 and f < 0.74
-		"morning": return f >= 0.96 or f < 0.12
+		"dusk", "morning": return sim.is_day_part(c)
 		"cold": return sim.hz.winter() or sim.hz.cold_rate(u, false) > 0.0
 		"wet": return sim.hz.on() and sim.hz.wet()
 		"tired": return u.fatigue >= float(C["fatigue"]["tired_at"])

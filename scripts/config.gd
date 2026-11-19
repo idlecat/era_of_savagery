@@ -20,8 +20,20 @@ static func load_cfg(name: String) -> Dictionary:
 			push_error("config %s line %d: %s" % [path, j.get_error_line(), j.get_error_message()])
 			continue
 		_merge(out, j.data)
+	_freeze(out)
 	_cache[name] = out
 	return out
+
+## Configs are shared by everyone who loads them: read-only, so a change made by mistake
+## fails loudly where it happens instead of quietly changing the rules for everyone else.
+## (Copy with duplicate(true) to change one.)
+static func _freeze(v) -> void:
+	if v is Dictionary:
+		for k in v: _freeze(v[k])
+		v.make_read_only()
+	elif v is Array:
+		for x in v: _freeze(x)
+		v.make_read_only()
 
 ## Forget cached configs (tests that change them; a mod reload).
 static func reload() -> void:

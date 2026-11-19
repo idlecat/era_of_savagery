@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -1706,16 +1706,15 @@ func test_config() -> void:
 	Config._merge(base, {"a": {"y": 5}, "c": true})
 	check(base["a"]["x"] == 1 and base["a"]["y"] == 5 and base["c"] == true, "a user://config file overrides only the keys it has")
 	# change the data, change the behaviour: with no earthquake reactions nobody takes cover
-	var saved: Array = re["on"]["earthquake"]
-	re["on"]["earthquake"] = []
+	sim.react.C = re.duplicate(true) # (configs are shared and read-only: this sim gets its own copy to change)
+	sim.react.C["on"]["earthquake"] = []
 	var u = sim.unit_by_name("Bai")
 	sim.assign_gather(u, "wood")
 	sim.nat.quake()
 	check(u.job.get("type", "") == "gather", "an event with no reactions configured leaves people at their work")
-	re["on"]["earthquake"] = [{"do": "flee", "who": "all", "dist": 200}]
+	sim.react.C["on"]["earthquake"] = [{"do": "flee", "who": "all", "dist": 200}]
 	sim.nat.quake()
 	check(u.job.get("flee", false), "and a different reaction in the config is what they do")
-	re["on"]["earthquake"] = saved
 	# a rival clan's grudges are data too
 	var rv: Dictionary = sim.rivals.C
 	var cid: String = sim.rivals.clans.keys()[0]
@@ -1744,12 +1743,11 @@ func test_gm_operations() -> void:
 	check(u.job.get("type", "") == "gather", "warm again, they go back to work")
 	# weather effects are data
 	sim.hz.set_weather("rain")
+	sim.hz.WEATHER = sim.hz.WEATHER.duplicate(true) # (its own copy to change)
 	var rain: Dictionary = sim.hz.WEATHER["rain"]
 	check(is_equal_approx(sim.hz.speed_mult(), float(rain["speed"])) and sim.hz.wet(), "rain slows walking by its configured amount, and is wet")
-	var old: float = rain["speed"]
 	rain["speed"] = 0.5
 	check(is_equal_approx(sim.hz.speed_mult(), 0.5), "change the config and the rain changes")
-	rain["speed"] = old
 	sim.hz.set_weather("clear")
 	check(not sim.hz.set_weather("hailstorm"), "an unknown weather is refused")
 	# a scout backs off from a beast, then scouts on
@@ -1835,10 +1833,9 @@ func test_dilemma_config() -> void:
 	sim.resolve_event("demand_" + cid, 1)
 	check(sim.predators.filter(func(p): return p.clan == cid and p.kind == "warrior").size() > war0, "refusing it brings their war band")
 	# change the data, change the dilemma
-	var old: String = dl["overpop"]["options"][0]["label"]
-	dl["overpop"]["options"][0]["label"] = "Found a colony"
+	sim.DILEMMAS = sim.DILEMMAS.duplicate(true) # (its own copy to change)
+	sim.DILEMMAS["overpop"]["options"][0]["label"] = "Found a colony"
 	check(sim.event_def("overpop")["options"][0]["label"] == "Found a colony", "editing config/dilemmas.json changes the dilemma")
-	dl["overpop"]["options"][0]["label"] = old
 
 func test_improvements() -> void:
 	print("\n== The village lays out improvements ==")
@@ -2887,6 +2884,22 @@ func test_boundaries() -> void:
 	check(tried.is_empty(), "junk input raises no script error %s" % str(tried))
 	var bad: Array = sim.check_invariants()
 	check(bad.is_empty(), "and leaves the world sound %s" % str(bad))
+
+func test_day_parts() -> void:
+	print("\n== The parts of the day come from rules.json ==")
+	var sim = _new_sim()
+	var at := func(f: float) -> void: sim.time = D.DAY_LEN * (3.0 + f)
+	at.call(0.5)
+	check(not sim.rest_time() and not sim.is_day_part("dusk") and not sim.is_day_part("morning"), "midday is none of them")
+	at.call(0.8)
+	check(sim.rest_time() and sim.is_day_part("dark"), "night: rest and dark")
+	at.call(0.99)
+	check(sim.is_day_part("morning") and sim.is_day_part("dawn") and not sim.rest_time(), "a part can wrap past midnight")
+	sim.RULES = sim.RULES.duplicate() # (RULES is the shared config: don't change it for the other tests)
+	sim.RULES["day"] = sim.RULES["day"].duplicate()
+	sim.RULES["day"]["night"] = [0.6, 0.9]
+	at.call(0.65)
+	check(sim.rest_time() and is_equal_approx(fmod(sim.night_start(), D.DAY_LEN), D.DAY_LEN * 0.6), "change the night in one place and bedtime follows")
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

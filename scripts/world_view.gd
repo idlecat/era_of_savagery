@@ -484,14 +484,18 @@ func _refresh_wear() -> void:
 	wear_img.set_data(sim.wear_w, sim.wear_h, false, Image.FORMAT_RGBA8, data)
 	wear_tex.update(wear_img)
 
+## How far into a part of the day it is, 0..1 (a part may wrap past midnight).
+func _part_k(name: String) -> float:
+	var w: Array = sim.day_part(name)
+	var a := float(w[0])
+	var span := fposmod(float(w[1]) - a, 1.0)
+	return clampf(fposmod(sim.day_frac() - a, 1.0) / maxf(span, 0.001), 0.0, 1.0)
+
 ## Time-of-day colour grading: warm golden dusk, blue night, pink dawn.
 func _sky_tint() -> Color:
-	var f: float = sim.day_frac()
 	var c := Color.WHITE
-	if f > 0.58 and f < 0.76: c = Color.WHITE.lerp(Color(1.0, 0.88, 0.74), sin((f - 0.58) / 0.18 * PI))
-	elif f > 0.94 or f < 0.06:
-		var k := (f - 0.94) / 0.12 if f > 0.94 else (f + 0.06) / 0.12
-		c = Color.WHITE.lerp(Color(1.0, 0.78, 0.82), sin(k * PI) * 0.8)
+	if sim.is_day_part("dusk"): c = Color.WHITE.lerp(Color(1.0, 0.88, 0.74), sin(_part_k("dusk") * PI))
+	elif sim.is_day_part("dawn"): c = Color.WHITE.lerp(Color(1.0, 0.78, 0.82), sin(_part_k("dawn") * PI) * 0.8)
 	return c.lerp(Color(0.30, 0.34, 0.55), sim.night_amt * 0.85)
 
 func _track(key: String, p: Vector2) -> void:
