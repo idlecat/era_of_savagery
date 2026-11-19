@@ -19,12 +19,12 @@ Godot 4.7 (GDScript only) prototype of `docs/PRD.md`: a pause-and-play tribe RTS
 ```sh
 GODOT=/Applications/Godot.app/Contents/MacOS/Godot
 $GODOT --path .                                                   # run the game
-$GODOT --headless --path . --script res://tests/test_contract.gd  # all tests (exit code 1 on failure)
+$GODOT --headless --path . --script res://tests/test_contract.gd  # all tests (exit code 1 on failure; add `-- --only=life` for some)
 ZAI_API_KEY=... $GODOT --headless --path . --script res://tests/test_llm_live.gd -- --provider=zai_coding [--lang=zh]  # live LLM smoke test (spends real calls)
 $GODOT --path . --quit-after 200 2>&1 | grep "SCRIPT ERROR"       # quick compile/startup check of the full game
 ```
 
-- There is no single-test runner: `tests/test_contract.gd` is a `SceneTree` script whose `_initialize()` calls `test_*()` functions in order. Comment out calls there to run a subset. The suite `preload`s main/hud/world_view only to compile-check them (headless tests never instantiate the UI).
+- Run a subset with `-- --only=life,smoke` (parts of `test_*` names, comma-separated). `tests/test_contract.gd` is a `SceneTree` script whose `_initialize()` calls the `test_*()` functions in its list, each from `seed(42)`; a `test_*` function missing from the list fails the run. The suite `preload`s main/hud/world_view only to compile-check them (headless tests never instantiate the UI). CI (`.github/workflows/tests.yml`) runs the suite, `check_culture` and a headless startup check for script errors on every push to main.
 - Screenshot / scenario harness in `scripts/main.gd` (`_debug_shot`): `$GODOT --path . -- --shot=/path.png --delay=2 --demo=newgame|overview|achievements|heritage|feat|sheet|negotiate|emergency|explore|evolve|winter|night|finds|nature|folk [--burial] [--day] [--kind=mushroom] [--what=fire|flood|eruption|ash|eclipse|storm|festival|kids|trade] [--hover=<structure>] [--graves] [--who=Name] [--era=1..3] [--secs=N] [--zoom=Z] [--lang=zh] [--map=<scenario id>|classic|small|standard|large|huge --tribes=N --seed=S] [--culture=<pack id>|none] [--tech] [--ability=craft] [--research=Name] [--finish] [--night]`. Move `user://llm_settings.cfg` aside first if you don't want screenshots to spend cloud LLM calls.
 - Release builds: `tools/build.sh` (Windows + macOS zips into `export/`, presets in `export_presets.cfg`, needs the 4.7.2 export templates); `tools/release.sh vX.Y.Z [--draft]` checks gh access and a clean pushed tree, stamps the version into the presets (commits it), builds, and creates the GitHub release (or replaces its zips if it exists). README download links point at `releases/latest/download/<file>`, so keep the zip names.
 - Culture packs: `$GODOT --headless --path . --script res://tools/check_culture.gd [-- --pack=res://cultures/<id> --skeleton]` validates `cultures/*/culture.json` and lists texts missing from its `zh.json`. Format: `docs/CULTURES.md`.

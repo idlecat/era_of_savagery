@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -sSLo godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && rm godot.zip
+          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
+
+      - name: Import the project
+        run: ~/godot/godot --headless --path . --import || true
+
+      - name: Unit and smoke tests
+        run: ~/godot/godot --headless --path . --script res://tests/test_contract.gd
+
+      - name: Culture packs
+        run: ~/godot/godot --headless --path . --script res://tools/check_culture.gd
+
+      - name: The game starts without script errors
+        run: |
+          ~/godot/godot --headless --path . --quit-after 200 2>&1 | tee startup.log
+          ! grep -E "SCRIPT ERROR|Parse Error" startup.log
