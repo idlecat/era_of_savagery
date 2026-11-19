@@ -2732,6 +2732,32 @@ func test_spend() -> void:
 	check(not sim.spend({"wood": 5, "stone": 3}) and sim.stock["wood"] == 10.0 and sim.stock["stone"] == 2.0, "a price that can't be paid in full takes nothing")
 	check(sim.spend({"wood": 5, "stone": 2}) and sim.stock["wood"] == 5.0 and sim.stock["stone"] == 0.0, "a price that can be paid is paid in full")
 	sim.stock["lore"] = 0.0
+	var food0: float = sim.stock["food"]
+	var got: Dictionary = sim.give({"foodd": 10, "food": 5, "wood": "lots", "stone": NAN})
+	check(got.keys() == ["food"] and sim.stock["food"] == food0 + 5 and not sim.stock.has("foodd"), "give ignores unknown resources and non-numbers (%s)" % str(got))
+	sim.give({"food": -9999})
+	check(sim.stock["food"] == 0.0, "taking more than there is leaves none, not a debt")
+	check(not sim.spend({"foodd": 0}) and not sim.can_afford({"gold": 0}), "a price in an unknown resource can't be paid")
+	sim.story.run([{"give": {"wodo": 50}}], {})
+	check(sim.check_invariants().is_empty(), "a typo in a script's gift breaks nothing (%s)" % str(sim.check_invariants()))
+	sim.stock["gold"] = 1.0
+	check(sim.check_invariants().any(func(b): return "gold" in b), "the checker catches a resource that doesn't exist")
+	sim.stock.erase("gold")
+	# every price, gift and reward in the data names a real resource
+	var unknown: Array = []
+	var walk := func(f: Callable, v, where: String) -> void:
+		if v is Dictionary:
+			for k in v:
+				if k in ["cost", "give", "reward", "get"] and v[k] is Dictionary:
+					for r in v[k]:
+						if not r in D.RESOURCES: unknown.append("%s.%s: %s" % [where, k, r])
+				f.call(f, v[k], where + "." + str(k))
+		elif v is Array:
+			for i in v.size(): f.call(f, v[i], where)
+	for f in DirAccess.get_files_at("res://config"):
+		if f.ends_with(".json"): walk.call(walk, JSON.parse_string(FileAccess.get_file_as_string("res://config/" + f)), f)
+	for lm in D.LANDMARKS: walk.call(walk, lm, "landmark " + str(lm.get("name", "")))
+	check(unknown.is_empty(), "configs and landmarks name only real resources %s" % str(unknown))
 	check(sim.contracts.effect_text("ward").contains(str(int(sim.RULES["ward"]["cost"]["lore"]))), "the ward's text names its price from rules.json (%s)" % sim.contracts.effect_text("ward"))
 
 func test_indexes() -> void:

@@ -350,7 +350,7 @@ func do_trade(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.act = "Carrying the trade home"
 			if not sim.approach(u, u.home, 20, dt): return
 			var got: Dictionary = j.get("get", {})
-			for r in got: sim.stock[r] += got[r]
+			sim.give(got)
 			u.carry_amt = 0
 			u.role = ""
 			sim.set_job(u, {})

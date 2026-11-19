@@ -2030,7 +2030,10 @@ const JOB_TYPES := ["move", "gather", "bury", "tend", "cover", "aid", "warm", "s
 func check_invariants() -> Array:
 	var bad: Array = []
 	for k in stock:
-		if is_nan(float(stock[k])) or float(stock[k]) < -0.01: bad.append("stock %s is %s" % [k, str(stock[k])])
+		if not k in D.RESOURCES: bad.append("stock holds an unknown resource '%s'" % str(k))
+		elif is_nan(float(stock[k])) or float(stock[k]) < -0.01: bad.append("stock %s is %s" % [k, str(stock[k])])
+	for r in D.RESOURCES:
+		if not stock.has(r): bad.append("stock lacks %s" % r)
 	var ids := {}
 	for u in units:
 		if ids.has(u.id): bad.append("two units share id %d" % u.id)
@@ -2124,16 +2127,30 @@ func can_place(type: String, p: Vector2, size := 0.0) -> String:
 ## Whether the stores hold `cost` ({resource: amount}).
 func can_afford(cost: Dictionary) -> bool:
 	for r in cost:
-		if float(stock.get(r, 0.0)) < float(cost[r]): return false
+		if not r in D.RESOURCES or float(stock.get(r, 0.0)) < float(cost[r]): return false # (an unknown resource can't be paid)
 	return true
 
 ## Pay `cost` from the stores, all or nothing: false (and nothing taken) if it can't be paid.
 ## Every price the tribe pays goes through here, so check-then-pay can't drift apart.
 func spend(cost: Dictionary) -> bool:
-	for r in cost: assert(stock.has(r), "spend: '%s' is not a resource" % r)
 	if not can_afford(cost): return false
 	for r in cost: stock[r] = float(stock.get(r, 0.0)) - float(cost[r])
 	return true
+
+## Add `amounts` ({resource: n}, negative takes, never below 0) to the stores. Input from
+## outside comes through here: unknown resource ids and non-numbers are ignored, never stored.
+## Returns what was actually given.
+func give(amounts: Dictionary) -> Dictionary:
+	var out := {}
+	for r in amounts:
+		var n = amounts[r]
+		if not r in D.RESOURCES or not (n is float or n is int) or is_nan(float(n)) or is_inf(float(n)):
+			push_warning("give: ignored %s: %s" % [str(r), str(n)])
+			continue
+		var before := float(stock[r])
+		stock[r] = maxf(0.0, before + float(n))
+		out[r] = stock[r] - before
+	return out
 
 ## Lay out a building site (`size`: a wall's radius, 0 = the default one).
 func place_structure(type: String, p: Vector2, size := 0.0) -> E.Structure:
@@ -2551,9 +2568,8 @@ func _discover(lm: Dictionary) -> void:
 		{"desc": (tr("%s %s.") % [tr(finder.name), tr(lm["text"])]) if finder else "", "at": lm["pos"]})
 	var rw: Dictionary = lm.get("reward", {})
 	var parts: Array = []
-	for k in rw:
-		stock[k] += rw[k]
-		parts.append(tr("+%d %s") % [rw[k], tr(k)])
+	var got := give(rw)
+	for k in got: parts.append(tr("+%d %s") % [got[k], tr(k)])
 	if lm.has("devotion"):
 		devotion = minf(100.0, devotion + lm["devotion"])
 		parts.append(tr("+%d devotion") % lm["devotion"])

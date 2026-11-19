@@ -147,7 +147,7 @@ const WHEN_KEYS := ["time", "day", "pop", "flag", "found", "met", "tech", "inven
 const DO_KEYS := ["log", "kind", "alert", "at", "level", "give", "reveal", "r", "flag", "mood", "devotion", "insight", "spawn", "offsets",
 	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join", "xp", "panic", "weather", "react"]
 const PERSON_AS := ["chosen", "founder", "wanderer", "ancestor"]
-const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods"]
+const RESOURCES := D.RESOURCES
 const WHERE := ["forest", "forest_edge", "meadow", "river", "riverbank", "hills_home", "hills_far"]
 const SEASONS := ["Spring", "Summer", "Autumn", "Winter"]
 

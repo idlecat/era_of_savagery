@@ -497,6 +497,9 @@ const STRUCTURES := {
 }
 ## Homes and walls get a new look per era (style = era they were built or renovated in).
 const STYLED := ["hut", "large_hut", "palisade", "granary"]
+## Everything the tribe keeps in its stores (sim.stock): the only resource ids input from
+## outside (scenarios, configs, culture packs, a game master) may name.
+const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods"]
 const CONTRACT_STRUCTURES := ["hut", "large_hut", "palisade", "fishing_dock", "bonfire", "weapon_rack", "totem_shrine", "farm_plot", "granary"]
 const VILLAGE_BUILDS := ["hut", "palisade", "bonfire", "totem_shrine", "farm_plot", "granary", "aurochs_pen", "smelter", "council_ring", "grand_altar"]
 const STRUCT_ALIASES := {

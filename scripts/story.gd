@@ -181,7 +181,7 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 				else:
 					sim.spawn_predator(p, base)
 		if a.has("give"):
-			for r in a["give"]: sim.stock[r] = maxf(0.0, sim.stock.get(r, 0.0) + float(a["give"][r]))
+			if a["give"] is Dictionary: sim.give(a["give"])
 		if a.has("reveal"):
 			sim.reveal(_at(a["reveal"], c, vars), float(a.get("r", 400.0)))
 		if a.has("flag"):

@@ -747,7 +747,7 @@ func _trade_resolve(id: String, idx: int) -> String:
 		sim.evo.seed(tid, float(C["traders"]["lesson"]), learner)
 		if learner: sim.remember(learner, tr("learned something of %s from a trader of the %s on Day %d") % [tr(sim.evo.tech_def(tid)["name"]), tr(c["name"]), sim.day()], 6)
 		return tr("The trader shows us how his people work. We understand more of %s.") % tr(sim.evo.tech_def(tid)["name"])
-	for r in o["get"]: sim.stock[r] += o["get"][r]
+	sim.give(o["get"])
 	var haggler = home_trader()
 	if haggler: sim.gain_xp(haggler, "trade", 8)
 	var known := teachable(id)
