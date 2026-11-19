@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -145,6 +145,7 @@ func test_full_contract() -> void:
 	check(u.memory.any(func(m): return "founding" in m["text"]), "contract archived in leader's memory")
 	check(u.lv("craft") > 4 or u.skills["craft"]["xp"] > 0, "leader gained crafting XP (Lv.%d, %d xp)" % [u.lv("craft"), u.skills["craft"]["xp"]])
 	check(sim.pop_cap() > 12, "pop cap increased to %d" % sim.pop_cap())
+	check(sim.settlement_name(c.site) == "%s's Outpost" % u.name and not "_" in sim.settlement_name(c.site), "the settlement is called by a name, not its plan id (%s)" % sim.settlement_name(c.site))
 
 func test_events() -> void:
 	print("\n== Milestone events ==")
@@ -1079,7 +1080,7 @@ func test_settling() -> void:
 	sim.tick(0.05)
 	var movers: Array = sim.residents_of(D.SITES[0])
 	check(movers.size() == 1 and movers[0].job.get("type", "") == "move", "someone moves to the settlement across the river")
-	check(sim.log_lines.any(func(e): return "test_outpost" in e["text"]), "and the chronicle tells of it")
+	check(sim.log_lines.any(func(e): return sim.settlement_name(c.site) in e["text"] and not "test_outpost" in e["text"]), "and the chronicle tells of it, by the settlement's name")
 	for i in 3:
 		sim.resettle_t = 0.0
 		sim.tick(0.05)
@@ -2900,6 +2901,27 @@ func test_day_parts() -> void:
 	sim.RULES["day"]["night"] = [0.6, 0.9]
 	at.call(0.65)
 	check(sim.rest_time() and is_equal_approx(fmod(sim.night_start(), D.DAY_LEN), D.DAY_LEN * 0.6), "change the night in one place and bedtime follows")
+
+## Rules about the code itself, checked by reading it: patterns that caused bugs before.
+func test_source_rules() -> void:
+	print("\n== Source rules ==")
+	var rules := {
+		"logic comparing the displayed activity (u.act is display text: read u.doing or the job)": RegEx.create_from_string("\\.act\\s*(==|!=)|\\.act\\.(begins_with|ends_with|contains)\\(|\\bin\\s+[a-z_]+\\.act\\b|match\\s+[a-z_.]*\\.act\\s*:"),
+		"times of day compared by hand (use sim.is_day_part)": RegEx.create_from_string("day_frac\\(\\)\\s*[<>]=?\\s*0\\.\\d"),
+		"calls to another module's private functions (make them public)": RegEx.create_from_string("\\bsim\\.(?:[a-z]+\\.)?_(?!cache)[a-z][a-z_]*\\("),
+	}
+	var bad_examples := ['if u.act == "Fighting":', 'x.act.begins_with("Dancing")', 'if "Idle" in u.act:', "if sim.day_frac() < 0.74:", "sim._end_errand(u)", "sim.react._start_aid(o)"]
+	for ex in bad_examples:
+		check(rules.values().any(func(r): return r.search(ex) != null), "the source rules catch: %s" % ex)
+	var hits := {}
+	for f in DirAccess.get_files_at("res://scripts"):
+		if not f.ends_with(".gd") or f == "lang_zh.gd": continue
+		var lines := FileAccess.get_file_as_string("res://scripts/" + f).split("\n")
+		for i in lines.size():
+			var code: String = lines[i].split("#")[0] if not lines[i].strip_edges().begins_with("##") else ""
+			for why in rules:
+				if rules[why].search(code): hits[why] = hits.get(why, []) + ["%s:%d" % [f, i + 1]]
+	for why in rules: check(not hits.has(why), "no %s %s" % [why, str(hits.get(why, []))])
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

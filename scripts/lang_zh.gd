@@ -1598,6 +1598,7 @@ const STRINGS := {
 	"Age": "时代",
 	"Masterpiece": "杰作",
 	"Outpost": "前哨",
+	"%s's Outpost": "%s的前哨",
 	"invented the %s on Day %d": "发明了%s（第 %d 天）",
 	"New %s: %s": "新%s：%s",
 	"Invention! %s made the first %s: %s": "发明！%s做出了第一个%s：%s",

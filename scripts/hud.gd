@@ -1083,7 +1083,7 @@ func _refresh_building(s) -> void:
 	var ours: bool = sim.ours(s)
 	left_title.text = tr("BUILDING")
 	var t := "[font_size=20][color=#ffd36b]%s[/color][/font_size]\n" % tr(sd["name"])
-	if ours: t += "[color=#b8a888]%s[/color]\n" % (tr("In %s") % tr(sim.settlement_name(sim.settlement_of(s.pos))))
+	if ours: t += "[color=#b8a888]%s[/color]\n" % (tr("In %s") % sim.settlement_name(sim.settlement_of(s.pos)))
 	else:
 		var cl: Dictionary = sim.rivals.clans.get(s.owner.trim_prefix("rival:"), {})
 		t += "[color=#ff9b8a]%s[/color]\n" % (tr("Of the %s") % tr(cl.get("name", "")))

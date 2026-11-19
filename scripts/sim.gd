@@ -1183,7 +1183,7 @@ func residents_of(p: Vector2) -> Array:
 
 func settlement_name(p: Vector2) -> String:
 	for c in contracts.list:
-		if c.kind == "settle" and c.site == p: return c.plan["plan_id"]
+		if c.kind == "settle" and c.site == p: return contracts.settlement_label(c)
 	return tr("the village")
 
 ## A crowded village sends someone to a settlement with empty beds (one at a time, by day).

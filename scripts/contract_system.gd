@@ -118,6 +118,11 @@ func next_site() -> Vector2:
 	var p := base + Vector2(0, 260 * (n % 3) * (1 if n % 2 == 0 else -1))
 	return D.shore(p, 60.0)
 
+## What players call a settlement: its founder's outpost (translated; the plan id is an id).
+func settlement_label(c: E.Contract) -> String:
+	var ld: E.Unit = sim.unit_by_id(c.leader_id)
+	return tr("%s's Outpost") % tr(ld.name) if ld else tr("Outpost")
+
 ## Has the tribe seen a river by the site?
 func river_known(site: Vector2) -> bool:
 	if D.river_dist(site) >= 700.0: return false
@@ -673,9 +678,15 @@ func _run_step(c: E.Contract, dt: float) -> void:
 				return
 			var sname: String = D.STRUCTURES[target.type]["name"]
 			if not target.paid:
-				var cost: int = D.STRUCTURES[target.type]["wood"]
+				var price: Dictionary = sim.place_cost(target.type, target.size) # (the one price of a building: wood from the crew's timber, anything else from the stores)
+				var cost := int(price["wood"])
+				var rest := {"stone": price["stone"]} if price["stone"] > 0 else {}
+				if c.wood >= cost and not sim.can_afford(rest):
+					c.substate = tr("Needs %d %s") % [rest["stone"], tr("stone")]
+					return
 				if c.wood >= cost:
 					c.wood -= cost
+					sim.spend(rest)
 					target.paid = true
 				else:
 					c.substate = tr("Gathering timber for %s (%d/%d)") % [tr(sname), c.wood, cost]
@@ -839,8 +850,8 @@ func _slot_for(c: E.Contract, type: String) -> Vector2:
 
 func deposit(c: E.Contract, res: String, amt: int, u: E.Unit) -> void:
 	if res == "wood": c.wood += amt
-	elif res == "food": sim.stock["food"] += amt # rations shared with the tribe
-	# stone is consumed by the experiments
+	elif res == "food": sim.give({"food": amt}) # rations shared with the tribe
+	elif res == "stone": c.stone += amt # (a research crew's material: the experiment works it, nothing reaches the stores)
 	if c.step_idx < c.steps.size():
 		var step: Dictionary = c.steps[c.step_idx]
 		if step["action"] == "gather_" + res: step["done"] += amt
@@ -1070,7 +1081,7 @@ func _complete(c: E.Contract) -> void:
 		_release(u)
 		sim.set_job(u, {})
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
-	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % c.plan["plan_id"], ld,
+	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % settlement_label(c), ld,
 		{"desc": tr("A new settlement on the frontier: %s.") % ", ".join(built.map(func(n): return tr(n))), "at": c.site})
 	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [c.plan["plan_id"], what, housing(c.plan)], "contract")
 	sim.contract_finished.emit(c)

@@ -46,7 +46,7 @@ class Unit:
 	var fell_t: float = 0.0 # when they died
 	var buried: bool = false
 	var death_cause: String = "" # how they fell (already translated)
-	var carrier_id: int = -1
+	var carrier_id: int = -1 # who is carrying the body to the burial ground
 	var carry_kind: String = "" # node kind of the load being carried (mushroom, honey...)
 	var herb_t: float = -1.0 # willow-bark tea working until
 	var salve_t: float = -1.0 # yarrow poultice working until
@@ -54,7 +54,7 @@ class Unit:
 	var born_t: float = -9999.0 # (children)
 	var parent_id: int = -1
 	var watch_id: int = -1 # the grown-up a child is watching
-	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load) # who is carrying the body to the burial ground
+	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load)
 	var kills: int = 0
 	var unlocked: Dictionary = {}
 	var resume_job: Dictionary = {}
@@ -168,7 +168,8 @@ class Contract:
 	var status: String = "assembling" # assembling, executing, interrupted, defending, sheltering, done, abandoned, failed
 	var steps: Array = [] # runtime copies of blueprint steps
 	var step_idx: int = 0
-	var wood: float = 0.0
+	var wood: float = 0.0 # timber the crew has gathered for its buildings
+	var stone: float = 0.0 # stone a research crew has quarried for its experiments (used up by them)
 	var struct_ids: Array = []
 	var slot_idx: int = 0
 	var progress: float = 0.0
