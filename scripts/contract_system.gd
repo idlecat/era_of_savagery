@@ -704,7 +704,7 @@ func _run_step(c: E.Contract, dt: float) -> void:
 			for u in cr:
 				var spot: Vector2 = c.site + Vector2.from_angle(i * TAU / maxf(1, cr.size())) * 26
 				_ensure(u, key, func(): sim.assign_experiment(u, spot, tname))
-				if u.act.begins_with("Experimenting"): working += 1
+				if u.doing == "experiment": working += 1
 				i += 1
 			var ld := leader(c)
 			var rate: float = (0.4 + 0.6 * working / maxf(1, cr.size())) * (1.0 + 0.08 * ld.lv("lore") + 0.04 * ld.lv("craft"))
@@ -752,7 +752,7 @@ func _run_war_step(c: E.Contract, step: Dictionary, key: String, dt: float) -> v
 				var spot: Vector2 = c.site + Vector2.from_angle(i * TAU / maxf(1, cr.size())) * 34
 				_ensure(u, key, func(): sim.assign_ritual(u, spot))
 				i += 1
-			if ld.job.get("type", "") == "ritual" and ld.act == "Performing ritual": step["done"] = step.get("done", 0.0) + dt
+			if ld.doing == "ritual": step["done"] = step.get("done", 0.0) + dt
 			if step.get("done", 0.0) >= step["duration_sec"]:
 				c.flags["blessed"] = true
 				for u in cr: sim.gain_xp(u, "combat", 3)

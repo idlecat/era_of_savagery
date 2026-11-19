@@ -1640,7 +1640,7 @@ func _draw_unit(u) -> void:
 	if u.hero: _ell(b, 15 + sin(t * 4) * 1.5, 7.5, Color(1, 0.85, 0.3, 0.3))
 	if sel: _ell_line(b, 14, 7, Color("#ffe066"), 2)
 	if u.role == "contract": _ell_line(b, 11, 5.5, Color(0.55, 0.8, 1.0, 0.8), 1.5)
-	var busy: bool = u.act in ["Chopping wood", "Picking berries", "Butchering game", "Building", "Fighting", "Quarrying stone"] or u.act.begins_with("Build") or u.act.begins_with("Renovating")
+	var busy: bool = DOING_ANIM.has(u.doing)
 	if art and art.has("man_idle_0_0"):
 		_draw_unit_sprite(u, b, key, walk, busy)
 		return
@@ -1666,7 +1666,7 @@ func _draw_unit(u) -> void:
 	var hand := sh + Vector2(6 * f, 6).rotated(swing * -f * 0.6)
 	ci.draw_line(sh + Vector2(3 * f, 0), hand, skin, 2)
 	ci.draw_line(sh + Vector2(-3 * f, 0), sh + Vector2(-5 * f, 7 + sw * 0.4), skin.darkened(0.1), 2)
-	if u.job.get("type", "") == "attack" or u.act == "Fighting" or u.has_trait("belligerent"):
+	if u.job.get("type", "") == "attack" or u.doing == "fight" or u.has_trait("belligerent"):
 		var dirv := Vector2(0.35 * f, -1).normalized().rotated(swing * f * 0.5)
 		ci.draw_line(hand - dirv * 6, hand + dirv * 18, Color("#b9a27a"), 1.6)
 		ci.draw_colored_polygon(PackedVector2Array([hand + dirv * 18 + Vector2(-2, 0), hand + dirv * 18 + Vector2(2, 0), hand + dirv * 24]), _blade_col())
@@ -1700,7 +1700,7 @@ func _draw_unit(u) -> void:
 			ci.draw_line(bk + Vector2(-1, 4), bk + Vector2(5, -3), Color("#8a5a32"), 3)
 		else:
 			ci.draw_circle(bk, 4, Color("#b03a2e"))
-	if u.job.get("type", "") == "ritual" and u.act == "Performing ritual":
+	if u.doing == "ritual":
 		_ell_line(b - Vector2(0, 12), 16 + sin(t * 3) * 3, 8, Color(0.75, 0.6, 1.0, 0.6), 1.5)
 		for i in 3:
 			var k := fmod(t * 0.7 + i / 3.0, 1.0)
@@ -1748,16 +1748,15 @@ func _zzz(at: Vector2, seed_: int) -> void:
 		var q := at + Vector2(sin(t * 1.5 + i + seed_) * 3.0 + k * 8.0, -k * 22.0)
 		_draw_label(q, "z", 12 + int(k * 8), Color(0.88, 0.92, 1.0, 1.0 - k * 0.9), true)
 
+## The animation for what a person's hands are doing (u.doing, set by the sim).
+const DOING_ANIM := {"fight": "attack", "ritual": "ritual", "dance": "ritual", "pick": "gather", "craft": "gather", "watch": "gather",
+	"build": "build", "experiment": "build", "paint": "build", "chop": "chop", "butcher": "chop", "quarry": "chop"}
+
 func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
 	var di := _dir_index(key)
 	var anim := "idle"
-	var act: String = u.act
-	if u.job.get("type", "") == "attack" and act == "Fighting": anim = "attack"
-	elif act == "Performing ritual" or act.begins_with("Dancing") or act == "Playing at the festival": anim = "ritual"
-	elif act in ["Picking berries", "Carving a figurine", "Stringing beads"] or act.begins_with("Watching"): anim = "gather" if not walk else "walk"
-	elif act.begins_with("Building") or act.begins_with("Renovating") or act.begins_with("Experimenting") or act == "Painting the huts": anim = "build"
-	elif busy: anim = "chop"
-	elif walk: anim = "walk"
+	if busy: anim = DOING_ANIM[u.doing]
+	if walk and (anim == "gather" or anim == "idle"): anim = "walk"
 	var pose: String = u.job.get("pose", "") # (life.gd: sitting at the fire, talking, a chore)
 	if pose != "" and not walk and art.has("man_%s_0_0" % pose): anim = pose
 	if anim in ["chop", "build", "attack"] and (walk and anim != "attack"): anim = "walk"
@@ -1798,7 +1797,7 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 		var th := hip + Vector2(-6 * f, -4)
 		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
 		_flame(th + Vector2(-2 * f, -14), 3, 9 * (1.0 + 0.2 * sin(t * 14 + u.id)), Color("#f8a531"))
-	if u.job.get("type", "") == "ritual" and u.act == "Performing ritual":
+	if u.doing == "ritual":
 		_ell_line(b - Vector2(0, 2), 15 + sin(t * 3) * 3, 7, Color(0.75, 0.6, 1.0, 0.6), 1.5)
 		for i in 3:
 			var kk := fmod(t * 0.7 + i / 3.0, 1.0)

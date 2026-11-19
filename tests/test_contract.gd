@@ -1100,7 +1100,7 @@ func test_folk() -> void:
 	var w = sim.unit_by_name("Bai")
 	sim.assign_gather(w, "wood")
 	kid.watch_id = w.id
-	kid.act = "Watching " + w.name
+	kid.play = "watch"
 	kid.idle_t = 50.0
 	kid.pos = w.pos + Vector2(10, 5)
 	var xp0: float = kid.skills["forage"]["xp"] + kid.skills["forage"]["lv"] * 1000

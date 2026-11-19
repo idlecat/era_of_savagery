@@ -127,7 +127,7 @@
    {"id": "hide", "do": "work", "weight": 2, "when": {"tech": "hide"}, "time": [8, 14], "acts": ["Scraping a hide", "Scraping a hide"], "pose": "gather", "xp": {"craft": 0.03}},
    {"id": "water", "do": "water", "weight": 1.5, "reach": 600, "time": [1, 2], "acts": ["Fetching water", "Carrying water home"]},
    {"id": "kids", "do": "watch", "weight": 1, "more": {"kin_child": 5}, "needs": ["children"], "reach": 400, "time": [8, 14],
-    "acts": ["Watching the children play", "Watching the children play"], "talk": "kids", "talk_chance": 0.3},
+    "acts": ["Watching the children play", "Watching the children play"], "pose": "gather", "talk": "kids", "talk_chance": 0.3},
    {"id": "mourn", "do": "sit", "at": "grave", "weight": 0, "more": {"grieving": 12}, "needs": ["grieving"], "time": [12, 20],
     "acts": ["Walking to the graves", "Mourning %s"], "pose": "sit", "talk": "grief", "talk_chance": 0.5},
    {"id": "gaze", "do": "gaze", "weight": 1, "more": {"trait:devout": 2, "low_spirits": 2}, "dist": [120, 220], "time": [8, 14],

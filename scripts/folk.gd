@@ -136,21 +136,25 @@ func play(u: E.Unit, dt: float) -> void:
 		if roll < 0.35 and not adults.is_empty():
 			var a: E.Unit = adults.pick_random()
 			u.watch_id = a.id
+			u.play = "watch"
 			u.act = "Watching " + a.name
 		elif roll < 0.7:
 			u.watch_id = -1
+			u.play = "chase"
 			u.act = "Playing chase"
 		else:
 			u.watch_id = -1
+			u.play = "hunters"
 			u.act = "Playing at hunters"
 		u.wander_to = u.home + Vector2(randf_range(-110, 110), randf_range(-80, 80))
-	match u.act:
-		"Playing chase": # round and round the fire
+	if u.play == "watch": u.doing = "watch"
+	match u.play:
+		"chase": # round and round the fire
 			var a: float = sim.time * 0.9 + u.id
 			u.wander_to = u.home + Vector2(cos(a) * 70.0, sin(a) * 45.0 + 20.0)
 			sim.go_to(u, u.wander_to)
 			sim.step_move(u, dt, sim.unit_speed(u) * 0.9)
-		"Playing at hunters":
+		"hunters":
 			if u.pos.distance_to(u.wander_to) < 8: u.wander_to = u.home + Vector2(randf_range(-120, 120), randf_range(-90, 90))
 			sim.go_to(u, u.wander_to)
 			sim.step_move(u, dt, sim.unit_speed(u) * 0.7)
@@ -191,6 +195,7 @@ func do_art(u: E.Unit, j: Dictionary, dt: float) -> void:
 		u.act = "Walking to work"
 		return
 	u.act = {"carve": "Carving a figurine", "beads": "Stringing beads", "paint": "Painting the huts"}[j["kind"]]
+	u.doing = "paint" if j["kind"] == "paint" else "craft"
 	j["t"] += dt * sim.work_mul(u)
 	if j["t"] < float(F["art_time"]): return
 	var ca: Dictionary = F["art"]
@@ -268,6 +273,7 @@ func dance(u: E.Unit, dt: float) -> void:
 	sim.go_to(u, D.VILLAGE + Vector2(cos(a) * r, sin(a) * r * 0.7))
 	sim.step_move(u, dt, sim.unit_speed(u) * 0.6)
 	u.act = "Dancing at the festival" if u.role != "child" else "Playing at the festival"
+	u.doing = "dance"
 
 # ------------------------------------------------------------ trade trips
 func trade_block(u: E.Unit, id: String) -> String:

@@ -222,7 +222,7 @@ func _bond_tick(alive: Array, step: float) -> void:
 			var gain := 0.0
 			if ja.get("type", "") == jo.get("type", ""): gain = float(b["work"])
 			if ja.get("type", "") == "attack" and ja.get("target_id", -1) == jo.get("target_id", -2): gain = float(b["fight"])
-			if a.act.begins_with("Dancing") and o.act.begins_with("Dancing"): gain = float(b["festival"])
+			if a.doing == "dance" and o.doing == "dance": gain = float(b["festival"])
 			if gain > 0.0: add_bond(a, o, gain * step)
 
 ## How much faster (or slower) this person works: spirits, weariness, company.
@@ -555,6 +555,7 @@ func do_act(u: E.Unit, j: Dictionary, dt: float) -> void:
 			if j.has("talk") and randf() < float(j["talk_chance"]): say(u, str(j["talk"]), tr(j.get("who", "")))
 		1:
 			u.act = label.call(1)
+			u.doing = str(j.get("act", ""))
 			if j.has("kid"): # watching a child: keep them in sight
 				var k: E.Unit = sim.unit_by_id(j["kid"])
 				if k == null or k.dead or k.role != "child":

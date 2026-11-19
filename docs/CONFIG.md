@@ -152,7 +152,7 @@ There are no sound files: every sound is a **recipe** in `sounds`, rendered by `
 
 - `volume`: the default volumes (the Sound dialog saves the player's own in `user://settings.cfg`).
 - `on_log` (chronicle kind → sound), `on_alert` (level), `on_signal` (any `sim` signal), `on_happening` (the ids of `after` conditions: weather and nature), `ui_click`.
-- `jobs`: the sounds of people near the camera at work, by the start of their activity (`act`), `every` `[min, max]` seconds; at most `max_voices` at once; `beasts` for wild animals.
+- `jobs`: the sounds of people near the camera at work, by what their hands are doing (`doing`: chop, quarry, build, butcher, pick, fight, ritual, dance, craft, paint, experiment, watch, or an idle act id from life.json such as mend, hide), `every` `[min, max]` seconds; at most `max_voices` at once; `beasts` for wild animals.
 - `ambience`: loops faded in while `when` holds; `near` a structure type or `river` makes it come from the nearest one.
 - `random`: one-shots now and then (`every`, `spread` around the camera, `pitch` range).
 - `music.moods`: the first whose `when` holds plays (it changes on the bar): `bpm`, `root` (semitones), a pentatonic `scale`, `drums` (16-step patterns per sound, `x` = hit), the `flute` (a wandering melody: `density`, `octave`, `leap`) and the `drone` level.

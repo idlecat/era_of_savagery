@@ -31,7 +31,9 @@ class Unit:
 	var last_hit_t: float = -99.0
 	var attacker_id: int = -1
 	var dead: bool = false
-	var act: String = "Idle"
+	var act: String = "Idle" # shown to the player (translated by I.act()); never compare it in logic
+	var doing: String = "" # what the hands are busy with right now (chop, build, fight, ritual, dance...): logic, poses and sounds read this; update_unit clears it each tick
+	var play: String = "" # a child's game (folk.play): chase, hunters, watch
 	var xp_acc: float = 0.0
 	var xp_flush_t: float = 0.0
 	var wander_t: float = 0.0

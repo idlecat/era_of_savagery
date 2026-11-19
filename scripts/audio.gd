@@ -297,7 +297,7 @@ func _jobs() -> void:
 	for u in sim.units:
 		if u.dead or sim.in_hut(u) or u.pos.distance_to(c) > reach: continue
 		for j in J.get("list", []):
-			if u.act.begins_with(j["act"]):
+			if u.doing == j["doing"]:
 				near.append([u.pos.distance_to(c), u, j])
 				break
 	var bj: Dictionary = J.get("beasts", {})

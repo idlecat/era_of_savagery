@@ -632,6 +632,7 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResN
 
 # ------------------------------------------------------------------ unit update
 func update_unit(u: E.Unit, dt: float) -> void:
+	u.doing = ""
 	if u.dead: return
 	unit_needs(u, dt)
 	u.cd -= dt
@@ -742,6 +743,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				gain_xp(u, "craft", dt * 0.9)
 				evo.practice(u, "build", dt)
 				evo.drift("spiritual", -0.005 * dt)
+				u.doing = "build"
 				if s.reno:
 					u.act = ("Upgrading " if s.upgrade != "" else "Renovating ") + sd["name"]
 					s.reno_progress += speed
@@ -775,6 +777,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					set_job(u, {})
 				return
 			u.act = "Fighting"
+			u.doing = "fight"
 			if approach(u, p.pos, 22, dt) and u.cd <= 0:
 				u.cd = 1.0
 				var dmg := unit_atk(u) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def))
@@ -794,6 +797,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		"experiment":
 			if approach(u, j["at"], 8, dt):
 				u.act = "Experimenting: " + j["label"]
+				u.doing = "experiment"
 				gain_xp(u, "lore", dt * 0.3)
 				gain_xp(u, "craft", dt * 0.2)
 			else:
@@ -821,6 +825,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		"ritual":
 			if approach(u, j["at"], 6, dt):
 				u.act = "Performing ritual"
+				u.doing = "ritual"
 				var boost := 1.5 if (_struct_near("totem_shrine", u.pos, 140) or _struct_near("grand_altar", u.pos, 140)) else 1.0
 				if evo.has_trad("ancestor_rites"): boost *= 1.3
 				stock["lore"] += dt * 0.22 * (1.0 + 0.2 * u.lv("lore")) * boost
@@ -891,6 +896,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 				popup(u.pos + Vector2(0, -30), tr("Lethal strike!"), Color("#ffb36b"))
 				n.amount += 5
 		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
+		u.doing = {"tree": "chop", "carcass": "butcher", "boulder": "quarry"}.get(n.kind, "pick")
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
 		var rate := base * (1.0 + 0.1 * u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
