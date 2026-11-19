@@ -13,6 +13,9 @@
 ##   defend    - come and fight a beast or raider that attacks someone
 ##   warm      - someone freezing goes to the nearest fire and stays until warm again
 ##   shelter   - hide in one's hut (or cower outdoors) until ctx "until"
+##   look      - people standing about (no work, or an idle act) come over to see something
+##               (a new building, a newborn, strangers, a kill) and stand round it a moment
+##   startle   - a start at a sudden noise: stop dead for a moment, then carry on
 ##
 ## Wildfire is not a one-off: while anything burns, update() runs the "wildfire" responses
 ## once a second for everyone near a fire (the first one that takes a person wins).
@@ -22,7 +25,7 @@ const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const Config = preload("res://scripts/config.gd")
 
-const VERBS := ["cover", "aid", "flee", "firefight", "defend", "warm", "shelter"]
+const VERBS := ["cover", "aid", "flee", "firefight", "defend", "warm", "shelter", "look", "startle"]
 const WHO := ["all", "able", "victim", "near", "river", "helpers"]
 
 var C: Dictionary = Config.load_cfg("reactions")
@@ -60,13 +63,15 @@ func able(u: E.Unit) -> bool:
 
 ## Drop the current work for `job` (marked as a reaction), keeping the work to come back to.
 func interrupt(u: E.Unit, job: Dictionary) -> void:
-	if u.resume_job.is_empty() and not u.job.is_empty() and not u.job.get("react", false) and not u.job.get("flee", false):
+	if u.resume_job.is_empty() and not u.job.is_empty() and not u.job.get("react", false) and not u.job.get("flee", false) \
+			and u.job.get("type", "") != "life": # (an idle act is not worth coming back to)
 		u.resume_job = u.job
 		u.resume_key = u.job_key
 		u.resume_t = u.job_t
 	job["react"] = true
 	sim.set_job(u, job, u.job_key)
 	u.sleeping = false
+	sim.life.hush(u) # (whatever they were chatting about, it's over)
 
 # ------------------------------------------------------------ dispatch
 ## Something happened: run its configured responses. A person taken by one response is
@@ -76,7 +81,10 @@ func trigger(event: String, ctx: Dictionary = {}) -> void:
 	for r in responses(event):
 		for u in _pick(r, ctx):
 			if taken.has(u.id): continue
-			if _respond(r, u, ctx): taken[u.id] = true
+			if _respond(r, u, ctx):
+				taken[u.id] = true
+				if r.has("talk") and r.get("do", "") != "look" and randf() < float(r.get("talk_chance", 0.3)): # (look speaks on arrival)
+					sim.life.say(u, str(r["talk"]), "", bool(r.get("talk_force", false)))
 
 ## The people a response applies to.
 func _pick(r: Dictionary, ctx: Dictionary) -> Array:
@@ -110,8 +118,10 @@ func _helpers(r: Dictionary, ctx: Dictionary) -> Array:
 		var reach: float = float(r.get("reach", 300))
 		for t in r.get("reach_by_trait", {}):
 			if o.has_trait(t): reach = float(r["reach_by_trait"][t])
+		var close: bool = sim.life.on and (sim.life.kin(o, v) or sim.life.bond(o, v) >= float(sim.life.C["bonds"]["friend_at"]))
+		if close: reach += float(r.get("bond_reach", 0)) # friends and kin come from further, and first
 		var d: float = o.pos.distance_to(v.pos)
-		if d < reach and D.same_side(o.pos, v.pos): near.append([d, o])
+		if d < reach and D.same_side(o.pos, v.pos): near.append([d - (float(r.get("bond_reach", 0)) if close else 0.0), o])
 	near.sort_custom(func(a, b): return a[0] < b[0])
 	return near.map(func(e): return e[1])
 
@@ -124,6 +134,8 @@ func _respond(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 		"defend": return _start_defend(r, u, ctx)
 		"warm": return _start_warm(r, u)
 		"shelter": return _start_shelter(r, u, ctx)
+		"look": return _start_look(r, u, ctx)
+		"startle": return _start_startle(r, u, ctx)
 	push_warning("reactions.json: unknown response '%s'" % r.get("do", ""))
 	return false
 
@@ -142,7 +154,7 @@ func _start_cover(r: Dictionary, u: E.Unit) -> bool:
 		var hut = sim.struct_by_id(u.bed_id)
 		if hut: u.pos = hut.pos + Vector2(0, 14) # out of the door
 		u.bed_pos = null
-	interrupt(u, {"type": "cover", "to": spot, "t": 0.0, "r": r})
+	interrupt(u, {"type": "cover", "to": spot, "t": 0.0, "r": r, "pose": r.get("pose", "")})
 	return true
 
 ## Somewhere close to p, at least `clear` from buildings (moving at most `max_move`), on
@@ -349,3 +361,43 @@ func do_shelter(u: E.Unit, j: Dictionary, dt: float) -> void:
 		u.act = _act(r, 1)
 	else:
 		u.act = _act(r, 2)
+
+# ------------------------------------------------------------ look (something to see)
+## Only people standing about come (no work, or an idle act of life.gd), and only while
+## everyday life is on (sim.life.on); "chance" each, at most "count" at once.
+func _start_look(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
+	if not sim.life.on or u.sleeping or sim.in_hut(u) or not (u.job.is_empty() or u.job.get("type", "") == "life"): return false
+	if u.role != "" and u.role != "child": return false
+	if randf() >= float(r.get("chance", 1.0)): return false
+	if sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "look" and o.job.get("r", {}) == r).size() >= int(r.get("count", 5)): return false
+	var at: Vector2 = ctx.get("at", u.pos)
+	var dir := (u.pos - at).normalized() if u.pos.distance_to(at) > 1.0 else Vector2.from_angle(randf() * TAU)
+	var to: Vector2 = sim._dry(at + dir.rotated(randf_range(-0.5, 0.5)) * Config.rand_in(r.get("ring", [40, 70])))
+	if not D.same_side(to, u.pos): return false
+	interrupt(u, {"type": "look", "to": to, "face": at, "t": 0.0, "time": Config.rand_in(r.get("time", [4, 7])), "r": r})
+	return true
+
+func do_look(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var r: Dictionary = j.get("r", {})
+	if not sim.approach(u, j["to"], 6, dt):
+		u.act = _act(r, 0)
+		if sim.time - u.job_t > 30.0: sim._end_errand(u) # (too far: never mind)
+		return
+	u.act = _act(r, 1)
+	u.face = j["face"]
+	if j["t"] == 0.0 and r.has("talk") and randf() < float(r.get("talk_chance", 0.5)): sim.life.say(u, str(r["talk"]))
+	j["t"] += dt
+	if j["t"] >= float(j["time"]): sim._end_errand(u)
+
+# ------------------------------------------------------------ startle (thunder)
+func _start_startle(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
+	if not sim.life.on or u.sleeping or sim.in_hut(u) or u.job.get("flee", false) or u.job.get("react", false): return false
+	if u.job.get("type", "") in ["attack", "bury", "envoy", "trade_trip", "depart"]: return false
+	interrupt(u, {"type": "startle", "t": 0.0, "time": Config.rand_in(r.get("time", [1, 2])), "r": r, "face": ctx.get("at", u.pos)})
+	return true
+
+func do_startle(u: E.Unit, j: Dictionary, dt: float) -> void:
+	u.act = _act(j.get("r", {}), 0)
+	u.face = j["face"]
+	j["t"] += dt
+	if j["t"] >= float(j["time"]): sim._end_errand(u)

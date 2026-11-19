@@ -767,5 +767,32 @@
     "result": "We leave them to mourn."
    }
   ]
+ },
+ "discontent": {
+  "_doc": "A family whose spirits stay low wants to leave (life.gd, config/life.json 'leave'). Vars: person (their name), who (them, for the actions' who).",
+  "title": "A Family Loses Heart",
+  "text": ["The family of %s has lost heart. They sit apart from the fire, work without will and speak of leaving the tribe.", "person"],
+  "options": [
+   {
+    "label": "Sit with them at the fire",
+    "desc": "Hear them out over a shared meal.",
+    "cost": {"food": 10},
+    "do": [{"morale": 35, "who": "$who"}],
+    "result": ["The family of %s talks with you long into the night. In the morning they take up their work again.", "person"]
+   },
+   {
+    "label": "Honour their family",
+    "desc": "Give them crafted goods and a place of honour at the next feast.",
+    "cost": {"goods": 2},
+    "do": [{"morale": 55, "who": "$who"}, {"remember": "was honoured by the chieftain before the whole tribe on Day %d", "who": "$who", "impact": 7}, {"mood": 2}],
+    "result": ["The family of %s stands taller. The tribe sees that every family counts.", "person"]
+   },
+   {
+    "label": "Let them go",
+    "desc": "Every family is free to find its own fire.",
+    "do": [{"depart": true, "who": "$who"}],
+    "result": ["The family of %s gathers its things and walks away from the tribe.", "person"]
+   }
+  ]
  }
 }

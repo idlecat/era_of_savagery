@@ -200,6 +200,7 @@ func strike() -> void:
 
 func _flash(at: Vector2) -> void:
 	strikes.append({"pos": at, "t": 0.0})
+	sim.react.trigger("thunder", {"at": at, "danger": at}) # (people nearby start)
 	sim.devotion = minf(100.0, sim.devotion + float(C["lightning"]["devotion"]))
 
 func _hit_person(u: E.Unit) -> void:

@@ -1,0 +1,187 @@
+{
+ "_doc": "Everyday life of the people (life.gd, sim.life): meals at the fire, waking, how fast people walk, weariness (fatigue), spirits (morale), the bonds between families, the idle acts people choose when nobody needs them, and the short things they say. Each person is one family line: a child starts a new line, kin to the line it came from. Times are seconds unless named *_days; day parts are fractions of the day (sim.day_frac(): 0.74 night falls, 0.96 dawn). Texts are English translation keys. See docs/CONFIG.md.",
+
+ "meals": {
+  "_doc": "In each of `times` (day parts) people at home who are hungrier than hungry_below put down work listed in `jobs` ('' = no work, 'life' = an idle act) and walk to the nearest fire within `reach` to eat in a ring around it (seat: distance from the fire). They eat up to a full meal (survival meal_fill) for food in proportion (survival meal per meal_fill), then go back to work. People far away still eat from the stores when very hungry (survival eat_below).",
+  "times": [[0.34, 0.42], [0.6, 0.68]],
+  "hungry_below": 80,
+  "reach": 650,
+  "roles": ["", "child"],
+  "jobs": ["", "life", "gather", "build", "art", "tend", "ritual"],
+  "seat": [40, 78],
+  "eat_time": [5, 9],
+  "give_up": 40,
+  "bond": 1.0,
+  "bond_reach": 70,
+  "acts": ["Going to eat", "Eating at the fire"],
+  "pose": "sit",
+  "talk": "eating",
+  "talk_chance": 0.35
+ },
+
+ "wake": {
+  "_doc": "At dawn people take a moment before the day's work.",
+  "time": [2, 4.5],
+  "act": "Waking up",
+  "talk": "morning",
+  "talk_chance": 0.25
+ },
+
+ "pace": {
+  "_doc": "Walking speed multipliers: weariness above tired_from slows people by up to tired_slow; the starving walk at `hungry`; in an alarm, a crisis or flight people hurry.",
+  "tired_from": 60,
+  "tired_slow": 0.2,
+  "hungry_below": 20,
+  "hungry": 0.9,
+  "hurry": 1.12
+ },
+
+ "fatigue": {
+  "_doc": "0..100 per person. Work raises it per second (lazy people tire faster), idling, eating and idle acts lower it, sleep clears it. Above work_from it slows work by up to work_loss at 100. tired_at is when idle acts count someone as tired.",
+  "work": 0.9,
+  "lazy": 1.2,
+  "sick": 0.5,
+  "rest": 0.8,
+  "sleep": 4.0,
+  "rest_jobs": ["", "life", "meal", "look", "startle"],
+  "work_from": 50,
+  "work_loss": 0.2,
+  "tired_at": 60
+ },
+
+ "morale": {
+  "_doc": "0..100 per person: the tribe's mood plus what weighs on or lifts this family (hunger, sickness, wounds, weariness, grief, praise, friends, rivals working nearby). It moves `step` per second. Work speed changes by work_per for each point above or below the tribe's mood. low/high are the idle acts' low_spirits and high_spirits.",
+  "step": 0.5,
+  "hungry_below": 30,
+  "hungry": -12,
+  "sick": -10,
+  "hurt_below": 0.5,
+  "hurt": -8,
+  "tired": -6,
+  "friend": 3,
+  "friend_max": 9,
+  "lonely": -4,
+  "rival_near": -4,
+  "grief_fade": 0.12,
+  "grief_max": 35,
+  "cheer_fade": 0.1,
+  "cheer_max": 20,
+  "work_per": 0.003,
+  "low": 35,
+  "high": 70,
+  "words": [[80, "In high spirits"], [60, "Content"], [40, "Low"], [20, "Unhappy"]],
+  "lowest_word": "Despairing"
+ },
+
+ "praise": {
+  "_doc": "Cheer (fading morale) for a person's own deeds.",
+  "level_up": 6,
+  "kill": 10,
+  "masterpiece": 12,
+  "come_of_age": 8,
+  "talk_chance": 0.5
+ },
+
+ "leave": {
+  "_doc": "A family whose spirits stay below `below` for `days` days may want to leave: the chieftain is asked (dilemma 'discontent' in config/dilemmas.json), at most every every_days days, never with fewer than min_pop people.",
+  "below": 15,
+  "days": 1.0,
+  "every_days": 3,
+  "min_pop": 4,
+  "walk": 40,
+  "act": "Leaving the tribe"
+ },
+
+ "bonds": {
+  "_doc": "Bonds between two families, -100..100: friends at friend_at and above (close at close_at), rivals at rival_at and below. A child starts at `kin` with the family it came from. At the start each family has `start` friends and maybe a rival. Bonds grow per second working within `near` of each other, fighting the same foe, dancing at a festival, and per chat (a quarrel instead costs quarrel.loss). Friends working nearby speed work (work_bonus each, up to work_bonus_max); rivals nearby slow it. A death grieves those bonded at grieve_at or more (kin always): grief = grief + grief_per x bond.",
+  "friend_at": 30,
+  "close_at": 60,
+  "rival_at": -30,
+  "kin": 45,
+  "start": {"friends": 1, "friend": [30, 55], "rival_chance": 0.3, "rival": [-50, -30]},
+  "near": 150,
+  "work": 0.03,
+  "fight": 0.4,
+  "festival": 0.15,
+  "chat": 6,
+  "quarrel": {"base": 0.06, "belligerent": 0.12, "low_spirits": 0.12, "rival": 0.3, "loss": 10, "morale": -6},
+  "work_bonus": 0.04,
+  "work_bonus_max": 0.12,
+  "rival_work": -0.05,
+  "grieve_at": 20,
+  "grief": 10,
+  "grief_per": 0.25,
+  "kin_grief": 25,
+  "depart_grief": 0.5
+ },
+
+ "idle": {
+  "_doc": "What grown-ups at home do when nobody needs them: every `every` seconds of idling one act is picked, weighted by `weight` plus `more` for each condition that holds. `needs`: conditions that must all hold; `when`: tribe conditions as in scenario scripts (story.holds). Conditions: dusk, morning, cold, wet, tired, hurt, hungry, grieving, low_spirits, high_spirits, children, kin_child, can_art, trait:<trait>. Verbs (do): sit (at: fire, here, shelter, grave, edge), chat, work (a chore at home), water, watch (the children), gaze, ritual (lasts until new orders), art (folk.gd), wander. acts: [walking there, doing it] ('%s': the other person); pose: the drawn pose there (sit, talk, build, gather, ritual).",
+  "every": [2, 4],
+  "acts": [
+   {"id": "fire", "do": "sit", "at": "fire", "weight": 2, "more": {"dusk": 6, "cold": 5, "tired": 3, "wet": -2}, "time": [10, 18],
+    "acts": ["Walking to the fire", "Sitting by the fire"], "pose": "sit", "talk": "fire", "talk_chance": 0.25},
+   {"id": "chat", "do": "chat", "weight": 3, "more": {"dusk": 2, "high_spirits": 2, "low_spirits": -2}, "time": [6, 10], "reach": 240,
+    "acts": ["Going to talk with %s", "Talking with %s"], "pose": "talk", "talk": "chat"},
+   {"id": "mend", "do": "work", "weight": 2, "time": [8, 14], "acts": ["Mending tools", "Mending tools"], "pose": "build", "xp": {"craft": 0.04}},
+   {"id": "hide", "do": "work", "weight": 2, "when": {"tech": "hide"}, "time": [8, 14], "acts": ["Scraping a hide", "Scraping a hide"], "pose": "gather", "xp": {"craft": 0.03}},
+   {"id": "water", "do": "water", "weight": 1.5, "reach": 600, "time": [1, 2], "acts": ["Fetching water", "Carrying water home"]},
+   {"id": "kids", "do": "watch", "weight": 1, "more": {"kin_child": 5}, "needs": ["children"], "reach": 400, "time": [8, 14],
+    "acts": ["Watching the children play", "Watching the children play"], "talk": "kids", "talk_chance": 0.3},
+   {"id": "mourn", "do": "sit", "at": "grave", "weight": 0, "more": {"grieving": 12}, "needs": ["grieving"], "time": [12, 20],
+    "acts": ["Walking to the graves", "Mourning %s"], "pose": "sit", "talk": "grief", "talk_chance": 0.5},
+   {"id": "gaze", "do": "gaze", "weight": 1, "more": {"trait:devout": 2, "low_spirits": 2}, "dist": [120, 220], "time": [8, 14],
+    "acts": ["Wandering off alone", "Lost in thought"], "talk": "gaze", "talk_chance": 0.3},
+   {"id": "pray", "do": "ritual", "weight": 0, "more": {"trait:devout": 30}},
+   {"id": "art", "do": "art", "weight": 8, "needs": ["can_art"], "more": {"tired": -6}},
+   {"id": "stroll", "do": "wander", "weight": 2, "time": [4, 8], "acts": ["Idle", "Idle"]},
+   {"id": "eaves", "do": "sit", "at": "shelter", "weight": 0, "more": {"wet": 20}, "needs": ["wet"], "time": [10, 16],
+    "acts": ["Running for cover", "Sheltering from the rain"], "talk": "rain", "talk_chance": 0.3},
+   {"id": "rest", "do": "sit", "at": "here", "weight": 0, "more": {"tired": 8, "hurt": 6}, "time": [8, 14],
+    "acts": ["Resting", "Resting"], "pose": "sit", "talk": "tired", "talk_chance": 0.3},
+   {"id": "sulk", "do": "sit", "at": "edge", "weight": 0, "more": {"low_spirits": 6}, "time": [10, 16],
+    "acts": ["Walking off", "Sulking alone"], "pose": "sit", "talk": "sulk", "talk_chance": 0.4}
+  ]
+ },
+
+ "speech": {
+  "_doc": "Speech marks over people's heads: shown for `time` seconds, at most max_shown at once, a person speaks at most once per `gap` seconds. Each second someone with a need (hungry, cold, sick, tired) says so with need_chance. Lines are picked from `talk` by situation; a '<situation>:<trait>' list is used half the time for people of that trait. '%s' is the other person's name.",
+  "time": 3.5,
+  "gap": 12,
+  "max_shown": 5,
+  "need_chance": 0.01
+ },
+
+ "talk": {
+  "chat": ["Saw deer tracks by the water.", "My grandmother told of a winter worse than any.", "The berries are ripening on the far slope.", "Did you hear the wolves last night?", "This spear-shaft is warped again.", "The children grow so fast."],
+  "chat:devout": ["The spirits are restless today."],
+  "chat:belligerent": ["Let any clan come. I'll be waiting."],
+  "chat:cautious": ["We should check the stores again."],
+  "chat:gluttonous": ["I could eat a whole aurochs."],
+  "chat:lazy": ["Why hurry? The river isn't going anywhere."],
+  "friend": ["You always know how to make me laugh.", "Hunt with me tomorrow?", "Our families should share a fire."],
+  "quarrel": ["That was my catch, not yours!", "You never carry your share.", "Keep your family away from my hut!"],
+  "eating": ["Good meat.", "Pass the roots.", "A full belly, a warm fire."],
+  "eating:gluttonous": ["Is there more?"],
+  "fire": ["The fire feels good.", "Tell the story of the first hunters again.", "Look how the sparks fly up."],
+  "morning": ["Another day. My bones ache.", "The birds are loud this morning.", "Up, up, the day won't wait."],
+  "morning:lazy": ["Just a little more sleep..."],
+  "tired": ["My back aches.", "I need to sit a while.", "So tired..."],
+  "hungry": ["My belly is growling.", "When do we eat?"],
+  "cold": ["The cold bites to the bone.", "I can't feel my fingers."],
+  "sick": ["My head burns.", "Leave me be, I'm unwell."],
+  "grief": ["I miss %s.", "%s should be here with us.", "Rest well, %s."],
+  "rain": ["Wet again.", "The sky is weeping."],
+  "built": ["Fine work!", "That will stand for years."],
+  "birth": ["A new family in the tribe!", "Welcome, little one."],
+  "visitor": ["Strangers! Keep the children close.", "What do they carry?"],
+  "cheer": ["What a beast!", "Tonight we feast!"],
+  "startled": ["Spirits above!", "Ah!"],
+  "kids": ["Careful, don't go near the water!", "They play just like we did."],
+  "gaze": ["The land goes on forever.", "What lies beyond those hills?"],
+  "sulk": ["Nobody listens to my family.", "Why do I bother?"],
+  "praise": ["Ha! Did you see that?", "I'm getting good at this."],
+  "quake": ["The earth is angry!", "Out of the huts, now!", "Spirits, spare us!", "Hold on to the children!"],
+  "panic": ["Hide! Hide!", "We're doomed!", "Into the huts!"]
+ }
+}

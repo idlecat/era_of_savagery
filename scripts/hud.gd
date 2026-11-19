@@ -891,6 +891,17 @@ func _refresh_left_content() -> void:
 	s += tr("[color=#e6b8ff]%s[/color] · Level %d\n") % [", ".join(trs), sim.unit_level(u)]
 	s += tr("HP %d/%d   Hunger %d%%\nATK %.1f   DEF %.1f   SPD %.2f   Kills %d\n") % [u.hp, u.max_hp, u.hunger, sim.unit_atk(u), sim.unit_def(u), u.spd, u.kills]
 	s += tr("[color=#b8a888]Now:[/color] %s\n") % I.act(u.act)
+	if sim.life.on and not u.dead:
+		s += tr("Spirits: %s (%d)   Weariness %d%%\n") % [sim.life.mood_word(u), roundi(u.morale), roundi(u.fatigue)]
+		var names := func(list: Array) -> String: return ", ".join(list.map(func(o): return tr(o.name)))
+		var kin: Array = sim.life.kin_of(u)
+		var friends: Array = sim.life.friends_of(u).filter(func(o): return not o in kin)
+		var foes: Array = sim.life.rivals_of(u)
+		if not kin.is_empty(): s += tr("[color=#b8a888]Kin:[/color] %s\n") % names.call(kin)
+		if not friends.is_empty(): s += tr("[color=#b8a888]Friends:[/color] %s\n") % names.call(friends)
+		if not foes.is_empty(): s += tr("[color=#b8a888]At odds with:[/color] %s\n") % names.call(foes)
+		var mourned = sim.unit_by_id(u.mourn_id)
+		if u.grief > 1.0 and mourned: s += tr("[color=#b8a888]Mourning:[/color] %s\n") % tr(mourned.name)
 	var knows: Array = sim.evo.known_by(u).map(func(id): return tr(sim.evo.tech_def(id)["name"]))
 	s += tr("[color=#b8a888]Knows:[/color] %s\n\n") % (", ".join(knows) if not knows.is_empty() else tr("[color=#8a7a60]only the old ways[/color]"))
 	s += tr("[color=#ffd36b]SPECIALIZATIONS[/color]\n")
@@ -1149,17 +1160,17 @@ func _cost_long(sd: Dictionary) -> String:
 func _vice_button(b: Button, u, role: String) -> void:
 	var why: String = sim.appoint_block(u, role)
 	var steward: bool = role == "steward"
-	b.disabled = why != ""
+	b.disabled = why != "" and why != "already"
 	match why:
 		"already":
 			b.text = tr("★ Steward") if steward else tr("★ War Chief")
-			b.tooltip_text = tr("%s already holds this office") % tr(u.name)
+			b.tooltip_text = tr("%s holds this office. Click to relieve them and free the slot.") % tr(u.name)
 		"child":
 			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
 			b.tooltip_text = tr("Too young to lead")
 		"no_slot":
 			b.text = tr("Steward (no slot)") if steward else tr("War Chief (no slot)")
-			b.tooltip_text = tr("All %d Vice-Chieftain slots are taken. Tribal Code and the Council of Elders tradition each add one.") % sim.vice_slots()
+			b.tooltip_text = tr("All %d Vice-Chieftain slots are taken. Tribal Code and the Council of Elders tradition each add one.") % sim.vice_slots() + "\n" + tr("Select an office holder and click their office to relieve them.")
 		_:
 			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
 			b.tooltip_text = tr("Tier 3: auto-manages idle villagers") if steward else tr("Tier 3: rallies warriors vs. beasts near the village")
@@ -1167,7 +1178,9 @@ func _vice_button(b: Button, u, role: String) -> void:
 func _appoint(role: String) -> void:
 	var sel: Array = world.selected_units()
 	if sel.size() != 1: return
-	if not sim.appoint(sel[0], role):
+	if sim.vice[role] == sel[0].id: # (their own office: step down)
+		sim.dismiss(role)
+	elif not sim.appoint(sel[0], role):
 		sim.popup(sel[0].pos, tr("No Vice-Chieftain slot free (Tribal Code or the Council of Elders adds one)"), Color("#ff8080"))
 	_refresh_left_content()
 

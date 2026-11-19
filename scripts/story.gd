@@ -93,7 +93,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("fewer"): # fewer than n of a structure of ours, building sites included
 		for st in w["fewer"]:
 			if sim.structures.filter(func(s): return s.type == st and sim.ours(s)).size() >= int(w["fewer"][st]): return false
-	if w.has("deaths") and sim.units.filter(func(u): return u.dead).size() < int(w["deaths"]): return false
+	if w.has("deaths") and sim.units.filter(func(u): return u.dead and not u.gone).size() < int(w["deaths"]): return false
 	if w.has("culture"):
 		for ax in w["culture"]:
 			var v := float(w["culture"][ax])
@@ -123,7 +123,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart"]
 
 ## A text: an English key, or [key, var names...] filled from `vars` (GDScript % is
 ## positional: the names are in the key's placeholder order).
@@ -136,8 +136,15 @@ func text(v, vars: Dictionary = {}) -> String:
 	return tr(str(v))
 
 ## The people an action is for: "all" (grown-ups), "best:<skill>", "fighters:<n>" (the
-## n hardest hitters at home).
-func people(who: String) -> Array:
+## n hardest hitters at home), "name:<name>", "id:<n>" (one person, a child too), or
+## "$<var>": the value of a var of the moment (e.g. a dilemma's "who").
+func people(who: String, vars: Dictionary = {}) -> Array:
+	if who.begins_with("$"):
+		who = str(vars.get(who.substr(1), ""))
+		if who == "": return [] # (an unknown var is nobody, never everyone)
+	if who.begins_with("name:") or who.begins_with("id:"):
+		var one = sim.unit_by_name(who.substr(5)) if who.begins_with("name:") else sim.unit_by_id(int(who.substr(3)))
+		return [one] if one != null and not one.dead else []
 	var out: Array = sim.living().filter(func(u): return u.role != "child")
 	if who.begins_with("best:"):
 		var b = sim.best_unit(who.substr(5), false)
@@ -189,12 +196,23 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 		if a.has("remember"):
 			var mem: String = text(a["remember"], vars)
 			if not a["remember"] is Array and mem.contains("%d"): mem = mem % sim.day()
-			for u in people(a.get("who", "all")): sim.remember(u, mem, int(a.get("impact", 6)))
+			for u in people(a.get("who", "all"), vars): sim.remember(u, mem, int(a.get("impact", 6)))
 		if a.has("xp"):
-			for u in people(a.get("who", "all")):
+			for u in people(a.get("who", "all"), vars):
 				for k in a["xp"]: sim.gain_xp(u, k, float(a["xp"][k]))
 		if a.has("hurt"): # (a fraction of max HP)
-			for u in people(a.get("who", "all")): sim.hurt_unit(u, u.max_hp * float(a["hurt"]), null)
+			for u in people(a.get("who", "all"), vars): sim.hurt_unit(u, u.max_hp * float(a["hurt"]), null)
+		if a.has("morale"): # one family's spirits (the tribe's mood is "mood")
+			for u in people(a.get("who", "all"), vars):
+				u.morale = clampf(u.morale + float(a["morale"]), 0.0, 100.0)
+				u.low_t = 0.0
+		if a.has("bond"): # between "who" and "with" (both people specs)
+			for u in people(a.get("who", "all"), vars):
+				for o in people(str(a.get("with", "all")), vars): sim.life.add_bond(u, o, float(a["bond"]))
+		if a.has("say"):
+			for u in people(a.get("who", "all"), vars): sim.life.say_text(u, text(a["say"], vars))
+		if a.has("depart"):
+			for u in people(a.get("who", ""), vars): sim.life.depart(u)
 		if a.has("panic"):
 			sim.nat.panic_until = maxf(sim.nat.panic_until, sim.time + float(a["panic"]))
 			sim.react.trigger("panic", {"at": D.VILLAGE, "until": sim.nat.panic_until})

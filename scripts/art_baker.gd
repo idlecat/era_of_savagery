@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 16
+const ART_VERSION := 17
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -19,7 +19,7 @@ const DIRS := 8
 const WALK_FRAMES := 8
 const WORK_FRAMES := 4
 ## Villager animations: name -> frames. Tool animations also bake a bronze variant.
-const MAN_ANIMS := {"idle": 1, "walk": 8, "chop": 4, "build": 4, "gather": 4, "attack": 4, "ritual": 4, "dead": 1}
+const MAN_ANIMS := {"idle": 1, "walk": 8, "chop": 4, "build": 4, "gather": 4, "attack": 4, "ritual": 4, "dead": 1, "sit": 2, "talk": 4}
 const TOOL_ANIMS := ["chop", "build", "attack"]
 const SITE_SIZES := [14, 20, 26] # footprint radius of construction-site sprites
 
@@ -1499,6 +1499,16 @@ func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "
 			spread = 18.0
 			legs = {1: [maxf(0.0, s) * 0.5, maxf(0.0, s) * 0.9 + 0.1], -1: [maxf(0.0, -s) * 0.5, maxf(0.0, -s) * 0.9 + 0.1]}
 			bob = absf(s) * 0.6
+		"sit": # on the ground, knees up, a hand going to the mouth and back (eating, resting)
+			legs = {1: [1.95, 2.65], -1: [1.8, 2.5]}
+			arm = {1: [-55.0, -115.0][k / 2], -1: -20.0}
+			elbow = {1: [-55.0, -120.0][k / 2], -1: -70.0}
+			tilt = 10.0
+		"talk": # standing, talking with the hands
+			arm = {1: [-25.0, -50.0, -35.0, -15.0][k], -1: [5.0, -10.0, 0.0, 10.0][k]}
+			elbow = {1: [-55.0, -80.0, -65.0, -45.0][k], -1: -25.0}
+			spread = 9.0
+			tilt = [2.0, 4.0, 3.0, 1.0][k]
 		"dead":
 			root.rotation_degrees.x = 86.0 # face down on the ground
 			root.position = Vector3(0, 3.2, -12)

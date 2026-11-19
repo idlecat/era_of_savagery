@@ -1,5 +1,5 @@
 {
- "_doc": "How people respond to what happens around them. 'on' maps a game happening (sent by the rules through sim.react.trigger) to a list of responses, run in order. Each response has a verb in 'do' (cover, aid, flee, firefight, defend: what the person does, coded in reactions.gd) and the numbers and texts for it. 'who' picks the people: all (everyone in the village), able (grown-ups fit to help: see 'able'), victim (the one it happened to), near (within 'reach' of the place), river (within 'reach' of a river), helpers (the nearest able people within 'reach' of the victim, at most 'count'). 'roles' limits who it applies to ('' = an ordinary villager). Texts are English translation keys. See docs/CONFIG.md.",
+ "_doc": "How people respond to what happens around them. 'on' maps a game happening (sent by the rules through sim.react.trigger) to a list of responses, run in order. Each response has a verb in 'do' (cover, aid, flee, firefight, defend: what the person does, coded in reactions.gd) and the numbers and texts for it. 'who' picks the people: all (everyone in the village), able (grown-ups fit to help: see 'able'), victim (the one it happened to), near (within 'reach' of the place), river (within 'reach' of a river), helpers (the nearest able people within 'reach' of the victim, at most 'count'; friends and kin of the victim come from 'bond_reach' further, and first). look and startle only run while everyday life is on (config/life.json). 'talk' (any response) names a situation of life.json's talk lines, said with talk_chance when the response starts ('talk_force': even past the usual limits, for a panic); 'pose' is the drawn pose once there (cover). 'roles' limits who it applies to ('' = an ordinary villager). Texts are English translation keys. See docs/CONFIG.md.",
 
  "able": {
   "min_hp": 0.5,
@@ -15,12 +15,13 @@
   "earthquake": [
    {"do": "cover", "who": "all", "skip_roles": ["contract", "envoy", "trader"], "skip_jobs": ["attack"],
     "wake": true, "clear": 110, "max_move": 160, "time": 7, "until_shake": 0.3,
-    "then": "hurt", "then_below": 0.8, "then_reach": 320,
+    "then": "hurt", "then_below": 0.8, "then_reach": 320, "pose": "sit",
+    "talk": "quake", "talk_chance": 0.7, "talk_force": true,
     "acts": ["Running into the open", "Crouching in the open"]}
   ],
 
   "hurt": [
-   {"do": "aid", "who": "helpers", "count": 2, "reach": 320, "below": 0.9, "time": 5, "heal": 0.2, "xp": {"lore": 3},
+   {"do": "aid", "who": "helpers", "count": 2, "reach": 320, "bond_reach": 200, "below": 0.9, "time": 5, "heal": 0.2, "xp": {"lore": 3},
     "popup": "Runs to help %s", "remember": "was tended by %s after being hurt on Day %d",
     "acts": ["Running to help %s", "Tending %s"]}
   ],
@@ -30,7 +31,7 @@
   ],
 
   "attacked": [
-   {"do": "defend", "who": "helpers", "count": 3, "reach": 260,
+   {"do": "defend", "who": "helpers", "count": 3, "reach": 260, "bond_reach": 180,
     "reach_by_trait": {"belligerent": 340, "lazy": 180}, "skip_attackers": ["hunter", "trader"],
     "popup": "To %s's aid!"}
   ],
@@ -66,7 +67,38 @@
 
   "panic": [
    {"do": "shelter", "who": "all", "skip_roles": ["contract", "envoy", "trader"], "skip_jobs": ["attack", "bury"],
+    "talk": "panic", "talk_chance": 0.6, "talk_force": true,
     "acts": ["Running to hide", "Hiding in a hut", "Cowering in fear"]}
+  ],
+
+  "built": [
+   {"do": "look", "who": "near", "reach": 420, "count": 5, "chance": 0.7, "ring": [45, 80], "time": [4, 7],
+    "acts": ["Going to see the new building", "Admiring the new building"], "talk": "built", "talk_chance": 0.5}
+  ],
+
+  "masterpiece": [
+   {"do": "look", "who": "near", "reach": 500, "count": 6, "chance": 0.8, "ring": [30, 55], "time": [4, 7],
+    "acts": ["Going to see the masterpiece", "Admiring the masterpiece"], "talk": "built", "talk_chance": 0.5}
+  ],
+
+  "birth": [
+   {"do": "look", "who": "near", "reach": 420, "count": 6, "chance": 0.8, "ring": [30, 60], "time": [5, 8],
+    "acts": ["Going to see the newborn", "Welcoming the newborn"], "talk": "birth", "talk_chance": 0.5}
+  ],
+
+  "visitor": [
+   {"do": "look", "who": "near", "reach": 500, "count": 5, "chance": 0.6, "ring": [60, 100], "time": [6, 10],
+    "acts": ["Going to see the strangers", "Watching the strangers"], "talk": "visitor", "talk_chance": 0.5}
+  ],
+
+  "beast_slain": [
+   {"do": "look", "who": "near", "reach": 500, "count": 5, "chance": 0.8, "ring": [35, 60], "time": [4, 7],
+    "acts": ["Running to see the kill", "Cheering the hunter"], "talk": "cheer", "talk_chance": 0.6}
+  ],
+
+  "thunder": [
+   {"do": "startle", "who": "near", "reach": 900, "skip_roles": ["envoy", "trader"], "time": [1.2, 2.2],
+    "acts": ["Startled by thunder"], "talk": "startled", "talk_chance": 0.3}
   ],
 
   "blizzard": [],

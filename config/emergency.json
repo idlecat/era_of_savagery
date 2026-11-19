@@ -71,6 +71,7 @@
     "wood": 6
    },
    "of": "beasts",
+   "popup": "%d beasts flee the fire",
    "scare_radius": 260
   },
   {

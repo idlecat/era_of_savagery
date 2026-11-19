@@ -313,7 +313,14 @@ func _process(delta: float) -> void:
 	ground_fx.queue_redraw()
 	glow.queue_redraw()
 	overlay.queue_redraw()
-	for u in sim.units: _track("u%d" % u.id, u.pos)
+	for u in sim.units:
+		var uk := "u%d" % u.id
+		_track(uk, u.pos)
+		if u.face != null and not moving.get(uk, false): # standing and looking at something (life.gd)
+			var dv: Vector2 = iso(u.face) - iso(u.pos)
+			if dv.length() > 2.0:
+				heading[uk] = dv.normalized()
+				facing[uk] = 1 if dv.x > 0 else -1
 	if sim.guardian and not sim.guardian.dead: _track("g", sim.guardian.pos)
 	attacking.clear()
 	for p in sim.predators:
@@ -713,6 +720,10 @@ func draw_overlay() -> void:
 		var col: Color = p["color"]
 		col.a = a
 		_draw_label(iso(p["pos"]) - Vector2(0, 26), p["text"], 17 if p["big"] else 13, col, true)
+	if not clean: # speech marks last, above names and popups
+		for u in sim.units:
+			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
+				_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u.say, u.say_until - sim.time)
 	if drag_start != null and wall_center == null: # (a box select, not a wall being sized)
 		var m := get_global_mouse_position()
 		var r := Rect2(drag_start, m - drag_start).abs()
@@ -1720,8 +1731,10 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 	elif act.begins_with("Building") or act.begins_with("Renovating") or act.begins_with("Experimenting") or act == "Painting the huts": anim = "build"
 	elif busy: anim = "chop"
 	elif walk: anim = "walk"
+	var pose: String = u.job.get("pose", "") # (life.gd: sitting at the fire, talking, a chore)
+	if pose != "" and not walk and art.has("man_%s_0_0" % pose): anim = pose
 	if anim in ["chop", "build", "attack"] and (walk and anim != "attack"): anim = "walk"
-	var frames: int = {"idle": 1, "walk": 8}.get(anim, 4)
+	var frames: int = {"idle": 1, "walk": 8, "sit": 2}.get(anim, 4)
 	var speed := 11.0 if anim == "walk" else 7.0
 	var name := "man_%s_%d_%d" % [anim, di, int(anim_t * speed + u.id) % frames]
 	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
@@ -1750,6 +1763,10 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 	if u.ox and u.job.get("type", "") == "gather":
 		var behind: Vector2 = -heading.get(key, Vector2(0.6, 0.8)) * 18.0
 		if not _beast_sprite("packox", key, b + behind, 0.8): _pack_ox(b + Vector2(-17 * f, 3), f, walk)
+	if u.job.get("load", "") == "water": # a waterskin on the hip
+		var ws := hip + Vector2(5 * f, -2)
+		_ell(ws, 3.2, 4.2, Color("#7a5232"))
+		ci.draw_circle(ws + Vector2(0, -4), 1.2, Color("#4a3020"))
 	if _has_torch(u):
 		var th := hip + Vector2(-6 * f, -4)
 		ci.draw_line(th, th + Vector2(-2 * f, -14), Color("#6b4524"), 2)
@@ -1901,6 +1918,22 @@ func _draw_unit_overlay(u) -> void:
 	var title: String = ("★ " if u.title != "" else "") + tr(u.name)
 	_draw_label(b + Vector2(0, -46), title, 14, Color("#fff4d6") if not sel else Color("#ffe066"), true)
 	if u.hp < u.max_hp - 0.5: _bar(b + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
+
+## A speech mark: a small pale bubble with a tail, fading out at the end.
+func _speech(at: Vector2, text: String, left: float) -> void:
+	var a := clampf(left / 0.4, 0.0, 1.0)
+	var size := 12
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12.0
+	var r := Rect2(at.x - w / 2, at.y - 17, w, 19)
+	var bg := Color(0.98, 0.95, 0.86, 0.92 * a)
+	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-5, 1), at + Vector2(5, 1), at + Vector2(0, 8)]), bg)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(7)
+	sb.border_color = Color(0.3, 0.22, 0.12, 0.5 * a)
+	sb.set_border_width_all(1)
+	ci.draw_style_box(sb, r)
+	ci.draw_string(font, Vector2(r.position.x + 6, r.position.y + 14), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.22, 0.15, 0.08, a))
 
 func _draw_pred(p) -> void:
 	var b := iso(p.pos)

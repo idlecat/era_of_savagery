@@ -114,7 +114,9 @@
    {"act": "Upgrading", "sound": "hammer", "every": [0.7, 1.1]},
    {"act": "Butchering game", "sound": "chop", "every": [1.2, 1.8], "pitch": 1.5},
    {"act": "Picking berries", "sound": "rustle", "every": [1.5, 2.5]},
-   {"act": "Fighting", "sound": "hit", "every": [0.5, 0.9]}
+   {"act": "Fighting", "sound": "hit", "every": [0.5, 0.9]},
+   {"act": "Mending tools", "sound": "hammer", "every": [1.4, 2.4], "pitch": 1.3},
+   {"act": "Scraping a hide", "sound": "rustle", "every": [1.2, 2.0], "pitch": 0.8}
   ],
   "beasts": {"sound": "growl", "every": [3, 6]}
  },

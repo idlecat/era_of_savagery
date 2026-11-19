@@ -77,6 +77,7 @@ func _initialize() -> void:
 	test_roads()
 	test_discovery_odds()
 	test_routine_matters()
+	test_life()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -87,6 +88,7 @@ func _new_sim():
 	s.folk.festivals = false # (no festival events popping up mid-test)
 	s.crisis.on = false # (no emergency mode either; test_crisis switches it on)
 	s.director.on = false # (nor pacing: hardship tests roll their own; test_director switches it on)
+	s.life.on = false # (nor everyday life: meals, idle acts, spirits, speech; test_life switches it on)
 	s.new_game()
 	return s
 
@@ -319,7 +321,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen", "culture", "cultures", "inventions"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen", "culture", "cultures", "inventions", "life"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -335,7 +337,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -381,6 +383,21 @@ func test_vice_slots() -> void:
 	for id in ["fire", "farming", "tools", "pottery", "domestication"]: sim.research(id)
 	sim.research("code")
 	check(sim.appoint(p, "steward"), "Tribal Code adds a second slot: Panshi becomes Steward")
+	var b = sim.unit_by_name("Bai")
+	check(sim.appoint(b, "steward") and b.title == "Steward" and p.title == "", "a new Steward takes over: the old one steps down (no two Stewards)")
+	check(sim.dismiss("warchief") and a.title == "" and sim.vice["warchief"] == -1 and sim.appoint_block(p, "warchief") == "", "an office holder can be relieved, freeing the slot")
+	# with everyday life on, people busy with an idle act still count as idle hands for the Steward
+	var s2 = _new_sim()
+	s2.life.on = true
+	var st = s2.unit_by_name("Panshi")
+	s2.appoint(st, "steward")
+	var y = s2.unit_by_name("Yan")
+	y.pos = D.VILLAGE + Vector2(40, 40)
+	s2.set_job(y, {"type": "life", "act": "stroll", "t": 0.0, "time": 99.0, "phase": 0, "to": y.pos})
+	s2.time = D.DAY_LEN * 0.2
+	s2.vice_timer = 0.0
+	s2._update_vice(0.1)
+	check(y.job.get("type", "") != "life", "the Steward puts people at their idle pastimes to work (%s)" % y.job.get("type", ""))
 
 
 func test_hardships() -> void:
@@ -2217,6 +2234,10 @@ func test_crisis() -> void:
 	check(K.order("torches") == "" and tiger.fleeing and is_equal_approx(sim.stock["wood"], 44.0), "Torches!: the beast flees, for 6 wood")
 	var s0: int = K.summary()["threats"]
 	check(s0 == 0, "no threat left once it flees")
+	check(K.order("torches") != "" and is_equal_approx(sim.stock["wood"], 44.0), "with nothing left to scare, torches are refused and cost nothing")
+	check(K.order_block("fight") != "", "and with no threat there is nothing to fight")
+	for u in K.people(): u.hp = u.max_hp
+	check(K.order_block("wounded") != "", "nobody badly hurt: no one to tend")
 	# it ends when all is quiet: everyone back to work, and they remember
 	for i in 140: K.update(0.05)
 	check(not K.active(), "when it is quiet, the crisis ends")
@@ -2281,6 +2302,8 @@ func test_director() -> void:
 	sim.rivals._raids(c, 0.1)
 	check(sim.predators.size() == preds0 and is_equal_approx(c["raid_t"], Dr.retry()), "a clan raid too")
 	Dr.tension = 0.0
+	Dr.deaths.clear() # (and out of distress: the deaths above put the tribe under mercy's cap)
+	Dr.distress = false
 	c["raid_t"] = 0.0
 	sim.rivals._raids(c, 0.1)
 	check(sim.predators.size() > preds0 or "demand_" + cid in sim.rivals.pending, "once the tribe has breathed, it comes")
@@ -2297,6 +2320,8 @@ func test_director() -> void:
 	s2.stock["food"] = 1.0
 	s2.director.update(10.0)
 	check(s2.director.distress and s2.director.cap() == 0.5, "with the food gone the tribe is in distress: hardly anything more may come")
+	s2.director.tension = 0.0
+	check(not s2.director.allow("earthquake") and s2.director.allow("lightning"), "even with no tension, a tribe in distress is spared heavy blows")
 	check(s2.stock["food"] >= 20.0, "and a gift helps it through (food %d)" % s2.stock["food"])
 	var f1: float = s2.stock["food"]
 	s2.stock["food"] = 1.0
@@ -2528,3 +2553,170 @@ func test_routine_matters() -> void:
 	sim.resolve_event("festival", 2)
 	sim._fire_event("overpop")
 	check(sim.pending_event == "overpop", "matters that are not routine are always asked")
+
+## A sim with everyday life switched on (as in the game), at day part `f` of day 1.
+func _life_sim(f: float):
+	var sim = _new_sim()
+	sim.life.on = true
+	sim.crisis.on = true # (as in the game: emergency mode is on, but no crisis is under way)
+	sim.life.setup()
+	sim.time = D.DAY_LEN * f
+	return sim
+
+func test_life() -> void:
+	print("\n== Everyday life: meals, idle acts, bonds, spirits, speech ==")
+	var Life = preload("res://scripts/life.gd")
+	var Rx = preload("res://scripts/reactions.gd")
+	check(Life.problems(Life.new(null).C).is_empty() and Rx.problems(preload("res://scripts/config.gd").load_cfg("reactions")).is_empty(),
+		"config/life.json and reactions.json use only known verbs and conditions (%s)" % str(Life.problems(Life.new(null).C)))
+	# the first families each have a friend; children are kin to their parent's line
+	var sim = _life_sim(0.2)
+	var adults: Array = sim.living().filter(func(u): return u.role == "")
+	check(adults.all(func(u): return not sim.life.friends_of(u).is_empty()), "every family starts with a friend")
+	var a = adults[0]
+	var kid = sim.folk.make_child("Testkid", a)
+	sim.units.append(kid)
+	check(sim.life.kin(kid, a) and sim.life.bond(kid, a) >= 40.0, "a child is a new family line, kin to its parent's")
+	# a meal: work is put down, people eat in a ring at the fire, then go back to work
+	sim = _life_sim(0.3)
+	var u = sim.unit_by_name("Bai")
+	u.pos = D.VILLAGE + Vector2(120, 60)
+	u.hunger = 50.0
+	sim.assign_gather(u, "wood")
+	sim.stock["food"] = 100.0
+	sim.time = D.DAY_LEN * 0.345 # (the midday meal)
+	var food0: float = sim.stock["food"]
+	for i in 40: sim.tick(0.05)
+	check(u.job.get("type", "") == "meal" and u.resume_job.get("type", "") == "gather", "at mealtime the hungry put down their work and come to eat (%s)" % u.job.get("type", ""))
+	for i in 400:
+		sim.tick(0.05)
+		if u.job.get("type", "") != "meal": break
+	check(u.hunger > 70.0 and sim.stock["food"] < food0, "they eat their fill from the stores (hunger %d, food %.1f -> %.1f)" % [u.hunger, food0, sim.stock["food"]])
+	check(u.job.get("type", "") == "gather", "then go back to work")
+	u.hunger = 90.0
+	food0 = sim.stock["food"]
+	sim.life.eat(u)
+	var sv: Dictionary = sim.RULES["survival"]
+	var fill: float = float(sv["meal_fill_fire"] if sim.has_tech("fire") else sv["meal_fill"])
+	check(is_equal_approx(food0 - sim.stock["food"], float(sv["meal"]) * 10.0 / fill) and is_equal_approx(u.hunger, 100.0),
+		"a meal costs food in proportion to what is eaten (%.2f for the last 10)" % (food0 - sim.stock["food"]))
+	# idle acts: nobody just stands about for long
+	sim = _life_sim(0.2)
+	u = sim.unit_by_name("Yan")
+	sim.set_job(u, {})
+	u.pos = D.VILLAGE + Vector2(40, 40)
+	for i in 120: sim.tick(0.05)
+	check(u.job.get("type", "") in ["life", "art", "ritual"], "someone with nothing to do finds something to do (%s, %s)" % [u.job.get("type", ""), u.act])
+	# a chat: they meet, face each other, talk; the bond grows (or they quarrel)
+	sim = _life_sim(0.2)
+	var p1 = sim.unit_by_name("Bai")
+	var p2 = sim.unit_by_name("Yan")
+	for o in sim.living():
+		o.pos = D.VILLAGE + Vector2(-900, 0) # (everyone else is out of reach)
+	for o in [p1, p2]:
+		sim.set_job(o, {})
+		o.pos = D.VILLAGE + Vector2(60, 60)
+	sim.life.set_bond(p1, p2, 10.0)
+	var chat: Dictionary = sim.life.C["idle"]["acts"].filter(func(x): return x["id"] == "chat")[0]
+	check(sim.life.start(p1, chat) and p2.job.get("with", -1) == p1.id, "two people idle near each other can sit down to talk")
+	var spoke := false
+	for i in 300:
+		sim.tick(0.05)
+		if p1.say_until > sim.time: spoke = true
+		if p1.job.is_empty() or p1.job.get("type", "") != "life": break
+	check(spoke and absf(sim.life.bond(p1, p2) - 10.0) >= 5.0, "they talk (speech marks) and the bond changes (%.0f)" % sim.life.bond(p1, p2))
+	# an earthquake ends the talk at once: they run into the open, crying out
+	sim.life.start(p1, chat)
+	for i in 40: sim.tick(0.05)
+	p1.say = "Saw deer tracks by the water."
+	p1.say_until = sim.time + 3.0
+	sim.nat.quake()
+	sim.tick(0.05)
+	var cries: Array = sim.life.C["talk"]["quake"]
+	check(p1.job.get("type", "") == "cover" and p2.job.get("type", "") == "cover", "when the earth shakes, the talk stops: both run for the open")
+	check(p1.say == "" or p1.say in cries, "and their idle words are cut off (now: '%s')" % p1.say)
+	sim.set_job(p1, {})
+	p1.idle_t = 99.0
+	sim.life.idle(p1, 0.1)
+	check(p1.job.is_empty(), "nobody starts a pastime while the ground shakes")
+	# weariness: work tires, sleep restores, and the weary work slower
+	sim = _life_sim(0.05)
+	u = sim.unit_by_name("Bai")
+	sim.assign_gather(u, "wood")
+	for i in 400: sim.tick(0.05)
+	check(u.fatigue > 10.0, "work makes people weary (%d)" % roundi(u.fatigue))
+	var w0: float = sim.work_mul(u)
+	u.fatigue = 100.0
+	check(sim.work_mul(u) < w0 * 0.9 and sim.life.speed_mult(u) < 0.9, "the weary work and walk slower")
+	u.sleeping = true
+	sim.life._fatigue(u, 10.0)
+	check(u.fatigue < 70.0, "and sleep restores them")
+	# grief: a friend dies, the living grieve and their spirits fall
+	sim = _life_sim(0.2)
+	p1 = sim.unit_by_name("Bai")
+	p2 = sim.unit_by_name("Yan")
+	sim.life.set_bond(p1, p2, 70.0)
+	var t0: float = sim.life.morale_target(p1)
+	sim.kill_unit(p2, null)
+	check(p1.grief > 10.0 and p1.mourn_id == p2.id and sim.life.morale_target(p1) < t0, "losing a friend brings grief (%.0f) and low spirits" % p1.grief)
+	# friends come from further to help the hurt
+	sim = _life_sim(0.2)
+	var v = sim.unit_by_name("Yan")
+	var fr = sim.unit_by_name("Bai")
+	for o in sim.living():
+		if o != v: o.pos = v.pos + Vector2(2000, 0) if o != fr else v.pos + Vector2(430, 0)
+	fr.pos = sim._dry(fr.pos)
+	sim.life.set_bond(v, fr, 70.0)
+	v.hp = v.max_hp * 0.5
+	sim.react.trigger("hurt", {"victim": v, "at": v.pos})
+	check(D.same_side(fr.pos, v.pos) and fr.job.get("type", "") == "aid", "a friend comes from further away to tend the wounded")
+	# something to see: a finished building draws the idle
+	sim = _life_sim(0.2)
+	for o in sim.living():
+		if o.role == "":
+			sim.set_job(o, {})
+			o.pos = D.VILLAGE + Vector2(randf_range(-60, 60), randf_range(-60, 60))
+	var site = sim.add_structure("hut", D.VILLAGE + Vector2(150, 120))
+	sim.complete_structure(site, null)
+	check(sim.units.any(func(o): return o.job.get("type", "") == "look"), "a new building draws people to come and see")
+	# speech: lines from config, a cap on how many speak at once, lines from a game master
+	sim = _life_sim(0.2)
+	var ppl: Array = sim.living()
+	var n := 0
+	for o in ppl:
+		if sim.life.say(o, "chat"): n += 1
+	check(n == mini(ppl.size(), int(sim.life.C["speech"]["max_shown"])), "at most a few speak at once (%d)" % n)
+	check(sim.life.add_lines("nonsense", ["x"]).size() == 1 and sim.life.add_lines("chat", ["Hello there", 7, ""]).is_empty() and sim.life.extra_lines["chat"] == ["Hello there"],
+		"a game master's new lines are checked (known situations, strings only)")
+	# the story actions a game master can use
+	sim = _life_sim(0.2)
+	p1 = sim.unit_by_name("Bai")
+	p2 = sim.unit_by_name("Yan")
+	sim.life.set_bond(p1, p2, 0.0)
+	sim.story.run([{"bond": 45, "who": "name:Bai", "with": "name:Yan"}, {"say": "The river is high.", "who": "name:Bai"}, {"morale": -30, "who": "name:Yan"}], null)
+	check(p2 in sim.life.friends_of(p1) and p1.say == "The river is high." and p2.morale < sim.folk.mood - 20, "story actions set bonds, words and spirits")
+	check(sim.story.people("$nobody", {}).is_empty(), "an unknown person var means nobody, never everyone")
+	# a family in despair asks to leave; letting them go sends them away
+	sim = _life_sim(0.2)
+	u = sim.unit_by_name("Yan")
+	u.morale = 5.0
+	u.low_t = D.DAY_LEN * 2.0
+	sim.folk.mood = 5.0
+	sim.life.update(1.0)
+	sim.tick(0.05)
+	check(sim.pending_event == "discontent", "a family that stays in despair wants to leave: the chieftain is asked (%s)" % sim.pending_event)
+	var d: Dictionary = sim.event_def("discontent")
+	check(d["text"].contains("Yan") and d["options"].size() == 3, "the question names the family")
+	var pop0: int = sim.living().size()
+	sim.resolve_event("discontent", 2)
+	sim.paused = false
+	for i in 1000:
+		sim.tick(0.05)
+		if u.gone: break
+	check(u.gone and u.dead and u.buried and sim.living().size() == pop0 - 1, "letting them go: the family walks away and is gone")
+	check(not sim.story.holds({"deaths": 1}), "a family that left is not counted among the dead")
+	# switched off: the old ways (tests)
+	var off = _new_sim()
+	u = off.unit_by_name("Bai")
+	u.fatigue = 100.0
+	check(off.life.work_mult(u) == 1.0 and off.life.speed_mult(u) == 1.0, "with everyday life off, nothing changes the old rules")

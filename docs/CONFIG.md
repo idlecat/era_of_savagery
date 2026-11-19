@@ -95,17 +95,38 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 | `beast_seen` | a scout sees a beast | victim, danger, attacker |
 | `panic` | the tribe panics (the `panic` action) | until |
 | `blizzard`, `storm`, `rain`, `drought`, `sickness`, `famine` | they start (no reactions by default) | at, victim |
+| `built` | a building of ours is finished | at |
+| `masterpiece` | someone makes a treasure | at |
+| `birth` | a child is born | at |
+| `visitor` | a trader of another clan reaches the village | at |
+| `beast_slain` | someone kills a beast | at, victim (the hunter) |
+| `thunder` | lightning strikes | at, danger |
 
 A response:
 
-- `do`: the verb, one of `cover` (leave the huts, crouch away from buildings until the shaking stops; `then` triggers another event for the hurt nearby), `aid` (dress a wound: `time`, `heal` as a fraction of max HP), `flee` (run `dist` away from the danger, or to `reach + beyond` from it; with `who: river` away from the water; `resume: false` drops the work instead of going back to it), `firefight` (beat out fires within `near_home` of the village or `near_building` of a building: `count`, `rate`, `stand_off`), `defend` (fight the attacker: `count`, `reach_by_trait`), `warm` (go to the nearest fire when below `below` of max HP, stay until `until`), `shelter` (hide in one's hut until the panic ends).
-- `who`: `all`, `able` (fit grown-ups, see `able`), `victim`, `near` (within `reach` of the place), `river` (within `reach` of a river), `helpers` (the nearest able people within `reach` of the victim).
+- `do`: the verb, one of `cover` (leave the huts, crouch away from buildings until the shaking stops; `then` triggers another event for the hurt nearby), `aid` (dress a wound: `time`, `heal` as a fraction of max HP), `flee` (run `dist` away from the danger, or to `reach + beyond` from it; with `who: river` away from the water; `resume: false` drops the work instead of going back to it), `firefight` (beat out fires within `near_home` of the village or `near_building` of a building: `count`, `rate`, `stand_off`), `defend` (fight the attacker: `count`, `reach_by_trait`), `warm` (go to the nearest fire when below `below` of max HP, stay until `until`), `shelter` (hide in one's hut until the panic ends), `look` (people standing about come to see: `chance`, `count`, `ring`, `time`, `talk`), `startle` (stop dead for `time` seconds). `look` and `startle` only run while everyday life is on (`life.json`). Any response can have `talk` (a situation of `life.json`'s talk lines, said with `talk_chance` as it starts; `talk_force` lets it past the usual limits, for a panic) and `pose` (`cover`: the drawn pose once there). A danger cuts off whatever people were saying.
+- `who`: `all`, `able` (fit grown-ups, see `able`), `victim`, `near` (within `reach` of the place), `river` (within `reach` of a river), `helpers` (the nearest able people within `reach` of the victim; the victim's friends and kin come from `bond_reach` further, and first).
 - `roles`, `skip_roles`, `skip_jobs`: narrow it down (`""` is an ordinary villager).
 - Texts: `popup`, `remember`, `log`, and `acts` (what the person is shown doing; `%s` is the other person's name).
 
 `night_watch` sets what rouses the sleeping camp (beasts near the village, a fight, a flood) and for how long.
 
 Responses run in order, and someone taken by one is not picked by the next. People go back to their interrupted work afterwards. A new verb or selector needs code in `reactions.gd` (`VERBS`, `WHO`); a new happening needs a `sim.react.trigger()` call where it happens in the rules.
+
+## life.json
+
+Everyday life (`life.gd`, `sim.life`). Each person stands for one family line; a child starts a new line, kin to its parent's.
+
+- `meals`: in each of `times` (day parts), hungry people at home put down the work in `jobs` and eat in a ring at the nearest fire. A meal costs food in proportion to what is eaten (`rules.json` survival `meal` per `meal_fill`), so the food economy is unchanged; people away from home still eat from the stores when very hungry (`eat_below`).
+- `wake`: a moment at dawn before work. `pace`: walking speed with weariness, hunger, alarm.
+- `fatigue` (weariness) and `morale` (spirits): per person; morale is the tribe's mood plus hunger, sickness, wounds, weariness, grief, praise, friends and rivals nearby. Both change work speed (`sim.work_mul`).
+- `praise`: cheer from one's own deeds (level up, kill, masterpiece, coming of age).
+- `leave`: a family in despair asks to leave: the `discontent` dilemma in `dilemmas.json`.
+- `bonds`: friends, rivals and kin between families: how they start, grow (shared work, fights, festivals, chats, meals), help (work bonus) and grieve.
+- `idle`: the acts people pick when nobody needs them: `weight` plus `more` per condition, `needs`, `when` (tribe conditions as in scenario scripts). Verbs: `sit` (at `fire`, `here`, `shelter`, `grave`, `edge`), `chat`, `work`, `water`, `watch`, `gaze`, `ritual`, `art`, `wander`. `pose` is the drawn pose (`sit`, `talk`, `build`, `gather`).
+- `speech` and `talk`: speech marks over heads; `talk` holds lines per situation, `<situation>:<trait>` for a trait's own.
+
+With `sim.life.on = false` (tests) none of it runs and the old rules hold.
 
 ## Operations (for scenarios, packs and a game master)
 
@@ -117,6 +138,10 @@ Everything above can be set off from data or from outside the rules, through the
 | `sim.story.pose(id, dilemma)` | checks a dilemma (`Cultures.check_dilemma`), queues it as `posed:<id>`; returns the problems, `[]` if posed |
 | `sim.react.trigger(event, ctx)` | sets off the configured reactions to a happening |
 | `sim.hz.set_weather(kind)` | brings that weather now (`"clear"` ends it); false for an unknown kind |
+| `sim.life.add_lines(situation, lines)` | new things people say (known situations, strings only, clipped); returns the problems |
+| `sim.life.summary()` | each person's spirits, weariness, friends, rivals, kin, grief and what they are saying |
+
+Actions for people (`who`: `all`, `best:<skill>`, `name:<name>`, `id:<n>`, `$<var>`): `{"morale": n}` (one family's spirits), `{"bond": n, "with": who}`, `{"say": text}`, `{"depart": true}` (the family leaves the tribe).
 
 Their input is checked like a culture pack's: unknown ids and malformed actions are refused, not run.
 
@@ -153,7 +178,7 @@ The Council's standing policies (`policy.gd`, `sim.policy`; the **Council** butt
 
 Emergency mode (`crisis.gd`, `sim.crisis`). `triggers.attack`: a beast or raider of the listed `kinds` striking one of ours (not `skip_roles`) within `hit_ago` seconds starts a crisis, at most once per `cooldown` seconds. The chieftain can also take command of a contract crew in its emergency dialog. While it lasts, time runs at `slow`, the people within `radius` are the ones commanded, and it ends after `quiet` seconds without a threat (or `max_secs`, or **Hand back**). `titles`, `happened` (for memories, with `remember`), `start_log`, `end_log` and `outcome` are its texts.
 
-`orders`: `{"id", "label", "desc", "verb", "needs": conditions, "cost": {stock: n}, ...}`. The verbs are coded: `fight` (`min_hp`), `rally` (`def`, `close`, `secs`), `scare` (`scare_radius`, `"of": "beasts"`), `to_fire` (`reach`, `scare_radius`), `shelter` (`acts`), `aid` (`below`, `heal`, `time`, `count`, `acts`). A game master starts one with `sim.crisis.start(kind, at, people, contract)`, gives orders with `sim.crisis.order(id)`, ends it with `end()` and reads it with `summary()`.
+`orders`: `{"id", "label", "desc", "verb", "needs": conditions, "cost": {stock: n}, ...}`. The verbs are coded: `fight` (`min_hp`), `rally` (`def`, `close`, `secs`), `scare` (`scare_radius`, `"of": "beasts"`, `popup` with `%d` for how many flee), `to_fire` (`reach`, `scare_radius`), `shelter` (`acts`), `aid` (`below`, `heal`, `time`, `count`, `acts`). An order that would do nothing (no threat, nothing that fears fire, no fire in reach, no one badly hurt) is refused by `order_block()` and costs nothing; the cost is paid once it is carried out. A game master starts one with `sim.crisis.start(kind, at, people, contract)`, gives orders with `sim.crisis.order(id)`, ends it with `end()` and reads it with `summary()`.
 
 ## director.json
 

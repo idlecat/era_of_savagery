@@ -61,6 +61,22 @@ class Unit:
 	var hero: bool = false
 	var sick: float = 0.0 # 1 = just fell ill, 0 = healthy
 	var immune_t: float = 0.0
+	# everyday life (life.gd, config/life.json); each person stands for one family line
+	var morale: float = 60.0 # spirits, 0..100
+	var fatigue: float = 0.0 # weariness, 0..100 (sleep clears it)
+	var bonds: Dictionary = {} # other person's id -> -100..100 (friends above, rivals below)
+	var company: int = 0 # friends (+) or rivals (-) working nearby, this second
+	var grief: float = 0.0
+	var mourn_id: int = -1 # whose grave they visit
+	var cheer: float = 0.0 # lift from their own deeds, fading
+	var low_t: float = 0.0 # seconds in despair (the family may want to leave)
+	var meal_slot: int = -1 # the last meal time they were called to (day * 10 + meal)
+	var wake_until: float = -1.0
+	var face: Variant = null # where they look while standing (the fire, the one they talk to)
+	var say: String = "" # a speech mark over their head (already translated)
+	var say_until: float = -1.0
+	var say_t: float = 0.0 # when they may speak again
+	var gone: bool = false # left the tribe (also dead + buried: out of every count)
 
 	func lv(skill: String) -> int:
 		return skills[skill]["lv"]

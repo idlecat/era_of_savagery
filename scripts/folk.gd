@@ -103,6 +103,7 @@ func make_child(nm: String, parent: E.Unit) -> E.Unit:
 	u.born_t = sim.time
 	u.parent_id = parent.id if parent else -1
 	u.hunger = 90.0
+	sim.life.on_birth(u) # (a new family line, kin to its parent's)
 	return u
 
 func days_to_grow(u: E.Unit) -> int:
@@ -122,6 +123,7 @@ func come_of_age(u: E.Unit) -> void:
 	sim.popup(u.pos + Vector2(0, -30), tr("%s comes of age!") % tr(u.name), Color("#ffd6f0"), true)
 	sim.devotion = minf(100.0, sim.devotion + 2)
 	lift(5.0)
+	sim.life.praise(u, "come_of_age")
 
 ## What a child does with no job: chase the others round the fire, play at hunters with a
 ## stick, or watch a grown-up at work (and learn a little of it).
@@ -220,6 +222,8 @@ func _masterpiece(u: E.Unit, kind: String) -> void:
 	sim.inv.feat("masterpiece", tr("Made a masterpiece: the %s") % tr(what), u,
 		{"desc": tr("A treasure of the tribe, made by %s. The whole tribe comes to see it, and its mood rises.") % tr(u.name)})
 	sim.alert(tr("%s has made a masterpiece: the %s! The whole tribe comes to see it.") % [tr(u.name), tr(what)], u.pos, "info", [u])
+	sim.life.praise(u, "masterpiece")
+	sim.react.trigger("masterpiece", {"at": u.pos})
 
 # ------------------------------------------------------------ festivals
 func festival_on() -> bool: return sim.time < festival_until

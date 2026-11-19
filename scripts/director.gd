@@ -40,15 +40,20 @@ func _level() -> Dictionary:
 
 ## How much trouble the tribe can take now.
 func cap() -> float:
-	if distress or sim.time < mercy_until: return float(C.get("mercy", {}).get("cap", 0.5))
+	if mercy(): return float(C.get("mercy", {}).get("cap", 0.5))
 	return float(_level().get("cap", 3.0))
 
 func weight(kind: String) -> float: return float(C.get("weights", {}).get(kind, 0.0))
 
-## May hardship `kind` start now? (Kinds without a weight always may.)
+## In distress or under mercy's breath (the mercy cap holds then).
+func mercy() -> bool: return distress or sim.time < mercy_until
+
+## May hardship `kind` start now? (Kinds without a weight always may.) In a calm land
+## (no tension at all) even a hardship heavier than the cap may come, but never while
+## the tribe is in distress: then the mercy cap holds.
 func allow(kind: String) -> bool:
 	if not active() or weight(kind) <= 0.0: return true
-	if tension + weight(kind) <= cap() or tension <= 0.0: return true
+	if tension + weight(kind) <= cap() or (tension <= 0.0 and not mercy()): return true
 	held.append({"kind": kind, "t": sim.time})
 	if held.size() > 20: held.pop_front()
 	return false

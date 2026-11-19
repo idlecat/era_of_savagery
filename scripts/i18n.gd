@@ -66,12 +66,13 @@ static func act(a: String) -> String:
 	return a
 
 static var _cfg_pre = null
-## "Running to help %s"-style activities from config/reactions.json, as prefixes.
+## "Running to help %s"-style activities from config/reactions.json and life.json, as prefixes.
 static func _cfg_prefixes() -> Array:
 	if _cfg_pre == null:
 		_cfg_pre = []
-		for x in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg("reactions")):
-			if x.ends_with("%s") and x.count("%") == 1: _cfg_pre.append(x.trim_suffix("%s"))
+		for cfg in ["reactions", "life"]:
+			for x in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
+				if x.ends_with("%s") and x.count("%") == 1: _cfg_pre.append(x.trim_suffix("%s"))
 	return _cfg_pre
 
 ## English plural suffix; Chinese has none (an empty translation would count as "missing").

@@ -135,14 +135,33 @@ func order_block(id: String) -> String:
 	if not sim.story.holds(o.get("needs", {})): return "Not yet"
 	for k in o.get("cost", {}):
 		if sim.stock.get(k, 0.0) < float(o["cost"][k]): return sim.tr("Needs %d %s") % [int(o["cost"][k]), sim.tr(k)]
+	# an order that would do nothing is refused, not paid for
+	if o["verb"] == "fight" and threats().is_empty(): return "No threat near"
+	if o["verb"] == "scare" and _scared(o).is_empty(): return "Nothing near fears fire"
+	if o["verb"] == "to_fire" and _fire_for(o) == null: return "No fire near"
+	if o["verb"] == "aid" and _wounded(o).is_empty(): return "No one is badly hurt"
 	return ""
+
+## What a "scare" order turns away (beasts only with "of": "beasts").
+func _scared(o: Dictionary) -> Array:
+	return sim.active_predators_near(cur["at"], float(o.get("scare_radius", 260))).filter(func(p): return o.get("of", "") != "beasts" or p.clan == "")
+
+## The nearest bonfire of ours within the order's reach of the crisis (or null).
+func _fire_for(o: Dictionary) -> Variant:
+	var fire = null
+	for s in sim.structures:
+		if s.built and sim.ours(s) and s.type == "bonfire" and s.pos.distance_to(cur["at"]) < float(o.get("reach", 900)) and (fire == null or s.pos.distance_to(cur["at"]) < fire.pos.distance_to(cur["at"])): fire = s
+	return fire
+
+## The badly hurt people of the crisis.
+func _wounded(o: Dictionary) -> Array:
+	return people().filter(func(v): return v.hp < v.max_hp * float(o.get("below", 0.6)))
 
 ## Give order `id` to the people in the crisis. Returns "" or why not.
 func order(id: String) -> String:
 	var why := order_block(id)
 	if why != "": return why
 	var o := order_def(id)
-	for k in o.get("cost", {}): sim.stock[k] -= float(o["cost"][k])
 	var ps := people()
 	match o["verb"]:
 		"fight":
@@ -161,27 +180,21 @@ func order(id: String) -> String:
 					if u != best: _command(u, {"type": "move", "to": at + Vector2.from_angle(u.id * 2.4) * 20.0, "hold": true})
 				buff = {"at": at, "until": sim.time + float(o.get("secs", 25)), "def": float(o.get("def", 3)), "close": float(o.get("close", 70))}
 		"scare":
-			var n := 0
-			for p in sim.active_predators_near(cur["at"], float(o.get("scare_radius", 260))):
-				if o.get("of", "") == "beasts" and p.clan != "": continue
-				p.fleeing = true
-				n += 1
-			sim.popup(cur["at"] + Vector2(0, -40), sim.tr("%d beasts flee the fire") % n if n > 0 else sim.tr("Nothing fears the fire"), Color("#ffb060"))
+			var fled := _scared(o)
+			for p in fled: p.fleeing = true
+			sim.popup(cur["at"] + Vector2(0, -40), sim.tr(str(o.get("popup", "%d flee the fire"))) % fled.size(), Color("#ffb060"))
 		"to_fire":
-			var fire = null
-			for s in sim.structures:
-				if s.built and sim.ours(s) and s.type == "bonfire" and s.pos.distance_to(cur["at"]) < float(o.get("reach", 900)) and (fire == null or s.pos.distance_to(cur["at"]) < fire.pos.distance_to(cur["at"])): fire = s
-			if fire == null: return "No fire near"
+			var fire = _fire_for(o)
 			for u in ps: _command(u, {"type": "move", "to": fire.pos + Vector2.from_angle(u.id * 2.4) * 28.0, "hold": true})
 			cur["fire"] = {"at": fire.pos, "r": float(o.get("scare_radius", 180))}
 		"shelter":
 			for u in ps: sim.react._start_shelter(o, u, {"until": sim.time + float(C.get("max_secs", 150))})
 		"aid":
-			for v in ps:
-				if v.hp < v.max_hp * float(o.get("below", 0.6)):
-					var helpers: Array = ps.filter(func(h): return h != v and h.hp >= h.max_hp * 0.6)
-					helpers.sort_custom(func(a, b): return a.pos.distance_to(v.pos) < b.pos.distance_to(v.pos))
-					for h in helpers.slice(0, int(o.get("count", 2))): sim.react._start_aid(o, h, {"victim": v})
+			for v in _wounded(o):
+				var helpers: Array = ps.filter(func(h): return h != v and h.hp >= h.max_hp * 0.6)
+				helpers.sort_custom(func(a, b): return a.pos.distance_to(v.pos) < b.pos.distance_to(v.pos))
+				for h in helpers.slice(0, int(o.get("count", 2))): sim.react._start_aid(o, h, {"victim": v})
+	for k in o.get("cost", {}): sim.stock[k] -= float(o["cost"][k]) # (paid once it is done)
 	cur["orders"].append(id)
 	sim.add_log(sim.tr("The Chieftain commands: %s") % sim.tr(o.get("label", id)), "combat")
 	return ""

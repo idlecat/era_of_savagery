@@ -21,6 +21,7 @@ const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
 const Reactions = preload("res://scripts/reactions.gd")
+const Life = preload("res://scripts/life.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
 signal contract_interrupted(contract)
@@ -35,6 +36,7 @@ signal sound_cue(id, at) # the story action "sound" (audio.gd plays it)
 signal crisis_started(crisis) # emergency mode begins (crisis.gd): the HUD shows the orders
 signal crisis_ended(crisis)
 signal feat_added(feat) # one of the tribe's firsts (inv.feat): the HUD celebrates it
+signal spoke(unit, text) # someone says something (a speech mark over their head, life.gd)
 
 var next_id := 1
 var time := 0.0
@@ -103,6 +105,7 @@ var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var react: Reactions # how people respond to quakes, fires, the hurt... (reactions.gd)
+var life: Life # meals, idle acts, bonds, spirits and weariness, speech (life.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
 var legacy: Legacy
@@ -130,6 +133,7 @@ func _init() -> void:
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
 	react = Reactions.new(self)
+	life = Life.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
@@ -170,6 +174,7 @@ func new_game() -> void:
 		kid.born_t = -D.DAY_LEN * randf_range(0.5, 1.5)
 		units.append(kid)
 	cult.setup() # (a random tribe may be led by the culture's founders)
+	life.setup() # (the first friendships and feuds)
 	_start_jobs()
 	story.setup(D.SCRIPT)
 	for line in D.MAP.get("intro", []): add_log(tr(line), "story")
@@ -487,9 +492,9 @@ func unit_speed(u: E.Unit) -> float:
 	if evo.has_trad("wayfinders"): s *= 1.1
 	s *= hz.speed_mult() * inv.mul("speed")
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
-	return s * roads.speed_at(u.pos) # (trails and roads)
+	return s * roads.speed_at(u.pos) * life.speed_mult(u) # (trails and roads; weariness, hurry)
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u)
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u)
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second (config/rules.json "survival").
@@ -518,6 +523,7 @@ func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 		s["lv"] += 1
 		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"), true)
 		add_log(tr("%s reached %s Lv.%d.") % [tr(u.name), tr(D.SKILL_NAMES[skill]), s["lv"]], "xp", [u])
+		life.praise(u, "level_up")
 		if s["lv"] == 5 and not u.unlocked.has(skill):
 			u.unlocked[skill] = true
 			remember(u, tr("mastered %s and unlocked [%s]") % [tr(D.SKILL_NAMES[skill]).to_lower(), tr(D.SKILL_UNLOCKS[skill])], 7)
@@ -582,6 +588,7 @@ func set_job(u: E.Unit, job: Dictionary, key := "") -> void:
 	u.path.clear()
 	u.dest = null
 	u.gather_t = 0.0
+	u.face = null
 
 func assign_move(u: E.Unit, p: Vector2) -> void: set_job(u, {"type": "move", "to": p})
 func assign_flee(u: E.Unit) -> void:
@@ -653,13 +660,14 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), tr("Flees!"), Color("#ff9b7a"))
 			elif not low and jt != "attack" and jt != "move":
-				if u.resume_job.is_empty() and not u.job.is_empty():
+				if u.resume_job.is_empty() and not u.job.is_empty() and jt != "life":
 					u.resume_job = u.job
 					u.resume_key = u.job_key
 					u.resume_t = u.job_t
 				assign_attack(u, p, u.job_key)
 
 	if _night_rest(u, dt): return
+	if life.waking(u): return
 	var jt0: String = u.job.get("type", "")
 	if folk.festival_on() and u.role in ["", "child"] and u.home.distance_to(D.VILLAGE) < 60 and jt0 != "attack" and not u.job.get("flee", false) and not u.job.get("react", false) and jt0 != "bury":
 		folk.dance(u, dt)
@@ -700,6 +708,16 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			react.do_shelter(u, j, dt)
 		"firefight":
 			react.do_firefight(u, j, dt)
+		"look":
+			react.do_look(u, j, dt)
+		"startle":
+			react.do_startle(u, j, dt)
+		"life":
+			life.do_act(u, j, dt)
+		"meal":
+			life.do_meal(u, j, dt)
+		"depart":
+			life.do_depart(u, j, dt)
 		"art":
 			folk.do_art(u, j, dt)
 		"trade_trip":
@@ -945,6 +963,7 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	var name: String = tr(D.STRUCTURES[s.type]["name"])
 	popup(s.pos + Vector2(0, -30), tr("%s complete!") % name, Color("#b6f28a"), true)
 	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build", [u] if u else [])
+	if ours(s): react.trigger("built", {"at": s.pos})
 	if s.type == "grand_altar": summon_guardian(s)
 
 # ------------------------------------------------------------------ natural finds
@@ -1449,6 +1468,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start())
 	if jt == "shelter": return false # (hiding: the reaction keeps them in the hut)
 	if not rest_time() or duty:
+		if u.sleeping and not duty: life.woke(u) # (dawn: a moment to stretch)
 		if u.sleeping or u.bed_pos != null: wake(u)
 		return false
 	if u.bed_pos == null: _pick_bed(u)
@@ -1512,6 +1532,9 @@ func _dry(p: Vector2) -> Vector2:
 	return out if D.region_at(out) == D.region_at(p) else p
 
 func unit_idle(u: E.Unit, dt: float) -> void:
+	if life.on and u.role == "" and D.same_side(u.pos, u.home): # (the idle acts of config/life.json)
+		life.idle(u, dt)
+		return
 	u.act = "Resting (sick)" if u.sick > 0 else "Idle"
 	if u.has_trait("devout") and u.role != "contract" and D.same_side(u.pos, u.home):
 		u.idle_t += dt
@@ -1591,6 +1614,7 @@ func kill_unit(u: E.Unit, killer) -> void:
 	var cause: String = (tr("slain by a %s") % tr(killer.name)) if killer else (cause_hint if cause_hint != "" else tr("lost to hunger and cold"))
 	u.death_cause = cause
 	folk.on_death()
+	life.on_death(u)
 	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
 	for o in units:
@@ -1631,6 +1655,8 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 			else:
 				remember(u, tr("slew a %s on Day %d") % [tr(p.name), day()], 8)
 				add_log(tr("%s slew a %s!") % [tr(u.name), tr(p.name)], "combat", [u])
+				life.praise(u, "kill")
+				react.trigger("beast_slain", {"at": p.pos, "victim": u})
 			evo.drift("martial", 4.0)
 		if p.clan != "": rivals.on_rival_killed(p, u)
 		else: _node("carcass", "food", p.pos, 35)
@@ -1715,6 +1741,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		elif p.kind == "trader" and not p.arrived:
 			p.arrived = true
 			rivals.trader_arrived(p)
+			react.trigger("visitor", {"at": p.pos})
 	else:
 		p.prowl_t -= dt
 		if p.prowl_t <= 0:
@@ -1862,6 +1889,7 @@ func tick(dt: float) -> void:
 	nat.update(dt)
 	react.update(dt)
 	folk.update(dt)
+	life.update(dt)
 	rivals.update(dt)
 	legacy.update(dt)
 	wear_t -= dt
@@ -1908,6 +1936,7 @@ func _update_births(dt: float) -> void:
 			evo.on_birth(u)
 			add_log(tr("%s (%s) was born into the tribe.") % [tr(nm), tr(D.TRAITS[u.traits[0]]["name"])], "story", [u])
 			popup(u.pos + Vector2(0, -24), tr("%s is born!") % tr(nm), Color("#ffd6f0"), true)
+			react.trigger("birth", {"at": u.pos})
 	else:
 		birth_timer = maxf(0, birth_timer - dt)
 
@@ -1929,6 +1958,8 @@ func appoint(u: E.Unit, role: String) -> bool:
 	if appoint_block(u, role) != "": return false
 	for k in vice:
 		if vice[k] == u.id: vice[k] = -1
+	var old := unit_by_id(vice[role]) # (the one replaced steps down)
+	if old and old != u: old.title = ""
 	vice[role] = u.id
 	u.title = "Steward" if role == "steward" else "War Chief"
 	remember(u, tr("was appointed %s of the tribe on Day %d") % [tr(u.title), day()], 7)
@@ -1936,13 +1967,26 @@ func appoint(u: E.Unit, role: String) -> bool:
 	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice", [u])
 	return true
 
+## Relieve the holder of a Vice-Chieftain role, freeing the slot. Returns false if nobody holds it.
+func dismiss(role: String) -> bool:
+	var u := unit_by_id(vice.get(role, -1))
+	if not vice.has(role) or vice[role] < 0: return false
+	vice[role] = -1
+	if u == null: return true
+	u.title = ""
+	add_log(tr("%s steps down as Vice-Chieftain.") % tr(u.name), "vice", [u])
+	return true
+
+## Free for other work: no job, or only an idle act of everyday life (life.gd).
+func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
+
 func _update_vice(dt: float) -> void:
 	vice_timer -= dt
 	if vice_timer > 0: return
 	vice_timer = 3
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time(): # no work handed out at night
-		var idle := living().filter(func(u): return u.job.is_empty() and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < 500)
+		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < 500)
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = null
@@ -2204,6 +2248,10 @@ func _check_events() -> void:
 		_fire_event(ne)
 	elif not rivals.pending.is_empty():
 		_fire_event(rivals.pending.pop_front())
+	elif life.pending != "": # a family in despair wants to leave
+		var le: String = life.pending
+		life.pending = ""
+		_fire_event(le)
 
 var steward_routine := true # the Steward decides routine matters (dilemmas with "routine"); a player setting
 
@@ -2264,6 +2312,7 @@ func event_def(id: String) -> Dictionary:
 	if legacy.owns_event(id): return legacy.event_def(id)
 	if nat.owns_event(id): return nat.event_def(id)
 	if folk.owns_event(id): return folk.event_def(id)
+	if life.owns_event(id): return life.event_def(id)
 	if cult.owns_event(id): return cult.event_def(id)
 	if story.owns_event(id): return story.event_def(id)
 	if DILEMMAS.has(id): return story.dilemma_view(DILEMMAS[id], _dilemma_vars(id))
@@ -2314,6 +2363,10 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		var ft: String = folk.resolve(id, idx)
 		cult.festival() # a tale saved for feasts
 		return {"text": ft, "open_contract": false}
+	if life.owns_event(id):
+		var lt: String = life.resolve(id, idx)
+		add_log(lt, "story")
+		return {"text": lt, "open_contract": false}
 	if cult.owns_event(id):
 		var ct: String = cult.resolve(id, idx)
 		add_log(ct, "story")

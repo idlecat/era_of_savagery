@@ -222,7 +222,7 @@ func toggle_fullscreen() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED if fs else DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 # ------------------------------------------------------------ debug: automated screenshots
-# godot --path . -- --shot=/tmp/x.png --delay=3 --demo=sheet|negotiate|emergency --fast=60
+# godot --path . -- --shot=/tmp/x.png --delay=3 --demo=sheet|negotiate|emergency|life --fast=60
 func _enter_tree() -> void:
 	var args := {}
 	for a in OS.get_cmdline_user_args():
@@ -560,6 +560,19 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.pending_event = ""
 			hud._close_modal()
 			hud.open_heritage()
+		"life": # everyday life: --at=<day part> (0.35 the midday meal, 0.62 the evening meal, 0.2 idle acts), --secs to run on
+			hud._close_modal()
+			var at := float(args.get("at", "0.33"))
+			while sim.day_frac() < at or sim.day() < 2:
+				sim.tick(STEP)
+				if sim.pending_event != "":
+					sim.pending_event = ""
+					sim.paused = false
+			for i in int(float(args.get("secs", "8")) / STEP): sim.tick(STEP)
+			sim.paused = false
+			hud._close_modal()
+			world.cam.zoom = Vector2(float(args.get("zoom", "1.6")), float(args.get("zoom", "1.6")))
+			world.focus_on(sim.D.VILLAGE + Vector2(0, 30))
 		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
 			hud._close_modal()
 			sim.fog_enabled = false
