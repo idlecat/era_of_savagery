@@ -1993,6 +1993,36 @@ func dismiss(role: String) -> bool:
 ## Free for other work: no job, or only an idle act of everyday life (life.gd).
 func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
 
+## Every job type update_unit() runs (a job of any other type would silently do nothing).
+const JOB_TYPES := ["move", "gather", "bury", "tend", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
+	"life", "meal", "depart", "art", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
+
+## What must always hold in a running game; returns the broken rules ([] when all is well).
+## Tests call it after ticking; a game master can call it to sanity-check the world.
+func check_invariants() -> Array:
+	var bad: Array = []
+	for k in stock:
+		if is_nan(float(stock[k])) or float(stock[k]) < -0.01: bad.append("stock %s is %s" % [k, str(stock[k])])
+	var ids := {}
+	for u in units:
+		if ids.has(u.id): bad.append("two units share id %d" % u.id)
+		ids[u.id] = true
+		if u.dead: continue
+		for j in [u.job, u.resume_job]:
+			if not j.is_empty() and not j.get("type", "") in JOB_TYPES: bad.append("%s has a job of unknown type %s" % [u.name, str(j.get("type"))])
+		if u.hp > u.max_hp + 0.01 or is_nan(u.hp): bad.append("%s has hp %.1f of %.1f" % [u.name, u.hp, u.max_hp])
+		if u.morale < -0.01 or u.morale > 100.01: bad.append("%s has morale %.1f" % [u.name, u.morale])
+		if u.fatigue < -0.01 or u.fatigue > 100.01: bad.append("%s has fatigue %.1f" % [u.name, u.fatigue])
+		if u.role == "contract" and contracts.by_id(u.contract_id) == null: bad.append("%s is on missing contract %d" % [u.name, u.contract_id])
+		var role := "steward" if u.title == "Steward" else ("warchief" if u.title == "War Chief" else "")
+		if u.title != "" and (role == "" or vice[role] != u.id): bad.append("%s is titled %s but holds no such office" % [u.name, u.title])
+	for role in vice:
+		if vice[role] < 0: continue
+		var h := unit_by_id(vice[role])
+		if h == null or h.dead: bad.append("the %s office is held by a missing or dead person" % role)
+		elif h.title != ("Steward" if role == "steward" else "War Chief"): bad.append("%s holds %s but is titled '%s'" % [h.name, role, h.title])
+	return bad
+
 func _update_vice(dt: float) -> void:
 	vice_timer -= dt
 	if vice_timer > 0: return

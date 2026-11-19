@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	for t in [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life]:
+	for t in [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_smoke]:
 		seed(42)
 		t.call()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
@@ -2714,3 +2714,40 @@ func test_life() -> void:
 	u = off.unit_by_name("Bai")
 	u.fatigue = 100.0
 	check(off.life.work_mult(u) == 1.0 and off.life.speed_mult(u) == 1.0, "with everyday life off, nothing changes the old rules")
+
+## A game as the player gets it: every system on (hardships, festivals, crisis, director,
+## everyday life), on the default map and on a random one, ticked for days while the world's
+## invariants (sim.check_invariants) are checked. Catches what tests with features off miss.
+func _game_sim():
+	var sim = Sim.new()
+	sim.new_game()
+	return sim
+
+func _smoke(sim, days: float) -> Array:
+	var bad: Array = []
+	var t := 0.0
+	while t < days * D.DAY_LEN and bad.is_empty():
+		_run(sim, 5.0)
+		if sim.crisis.active(): sim.crisis.end()
+		t += 5.0
+		for b in sim.check_invariants(): bad.append("day %d: %s" % [sim.day(), b])
+	return bad
+
+func test_smoke() -> void:
+	print("\n== Smoke: a whole game with every system on ==")
+	var sim = _game_sim()
+	check(sim.check_invariants().is_empty(), "a new game breaks no invariant (%s)" % str(sim.check_invariants()))
+	var u = sim.living()[0]
+	u.title = "Steward"
+	sim.stock["wood"] = -5.0
+	u.job = {"type": "gahter"}
+	check(sim.check_invariants().size() == 3, "the checker catches a false title, a debt and an unknown job (%s)" % str(sim.check_invariants()))
+	sim = _game_sim()
+	var bad := _smoke(sim, 4.0)
+	check(bad.is_empty(), "4 days on the default map break no invariant %s" % str(bad))
+	check(sim.living().size() > 0, "the tribe lives through 4 days")
+	MapGen.generate("standard", 4, 269472)
+	sim = _game_sim()
+	bad = _smoke(sim, 3.0)
+	check(bad.is_empty(), "3 days on a random map break no invariant %s" % str(bad))
+	Scenarios.apply("the_ford")
