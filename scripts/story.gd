@@ -283,10 +283,7 @@ func _cost(o: Dictionary, vars: Dictionary) -> Dictionary:
 	return out
 
 func affords(o: Dictionary, vars: Dictionary = {}) -> bool:
-	var cost := _cost(o, vars)
-	for r in cost:
-		if sim.stock.get(r, 0.0) < cost[r]: return false
-	return true
+	return sim.can_afford(_cost(o, vars))
 
 ## Are an option's "needs" met (else it runs else_do)? {"best": skill, "lv", "or_tech"}
 ## or {"var": name} (a true value of the caller's).
@@ -351,8 +348,7 @@ func dilemma_choose(ev: Dictionary, idx: int, vars: Dictionary = {}) -> Dictiona
 	if opts.is_empty(): return {"text": "", "option": {}, "vars": v}
 	var o: Dictionary = opts[clampi(idx, 0, opts.size() - 1)]
 	if not affords(o, v) or not holds(o.get("when", {})): o = opts.back() # (can't: the last choice, usually "do nothing")
-	var cost := _cost(o, v)
-	for r in cost: sim.stock[r] -= cost[r]
+	sim.spend(_cost(o, v)) # (all or nothing: the fallback choice is free or affordable)
 	v["choice"] = _say(o["label"], ev, v)
 	var good := needs_met(o, v) and (not o.has("chance") or randf() < chance(o))
 	run(o.get("do", []) if good else o.get("else_do", []), null, v)

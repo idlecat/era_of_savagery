@@ -379,7 +379,7 @@ static func emergency(ctx: Dictionary) -> Dictionary:
 			opts = {
 				"cautious": [["reinforce", I.t("Hold the half-built camp and wait for reinforcements")], ["retreat", I.t("Abandon the timber and fall back to the village")], ["hold", I.t("Stand behind what we have built and fight")]],
 				"warrior": [["hold", I.t("Stand and fight - we crush them!")], ["reinforce", I.t("Send more spears and we finish them faster")], ["retreat", I.t("...Fall back, if you must insist")]],
-				"mystic": [["ward", I.t("Invoke the totem ward to drive them off (10 lore)")], ["hold", I.t("Fight with the spirits at our backs")], ["retreat", I.t("Fall back to the village")]],
+				"mystic": [["ward", I.t("Invoke the totem ward to drive them off (%d lore)") % int(ctx.get("ward_cost", 10))], ["hold", I.t("Fight with the spirits at our backs")], ["retreat", I.t("Fall back to the village")]],
 				"agrarian": [["reinforce", I.t("Send help - we guard the larder")], ["hold", I.t("Fight for our supplies")], ["retreat", I.t("Run, and take what food we can")]],
 				"lazy": [["retreat", I.t("Go home. Please.")], ["reinforce", I.t("Send someone else to deal with them")], ["hold", I.t("Fine, we fight")]],
 			}[arch]

@@ -129,7 +129,7 @@ func lay_cells(cells: Array, lv: int, helpers: Array = []) -> String:
 	var c := cost(cells, lv)
 	for r in c:
 		if sim.stock.get(r, 0.0) < c[r]: return sim.tr("Needs %d %s") % [c[r], sim.tr(r)]
-	for r in c: sim.stock[r] -= c[r]
+	sim.spend(c)
 	var mid: Vector2 = cell_pos(cells[cells.size() / 2])
 	var s: E.Structure = sim.add_structure("roadworks", mid, false, "village", true)
 	s.cells = cells.map(func(k): return [k, lv])

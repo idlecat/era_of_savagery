@@ -161,7 +161,7 @@ func _herds_return() -> void:
 func _weather(dt: float) -> void:
 	if incoming != "":
 		incoming_t -= dt
-		if incoming_t <= 0: _start(incoming)
+		if incoming_t <= 0: start_weather(incoming)
 		return
 	if weather != "clear":
 		weather_left -= dt
@@ -181,7 +181,7 @@ func _weather(dt: float) -> void:
 				incoming_t = float(kind["warn_ahead"])
 				sim.alert(tr(kind["warn"]), Vector2.ZERO, "danger")
 			else:
-				_start(w)
+				start_weather(w)
 			return
 
 ## Make the weather w (a weather.kinds id, or "clear") now: an operation for scenario
@@ -192,10 +192,10 @@ func set_weather(w: String) -> bool:
 		incoming = ""
 		return true
 	if not WEATHER.has(w): return false
-	_start(w)
+	start_weather(w)
 	return true
 
-func _start(w: String) -> void:
+func start_weather(w: String) -> void:
 	sim.cult.on_event(w) # (weather: blizzard, storm, drought...)
 	incoming = ""
 	weather = w
@@ -300,7 +300,7 @@ func heal_rate(u: E.Unit, warm: bool) -> float:
 	var r := 1.0 / float(cr["time"])
 	if warm: r *= float(cr["warm"])
 	for st in cr["shrines"]:
-		if sim._struct_near(st, u.pos, float(cr["shrine_radius"])):
+		if sim.struct_near(st, u.pos, float(cr["shrine_radius"])):
 			r *= float(cr["shrine"])
 			break
 	for o in sim.living():

@@ -240,7 +240,7 @@ func spot(st: String, near: String) -> Vector2:
 
 func _free(p: Vector2, r: float, structs: Array, obstacles: Array) -> bool:
 	if p.x < 40 or p.y < 40 or p.x > D.W - 40 or p.y > D.H - 40: return false
-	if D.is_water(p) or D.river_dist(p) < sim._wet_reach() + r: return false
+	if D.is_water(p) or D.river_dist(p) < sim.wet_reach() + r: return false
 	var gap := float(C.get("gap", 14))
 	for s in structs:
 		var sr: float = sim.struct_r(s)

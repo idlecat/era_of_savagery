@@ -148,7 +148,7 @@ func new_game() -> void:
 	for h in D.HOME.get("huts", []): add_structure("hut", h, true)
 	for f in D.HOME.get("forests", []): _forest(f[0], f[1], f[2])
 	for b in D.HOME.get("bushes", []):
-		var n := _node("bush", "food", b, 30)
+		var n := add_node("bush", "food", b, 30)
 		n.regrow = 0.1
 	_wilds()
 	_boulders()
@@ -246,7 +246,7 @@ func _wilds() -> void:
 		var c := Vector2(randf_range(150, D.W - 150), randf_range(150, D.H - 150))
 		if home.has_point(c) or D.river_dist(c) < 160: continue
 		for k in 3:
-			var n := _node("bush", "food", c + Vector2(randf_range(-50, 50), randf_range(-40, 40)), 30)
+			var n := add_node("bush", "food", c + Vector2(randf_range(-50, 50), randf_range(-40, 40)), 30)
 			n.regrow = 0.1
 	for def in D.LANDMARKS:
 		var lm: Dictionary = def.duplicate(true)
@@ -254,7 +254,7 @@ func _wilds() -> void:
 		landmarks.append(lm)
 		if lm["kind"] == "grove":
 			for k in 6:
-				var n := _node("bush", "food", lm["pos"] + Vector2.from_angle(k * TAU / 6) * 60, 40)
+				var n := add_node("bush", "food", lm["pos"] + Vector2.from_angle(k * TAU / 6) * 60, 40)
 				n.regrow = 0.14
 		for k in int(lm.get("den", 0)):
 			var pr := spawn_predator(lm["pos"] + Vector2(randf_range(-60, 60), randf_range(-40, 40)))
@@ -271,9 +271,9 @@ func _boulders() -> void:
 		if D.river_dist(c) < 150 or c.distance_to(D.VILLAGE) < 220: continue
 		for k in 3:
 			var p: Vector2 = c + Vector2(randf_range(-45, 45), randf_range(-35, 35))
-			_node("boulder", "stone", p, 40)
+			add_node("boulder", "stone", p, 40)
 
-func _node(kind: String, res: String, p: Vector2, amount: float) -> E.ResNode:
+func add_node(kind: String, res: String, p: Vector2, amount: float) -> E.ResNode:
 	var n := E.ResNode.new()
 	n.id = uid(); n.kind = kind; n.res = res; n.pos = p; n.amount = amount; n.max_amount = amount
 	nodes.append(n)
@@ -290,7 +290,7 @@ func _forest(c: Vector2, count: int, spread: float) -> void:
 		for lm in D.LANDMARKS:
 			if p.distance_to(lm["pos"]) < 90: blocked = true
 		if blocked: continue
-		var n := _node("tree", "wood", p, 30)
+		var n := add_node("tree", "wood", p, 30)
 		n.sz = randf_range(0.8, 1.25)
 
 ## A deer on the given stretch of land (-1: any); from_edge: wandering in from the map edge.
@@ -305,7 +305,7 @@ func spawn_deer(region: int, from_edge: bool) -> void:
 			p = Vector2(randf_range(80, D.W - 80), randf_range(60, D.H - 60))
 		p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 60, D.H - 60))
 		if not D.in_river(p) and (region < 0 or D.region_at(p) == region) and p.distance_to(D.VILLAGE) > 220: break
-	var n := _node("deer", "food", p, 25)
+	var n := add_node("deer", "food", p, 25)
 	n.bank = D.region_at(p)
 
 func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
@@ -359,9 +359,9 @@ func day() -> int: return int(time / D.DAY_LEN) + 1
 func day_frac() -> float: return fmod(time, D.DAY_LEN) / D.DAY_LEN
 func has_tech(t: String) -> bool: return techs.has(t)
 ## Bronze arms the tribe only while a smelter stands and has copper and tin to work.
-func has_bronze() -> bool: return has_tech("bronze") and _struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1
+func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1
 func knows_find(id: String) -> bool: return known_finds.has(id)
-func _struct_exists(type: String) -> bool:
+func struct_exists(type: String) -> bool:
 	for s in structures:
 		if s.built and ours(s) and s.type == type: return true
 	return false
@@ -417,7 +417,7 @@ func pop_cap() -> int:
 		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("cap", 0))
 	return c
 
-func _nearest_fire(p: Vector2) -> E.Structure:
+func nearest_fire(p: Vector2) -> E.Structure:
 	var best: E.Structure = null
 	for s in structures:
 		if s.built and ours(s) and s.type == "bonfire" and (best == null or s.pos.distance_to(p) < best.pos.distance_to(p)): best = s
@@ -453,7 +453,7 @@ func inside_wall(p: Vector2) -> bool:
 		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0: return true
 	return false
 
-func _struct_near(type: String, p: Vector2, r: float) -> bool:
+func struct_near(type: String, p: Vector2, r: float) -> bool:
 	for s in structures:
 		if s.built and ours(s) and s.type == type and s.pos.distance_to(p) < r: return true
 	return false
@@ -466,7 +466,7 @@ func unit_atk(u: E.Unit) -> float:
 	if evo.has_trad("warrior_initiation"): a += 2
 	if has_bronze(): a *= 1.6
 	elif knows_find("obsidian"): a *= 1.15 # black-glass blades
-	if _struct_near("weapon_rack", u.pos, 160): a *= 1.2
+	if struct_near("weapon_rack", u.pos, 160): a *= 1.2
 	if u.role == "contract":
 		var c = contracts.by_id(u.contract_id)
 		if c and c.flags.get("blessed", false): a *= 1.15 # the war dance
@@ -690,7 +690,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					assign_explore(u)
 					u.job_t = u.resume_t
 				elif j.get("react", false): # (out of danger: back to work)
-					_end_errand(u)
+					end_errand(u)
 				else:
 					set_job(u, {})
 		"gather":
@@ -747,7 +747,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				if s.reno:
 					u.act = ("Upgrading " if s.upgrade != "" else "Renovating ") + sd["name"]
 					s.reno_progress += speed
-					if s.reno_progress >= reno_need(s): _finish_reno(s, u)
+					if s.reno_progress >= reno_need(s): finish_reno(s, u)
 				else:
 					u.act = "Building " + sd["name"]
 					s.progress += speed
@@ -826,7 +826,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			if approach(u, j["at"], 6, dt):
 				u.act = "Performing ritual"
 				u.doing = "ritual"
-				var boost := 1.5 if (_struct_near("totem_shrine", u.pos, 140) or _struct_near("grand_altar", u.pos, 140)) else 1.0
+				var boost := 1.5 if (struct_near("totem_shrine", u.pos, 140) or struct_near("grand_altar", u.pos, 140)) else 1.0
 				if evo.has_trad("ancestor_rites"): boost *= 1.3
 				stock["lore"] += dt * 0.22 * (1.0 + 0.2 * u.lv("lore")) * boost
 				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")) * (1.3 if evo.has_trad("ancestor_rites") else 1.0) * inv.mul("devotion"))
@@ -994,7 +994,7 @@ func _place_finds() -> void:
 					p = info["c"] + info["t"] * randf_range(-40, 40) * k
 					p = D.river_info(p)["c"] + info["n"] * (D.RIVER_HALF - 26.0)
 				p = Vector2(clampf(p.x, 30, D.W - 30), clampf(p.y, 30, D.H - 30))
-				var n := _node(id, fd["res"], p, fd["amount"])
+				var n := add_node(id, fd["res"], p, fd["amount"])
 				n.regrow = fd["regrow"]
 				n.bank = D.region_at(p)
 			made += 1
@@ -1068,7 +1068,7 @@ func _finds_tick(dt: float) -> void:
 			if randf() < 1.0 - exp(-find_chance(u, n.kind) * 0.5):
 				discover_find(n.kind, u, n.pos)
 				break
-	if has_tech("bronze") and _struct_exists("smelter") and day() != smelter_day and not rest_time():
+	if has_tech("bronze") and struct_exists("smelter") and day() != smelter_day and not rest_time():
 		smelter_day = day()
 		if stock["copper"] >= 1 and stock["tin"] >= 1:
 			stock["copper"] -= 1
@@ -1261,7 +1261,7 @@ func _send_herder() -> void:
 func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var pen := struct_by_id(j["pen_id"])
 	if pen == null or not pen.built or oxen <= 0:
-		_end_errand(u)
+		end_errand(u)
 		return
 	if not approach(u, pen.pos + Vector2(cos(u.id) * 34, sin(u.id) * 20), 8, dt):
 		u.act = "Walking to the oxen"
@@ -1272,7 +1272,7 @@ func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
 		ox_care = 100.0
 		gain_xp(u, "forage", 2.0)
 		evo.practice(u, "hunt", 1.0)
-		_end_errand(u) # back to what they were doing
+		end_errand(u) # back to what they were doing
 
 # ------------------------------------------------------------------ burials
 var BURY_RANGE: float = float(RULES["burial"]["range"]) # bodies further out than this are lost to the wild after a day
@@ -1348,7 +1348,7 @@ func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var b := unit_by_id(j["body_id"])
 	var bg := burial_ground()
 	if b == null or b.buried or bg == null:
-		_end_errand(u)
+		end_errand(u)
 		return
 	match j["phase"]:
 		"fetch":
@@ -1381,9 +1381,9 @@ func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
 				popup(bg.pos + Vector2(0, -40), tr("%s is laid to rest") % tr(b.name), Color("#d8d0e8"), true)
 				devotion = minf(100.0, devotion + 1.0)
 				evo.drift("spiritual", 1.0)
-				_end_errand(u)
+				end_errand(u)
 
-func _end_errand(u: E.Unit) -> void:
+func end_errand(u: E.Unit) -> void:
 	if not u.resume_job.is_empty():
 		var rj := u.resume_job
 		u.resume_job = {}
@@ -1477,11 +1477,11 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 		if u.sleeping and not duty: life.woke(u) # (dawn: a moment to stretch)
 		if u.sleeping or u.bed_pos != null: wake(u)
 		return false
-	if u.bed_pos == null: _pick_bed(u)
+	if u.bed_pos == null: pick_bed(u)
 	var outdoors: bool = u.bed_id < 0
-	if outdoors and D.river_dist(u.bed_pos) < _wet_reach() - 10.0: # the water is rising: move the bed out
+	if outdoors and D.river_dist(u.bed_pos) < wet_reach() - 10.0: # the water is rising: move the bed out
 		u.sleeping = false
-		u.bed_pos = _dry(u.bed_pos)
+		u.bed_pos = dry_spot(u.bed_pos)
 	var danger: bool = night_alarm or (outdoors and not active_predators_near(u.pos, float(react.C.get("night_watch", {}).get("outdoor_beasts", 300))).is_empty())
 	if u.sleeping:
 		if danger and outdoors:
@@ -1501,7 +1501,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 		u.act = "Going to sleep"
 	return true
 
-func _pick_bed(u: E.Unit) -> void:
+func pick_bed(u: E.Unit) -> void:
 	var bank := D.region_at(u.pos)
 	var near: Vector2 = u.home if D.region_at(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos
 	var best: E.Structure = null
@@ -1516,22 +1516,22 @@ func _pick_bed(u: E.Unit) -> void:
 		u.bed_pos = best.pos + Vector2(0, 6)
 		return
 	u.bed_id = -1
-	var fire := _nearest_fire(u.pos)
+	var fire := nearest_fire(u.pos)
 	if fire and D.region_at(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
 		var a := float(u.id) * 2.39996 # golden angle: spread the sleepers round the fire
-		u.bed_pos = _dry(fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0))
+		u.bed_pos = dry_spot(fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0))
 	else:
-		u.bed_pos = _dry(u.pos) # camp in the open, but not at the water's edge
+		u.bed_pos = dry_spot(u.pos) # camp in the open, but not at the water's edge
 
 ## How far from a river's centreline the ground is wet: the river, a margin of bank, and
 ## the spring flood while it is up.
-func _wet_reach() -> float:
+func wet_reach() -> float:
 	return maxf(nat.flood_half(), D.RIVER_HALF) + 40.0
 
 ## A spot near p that is out of the water's reach (on the same side of the river), for
 ## sleeping in the open.
-func _dry(p: Vector2) -> Vector2:
-	var reach := _wet_reach()
+func dry_spot(p: Vector2) -> Vector2:
+	var reach := wet_reach()
 	var info := D.river_info(p)
 	if info["d"] >= reach or info["n"] == Vector2.ZERO: return p
 	var out: Vector2 = info["c"] + info["n"] * (reach + 10.0)
@@ -1665,7 +1665,7 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 				react.trigger("beast_slain", {"at": p.pos, "victim": u})
 			evo.drift("martial", 4.0)
 		if p.clan != "": rivals.on_rival_killed(p, u)
-		else: _node("carcass", "food", p.pos, 35)
+		else: add_node("carcass", "food", p.pos, 35)
 	elif (p.kind == "hunter" or p.kind == "trader") and not p.fleeing: # attacked hunters run home and tell their clan
 		p.fleeing = true
 		rivals.on_hunter_attacked(p)
@@ -1688,8 +1688,8 @@ func update_predator(p: E.Predator, dt: float) -> void:
 	if p.fleeing:
 		if p.path.is_empty() or not p.homeward:
 			p.homeward = true
-			set_dest(p, _way_out(p.pos))
-			if not p.path.is_empty(): p.path[p.path.size() - 1] = _way_out(p.pos, 50.0) # off the map edge
+			set_dest(p, way_out(p.pos))
+			if not p.path.is_empty(): p.path[p.path.size() - 1] = way_out(p.pos, 50.0) # off the map edge
 		step_move(p, dt, p.spd * 1.1)
 		if p.pos.x >= D.W or p.pos.x <= 0 or p.pos.y >= D.H or p.pos.y <= 0 or p.path.is_empty(): p.fled = true
 		return
@@ -1916,7 +1916,7 @@ func tick(dt: float) -> void:
 		p["pos"].y -= dt * (14.0 if p["big"] else 22.0)
 	popups = popups.filter(func(p): return p["t"] < p["life"])
 	if flood_fx > 0: flood_fx = maxf(0, flood_fx - dt * 0.08)
-	_check_events()
+	check_events()
 
 ## Every name already given in this game (the living and the dead).
 func _names_taken() -> Dictionary:
@@ -2042,7 +2042,7 @@ func _update_vice(dt: float) -> void:
 			var unbuilt = null
 			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
 			for s in structures: # a site near home: the village's new buildings, or any old home being renovated
-				if s.paid and ((not s.built and s.owner == "village" and not settler) or (s.reno and ours(s) and _settlement_of(s.pos) == _settlement_of(u.home))):
+				if s.paid and ((not s.built and s.owner == "village" and not settler) or (s.reno and ours(s) and settlement_of(s.pos) == settlement_of(u.home))):
 					unbuilt = s
 					break
 			var choice: String
@@ -2101,12 +2101,25 @@ func can_place(type: String, p: Vector2, size := 0.0) -> String:
 			if o.pos.distance_to(p) < r + struct_r(o) - 4.0: return "Too close to another building"
 	return ""
 
+## Whether the stores hold `cost` ({resource: amount}).
+func can_afford(cost: Dictionary) -> bool:
+	for r in cost:
+		if float(stock.get(r, 0.0)) < float(cost[r]): return false
+	return true
+
+## Pay `cost` from the stores, all or nothing: false (and nothing taken) if it can't be paid.
+## Every price the tribe pays goes through here, so check-then-pay can't drift apart.
+func spend(cost: Dictionary) -> bool:
+	for r in cost: assert(stock.has(r), "spend: '%s' is not a resource" % r)
+	if not can_afford(cost): return false
+	for r in cost: stock[r] = float(stock.get(r, 0.0)) - float(cost[r])
+	return true
+
 ## Lay out a building site (`size`: a wall's radius, 0 = the default one).
 func place_structure(type: String, p: Vector2, size := 0.0) -> E.Structure:
 	if can_place(type, p, size) != "": return null
 	var cost := place_cost(type, size)
-	stock["wood"] -= cost["wood"]
-	stock["stone"] -= cost["stone"]
+	if not spend({"wood": cost["wood"], "stone": cost["stone"]}): return null
 	var s := add_structure(type, p, false, "village", true)
 	if D.STRUCTURES[type].get("ring", false):
 		s.size = ring_radius(type, size)
@@ -2123,8 +2136,7 @@ func research(tech_id: String) -> String:
 	if has_tech(tech_id): return "Already known"
 	if not evo.prereqs_met(tech_id): return "Requires prior wisdom"
 	var cost: int = evo.lore_cost(tech_id)
-	if stock["lore"] < cost: return "Not enough lore"
-	stock["lore"] -= cost
+	if not spend({"lore": cost}): return "Not enough lore"
 	evo.breakthrough(tech_id, best_unit("lore", false), "taught")
 	return ""
 
@@ -2172,8 +2184,7 @@ func upgrade(id: int, to: String, helpers: Array = []) -> String:
 	for o in upgrades_for(s):
 		if o["to"] != to: continue
 		if o["why"] != "": return o["why"]
-		stock["wood"] -= o["wood"]
-		stock["stone"] -= o["stone"]
+		if not spend({"wood": o["wood"], "stone": o["stone"]}): return tr("Not enough wood")
 		s.reno = true
 		s.reno_progress = 0.0
 		s.upgrade = to
@@ -2187,10 +2198,8 @@ func renovate_one(id: int, helpers: Array = []) -> String:
 	var s := struct_by_id(id)
 	if s == null or not s in outdated(): return tr("Nothing to renovate")
 	var cost := reno_cost([s])
-	if stock["wood"] < cost["wood"] or stock["stone"] < cost["stone"]:
+	if not spend(cost):
 		return tr("Needs %d wood and %d stone") % [cost["wood"], cost["stone"]] if cost["stone"] > 0 else tr("Needs %d wood") % cost["wood"]
-	stock["wood"] -= cost["wood"]
-	stock["stone"] -= cost["stone"]
 	s.reno = true
 	s.reno_progress = 0.0
 	_send_renovators([s], helpers)
@@ -2227,10 +2236,8 @@ func renovate(helpers: Array) -> String:
 	var list := outdated()
 	if list.is_empty(): return tr("Nothing to renovate")
 	var cost := reno_cost(list)
-	if stock["wood"] < cost["wood"] or stock["stone"] < cost["stone"]:
+	if not spend(cost):
 		return tr("Needs %d wood and %d stone") % [cost["wood"], cost["stone"]] if cost["stone"] > 0 else tr("Needs %d wood") % cost["wood"]
-	stock["wood"] -= cost["wood"]
-	stock["stone"] -= cost["stone"]
 	for s in list:
 		s.reno = true
 		s.reno_progress = 0.0
@@ -2248,7 +2255,7 @@ func _send_renovators(list: Array, helpers: Array) -> void:
 	else: # each settlement's own free hands rebuild its homes
 		var taken := {}
 		for p in settlements():
-			var here: Array = list.filter(func(s): return _settlement_of(s.pos) == p)
+			var here: Array = list.filter(func(s): return settlement_of(s.pos) == p)
 			if here.is_empty(): continue
 			var free: Array = living().filter(func(u): return u.role == "" and not taken.has(u.id) and u.job.get("type", "") in ["", "ritual"] and D.region_at(u.home) == D.region_at(p))
 			free.sort_custom(func(a, b): return a.home.distance_to(p) < b.home.distance_to(p))
@@ -2260,7 +2267,7 @@ func _send_renovators(list: Array, helpers: Array) -> void:
 				assign_build(u, here[i % here.size()])
 				i += 1
 
-func _finish_reno(s: E.Structure, u: E.Unit) -> void:
+func finish_reno(s: E.Structure, u: E.Unit) -> void:
 	s.reno = false
 	s.style = evo.era
 	if s.upgrade != "": # it becomes the new building, with everything that brings
@@ -2272,14 +2279,14 @@ func _finish_reno(s: E.Structure, u: E.Unit) -> void:
 	gain_xp(u, "craft", 4)
 	var next: E.Structure = null # the nearest old home still waiting in this settlement
 	for o in structures:
-		if o.reno and ours(o) and not _reno_taken(o) and _settlement_of(o.pos) == _settlement_of(s.pos) and (next == null or o.pos.distance_to(u.pos) < next.pos.distance_to(u.pos)): next = o
+		if o.reno and ours(o) and not _reno_taken(o) and settlement_of(o.pos) == settlement_of(s.pos) and (next == null or o.pos.distance_to(u.pos) < next.pos.distance_to(u.pos)): next = o
 	if next == null:
 		for o in structures:
-			if o.reno and ours(o) and _settlement_of(o.pos) == _settlement_of(s.pos): next = o
+			if o.reno and ours(o) and settlement_of(o.pos) == settlement_of(s.pos): next = o
 	if next: assign_build(u, next)
 
 ## The settlement (from settlements()) a point belongs to: the nearest one.
-func _settlement_of(p: Vector2) -> Vector2:
+func settlement_of(p: Vector2) -> Vector2:
 	var best: Vector2 = D.VILLAGE
 	for q in settlements():
 		if q.distance_to(p) < best.distance_to(p): best = q
@@ -2289,7 +2296,7 @@ func _reno_taken(s: E.Structure) -> bool:
 	return living().any(func(w): return w.job.get("type", "") == "build" and w.job.get("struct_id", -1) == s.id)
 
 # ------------------------------------------------------------------ milestone events
-func _check_events() -> void:
+func check_events() -> void:
 	if pending_event != "": return
 	if legacy.pending != "": # endings come first
 		_fire_event(legacy.pending)
@@ -2543,7 +2550,7 @@ func _discover(lm: Dictionary) -> void:
 		gain_xp(finder, "forage", 15)
 
 ## The nearest point on the map edge (where beasts leave), `out` beyond it (or inside if < 0).
-func _way_out(p: Vector2, out := -10.0) -> Vector2:
+func way_out(p: Vector2, out := -10.0) -> Vector2:
 	var best := Vector2(-out, p.y)
 	var d := p.x
 	if D.W - p.x < d:

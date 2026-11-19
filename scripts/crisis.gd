@@ -113,7 +113,7 @@ func end(outcome := "handed") -> void:
 	var what: String = sim.tr(str(C.get("happened", {}).get(cur["kind"], "")))
 	for u in people():
 		if C.has("remember"): sim.remember(u, sim.tr(str(C["remember"])) % [what, sim.day()], int(C.get("impact", 4)))
-		if u.job.get("crisis", false) or u.job.get("type", "") in ["shelter"]: sim._end_errand(u)
+		if u.job.get("crisis", false) or u.job.get("type", "") in ["shelter"]: sim.end_errand(u)
 	var done := cur.duplicate()
 	done["outcome"] = outcome
 	cur = {}
@@ -188,13 +188,13 @@ func order(id: String) -> String:
 			for u in ps: _command(u, {"type": "move", "to": fire.pos + Vector2.from_angle(u.id * 2.4) * 28.0, "hold": true})
 			cur["fire"] = {"at": fire.pos, "r": float(o.get("scare_radius", 180))}
 		"shelter":
-			for u in ps: sim.react._start_shelter(o, u, {"until": sim.time + float(C.get("max_secs", 150))})
+			for u in ps: sim.react.start_shelter(o, u, {"until": sim.time + float(C.get("max_secs", 150))})
 		"aid":
 			for v in _wounded(o):
 				var helpers: Array = ps.filter(func(h): return h != v and h.hp >= h.max_hp * 0.6)
 				helpers.sort_custom(func(a, b): return a.pos.distance_to(v.pos) < b.pos.distance_to(v.pos))
-				for h in helpers.slice(0, int(o.get("count", 2))): sim.react._start_aid(o, h, {"victim": v})
-	for k in o.get("cost", {}): sim.stock[k] -= float(o["cost"][k]) # (paid once it is done)
+				for h in helpers.slice(0, int(o.get("count", 2))): sim.react.start_aid(o, h, {"victim": v})
+	sim.spend(o.get("cost", {})) # (paid once it is done; order_block checked it)
 	cur["orders"].append(id)
 	sim.add_log(sim.tr("The Chieftain commands: %s") % sim.tr(o.get("label", id)), "combat")
 	return ""

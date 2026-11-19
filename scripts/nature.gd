@@ -252,7 +252,7 @@ func _fire_tick(dt: float) -> void:
 				n.kind = "burnt"
 				n.regrow_t = float(cw["regrow"])
 				if randf() < float(cw["berry_chance"]): # berries sprout in the ashes
-					var b = sim._node("bush", "food", n.pos + Vector2(randf_range(-20, 20), randf_range(-14, 14)), 30)
+					var b = sim.add_node("bush", "food", n.pos + Vector2(randf_range(-20, 20), randf_range(-14, 14)), 30)
 					b.amount = 0.0
 					b.regrow = 0.14
 	spread_t -= dt
@@ -394,7 +394,7 @@ func erupt() -> void:
 	for k in maxi(0, int(cv["obsidian"]) - have):
 		var p: Vector2 = D.VOLCANO + Vector2.from_angle(randf_range(1.6, 3.4)) * randf_range(220, 380)
 		p = Vector2(clampf(p.x, 40, D.W - 40), clampf(p.y, 40, D.H - 40))
-		var o = sim._node("obsidian", "stone", p, D.FINDS["obsidian"]["amount"])
+		var o = sim.add_node("obsidian", "stone", p, D.FINDS["obsidian"]["amount"])
 		o.bank = D.region_at(p)
 	for u in sim.living(): sim.remember(u, tr(cv["remember"]) % sim.day(), 5)
 
@@ -445,7 +445,7 @@ func quake() -> void:
 	var c := D.VILLAGE + Vector2.from_angle(randf() * TAU) * Config.rand_in(cq["rockslide_dist"])
 	c = Vector2(clampf(c.x, 200, D.W - 200), clampf(c.y, 200, D.H - 200))
 	if c.distance_to(D.VILLAGE) > 400 and D.home_side(c) and D.river_dist(c) > 120:
-		for k in 3: sim._node("boulder", "stone", c + Vector2(randf_range(-40, 40), randf_range(-30, 30)), 40)
+		for k in 3: sim.add_node("boulder", "stone", c + Vector2(randf_range(-40, 40), randf_range(-30, 30)), 40)
 	_disaster("earthquake", D.VILLAGE, -1.0)
 	var what := (tr(" Fallen: %s.") % ", ".join(fallen)) if not fallen.is_empty() else ""
 	sim.alert(tr(cq["alert"]) % what, D.VILLAGE, "danger")

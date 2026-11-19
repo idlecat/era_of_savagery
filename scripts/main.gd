@@ -283,7 +283,7 @@ func _debug_shot(args: Dictionary) -> void:
 				sim.add_structure("fishing_dock", dock, true)
 			sim.renovate([])
 			for st in sim.structures:
-				if st.reno: sim._finish_reno(st, sim.units[0])
+				if st.reno: sim.finish_reno(st, sim.units[0])
 			for i in int(float(args.get("secs", "60")) / STEP):
 				sim.tick(STEP)
 				if sim.paused:
@@ -318,7 +318,7 @@ func _debug_shot(args: Dictionary) -> void:
 				if sim.paused:
 					sim.pending_event = ""
 					sim.paused = false
-			sim.hz._start(args.get("weather", "blizzard"))
+			sim.hz.start_weather(args.get("weather", "blizzard"))
 			sim.hz.spawn_wolf_pack()
 			for w in sim.predators:
 				if w.kind == "wolf": w.pos = sim.D.VILLAGE + Vector2(randf_range(-260, -160), randf_range(80, 160))
@@ -337,7 +337,7 @@ func _debug_shot(args: Dictionary) -> void:
 			if not args.has("event"):
 				for k in 3:
 					if sim.pending_event != "": sim.resolve_event(sim.pending_event, 2)
-					sim._check_events()
+					sim.check_events()
 				hud._close_modal()
 				rc["relation"] = -55.0
 				rc["raid_t"] = 0.0
@@ -447,7 +447,7 @@ func _debug_shot(args: Dictionary) -> void:
 						sim.tick(STEP)
 						if sim.paused: break
 				"storm":
-					sim.hz._start("storm")
+					sim.hz.start_weather("storm")
 					sim.nat.strikes.append({"pos": sim.D.VILLAGE + Vector2(150, -150), "t": 0.05})
 			sim.paused = false
 			sim.pending_event = sim.pending_event if what == "eclipse" else ""

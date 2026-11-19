@@ -36,7 +36,7 @@ func progress() -> Array:
 
 ## A condition: {count: vassals|allies|techs} (all of them) or {built: structure}.
 func _cond(c: Dictionary) -> Dictionary:
-	if c.has("built"): return {"text": sim.story.text(c["text"]), "done": sim._struct_exists(c["built"])}
+	if c.has("built"): return {"text": sim.story.text(c["text"]), "done": sim.struct_exists(c["built"])}
 	var R = sim.rivals
 	var n := 0
 	var of := 0

@@ -12,7 +12,7 @@ const EFFECTS := {
 	"hold": "Crew stands its ground and fights",
 	"reinforce": "Send up to 3 warriors from the village, crew holds",
 	"retreat": "Abandon the task and flee back to the village",
-	"ward": "Totem ritual drives beasts away (costs 10 lore)",
+	"ward": "Totem ritual drives beasts away (costs %d lore)",
 	"rest": "Wounded leader returns to the bonfire; crew carries on",
 	"press_on": "Ignore the wound and keep working",
 	"shelter": "Take shelter and wait for the danger to pass",
@@ -233,7 +233,7 @@ func seek_places(group: String) -> Array:
 			"riverbank":
 				if not D.RIVERS.is_empty():
 					var q: Vector2 = D.nearest_river_point(home + Vector2(rng.randf_range(-900, 900), rng.randf_range(-700, 700)))
-					out.append({"kind": "riverbank", "pos": sim._dry(q + (home - q).normalized() * 90.0)})
+					out.append({"kind": "riverbank", "pos": sim.dry_spot(q + (home - q).normalized() * 90.0)})
 			"hills": # rocky landmarks
 				for lm in sim.landmarks:
 					if lm["kind"] in ["peak", "stones", "cave", "flint"]: out.append({"kind": "hills", "pos": lm["pos"] + Vector2(90, 60), "lm": lm})
@@ -298,7 +298,7 @@ func emergency_ctx(c: E.Contract) -> Dictionary:
 	var u := leader(c)
 	return {
 		"arch": sim.arch(u), "name": u.name, "leader": leader_profile(u),
-		"summary": summary(c), "allowed": allowed_effects(c), "effects": EFFECTS, "world": sim.evo.world_ctx(),
+		"summary": summary(c), "allowed": allowed_effects(c), "effects": effect_texts(), "ward_cost": int(sim.RULES["ward"]["cost"].get("lore", 0)), "world": sim.evo.world_ctx(),
 	}
 
 # ------------------------------------------------------------ blueprint sanitizing
@@ -910,11 +910,21 @@ func _check_aborts(c: E.Contract) -> bool:
 	sim.contract_interrupted.emit(c)
 	return true
 
+## What a chieftain's answer to an emergency does, for the player and the LLM (translated).
+func effect_text(effect: String) -> String:
+	var t: String = tr(EFFECTS.get(effect, effect))
+	return t % int(sim.RULES["ward"]["cost"].get("lore", 0)) if effect == "ward" else t
+
+func effect_texts() -> Dictionary:
+	var out := {}
+	for k in EFFECTS: out[k] = effect_text(k)
+	return out
+
 func allowed_effects(c: E.Contract) -> Array:
 	match c.abort_reason:
 		"enemy_attack":
 			var fx := ["hold", "reinforce", "retreat"]
-			if sim.stock["lore"] >= 10: fx.append("ward")
+			if sim.can_afford(sim.RULES["ward"]["cost"]): fx.append("ward")
 			return fx
 		"leader_wounded": return ["rest", "press_on", "retreat"]
 		"natural_disaster": return ["shelter", "retreat"]
@@ -955,7 +965,7 @@ func _threat_text(site: Vector2) -> String:
 func resolve(c: E.Contract, effect: String, label := "") -> void:
 	if effect not in allowed_effects(c): effect = allowed_effects(c)[0]
 	var ld := leader(c)
-	_clog(c, tr("Chieftain's decision: %s") % (label if label != "" else tr(EFFECTS.get(effect, effect))))
+	_clog(c, tr("Chieftain's decision: %s") % (label if label != "" else effect_text(effect)))
 	c.abort_cooldowns[c.abort_reason] = sim.time + 5.0
 	match effect:
 		"hold":
@@ -974,8 +984,8 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 				_set_status(c, "executing")
 			else: _set_status(c, "defending")
 		"ward":
-			sim.stock["lore"] -= 10
-			var n: int = sim.scare_predators(c.site, 600)
+			sim.spend(sim.RULES["ward"]["cost"]) # (affordable: allowed_effects() checked it)
+			var n: int = sim.scare_predators(c.site, float(sim.RULES["ward"]["radius"]))
 			sim.gain_xp(ld, "lore", 12)
 			sim.remember(ld, tr("drove off %d beasts with a totem ward on Day %d") % [n, sim.day()], 8)
 			sim.popup(c.site + Vector2(0, -50), tr("Totem Ward!"), Color("#c8a8ff"), true)

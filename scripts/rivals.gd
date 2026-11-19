@@ -739,9 +739,7 @@ func _trade_resolve(id: String, idx: int) -> String:
 	if idx >= offers.size():
 		return tr("The trader shrugs, packs up and heads home.")
 	var o: Dictionary = offers[idx]
-	for r in o["give"]:
-		if sim.stock[r] < o["give"][r]: return tr("We cannot pay what we promised. The trader leaves.")
-	for r in o["give"]: sim.stock[r] -= o["give"][r]
+	if not sim.spend(o["give"]): return tr("We cannot pay what we promised. The trader leaves.")
 	change(id, 3.0)
 	if o.has("teach"):
 		var tid: String = o["teach"]

@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -239,7 +239,7 @@ func test_evolution() -> void:
 	sim2.research("fire")
 	sim2.research("pottery")
 	check(sim2.evo.era == 2, "first Era-2 tech starts the Tribe & Agrarian Era")
-	sim2._check_events()
+	sim2.check_events()
 	check(sim2.pending_event == "era2", "the new age opens a culture-defining dilemma")
 	var d: Dictionary = sim2.event_def("era2")
 	print("   ", d["text"])
@@ -419,7 +419,7 @@ func test_hardships() -> void:
 	check(sim.hz.cold_rate(u, false) < 0.5, "fur cloaks (Hide Tailoring) cut the cold")
 	check(sim.hz.cold_rate(u, true) == 0.0, "a fire keeps everyone warm")
 	# blizzard -> natural disaster for contracts
-	sim.hz._start("blizzard")
+	sim.hz.start_weather("blizzard")
 	check(sim.hz.speed_mult() < 1.0 and sim.hz.sight_mult() < 1.0, "blizzards slow and blind")
 	check(sim.flags.get("disaster_t", -1.0) == sim.time, "a blizzard counts as a natural disaster")
 	# wolves
@@ -497,7 +497,7 @@ func test_rivals() -> void:
 	sim.reveal(ochre["pos"], 200)
 	sim.rivals.update(0.05)
 	check(ochre["met"] and "contact_ochre" in sim.rivals.pending, "seeing their village makes first contact")
-	sim._check_events()
+	sim.check_events()
 	check(sim.pending_event == "contact_ochre" and sim.paused, "first contact pauses for a choice")
 	var d: Dictionary = sim.event_def("contact_ochre")
 	check(d["options"].size() == 3, "three ways to greet them")
@@ -1291,7 +1291,7 @@ func test_endgames() -> void:
 	sim.legacy.update(0.1)
 	check(sim.legacy.pending == "victory_conquest", "every clan a vassal: victory by conquest")
 	sim.pending_event = ""
-	sim._check_events()
+	sim.check_events()
 	check(sim.pending_event == "victory_conquest" and sim.paused, "the ending pauses the game")
 	var ctx: Dictionary = sim.legacy.saga_ctx("conquest")
 	var saga: String = sim.legacy.saga_offline(ctx)
@@ -1508,7 +1508,7 @@ func test_cultures() -> void:
 		cu.update(1.1)
 		if not cu.pending.is_empty(): break
 	check(cu.pending.has("culture:ten_suns"), "a dilemma waits once its conditions hold and its chance comes up")
-	sim._check_events()
+	sim.check_events()
 	check(sim.pending_event == "culture:ten_suns" and sim.paused, "it pauses the game like any event")
 	var ev: Dictionary = sim.event_def(sim.pending_event)
 	check(ev["options"].size() == 3 and ev["options"][0]["desc"].contains("20"), "its options show their costs")
@@ -1785,7 +1785,7 @@ func test_gm_operations() -> void:
 	var ok: Array = sim3.story.pose("gift", {"title": "A Gift", "text": "Strangers leave a basket at the fire.", "speaker": "best:lore",
 		"options": [{"label": "Keep it", "do": [{"give": {"food": 10}}], "result": "%s shares out the food."}, {"label": "Leave it", "result": "The basket stays."}]})
 	check(ok.is_empty() and "posed:gift" in sim3.story.pending, "a good one is queued (%s)" % str(ok))
-	sim3._check_events()
+	sim3.check_events()
 	check(sim3.pending_event == "posed:gift" and sim3.event_def("posed:gift")["options"].size() == 2, "it comes up as a dilemma")
 	var res: Dictionary = sim3.resolve_event("posed:gift", 0)
 	check(sim3.stock["food"] >= food0 + 10 and res["text"].ends_with("shares out the food."), "and choosing runs its actions (%s)" % res["text"])
@@ -2104,7 +2104,7 @@ func test_policies() -> void:
 		if n.kind == "deer" and deer == null: deer = n
 	var mid: Vector2 = deer.pos + Vector2(60, 0) # a deer and a bush equally far from here, nothing else near
 	sim.nodes = sim.nodes.filter(func(n): return n == deer or n.res != "food" or n.pos.distance_to(mid) > 200)
-	var bush = sim._node("bush", "food", mid + Vector2(60, 0), 30)
+	var bush = sim.add_node("bush", "food", mid + Vector2(60, 0), 30)
 	var pick = sim.find_node("food", mid, -1, 150.0)
 	check(pick == deer, "the hunters' way: gatherers seek deer before berries (picked %s)" % (pick.kind if pick else "nothing"))
 	# the forest grows back faster when only dead wood is taken
@@ -2668,7 +2668,7 @@ func test_life() -> void:
 	var fr = sim.unit_by_name("Bai")
 	for o in sim.living():
 		if o != v: o.pos = v.pos + Vector2(2000, 0) if o != fr else v.pos + Vector2(430, 0)
-	fr.pos = sim._dry(fr.pos)
+	fr.pos = sim.dry_spot(fr.pos)
 	sim.life.set_bond(v, fr, 70.0)
 	v.hp = v.max_hp * 0.5
 	sim.react.trigger("hurt", {"victim": v, "at": v.pos})
@@ -2723,6 +2723,16 @@ func test_life() -> void:
 	u = off.unit_by_name("Bai")
 	u.fatigue = 100.0
 	check(off.life.work_mult(u) == 1.0 and off.life.speed_mult(u) == 1.0, "with everyday life off, nothing changes the old rules")
+
+func test_spend() -> void:
+	print("\n== Paying: all or nothing ==")
+	var sim = _new_sim()
+	sim.stock["wood"] = 10.0
+	sim.stock["stone"] = 2.0
+	check(not sim.spend({"wood": 5, "stone": 3}) and sim.stock["wood"] == 10.0 and sim.stock["stone"] == 2.0, "a price that can't be paid in full takes nothing")
+	check(sim.spend({"wood": 5, "stone": 2}) and sim.stock["wood"] == 5.0 and sim.stock["stone"] == 0.0, "a price that can be paid is paid in full")
+	sim.stock["lore"] = 0.0
+	check(sim.contracts.effect_text("ward").contains(str(int(sim.RULES["ward"]["cost"]["lore"]))), "the ward's text names its price from rules.json (%s)" % sim.contracts.effect_text("ward"))
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

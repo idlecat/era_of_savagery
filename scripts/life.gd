@@ -285,10 +285,10 @@ func _meal_call(u: E.Unit) -> void:
 	if u.role == "child" and not u.job.is_empty(): return
 	u.meal_slot = slot # (asked once a meal time)
 	if u.hunger >= float(mc["hungry_below"]) or sim.stock["food"] < 1.0: return
-	var fire = sim._nearest_fire(u.pos)
+	var fire = sim.nearest_fire(u.pos)
 	if fire == null or fire.pos.distance_to(u.pos) > float(mc["reach"]) or not D.same_side(fire.pos, u.pos): return
 	var a := float(u.id) * 2.39996 + randf_range(-0.2, 0.2) # (round the fire, each at their place)
-	var seat: Vector2 = sim._dry(fire.pos + Vector2(cos(a), sin(a) * 0.8) * Config.rand_in(mc["seat"]))
+	var seat: Vector2 = sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * Config.rand_in(mc["seat"]))
 	_take_over(u, {"type": "meal", "to": seat, "face": fire.pos, "t": 0.0, "eat": Config.rand_in(mc["eat_time"]), "pose": mc["pose"]})
 
 ## Put work down for a moment (kept in resume_job; idle acts are not worth coming back to).
@@ -303,7 +303,7 @@ func _take_over(u: E.Unit, job: Dictionary) -> void:
 func do_meal(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var mc: Dictionary = C["meals"]
 	if sim.rest_time() or sim.time - u.job_t > float(mc["give_up"]):
-		sim._end_errand(u)
+		sim.end_errand(u)
 		return
 	if not sim.approach(u, j["to"], 5, dt):
 		u.act = mc["acts"][0]
@@ -316,7 +316,7 @@ func do_meal(u: E.Unit, j: Dictionary, dt: float) -> void:
 	if randf() < float(mc["talk_chance"]): say(u, str(mc["talk"]))
 	for o in sim.living(): # eating together brings families closer
 		if o != u and o.job.get("type", "") == "meal" and o.pos.distance_to(u.pos) < float(mc["bond_reach"]): add_bond(u, o, float(mc["bond"]))
-	sim._end_errand(u)
+	sim.end_errand(u)
 
 ## A meal from the common store: up to full, food in proportion to what is eaten.
 func eat(u: E.Unit) -> void:
@@ -406,7 +406,7 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 			if to == null: return false
 			job["to"] = to
 			if a.get("at", "") == "fire":
-				var fire = sim._nearest_fire(u.pos)
+				var fire = sim.nearest_fire(u.pos)
 				job["face"] = fire.pos
 			if a.get("at", "") == "grave":
 				var dead: E.Unit = sim.unit_by_id(u.mourn_id)
@@ -434,7 +434,7 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 			var to: Vector2 = u.home + dir * Config.rand_in(a.get("dist", [120, 220]))
 			to = Vector2(clampf(to.x, 30, D.W - 30), clampf(to.y, 40, D.H - 40))
 			if D.region_at(to) != D.region_at(u.home) or D.is_water(to): return false
-			job["to"] = sim._dry(to)
+			job["to"] = sim.dry_spot(to)
 			job["face"] = to + dir * 200.0
 		"wander":
 			job["to"] = u.home + Vector2(randf_range(-80, 80), randf_range(-70, 70))
@@ -472,10 +472,10 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 func _spot(u: E.Unit, at: String) -> Variant:
 	match at:
 		"fire":
-			var fire = sim._nearest_fire(u.pos)
+			var fire = sim.nearest_fire(u.pos)
 			if fire == null or not D.same_side(fire.pos, u.pos): return null
 			var a := randf() * TAU
-			return sim._dry(fire.pos + Vector2(cos(a), sin(a) * 0.8) * randf_range(40, 80))
+			return sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * randf_range(40, 80))
 		"shelter":
 			var best = null
 			for s in sim.structures:
@@ -489,7 +489,7 @@ func _spot(u: E.Unit, at: String) -> Variant:
 			var dir := Vector2.from_angle(randf() * TAU)
 			var to: Vector2 = u.home + dir * randf_range(150, 230)
 			if D.region_at(to) != D.region_at(u.home) or D.is_water(to): return null
-			return sim._dry(to)
+			return sim.dry_spot(to)
 	return u.pos
 
 ## A spot by one's own home (a hut, else the fire) to do chores.
@@ -685,7 +685,7 @@ func depart(u: E.Unit) -> void:
 	if sim.vice["warchief"] == u.id: sim.vice["warchief"] = -1
 	u.resume_job = {}
 	sim.wake(u)
-	sim.set_job(u, {"type": "depart", "to": sim._way_out(u.pos, 20.0)})
+	sim.set_job(u, {"type": "depart", "to": sim.way_out(u.pos, 20.0)})
 	sim.add_log(tr("The family of %s leaves the tribe. They take their fire and go.") % tr(u.name), "danger", [u])
 	sim.popup(u.pos + Vector2(0, -30), tr("%s leaves") % tr(u.name), Color("#d8c0a0"), true)
 	if on: on_death(u, float(C["bonds"]["depart_grief"]))

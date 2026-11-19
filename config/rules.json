@@ -52,6 +52,7 @@
   "reach": 700,
   "min_hp": 0.4
  },
+ "ward": {"_doc": "The totem ward, a chieftain's answer to beasts attacking a contract crew (contract_system.gd): what it costs and how far it scares them.", "cost": {"lore": 10}, "radius": 600},
  "triggers": {
   "_doc": "When the built-in dilemmas come up (conditions as in scenario scripts).",
   "overpop": {

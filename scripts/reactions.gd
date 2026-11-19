@@ -128,12 +128,12 @@ func _helpers(r: Dictionary, ctx: Dictionary) -> Array:
 func _respond(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	match r.get("do", ""):
 		"cover": return _start_cover(r, u)
-		"aid": return _start_aid(r, u, ctx)
+		"aid": return start_aid(r, u, ctx)
 		"flee": return _start_flee(r, u, ctx)
 		"firefight": return _start_firefight(r, u, ctx)
 		"defend": return _start_defend(r, u, ctx)
 		"warm": return _start_warm(r, u)
-		"shelter": return _start_shelter(r, u, ctx)
+		"shelter": return start_shelter(r, u, ctx)
 		"look": return _start_look(r, u, ctx)
 		"startle": return _start_startle(r, u, ctx)
 	push_warning("reactions.json: unknown response '%s'" % r.get("do", ""))
@@ -168,7 +168,7 @@ func open_spot(p: Vector2, clear := 110.0, max_move := 160.0) -> Vector2:
 	var q := p + away.limit_length(max_move)
 	q = Vector2(clampf(q.x, 30, D.W - 30), clampf(q.y, 40, D.H - 40))
 	if D.region_at(q) != D.region_at(p): q = p
-	return sim._dry(q)
+	return sim.dry_spot(q)
 
 func do_cover(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
@@ -178,14 +178,14 @@ func do_cover(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.act = _act(r, 1)
 	j["t"] += dt
 	if j["t"] >= float(r.get("time", 7)) and sim.nat.shake <= float(r.get("until_shake", 0.3)):
-		sim._end_errand(u)
+		sim.end_errand(u)
 		if r.has("then"): # the shaking is over: now see to anyone who was hurt
 			for v in sim.living():
 				if v.hp < v.max_hp * float(r.get("then_below", 0.8)) and v.pos.distance_to(u.pos) < float(r.get("then_reach", 320)):
 					trigger(r["then"], {"victim": v, "at": v.pos})
 
 # ------------------------------------------------------------ aid (the wounded)
-func _start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
+func start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var v = ctx.get("victim")
 	if v == null or v.dead or v.hp >= v.max_hp * float(r.get("below", 0.9)): return false
 	var tending: int = sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "aid" and o.job.get("victim", -1) == v.id).size()
@@ -198,7 +198,7 @@ func do_aid(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	var v: E.Unit = sim.unit_by_id(j["victim"])
 	if v == null or v.dead or v.hp >= v.max_hp * 0.95:
-		sim._end_errand(u)
+		sim.end_errand(u)
 		return
 	if not sim.approach(u, v.pos + Vector2(14, 6), 10, dt):
 		u.act = _act(r, 0, v.name)
@@ -209,7 +209,7 @@ func do_aid(u: E.Unit, j: Dictionary, dt: float) -> void:
 		v.hp = minf(v.max_hp, v.hp + v.max_hp * float(r.get("heal", 0.2)) * sim.inv.heal_mult())
 		for k in r.get("xp", {}): sim.gain_xp(u, k, float(r["xp"][k]))
 		if r.has("remember"): sim.remember(v, tr(r["remember"]) % [tr(u.name), sim.day()], 4)
-		sim._end_errand(u)
+		sim.end_errand(u)
 
 # ------------------------------------------------------------ flee
 ## Run directly away from the danger (not toward a home that may lie beyond it). "dist" is
@@ -219,7 +219,7 @@ func _start_flee(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	if u.job.get("flee", false) or u.job.get("type", "") in ["cover", "firefight"]: return false
 	if r.get("who", "") == "river":
 		var info := D.river_info(u.pos)
-		var to: Vector2 = sim._dry(info["c"] + info["n"] * float(r.get("dist", 380)))
+		var to: Vector2 = sim.dry_spot(info["c"] + info["n"] * float(r.get("dist", 380)))
 		if r.get("resume", true): interrupt(u, {"type": "move", "to": to, "flee": true})
 		else: sim.set_job(u, {"type": "move", "to": to, "flee": true}) # (the work is by the water: drop it)
 		return true
@@ -235,7 +235,7 @@ func flee_from(u: E.Unit, danger: Vector2, dist: float) -> void:
 	var to := u.pos + dir * dist
 	to = Vector2(clampf(to.x, 30, D.W - 30), clampf(to.y, 40, D.H - 40))
 	if D.region_at(to) != D.region_at(u.pos): to = u.home
-	interrupt(u, {"type": "move", "to": sim._dry(to), "flee": true})
+	interrupt(u, {"type": "move", "to": sim.dry_spot(to), "flee": true})
 
 # ------------------------------------------------------------ defend (beasts, raiders)
 func _start_defend(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
@@ -303,7 +303,7 @@ func do_firefight(u: E.Unit, j: Dictionary, dt: float) -> void:
 			bd = n.pos.distance_to(u.pos)
 			best = n
 	if best == null or bd > float(r.get("give_up", 630)):
-		sim._end_errand(u)
+		sim.end_errand(u)
 		return
 	# beat at the flames from the edge, not from inside them
 	var off: float = float(r.get("stand_off", 62))
@@ -322,7 +322,7 @@ func do_firefight(u: E.Unit, j: Dictionary, dt: float) -> void:
 # ------------------------------------------------------------ warm (freezing)
 func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 	if u.job.get("type", "") == "warm" or u.hp >= u.max_hp * float(r.get("below", 0.55)) or sim.near_warmth(u): return false
-	var fire = sim._nearest_fire(u.pos)
+	var fire = sim.nearest_fire(u.pos)
 	if fire == null: return false
 	interrupt(u, {"type": "warm", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "r": r})
 	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
@@ -331,7 +331,7 @@ func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	if u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill():
-		sim._end_errand(u) # (warm again, or the cold is over)
+		sim.end_errand(u) # (warm again, or the cold is over)
 		return
 	if not sim.approach(u, j["to"], 4, dt):
 		u.act = _act(r, 0)
@@ -339,7 +339,7 @@ func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.act = _act(r, 1)
 
 # ------------------------------------------------------------ shelter (panic)
-func _start_shelter(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
+func start_shelter(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var jt: String = u.job.get("type", "")
 	if jt == "shelter" or u.job.get("react", false) or u.job.get("flee", false): return false
 	interrupt(u, {"type": "shelter", "until": float(ctx.get("until", sim.time + float(r.get("time", 25)))), "r": r})
@@ -349,10 +349,10 @@ func do_shelter(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	if sim.time >= float(j["until"]):
 		sim.wake(u)
-		sim._end_errand(u)
+		sim.end_errand(u)
 		return
 	if u.sleeping: return
-	if u.bed_pos == null: sim._pick_bed(u)
+	if u.bed_pos == null: sim.pick_bed(u)
 	if not sim.approach(u, u.bed_pos, 5, dt):
 		u.act = _act(r, 0)
 		return
@@ -372,7 +372,7 @@ func _start_look(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	if sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "look" and o.job.get("r", {}) == r).size() >= int(r.get("count", 5)): return false
 	var at: Vector2 = ctx.get("at", u.pos)
 	var dir := (u.pos - at).normalized() if u.pos.distance_to(at) > 1.0 else Vector2.from_angle(randf() * TAU)
-	var to: Vector2 = sim._dry(at + dir.rotated(randf_range(-0.5, 0.5)) * Config.rand_in(r.get("ring", [40, 70])))
+	var to: Vector2 = sim.dry_spot(at + dir.rotated(randf_range(-0.5, 0.5)) * Config.rand_in(r.get("ring", [40, 70])))
 	if not D.same_side(to, u.pos): return false
 	interrupt(u, {"type": "look", "to": to, "face": at, "t": 0.0, "time": Config.rand_in(r.get("time", [4, 7])), "r": r})
 	return true
@@ -381,13 +381,13 @@ func do_look(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	if not sim.approach(u, j["to"], 6, dt):
 		u.act = _act(r, 0)
-		if sim.time - u.job_t > 30.0: sim._end_errand(u) # (too far: never mind)
+		if sim.time - u.job_t > 30.0: sim.end_errand(u) # (too far: never mind)
 		return
 	u.act = _act(r, 1)
 	u.face = j["face"]
 	if j["t"] == 0.0 and r.has("talk") and randf() < float(r.get("talk_chance", 0.5)): sim.life.say(u, str(r["talk"]))
 	j["t"] += dt
-	if j["t"] >= float(j["time"]): sim._end_errand(u)
+	if j["t"] >= float(j["time"]): sim.end_errand(u)
 
 # ------------------------------------------------------------ startle (thunder)
 func _start_startle(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
@@ -400,4 +400,4 @@ func do_startle(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.act = _act(j.get("r", {}), 0)
 	u.face = j["face"]
 	j["t"] += dt
-	if j["t"] >= float(j["time"]): sim._end_errand(u)
+	if j["t"] >= float(j["time"]): sim.end_errand(u)

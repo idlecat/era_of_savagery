@@ -1084,7 +1084,7 @@ func _refresh_building(s) -> void:
 	var ours: bool = sim.ours(s)
 	left_title.text = tr("BUILDING")
 	var t := "[font_size=20][color=#ffd36b]%s[/color][/font_size]\n" % tr(sd["name"])
-	if ours: t += "[color=#b8a888]%s[/color]\n" % (tr("In %s") % tr(sim.settlement_name(sim._settlement_of(s.pos))))
+	if ours: t += "[color=#b8a888]%s[/color]\n" % (tr("In %s") % tr(sim.settlement_name(sim.settlement_of(s.pos))))
 	else:
 		var cl: Dictionary = sim.rivals.clans.get(s.owner.trim_prefix("rival:"), {})
 		t += "[color=#ff9b8a]%s[/color]\n" % (tr("Of the %s") % tr(cl.get("name", "")))
@@ -1580,7 +1580,7 @@ func _on_interrupt(c) -> void:
 	speech.text = tr("[color=#e6b8ff][b]%s:[/b][/color] %s\n[color=#8a9aa8](%s)%s[/color]") % [tr(ld.name), r["speech"], r.get("source", ""), (tr(" — cloud error: ") + r["error"]) if r.get("error", "") != "" else ""]
 	for o in r["options"]:
 		var eff: String = o["effect"]
-		var b := _button(tr("%s   [%s]") % [tr(o["label"]), tr(sim.contracts.EFFECTS.get(eff, eff))], func():
+		var b := _button(tr("%s   [%s]") % [tr(o["label"]), sim.contracts.effect_text(eff)], func():
 			sim.contracts.resolve(c, eff, tr(o["label"]))
 			_close_modal()
 			sim.paused = false)

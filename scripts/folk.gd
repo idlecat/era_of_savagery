@@ -306,9 +306,9 @@ func quote(id: String, res: String, amt: int, trader: E.Unit = null) -> Dictiona
 func send_trader(u: E.Unit, id: String, res: String, amt: int) -> String:
 	var why := trade_block(u, id)
 	if why != "": return why
-	if sim.stock[res] < amt: return "Not enough to trade"
+	if not sim.can_afford({res: amt}): return "Not enough to trade"
 	if quote(id, res, amt).is_empty(): return "They have plenty of that"
-	sim.stock[res] -= amt
+	sim.spend({res: amt})
 	u.role = "trader"
 	u.carry_type = res
 	u.carry_amt = mini(amt, 12)
