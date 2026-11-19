@@ -1504,7 +1504,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	# Chief, self-defence), people in huts shelter inside, people outdoors keep watch.
 	var crew: bool = u.role != ""
 	var duty: bool = jt == "attack" or jt == "bury" or u.job.get("flee", false) or u.job.get("react", false) \
-		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start())
+		or (crew and _at_war(u)) or (not crew and not u.job.is_empty() and u.job_t >= night_start() and not work_kind(u) in RULES["beds"].get("day_only", []))
 	if jt == "shelter": return false # (hiding: the reaction keeps them in the hut)
 	if not rest_time() or duty:
 		if u.sleeping and not duty: life.woke(u) # (dawn: a moment to stretch)
@@ -1533,6 +1533,15 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 	else:
 		u.act = "Going to sleep"
 	return true
+
+## What kind of work someone is doing, for rules that care: the job type, or "renovate"
+## for building work on a structure being renovated or upgraded.
+func work_kind(u: E.Unit) -> String:
+	var jt: String = u.job.get("type", "")
+	if jt == "build":
+		var s := struct_by_id(u.job.get("struct_id", -1))
+		if s and s.reno: return "renovate"
+	return jt
 
 func pick_bed(u: E.Unit) -> void:
 	var bank := D.region_at(u.pos)

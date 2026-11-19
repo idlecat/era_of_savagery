@@ -63,7 +63,9 @@
   "dig": 5
  },
  "beds": {
-  "far": 700
+  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings).",
+  "far": 700,
+  "day_only": ["renovate"]
  },
  "vice": {
   "steward": {"_doc": "How the Steward picks work for each idle person, in this order: a building site near home (build_chance); crafts when there is food_per_head_art food a head and art_wood wood (art_chance); a want (see `wants`) once there is food_per_head food a head; wood when the stores are `full` (share of the cap); food below food_per_head a head; wood below low_wood; else the policy. Gatherers work within area_r of home.",
