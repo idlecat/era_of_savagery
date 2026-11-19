@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2733,6 +2733,25 @@ func test_spend() -> void:
 	check(sim.spend({"wood": 5, "stone": 2}) and sim.stock["wood"] == 5.0 and sim.stock["stone"] == 0.0, "a price that can be paid is paid in full")
 	sim.stock["lore"] = 0.0
 	check(sim.contracts.effect_text("ward").contains(str(int(sim.RULES["ward"]["cost"]["lore"]))), "the ward's text names its price from rules.json (%s)" % sim.contracts.effect_text("ward"))
+
+func test_indexes() -> void:
+	print("\n== Lookup tables follow the lists ==")
+	var sim = _new_sim()
+	var u = sim.units[-1]
+	check(sim.unit_by_id(u.id) == u, "a person is found by id")
+	var kid = sim.folk.make_child("Indexkid", u)
+	sim.units.append(kid)
+	check(sim.unit_by_id(kid.id) == kid, "and so is one added later")
+	var stone: Array = sim.nodes_of("stone")
+	var gone = stone[0]
+	sim.nodes.erase(gone)
+	var fresh = sim.add_node("boulder", "stone", gone.pos, 40)
+	check(not gone in sim.nodes_of("stone") and fresh in sim.nodes_of("stone") and sim.node_by_id(gone.id) == null and sim.node_by_id(fresh.id) == fresh, "a node removed and another added: the tables follow")
+	var swap = sim.folk.make_child("Swapkid", u)
+	var list: Array = sim.units.duplicate()
+	list[0] = swap
+	sim.units = list # (as a loaded game swaps in its own lists: same size, other people)
+	check(sim.unit_by_id(sim.units[0].id) == sim.units[0], "a new list of people (a loaded game) is indexed afresh")
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

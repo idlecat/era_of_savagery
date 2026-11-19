@@ -148,7 +148,6 @@ func _herds_leave() -> void:
 	var deer: Array = sim.nodes.filter(func(n): return n.kind == "deer")
 	deer.shuffle()
 	for n in deer.slice(0, deer.size() / 2): sim.nodes.erase(n)
-	sim._cache_nodes_size = -1
 
 func _herds_return() -> void:
 	var want: Dictionary = sim.herd_sizes(26.0 * D.area_k())

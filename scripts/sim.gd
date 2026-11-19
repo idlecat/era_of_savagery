@@ -367,10 +367,16 @@ func struct_exists(type: String) -> bool:
 	return false
 func living() -> Array: return units.filter(func(u): return not u.dead)
 
+## A person by id, through a lookup table (people are only ever added: the dead stay in `units`).
+var _cache_units := {}
+var _cache_units_key: Array = [] # [the units array, its size] when the table was made
 func unit_by_id(id: int) -> E.Unit:
-	for u in units:
-		if u.id == id: return u
-	return null
+	if id < 0: return null
+	if _cache_units_key.size() != 2 or not is_same(_cache_units_key[0], units) or _cache_units_key[1] != units.size():
+		_cache_units.clear()
+		for u in units: _cache_units[u.id] = u
+		_cache_units_key = [units, units.size()]
+	return _cache_units.get(id)
 func unit_by_name(n: String) -> E.Unit:
 	for u in units:
 		if u.name == n: return u
@@ -379,21 +385,34 @@ func struct_by_id(id: int) -> E.Structure:
 	for s in structures:
 		if s.id == id: return s
 	return null
-## A resource node by id: a lookup table rebuilt whenever the list of nodes changes (with
-## thousands of trees in a deep forest, scanning them for every gatherer every tick was slow).
+## Resource nodes by id and by resource: lookup tables rebuilt whenever the list of nodes
+## changes (a node added or removed, or a loaded game's list). With thousands of trees in a
+## deep forest, scanning them all for every gatherer was slow. A node's `res` never changes.
 var _cache_nodes := {}
-var _cache_nodes_size := -1
-var _cache_nodes_upto := -1 # ids up to this existed when the table was made (ids only grow)
+var _cache_by_res := {} # res -> [nodes]
+var _cache_live: Array = [] # nodes that grow, regrow or move (not trees or boulders), refreshed every second
+var _cache_live_t := 0.0
+var _cache_nodes_key: Array = [] # [the nodes array, its size, next_id] when the tables were made
 func node_by_id(id: int) -> E.ResNode:
 	if id < 0: return null
-	if _cache_nodes_size != nodes.size() or id > _cache_nodes_upto: _index_nodes()
+	_index_nodes()
 	return _cache_nodes.get(id)
 
+## The nodes that give `res` (food, wood, stone, herbs...), depleted ones included.
+func nodes_of(res: String) -> Array:
+	_index_nodes()
+	return _cache_by_res.get(res, [])
+
 func _index_nodes() -> void:
+	if _cache_nodes_key.size() == 3 and is_same(_cache_nodes_key[0], nodes) and _cache_nodes_key[1] == nodes.size() and _cache_nodes_key[2] == next_id: return
 	_cache_nodes.clear()
-	for n in nodes: _cache_nodes[n.id] = n
-	_cache_nodes_size = nodes.size()
-	_cache_nodes_upto = next_id
+	_cache_by_res.clear()
+	for n in nodes:
+		_cache_nodes[n.id] = n
+		if not _cache_by_res.has(n.res): _cache_by_res[n.res] = []
+		_cache_by_res[n.res].append(n)
+	_cache_nodes_key = [nodes, nodes.size(), next_id]
+	_cache_live_t = 0.0
 
 func pred_by_id(id: int) -> E.Predator:
 	for p in predators:
@@ -615,8 +634,8 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResN
 	for u in units:
 		if not u.dead and u.job.has("node_id"): claims_of[u.job["node_id"]] = claims_of.get(u.job["node_id"], 0) + 1
 	var prefer := {} # kind -> the ways' preference (looked up once per kind)
-	for n in nodes:
-		if n.res != res or n.amount < 1: continue
+	for n in nodes_of(res):
+		if n.amount < 1: continue
 		var d: float = n.pos.distance_to(from) # (cheap checks first: thousands of trees in a forest)
 		if d > max_dist: continue
 		if n.kind == "boulder" and not has_tech("tools"): continue
@@ -931,7 +950,6 @@ func _deplete(n: E.ResNode) -> void:
 		n.regrow_t = 140
 	elif n.kind == "carcass" or n.kind == "boulder" or (D.FINDS.has(n.kind) and D.FINDS[n.kind]["regrow"] <= 0.0):
 		nodes.erase(n) # (a worked-out seam is gone; plants grow back)
-		_cache_nodes_size = -1
 		if n.from_deer and not hz.winter(): # no new herds arrive in winter; how many do depends on the hunt
 			var hm := inv.mul("herd")
 			for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
@@ -1844,8 +1862,12 @@ func tick(dt: float) -> void:
 
 	var berry_k: float = hz.berry_mult() * nat.grow_mult() * inv.mul("regrow") # (once per tick, not per node)
 	var regrow_k: float = inv.mul("regrow")
-	for n in nodes:
-		if n.kind == "tree" or n.kind == "boulder": continue # (most nodes, and nothing to do: a deep forest is thousands)
+	_index_nodes()
+	_cache_live_t -= dt
+	if _cache_live_t <= 0.0: # (a tree that became a stump a moment ago can wait a second to start regrowing)
+		_cache_live_t = 1.0
+		_cache_live = nodes.filter(func(n): return n.kind != "tree" and n.kind != "boulder")
+	for n in _cache_live:
 		match n.kind:
 			"bush":
 				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * berry_k)
