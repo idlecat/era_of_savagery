@@ -15,6 +15,27 @@
   "store_granary": 100,
   "rot": 0.03
  },
+ "healing": {
+  "_doc": "Getting well (sim.unit_needs). Wounds heal per second at `warm` near a fire (else `cold`) once fed above fed_above and unhurt for calm_secs; a yarrow poultice (herbs, within poultice_reach of the village, below poultice_below of full health) multiplies it by `poultice` for herb_secs. Willow-bark tea for the sick costs a herb every herb_secs. Fever hurts the sick by `fever` per second down to fever_floor of full health (to death when hungrier than fever_hungry or in winter). Cold hurts down to cold_floor unless it can kill; freezing_warn: the 'Freezing!' mark.",
+  "warm": 0.7,
+  "cold": 0.15,
+  "fed_above": 35,
+  "calm_secs": 5,
+  "poultice": 2.0,
+  "poultice_below": 0.7,
+  "poultice_reach": 350,
+  "herb_secs": 30,
+  "fever": 0.12,
+  "fever_floor": 0.3,
+  "fever_hungry": 20,
+  "cold_floor": 0.35,
+  "freezing_warn": 0.4
+ },
+ "defense": {
+  "_doc": "When a person is hit (sim.update_unit): within hit_secs of the blow they fight back, or flee below flee_below of full health (the belligerent never flee; children and scouts always do).",
+  "hit_secs": 2,
+  "flee_below": 0.22
+ },
  "births": {
   "every": 45,
   "min_food": 30,
@@ -37,6 +58,8 @@
   "far": 700
  },
  "vice": {
+  "steward": {"_doc": "How the Steward picks work for each idle person, in this order: a building site near home (build_chance); crafts when there is food_per_head_art food a head and art_wood wood (art_chance); a want (see `wants`) once there is food_per_head food a head; wood when the stores are `full` (share of the cap); food below food_per_head a head; wood below low_wood; else the policy. Gatherers work within area_r of home.",
+   "build_chance": 0.5, "art_chance": 0.25, "food_per_head_art": 6, "art_wood": 40, "food_per_head": 4, "full": 0.95, "low_wood": 40, "area_r": 900, "xp": 0.5, "practice": 2.0},
   "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work. `wants`: what the tribe runs short of whatever the policy (except lore): while the store holds less than `below` of `res` and `when` holds (conditions as in scenario scripts), `share` of them go and gather it, if any can be gathered within want_reach of home (stone needs the tools; herbs and ore a known find). When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
   "every": 3,
   "steward_reach": 500,

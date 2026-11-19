@@ -666,10 +666,10 @@ func update_unit(u: E.Unit, dt: float) -> void:
 	if u.role == "envoy" and u.job.get("type", "") != "envoy" and u.resume_job.get("type", "") != "envoy":
 		u.role = "" # recalled: the mission is off
 		# Self-defense or flight when attacked
-	if time - u.last_hit_t < 2 and u.attacker_id >= 0:
+	if time - u.last_hit_t < float(RULES["defense"]["hit_secs"]) and u.attacker_id >= 0:
 		var p := pred_by_id(u.attacker_id)
 		if p and not p.dead and not p.fleeing:
-			var low := u.hp < u.max_hp * 0.22
+			var low := u.hp < u.max_hp * float(RULES["defense"]["flee_below"])
 			var jt: String = u.job.get("type", "")
 			if u.role == "child":
 				if not u.job.get("flee", false): assign_flee(u)
@@ -680,10 +680,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), tr("Flees!"), Color("#ff9b7a"))
 			elif not low and jt != "attack" and jt != "move":
-				if u.resume_job.is_empty() and not u.job.is_empty() and jt != "life":
-					u.resume_job = u.job
-					u.resume_key = u.job_key
-					u.resume_t = u.job_t
+				set_aside(u)
 				assign_attack(u, p, u.job_key)
 
 	if _night_rest(u, dt): return
@@ -1270,10 +1267,7 @@ func _send_herder() -> void:
 		if best == null or (jt == "" and best.job.get("type", "") != "") or \
 			((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(ps[0].pos) < best.pos.distance_to(ps[0].pos)): best = u
 	if best == null: return
-	if not best.job.is_empty():
-		best.resume_job = best.job
-		best.resume_key = best.job_key
-		best.resume_t = best.job_t
+	set_aside(best)
 	set_job(best, {"type": "tend", "pen_id": ps[0].id, "t": 0.0})
 
 func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
@@ -1354,10 +1348,7 @@ func _burials(dt: float) -> void:
 			if best == null or (jt == "" and best.job.get("type", "") != "") or \
 				((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(b.pos) < best.pos.distance_to(b.pos)): best = u
 		if best == null: continue
-		if not best.job.is_empty():
-			best.resume_job = best.job
-			best.resume_key = best.job_key
-			best.resume_t = best.job_t
+		set_aside(best)
 		set_job(best, {"type": "bury", "body_id": b.id, "phase": "fetch", "t": 0.0})
 		b.carrier_id = best.id
 		popup(best.pos + Vector2(0, -30), tr("%s goes to fetch %s") % [tr(best.name), tr(b.name)], Color("#d8d0e8"))
@@ -1400,6 +1391,16 @@ func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
 				devotion = minf(100.0, devotion + 1.0)
 				evo.drift("spiritual", 1.0)
 				end_errand(u)
+
+## Put the current work aside, to come back to with end_errand(). What was set aside first
+## wins (a meal on top of an errand doesn't make the errand forgotten), and idle acts, flights
+## and reactions are not worth coming back to. Every interruption goes through here.
+func set_aside(u: E.Unit) -> void:
+	if not u.resume_job.is_empty() or u.job.is_empty(): return
+	if u.job.get("type", "") == "life" or u.job.get("react", false) or u.job.get("flee", false): return
+	u.resume_job = u.job
+	u.resume_key = u.job_key
+	u.resume_t = u.job_t
 
 func end_errand(u: E.Unit) -> void:
 	if not u.resume_job.is_empty():
@@ -1597,28 +1598,27 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 	var warm := near_warmth(u)
 	if warm and night_amt > 0.5: evo.practice(u, "hearth", dt)
 	var cold := hz.cold_rate(u, warm)
+	var hl: Dictionary = RULES["healing"]
 	if u.sick > 0:
-		if knows_find("willow") and time > u.herb_t and stock["herbs"] >= 1:
-			stock["herbs"] -= 1
-			u.herb_t = time + 30.0
+		if knows_find("willow") and time > u.herb_t and spend({"herbs": 1}):
+			u.herb_t = time + float(hl["herb_secs"])
 			popup(u.pos + Vector2(0, -30), tr("Willow-bark tea"), Color("#b6f28a"))
 		u.sick -= hz.heal_rate(u, warm) * inv.sick_mult() * dt
 		if u.sick <= 0:
 			u.sick = 0.0
 			u.immune_t = time + D.DAY_LEN * 2
 			popup(u.pos + Vector2(0, -30), tr("Recovered"), Color("#b6f28a"))
-		elif u.hp > u.max_hp * (0.0 if u.hunger < 20 or hz.winter() else 0.3):
-			hurt_unit(u, 0.12 * dt, null) # fever
-	if cold > 0 and (hz.cold_can_kill() or u.hp > u.max_hp * 0.35):
+		elif u.hp > u.max_hp * (0.0 if u.hunger < float(hl["fever_hungry"]) or hz.winter() else float(hl["fever_floor"])):
+			hurt_unit(u, float(hl["fever"]) * dt, null) # fever
+	if cold > 0 and (hz.cold_can_kill() or u.hp > u.max_hp * float(hl["cold_floor"])):
 		hurt_unit(u, cold * dt, null)
-		if u.hp < u.max_hp * 0.4 and hz.cold_can_kill() and fmod(time, 6.0) < dt:
+		if u.hp < u.max_hp * float(hl["freezing_warn"]) and hz.cold_can_kill() and fmod(time, 6.0) < dt:
 			popup(u.pos + Vector2(0, -30), tr("Freezing!"), Color("#a8d8ff"))
-	elif u.hunger > 35 and u.sick <= 0 and time - u.last_hit_t > 5:
-		if knows_find("yarrow") and u.hp < u.max_hp * 0.7 and time > u.salve_t and stock["herbs"] >= 1 and u.pos.distance_to(D.VILLAGE) < 350:
-			stock["herbs"] -= 1
-			u.salve_t = time + 30.0
+	elif u.hunger > float(hl["fed_above"]) and u.sick <= 0 and time - u.last_hit_t > float(hl["calm_secs"]):
+		if knows_find("yarrow") and u.hp < u.max_hp * float(hl["poultice_below"]) and time > u.salve_t and u.pos.distance_to(D.VILLAGE) < float(hl["poultice_reach"]) and spend({"herbs": 1}):
+			u.salve_t = time + float(hl["herb_secs"])
 			popup(u.pos + Vector2(0, -30), tr("Yarrow poultice"), Color("#b6f28a"))
-		u.hp = minf(u.max_hp, u.hp + (0.7 if warm else 0.15) * (2.0 if time < u.salve_t else 1.0) * inv.heal_mult() * dt)
+		u.hp = minf(u.max_hp, u.hp + float(hl["warm"] if warm else hl["cold"]) * (float(hl["poultice"]) if time < u.salve_t else 1.0) * inv.heal_mult() * dt)
 
 func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
 	if u.dead: return
@@ -2068,13 +2068,14 @@ func _update_vice(dt: float) -> void:
 					unbuilt = s
 					break
 			var choice: String
-			var want := _steward_want(u) if stock["food"] >= pop * 4 and steward_policy != "lore" else "" # (short of stone, herbs, ore...)
-			if unbuilt and randf() < 0.5: choice = "build"
-			elif stock["food"] >= pop * 6 and stock["wood"] >= 40 and randf() < 0.25: choice = "art" # (stores are healthy: time for crafts)
+			var sw: Dictionary = vc["steward"]
+			var want := _steward_want(u) if stock["food"] >= pop * float(sw["food_per_head"]) and steward_policy != "lore" else "" # (short of stone, herbs, ore...)
+			if unbuilt and randf() < float(sw["build_chance"]): choice = "build"
+			elif stock["food"] >= pop * float(sw["food_per_head_art"]) and stock["wood"] >= float(sw["art_wood"]) and randf() < float(sw["art_chance"]): choice = "art" # (stores are healthy: time for crafts)
 			elif want != "": choice = want
-			elif stock["food"] >= food_cap() * 0.95 and steward_policy != "lore": choice = "wood" # the stores are full
-			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
-			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"
+			elif stock["food"] >= food_cap() * float(sw["full"]) and steward_policy != "lore": choice = "wood" # the stores are full
+			elif stock["food"] < pop * float(sw["food_per_head"]) or steward_policy == "food": choice = "food"
+			elif steward_policy == "wood" or stock["wood"] < float(sw["low_wood"]): choice = "wood"
 			elif steward_policy == "lore": choice = "lore"
 			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
 			else: choice = "food" if randf() < 0.5 else "wood"
@@ -2082,9 +2083,9 @@ func _update_vice(dt: float) -> void:
 				"build": assign_build(u, unbuilt)
 				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 				"art": folk.start_art(u)
-				_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": 900.0})
-			gain_xp(steward, "lore", 0.5)
-			evo.practice(steward, "lead", 2.0)
+				_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])})
+			gain_xp(steward, "lore", float(sw["xp"]))
+			evo.practice(steward, "lead", float(sw["practice"]))
 		if not idle.is_empty():
 			add_log(tr("Steward %s put %d idle hands to work (%s).") % [tr(steward.name), idle.size(), tr(steward_policy)], "vice", [steward])
 	var chief := unit_by_id(vice["warchief"])
@@ -2101,10 +2102,7 @@ func _update_vice(dt: float) -> void:
 					and u.hp >= u.max_hp * float(vc["min_hp"]) and u.pos.distance_to(foe.pos) < float(vc["reach"]) and D.same_side(u.pos, foe.pos))
 				fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
 				for u in fighters.slice(0, need):
-					if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "life":
-						u.resume_job = u.job # (back to work once the beast is dealt with)
-						u.resume_key = u.job_key
-						u.resume_t = u.job_t
+					set_aside(u) # (back to work once the beast is dealt with)
 					assign_attack(u, foe, u.job_key)
 				if not fighters.is_empty(): add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
 

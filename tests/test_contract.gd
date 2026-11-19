@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2752,6 +2752,23 @@ func test_indexes() -> void:
 	list[0] = swap
 	sim.units = list # (as a loaded game swaps in its own lists: same size, other people)
 	check(sim.unit_by_id(sim.units[0].id) == sim.units[0], "a new list of people (a loaded game) is indexed afresh")
+
+func test_set_aside() -> void:
+	print("\n== Work set aside comes back ==")
+	var sim = _new_sim()
+	var u = sim.living().filter(func(o): return o.role == "")[0]
+	sim.assign_gather(u, "wood")
+	var work: Dictionary = u.job
+	sim.set_aside(u)
+	sim.set_job(u, {"type": "meal", "to": u.pos, "face": u.pos, "t": 0.0, "eat": 5.0})
+	sim.set_aside(u) # (then called to the oxen, or to carry a body, mid-meal)
+	sim.set_job(u, {"type": "tend", "pen_id": -1, "t": 0.0})
+	check(u.resume_job == work, "an errand on top of a meal on top of work: the work is what comes back")
+	sim.end_errand(u)
+	check(u.job == work and u.resume_job.is_empty(), "and it does")
+	sim.set_job(u, {"type": "life", "act": "fire", "t": 0.0, "time": 5.0, "phase": 0})
+	sim.set_aside(u)
+	check(u.resume_job.is_empty(), "an idle act is not set aside")
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

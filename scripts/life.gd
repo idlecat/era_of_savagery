@@ -293,10 +293,7 @@ func _meal_call(u: E.Unit) -> void:
 
 ## Put work down for a moment (kept in resume_job; idle acts are not worth coming back to).
 func _take_over(u: E.Unit, job: Dictionary) -> void:
-	if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "life":
-		u.resume_job = u.job
-		u.resume_key = u.job_key
-		u.resume_t = u.job_t
+	sim.set_aside(u)
 	var key := u.job_key
 	sim.set_job(u, job, key)
 

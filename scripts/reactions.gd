@@ -63,11 +63,7 @@ func able(u: E.Unit) -> bool:
 
 ## Drop the current work for `job` (marked as a reaction), keeping the work to come back to.
 func interrupt(u: E.Unit, job: Dictionary) -> void:
-	if u.resume_job.is_empty() and not u.job.is_empty() and not u.job.get("react", false) and not u.job.get("flee", false) \
-			and u.job.get("type", "") != "life": # (an idle act is not worth coming back to)
-		u.resume_job = u.job
-		u.resume_key = u.job_key
-		u.resume_t = u.job_t
+	sim.set_aside(u)
 	job["react"] = true
 	sim.set_job(u, job, u.job_key)
 	u.sleeping = false
@@ -244,10 +240,7 @@ func _start_defend(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	if p == null or v == null or p.dead or p.kind in r.get("skip_attackers", []): return false
 	var fighting: int = sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == p.id).size()
 	if fighting >= int(r.get("count", 3)) + 1: return false # (the victim fights back too)
-	if u.resume_job.is_empty() and not u.job.is_empty():
-		u.resume_job = u.job
-		u.resume_key = u.job_key
-		u.resume_t = u.job_t
+	sim.set_aside(u)
 	sim.assign_attack(u, p, u.job_key)
 	u.sleeping = false
 	if r.has("popup"): sim.popup(u.pos + Vector2(0, -26), tr(r["popup"]) % tr(v.name), Color("#ffd36b"))
