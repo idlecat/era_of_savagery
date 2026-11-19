@@ -1675,6 +1675,12 @@ func test_reactions() -> void:
 func test_config() -> void:
 	print("\n== Events and reactions come from config ==")
 	var Config = preload("res://scripts/config.gd")
+	# every data file parses (a broken one is silently skipped in the game: notices.json once was)
+	var broken: Array = []
+	for dir in ["res://config"] + Array(DirAccess.get_directories_at("res://cultures")).map(func(d): return "res://cultures/" + d):
+		for f in DirAccess.get_files_at(dir):
+			if f.ends_with(".json") and not JSON.parse_string(FileAccess.get_file_as_string(dir + "/" + f)) is Dictionary: broken.append(dir + "/" + f)
+	check(broken.is_empty(), "every config and culture file is valid JSON (%s)" % ", ".join(broken))
 	var R = preload("res://scripts/reactions.gd")
 	var ev: Dictionary = Config.load_cfg("events")
 	var re: Dictionary = Config.load_cfg("reactions")
