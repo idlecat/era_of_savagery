@@ -6,6 +6,7 @@
 extends Node2D
 
 const D = preload("res://scripts/data.gd")
+const E = preload("res://scripts/entities.gd")
 const I = preload("res://scripts/i18n.gd")
 
 signal selection_changed()
@@ -66,6 +67,8 @@ var ground: Node2D
 var ground_fx: Node2D
 var objects: Node2D # y-sorted container: iso y == depth (x + y)
 var overlay: Node2D
+var ghost: Node2D # the building being placed, drawn as itself (green: it fits, red: it doesn't)
+var _ghost_s = null # (a stand-in structure for it)
 var glow: Node2D
 var items := {} # key -> Item
 var edge_scroll := true
@@ -154,6 +157,9 @@ func setup(s) -> void:
 	gmat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	glow.material = gmat
 	add_child(glow)
+	ghost = Ghost.new() # above the world, below fog and labels
+	ghost.wv = self
+	add_child(ghost)
 	overlay = Overlay.new()
 	overlay.wv = self
 	add_child(overlay)
@@ -313,6 +319,7 @@ func _process(delta: float) -> void:
 	ground_fx.queue_redraw()
 	glow.queue_redraw()
 	overlay.queue_redraw()
+	ghost.queue_redraw()
 	for u in sim.units:
 		var uk := "u%d" % u.id
 		_track(uk, u.pos)
@@ -646,8 +653,12 @@ func draw_ground_fx() -> void:
 		ghost_why = sim.can_place(build_type, ghost_m, build_size if ring else 0.0)
 		var col := Color(0.4, 1, 0.4, 0.45) if ghost_why == "" else Color(1, 0.3, 0.3, 0.45)
 		var r: float = build_size if ring else D.STRUCTURES[build_type]["r"]
-		ci.draw_circle(ghost_m, minf(r, 30), col)
-		if D.STRUCTURES[build_type].get("ring", false): ci.draw_arc(ghost_m, r, 0, TAU, 64, col, 6)
+		if ring:
+			ci.draw_circle(ghost_m, minf(r, 30), col)
+			ci.draw_arc(ghost_m, r, 0, TAU, 64, col, 6)
+		else: # (the building itself is drawn above, by the Ghost layer: here only its footprint)
+			ci.draw_circle(ghost_m, r, Color(col, 0.22))
+			ci.draw_arc(ghost_m, r, 0, TAU, 48, Color(col, 0.7), 2)
 	if sim.flood_fx > 0:
 		ci.draw_rect(Rect2(0, 0, D.W, D.H), Color(0.2, 0.4, 0.75, sim.flood_fx * 0.4))
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
@@ -670,6 +681,22 @@ func _halo(c: Vector2, r: float, a: float) -> void:
 	ci.draw_texture_rect(light_tex, Rect2(c - Vector2(r, r * 0.75), Vector2(r * 2, r * 1.5)), false, Color(1.0, 0.62, 0.3, a))
 
 ## Drawn by the Overlay child (above all objects): fog of war, then labels and bars.
+## The building being placed, as it will look when finished (AoE-style), at the cursor:
+## tinted green where it can go, red where it can't. Walls keep their ring outline.
+func draw_ghost() -> void:
+	if build_type == "" or build_type == "road" or not D.STRUCTURES.has(build_type) or D.STRUCTURES[build_type].get("ring", false): return
+	if _ghost_s == null: _ghost_s = E.Structure.new()
+	var g = _ghost_s
+	g.id = -1
+	g.type = build_type
+	g.pos = ghost_m
+	g.built = true
+	g.work = float(D.STRUCTURES[build_type].get("work", 1.0))
+	g.progress = g.work
+	g.style = clampi(sim.evo.era, 1, 3)
+	ghost.modulate = Color(0.7, 1.0, 0.7, 0.62) if ghost_why == "" else Color(1.0, 0.45, 0.4, 0.62)
+	_draw_structure(g)
+
 func draw_overlay() -> void:
 	# ---- fog of war over everything in the world (labels below stay readable)
 	if sim.fog_enabled:
@@ -2338,6 +2365,13 @@ class Glow extends Node2D:
 	func _draw() -> void:
 		wv.ci = self
 		wv.draw_glow()
+		wv.ci = wv
+
+class Ghost extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_ghost()
 		wv.ci = wv
 
 class Overlay extends Node2D:

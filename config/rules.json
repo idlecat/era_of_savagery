@@ -36,6 +36,15 @@
  "beds": {
   "far": 700
  },
+ "vice": {
+  "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work. When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
+  "every": 3,
+  "steward_reach": 500,
+  "warchief_range": 500,
+  "fighters": 3,
+  "reach": 700,
+  "min_hp": 0.4
+ },
  "triggers": {
   "_doc": "When the built-in dilemmas come up (conditions as in scenario scripts).",
   "overpop": {

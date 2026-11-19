@@ -1170,10 +1170,20 @@ func _vice_button(b: Button, u, role: String) -> void:
 			b.tooltip_text = tr("Too young to lead")
 		"no_slot":
 			b.text = tr("Steward (no slot)") if steward else tr("War Chief (no slot)")
-			b.tooltip_text = tr("All %d Vice-Chieftain slots are taken. Tribal Code and the Council of Elders tradition each add one.") % sim.vice_slots() + "\n" + tr("Select an office holder and click their office to relieve them.")
+			var other = sim.unit_by_id(sim.vice["warchief" if steward else "steward"])
+			b.tooltip_text = (tr("The only Vice-Chieftain slot is held by %s. Tribal Code or the Council of Elders tradition opens a second.") % (tr(other.name) if other else "?")) \
+				+ "\n" + tr("Select an office holder and click their office to relieve them.")
 		_:
-			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
-			b.tooltip_text = tr("Tier 3: auto-manages idle villagers") if steward else tr("Tier 3: rallies warriors vs. beasts near the village")
+			var holder = sim.unit_by_id(sim.vice[role])
+			var what: String = tr("Tier 3: auto-manages idle villagers") if steward else tr("Tier 3: rallies warriors vs. beasts near the village")
+			if holder and not holder.dead and holder != u:
+				b.text = (tr("Replace %s as Steward") if steward else tr("Replace %s as War Chief")) % tr(holder.name)
+				b.tooltip_text = what + "\n" + tr("%s steps down and %s takes the office.") % [tr(holder.name), tr(u.name)]
+			else:
+				b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
+				b.tooltip_text = what
+			if sim.vice["warchief" if steward else "steward"] == u.id:
+				b.tooltip_text += "\n" + tr("%s leaves their other office for this one.") % tr(u.name)
 
 func _appoint(role: String) -> void:
 	var sel: Array = world.selected_units()
@@ -1237,7 +1247,7 @@ func _show_intro() -> void:
 
 [color=#ffd36b]Tier 1 · Direct micro[/color] — select tribespeople (click / drag) and right-click trees, bushes, deer, tigers, construction sites or ground.
 [color=#ffd36b]Tier 2 · Task Contracts[/color] — select one person (try [b]%s[/b], [b]%s[/b] or [b]%s[/b]) and press [i]Assign Task Contract[/i]. Their LLM persona negotiates a blueprint for a settlement on the frontier. Once sealed, a deterministic state machine executes it with [b]zero LLM calls[/b] (watch the counter in the top bar) — until an ambush re-awakens the leader.
-[color=#ffd36b]Tier 3 · Vice-Chieftains[/color] — appoint a Steward to auto-manage idle villagers.
+[color=#ffd36b]Tier 3 · Vice-Chieftains[/color] — a [b]Steward[/b] puts idle hands to work and plans new buildings; a [b]War Chief[/b] sends the best fighters against beasts and raiders at the village. One office can be filled at first; Tribal Code or the Council of Elders opens the second. Appointing someone else replaces the holder; to relieve a holder, select them and click their own office.
 [color=#ffd36b]Exploration[/color] — the land beyond the firelight is hidden. Select someone and press [b]X[/b] (or [i]Scout the unknown[/i]) to auto-explore; landmarks reward the finder with lore, food or wood and a new memory. Beware the saber-tooth dens. The minimap (bottom left) shows what you know: click it to look, right-click it to send the selected people.
 
 [color=#ffd36b]Evolution[/color] — new wisdom comes from [i]practice[/i] (chopping wood teaches stone tools, rituals lead to totems) or from lore and research contracts. Each age changes homes, gear and what people can do; the tribe's culture drifts with its deeds and adopts traditions. Knowledge lives in people until it is carved into totems or laws.

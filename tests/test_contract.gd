@@ -386,6 +386,26 @@ func test_vice_slots() -> void:
 	var b = sim.unit_by_name("Bai")
 	check(sim.appoint(b, "steward") and b.title == "Steward" and p.title == "", "a new Steward takes over: the old one steps down (no two Stewards)")
 	check(sim.dismiss("warchief") and a.title == "" and sim.vice["warchief"] == -1 and sim.appoint_block(p, "warchief") == "", "an office holder can be relieved, freeing the slot")
+	sim.evo.traditions["council_of_elders"] = 1 # (with Tribal Code too)
+	check(sim.vice_slots() <= 2, "never more slots than the two offices (%d)" % sim.vice_slots())
+	# buildings can't be placed on top of each other
+	sim.stock["wood"] = 200
+	check(sim.can_place("hut", D.VILLAGE) == "Too close to another building" and sim.can_place("hut", D.VILLAGE + Vector2(200, 150)) == "", "a new building may not overlap another")
+	# the War Chief keeps a few on a beast at the village: the best fighters nearby, not everyone
+	var w = _new_sim()
+	w.time = D.DAY_LEN * 0.2
+	w.appoint(w.unit_by_name("Alie"), "warchief")
+	var far = w.unit_by_name("Bai")
+	far.pos = D.VILLAGE + Vector2(-1800, 0)
+	w.set_job(far, {})
+	var beast = w.spawn_predator(D.VILLAGE + Vector2(250, 0), D.VILLAGE)
+	beast.max_hp = 5000
+	beast.hp = 5000
+	for k in 4:
+		w.vice_timer = 0.0
+		w._update_vice(0.05)
+	var att: Array = w.living().filter(func(u): return u.job.get("type", "") == "attack")
+	check(att.size() == int(w.RULES["vice"]["fighters"]) and not far in att, "the War Chief keeps %d on the beast and calls no one from afar (%d)" % [int(w.RULES["vice"]["fighters"]), att.size()])
 	# with everyday life on, people busy with an idle act still count as idle hands for the Steward
 	var s2 = _new_sim()
 	s2.life.on = true

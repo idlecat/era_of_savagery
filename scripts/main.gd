@@ -222,7 +222,7 @@ func toggle_fullscreen() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MAXIMIZED if fs else DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 # ------------------------------------------------------------ debug: automated screenshots
-# godot --path . -- --shot=/tmp/x.png --delay=3 --demo=sheet|negotiate|emergency|life --fast=60
+# godot --path . -- --shot=/tmp/x.png --delay=3 --demo=sheet|negotiate|emergency|life --fast=60 [--place=hut --at=x,y]
 func _enter_tree() -> void:
 	var args := {}
 	for a in OS.get_cmdline_user_args():
@@ -610,6 +610,14 @@ func _debug_shot(args: Dictionary) -> void:
 					t += STEP
 				hud._close_modal()
 				world.focus_on(c.site)
+	if args.has("place"): # placing a building: its ghost at --at=x,y from the village (default 180,140)
+		var off: PackedStringArray = str(args.get("at", "180,140")).split(",")
+		var gp: Vector2 = sim.D.VILLAGE + (Vector2(float(off[0]), float(off[1])) if off.size() == 2 else Vector2(180, 140))
+		world.build_type = args["place"]
+		if args.has("zoom"): world.cam.zoom = Vector2(float(args["zoom"]), float(args["zoom"]))
+		world.focus_on(gp)
+		await get_tree().process_frame
+		get_viewport().warp_mouse(world.get_viewport().get_canvas_transform() * world.iso(gp))
 	if args.has("hover"): # put the mouse over the first structure of that type (adds one by the river if none)
 		var hs = sim.structures.filter(func(st): return st.type == args["hover"])
 		if hs.is_empty():

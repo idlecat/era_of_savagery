@@ -1941,7 +1941,9 @@ func _update_births(dt: float) -> void:
 		birth_timer = maxf(0, birth_timer - dt)
 
 # ------------------------------------------------------------------ Tier 3: Vice-Chieftains
-func vice_slots() -> int: return 1 + (1 if has_tech("code") else 0) + (1 if evo.has_trad("council_of_elders") else 0)
+## Vice-Chieftain slots: one, and a second with Tribal Code or the Council of Elders (never
+## more than there are offices).
+func vice_slots() -> int: return mini(vice.size(), 1 + (1 if has_tech("code") else 0) + (1 if evo.has_trad("council_of_elders") else 0))
 
 ## Why u can't take this Vice-Chieftain role right now ("" = they can). Any free slot
 ## works for either role; a person moving between roles frees their old slot.
@@ -1983,10 +1985,11 @@ func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", ""
 func _update_vice(dt: float) -> void:
 	vice_timer -= dt
 	if vice_timer > 0: return
-	vice_timer = 3
+	var vc: Dictionary = RULES["vice"]
+	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time(): # no work handed out at night
-		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < 500)
+		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]))
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = null
@@ -2015,12 +2018,24 @@ func _update_vice(dt: float) -> void:
 			add_log(tr("Steward %s put %d idle hands to work (%s).") % [tr(steward.name), idle.size(), tr(steward_policy)], "vice", [steward])
 	var chief := unit_by_id(vice["warchief"])
 	if chief and not chief.dead:
-		var threats := active_predators_near(D.VILLAGE, 500)
+		var threats := active_predators_near(D.VILLAGE, float(vc["warchief_range"]))
 		if not threats.is_empty():
-			var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack")
-			fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
-			for u in fighters.slice(0, 3): assign_attack(u, threats[0])
-			add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
+			threats.sort_custom(func(a, b): return a.pos.distance_to(D.VILLAGE) < b.pos.distance_to(D.VILLAGE))
+			var foe = threats[0]
+			# keep `fighters` on it (topped up, not sent again and again): the best fighters nearby
+			var on_it := living().filter(func(u): return u.job.get("type", "") == "attack" and u.job.get("target_id", -1) == foe.id).size()
+			var need := int(vc["fighters"]) - on_it
+			if need > 0:
+				var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack" and not in_hut(u) and u.sick <= 0.0 \
+					and u.hp >= u.max_hp * float(vc["min_hp"]) and u.pos.distance_to(foe.pos) < float(vc["reach"]) and D.same_side(u.pos, foe.pos))
+				fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
+				for u in fighters.slice(0, need):
+					if u.resume_job.is_empty() and not u.job.is_empty() and u.job.get("type", "") != "life":
+						u.resume_job = u.job # (back to work once the beast is dealt with)
+						u.resume_key = u.job_key
+						u.resume_t = u.job_t
+					assign_attack(u, foe, u.job_key)
+				if not fighters.is_empty(): add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
 
 # ------------------------------------------------------------------ village building (Tier 1)
 func can_place(type: String, p: Vector2, size := 0.0) -> String:
@@ -2030,6 +2045,11 @@ func can_place(type: String, p: Vector2, size := 0.0) -> String:
 	if stock["wood"] < cost["wood"]: return "Not enough wood"
 	if stock["stone"] < cost["stone"]: return "Not enough stone"
 	if D.river_dist(p) < D.RIVER_HALF + 15: return "Too close to the river"
+	if not sd.get("ring", false) and type != "roadworks": # footprints may not overlap (walls ring around them)
+		var r: float = float(sd["r"])
+		for o in structures:
+			if o.type == "roadworks" or D.STRUCTURES[o.type].get("ring", false): continue
+			if o.pos.distance_to(p) < r + struct_r(o) - 4.0: return "Too close to another building"
 	return ""
 
 ## Lay out a building site (`size`: a wall's radius, 0 = the default one).
