@@ -137,6 +137,14 @@ func _init() -> void:
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
 
+## Let go of this world (on Restart or Load): the sub-systems point back at the sim, a
+## cycle that would otherwise keep the whole old game in memory. The sim is unusable after.
+func dispose() -> void:
+	for prop in get_property_list():
+		var v = get(prop["name"])
+		if v is Object and v != self and "sim" in v: v.set("sim", null)
+	for a in [units, nodes, predators, structures, popups, log_lines, alerts, landmarks]: a.clear()
+
 func uid() -> int:
 	next_id += 1
 	return next_id

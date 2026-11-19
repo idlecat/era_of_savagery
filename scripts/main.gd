@@ -33,6 +33,11 @@ var settings := {} # what this world was made from (saved with the game)
 var autosave_day := 0
 var ready_done := false
 
+## Restart, Load and quitting free the old game (the sim and its sub-systems point at each
+## other, so without this every restart kept the whole old world in memory).
+func _exit_tree() -> void:
+	if sim: sim.dispose()
+
 func _ready() -> void:
 	randomize()
 	var lang := I.load_pref()
