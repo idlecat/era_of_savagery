@@ -55,12 +55,17 @@ static func pick(taken: Dictionary) -> String:
 		var list: Array = _by_pattern.get(pid, [])
 		if list.is_empty(): continue
 		var nm: String = list.pick_random()
-		if not taken.has(nm): return nm
+		if not taken.has(nm) and not _claimed(nm): return nm
 	for nm in _table: # (nearly all given: the first left)
-		if not taken.has(nm): return nm
+		if not taken.has(nm) and not _claimed(nm): return nm
 	var n := taken.size() + 1
 	while taken.has("Child %d" % n): n += 1
 	return "Child %d" % n
+
+## A name that has since become a word of something else (a culture pack's find or
+## invention, e.g. the Scythians' "Wild Hemp", added after install()): not given.
+static func _claimed(nm: String) -> bool:
+	return I._extra.get(nm, _table.get(nm, "")) != _table.get(nm, "")
 
 ## How many names the parts can make.
 static func count() -> int:

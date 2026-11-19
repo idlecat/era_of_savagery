@@ -2243,7 +2243,7 @@ func _command(sm: Vector2) -> void:
 	for n in sim.nodes:
 		if n.amount < 1 or n.kind == "stump": continue
 		if not (sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)): continue
-		var d := _pick_dist(sm, n.pos, 40.0 if n.kind == "tree" else 12.0)
+		var d := _pick_dist(sm, n.pos, {"tree": 40.0, "boulder": 26.0}.get(n.kind, 12.0)) # (a boulder's rocks stand tall)
 		if d < bd:
 			bd = d
 			node = n
@@ -2279,7 +2279,7 @@ func hover_info() -> Array:
 	var bd := 18.0
 	for n in sim.nodes:
 		if not (sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)): continue
-		var d := _pick_dist(sm, n.pos, 40.0 if n.kind == "tree" else 12.0)
+		var d := _pick_dist(sm, n.pos, {"tree": 40.0, "boulder": 26.0}.get(n.kind, 12.0)) # (a boulder's rocks stand tall)
 		if d < bd:
 			bd = d
 			best = n
@@ -2307,7 +2307,9 @@ func _node_info(n) -> Array:
 		"tree": return [tr("Tree"), tr("Wood: %d left. Felled trees regrow in time.") % roundi(n.amount)]
 		"stump", "burnt": return [tr("Stump") if n.kind == "stump" else tr("Burnt tree"), tr("A tree will grow here again.")]
 		"bush": return [tr("Berry bush"), tr("Food: %d. Berries regrow, but not in winter.") % roundi(n.amount)]
-		"boulder": return [tr("Stone outcrop"), tr("Stone: %d. Needs Polished Stone Tools to quarry.") % roundi(n.amount)]
+		"boulder":
+			if sim.has_tech("tools"): return [tr("Stone outcrop"), tr("Stone: %d. Right-click with people selected to quarry it.") % roundi(n.amount)]
+			return [tr("Stone outcrop"), tr("Stone: %d. Needs Polished Stone Tools to quarry.") % roundi(n.amount)]
 		"deer": return [tr("Deer"), tr("Hunt it for food. Half the herds leave in winter.")]
 		"carcass": return [tr("Carcass"), tr("Meat to butcher: %d food.") % roundi(n.amount)]
 	return []

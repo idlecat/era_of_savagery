@@ -37,9 +37,16 @@
   "far": 700
  },
  "vice": {
-  "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work. When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
+  "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work. `wants`: what the tribe runs short of whatever the policy (except lore): while the store holds less than `below` of `res` and `when` holds (conditions as in scenario scripts), `share` of them go and gather it, if any can be gathered within want_reach of home (stone needs the tools; herbs and ore a known find). When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
   "every": 3,
   "steward_reach": 500,
+  "want_reach": 900,
+  "wants": [
+   {"res": "stone", "below": 40, "share": 0.3},
+   {"res": "herbs", "below": 8, "share": 0.15},
+   {"res": "copper", "below": 6, "share": 0.2, "when": {"tech": "bronze"}},
+   {"res": "tin", "below": 6, "share": 0.2, "when": {"tech": "bronze"}}
+  ],
   "warchief_range": 500,
   "fighters": 3,
   "reach": 700,

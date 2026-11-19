@@ -27,57 +27,11 @@ func check(cond: bool, msg: String) -> void:
 		print("  FAIL ", msg)
 
 func _initialize() -> void:
-	seed(42)
-	test_personas()
-	test_sanitize()
-	test_full_contract()
-	test_events()
-	test_exploration()
-	test_evolution()
-	test_research_contract()
-	test_translations()
-	test_vice_slots()
-	test_hardships()
-	test_rivals()
-	test_diplomacy()
-	test_war_and_trade()
-	test_endgames()
-	test_night_rest()
-	test_burials()
-	test_night_contracts()
-	test_herd()
-	test_finds()
-	test_nature()
-	test_settling()
-	test_folk()
-	test_mapgen()
-	test_water()
-	test_inventions()
-	test_cultures()
-	test_flood_deer()
-	test_dry_beds()
-	test_feat_details()
-	test_help_and_carry()
-	test_reactions()
-	test_config()
-	test_gm_operations()
-	test_dilemma_config()
-	test_improvements()
-	test_audio()
-	test_save_load()
-	test_renovate_settlements()
-	test_building_panel()
-	test_wall_radius()
-	test_policies()
-	test_leaders_and_the_ways()
-	test_crisis()
-	test_director()
-	test_names()
-	test_lands()
-	test_roads()
-	test_discovery_odds()
-	test_routine_matters()
-	test_life()
+	# Each test starts from its own fixed seed, so adding or changing one test never shifts
+	# the random draws (and the outcome) of the tests after it.
+	for t in [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life]:
+		seed(42)
+		t.call()
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
@@ -388,6 +342,20 @@ func test_vice_slots() -> void:
 	check(sim.dismiss("warchief") and a.title == "" and sim.vice["warchief"] == -1 and sim.appoint_block(p, "warchief") == "", "an office holder can be relieved, freeing the slot")
 	sim.evo.traditions["council_of_elders"] = 1 # (with Tribal Code too)
 	check(sim.vice_slots() <= 2, "never more slots than the two offices (%d)" % sim.vice_slots())
+	# with little stone in store, the Steward sends some quarrying, whatever the policy
+	var q = _new_sim()
+	q.techs["tools"] = true
+	q.stock["food"] = 200
+	q.stock["stone"] = 0
+	q.steward_policy = "wood"
+	q.appoint(q.unit_by_name("Panshi"), "steward")
+	q.time = D.DAY_LEN * 0.2
+	for k in 6:
+		for o in q.living():
+			if o.role == "" and o.title == "": q.set_job(o, {})
+		q.vice_timer = 0.0
+		q._update_vice(0.1)
+	check(q.living().any(func(o): return o.job.get("res", "") == "stone"), "with no stone in store, the Steward sends someone quarrying (even on the wood policy)")
 	# buildings can't be placed on top of each other
 	sim.stock["wood"] = 200
 	check(sim.can_place("hut", D.VILLAGE) == "Too close to another building" and sim.can_place("hut", D.VILLAGE + Vector2(200, 150)) == "", "a new building may not overlap another")
@@ -2376,7 +2344,7 @@ func test_names() -> void:
 	check(clan > 50 and nature > 150, "both nature names (%d) and clan names (%d)" % [nature, clan])
 	I18N.setup("zh")
 	var bad: Array = made.filter(func(n): return I18N.t(n) == n or I18N.t(n).length() != 2)
-	check(bad.is_empty(), "every one has a two-character Chinese name (%s)" % ", ".join(made.slice(0, 6).map(func(n): return I18N.t(n))))
+	check(bad.is_empty(), "every one has a two-character Chinese name (%s; bad: %s)" % [", ".join(made.slice(0, 6).map(func(n): return I18N.t(n))), ", ".join(bad.map(func(n): return "%s=%s" % [n, I18N.t(n)]))])
 	I18N.setup("en")
 	# when the culture's names run out, the tribe still names its children
 	D.BIRTH_NAMES = []

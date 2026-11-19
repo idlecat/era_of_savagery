@@ -1969,6 +1969,17 @@ func appoint(u: E.Unit, role: String) -> bool:
 	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice", [u])
 	return true
 
+## What the Steward sends `u` to gather because the tribe is short of it, whatever the
+## policy (rules.json vice "wants": res, below, share, when): "" if nothing. Only what
+## can be gathered near home now counts (the tools for stone, a known find for herbs and ore).
+func _steward_want(u: E.Unit) -> String:
+	for w in RULES["vice"].get("wants", []):
+		var res: String = str(w.get("res", ""))
+		if res == "" or stock.get(res, 0.0) >= float(w.get("below", 0)) or not story.holds(w.get("when", {})): continue
+		if randf() >= float(w.get("share", 0.0)): continue
+		if find_node(res, u.home, D.region_at(u.home), float(RULES["vice"].get("want_reach", 900))) != null: return res
+	return ""
+
 ## Relieve the holder of a Vice-Chieftain role, freeing the slot. Returns false if nobody holds it.
 func dismiss(role: String) -> bool:
 	var u := unit_by_id(vice.get(role, -1))
@@ -1999,8 +2010,10 @@ func _update_vice(dt: float) -> void:
 					unbuilt = s
 					break
 			var choice: String
+			var want := _steward_want(u) if stock["food"] >= pop * 4 and steward_policy != "lore" else "" # (short of stone, herbs, ore...)
 			if unbuilt and randf() < 0.5: choice = "build"
 			elif stock["food"] >= pop * 6 and stock["wood"] >= 40 and randf() < 0.25: choice = "art" # (stores are healthy: time for crafts)
+			elif want != "": choice = want
 			elif stock["food"] >= food_cap() * 0.95 and steward_policy != "lore": choice = "wood" # the stores are full
 			elif stock["food"] < pop * 4 or steward_policy == "food": choice = "food"
 			elif steward_policy == "wood" or stock["wood"] < 40: choice = "wood"

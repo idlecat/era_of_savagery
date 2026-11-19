@@ -2212,4 +2212,5 @@ const STRINGS := {
 	"%s steps down and %s takes the office.": "%s卸任，由%s接任。",
 	"%s leaves their other office for this one.": "%s将辞去另一职位，改任此职。",
 	"Too close to another building": "离其他建筑太近",
+	"Stone: %d. Right-click with people selected to quarry it.": "石料：%d。选中族人后右键点击即可开采。",
 }
