@@ -2300,7 +2300,9 @@ func _node_info(n) -> Array:
 	if D.FINDS.has(n.kind):
 		var fd: Dictionary = D.FINDS[n.kind]
 		if not sim.knows_find(n.kind):
-			var hint: String = {"lore": tr("Someone with Lore might know what it is."), "tools": tr("Someone who knows stone-working might know what it is.")}.get(fd.get("needs", ""), tr("Walk someone up to it to find out."))
+			var hint: String = tr("Walk someone up to it to find out.") # (someone in the tribe can tell what it is)
+			if not sim.living().any(func(o): return o.role != "child" and sim.can_recognise(o, n.kind)): # (nobody yet: say who could)
+				hint = {"lore": tr("Someone with Lore might know what it is."), "tools": tr("Someone who knows stone-working might know what it is.")}.get(fd.get("needs", ""), hint)
 			return [tr("Something unfamiliar"), hint]
 		return [tr(fd["name"]), tr(fd["desc"]) + "\n" + (tr("Left: %d") % roundi(n.amount))]
 	match n.kind:
