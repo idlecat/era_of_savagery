@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2758,6 +2758,29 @@ func test_spend() -> void:
 		if f.ends_with(".json"): walk.call(walk, JSON.parse_string(FileAccess.get_file_as_string("res://config/" + f)), f)
 	for lm in D.LANDMARKS: walk.call(walk, lm, "landmark " + str(lm.get("name", "")))
 	check(unknown.is_empty(), "configs and landmarks name only real resources %s" % str(unknown))
+	# every action and condition in the data has the right shape (story.run skips one that
+	# doesn't, so a typo there would silently do nothing)
+	var malformed: Array = []
+	var Story = preload("res://scripts/story.gd")
+	var walk2 := func(f: Callable, v, where: String) -> void:
+		if v is Dictionary:
+			for k in v:
+				if k in ["do", "else_do", "on_start"] and v[k] is Array:
+					for act in v[k]:
+						var bk: Array = Story.bad_keys(act, Story.ACTION_TYPES) if act is Dictionary else ["not an object"]
+						if not bk.is_empty(): malformed.append("%s.%s: %s" % [where, k, str(bk)])
+				elif k == "when" and v[k] is Dictionary and not Story.bad_keys(v[k], Story.COND_TYPES).is_empty():
+					malformed.append("%s.when: %s" % [where, str(Story.bad_keys(v[k], Story.COND_TYPES))])
+				f.call(f, v[k], where + "." + str(k))
+		elif v is Array:
+			for i in v.size(): f.call(f, v[i], where)
+	for f in DirAccess.get_files_at("res://config"):
+		if f.ends_with(".json") and f != "audio.json": walk2.call(walk2, JSON.parse_string(FileAccess.get_file_as_string("res://config/" + f)), f) # (audio's "when" has its own keys)
+	for d in DirAccess.get_directories_at("res://cultures"):
+		var cf := "res://cultures/%s/culture.json" % d
+		if FileAccess.file_exists(cf): walk2.call(walk2, JSON.parse_string(FileAccess.get_file_as_string(cf)), d)
+	walk2.call(walk2, {"script": D.SCRIPT}, "the_ford")
+	check(malformed.is_empty(), "every action and condition in the configs, culture packs and scenario is well-formed %s" % str(malformed))
 	check(sim.contracts.effect_text("ward").contains(str(int(sim.RULES["ward"]["cost"]["lore"]))), "the ward's text names its price from rules.json (%s)" % sim.contracts.effect_text("ward"))
 
 func test_indexes() -> void:
@@ -2806,6 +2829,64 @@ func test_dispose() -> void:
 	sim = null
 	var left := int(Performance.get_monitor(Performance.OBJECT_COUNT) - n0)
 	check(left <= 0, "after dispose() nothing of it stays in memory (%d objects left)" % left)
+
+## Counts the errors the engine reports (a script error doesn't throw: the function just
+## stops), so a test can require that a call raised none.
+class ErrorCount extends Logger:
+	var n := 0
+	var last := ""
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String, editor_notify: bool, error_type: int, script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == ERROR_TYPE_WARNING: return
+		n += 1
+		if last == "": last = "%s:%d %s %s" % [file.get_file(), line, code, rationale]
+	func _log_message(message: String, error: bool) -> void: pass
+
+## What a game master (or a broken scenario, config or LLM reply) might send: wrong types,
+## missing keys, huge, negative and non-numbers, nested junk.
+const JUNK := [null, true, 0, -1, 1e12, -1e12, NAN, INF, "", "x", "food", [], [null, "a", {}], {}, {"a": {"b": [1]}}, Vector2(1e9, -1e9)]
+
+func test_boundaries() -> void:
+	print("\n== Junk at every entry point: no errors, no broken world ==")
+	var errs := ErrorCount.new()
+	OS.add_logger(errs)
+	var sim = _new_sim()
+	var u = sim.living()[0]
+	var tried := {}
+	var try := func(what: String, f: Callable) -> void:
+		var before := errs.n
+		f.call()
+		if errs.n > before and not tried.has(what): tried[what] = errs.last
+		errs.last = ""
+	for j in JUNK:
+		var js := str(j)
+		for k in sim.story.ACTIONS: try.call("story.run %s" % k, func(): sim.story.run([{k: j}], null, {}))
+		try.call("story.run junk list", func(): sim.story.run([j], null, {}))
+		for k in ["contract", "time", "day", "pop", "flag", "found", "met_any", "met", "tech", "invention", "find", "era", "season", "built", "devotion", "mood", "food_frac", "homeless", "wood", "fewer", "deaths", "culture", "after", "told", "joined", "happened"]:
+			try.call("story.holds %s" % k, func(): sim.story.holds({k: j}))
+		try.call("dilemma_view", func(): sim.story.dilemma_view({"text": j, "options": j}))
+		try.call("dilemma_choose", func(): sim.story.dilemma_choose({"text": j, "options": [{"label": j, "cost": j, "do": j}]}, 0))
+		try.call("story.pose", func(): sim.story.pose(js, {"title": j, "text": j, "options": j}))
+		try.call("contracts.sanitize", func(): sim.contracts.sanitize(j, {}, u))
+		try.call("contracts.sanitize steps", func(): sim.contracts.sanitize({"kind": "settle", "steps": [j, {"action": j, "target_amount": j}], "crew_size": j, "abort_conditions": j}, {}, u))
+		try.call("rivals.sanitize_terms", func(): sim.rivals.sanitize_terms(j, {"tribe_gives": {}, "clan_gives": {}}, ""))
+		try.call("improve.order", func(): sim.improve.order(js))
+		try.call("crisis.order", func(): sim.crisis.order(js))
+		try.call("react.trigger", func(): sim.react.trigger(js, {}))
+		try.call("react.trigger ctx", func(): sim.react.trigger("earthquake", {"at": j, "victim": j}))
+		try.call("policy.set_choice", func(): sim.policy.set_choice(js, js))
+		try.call("give", func(): sim.give({"food": j, js: j}))
+		try.call("spend", func(): sim.spend({"food": j}))
+		try.call("research", func(): sim.research(js))
+		try.call("buildings", func():
+			sim.upgrade(-1, js)
+			sim.renovate_one(-1)
+			sim.demolish(-1)
+			sim.can_place(js if D.STRUCTURES.has(js) else "hut", Vector2(1e9, -1e9)))
+	for i in 40: sim.tick(0.05)
+	OS.remove_logger(errs)
+	check(tried.is_empty(), "junk input raises no script error %s" % str(tried))
+	var bad: Array = sim.check_invariants()
+	check(bad.is_empty(), "and leaves the world sound %s" % str(bad))
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

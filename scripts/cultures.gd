@@ -340,7 +340,7 @@ static func check_dilemma(e) -> Array:
 	_keys(e, ["title", "text", "speaker", "speaker_default", "options"], "dilemma", err)
 	if not e.get("title") is String or not e.get("text") is String: err.call("dilemma", "needs a 'title' and a 'text'")
 	if str(e.get("speaker", "best:lore")).trim_prefix("best:") not in D.SKILLS: err.call("dilemma", "speaker must be \"best:<skill>\"")
-	if e.get("options", []).is_empty(): err.call("dilemma", "needs 'options'")
+	if not e.get("options", []) is Array or e.get("options", []).is_empty(): err.call("dilemma", "needs 'options'")
 	else: _check_options(e["options"], "dilemma", refs, err)
 	return errs
 

@@ -73,6 +73,7 @@ func interrupt(u: E.Unit, job: Dictionary) -> void:
 ## Something happened: run its configured responses. A person taken by one response is
 ## not picked by the next.
 func trigger(event: String, ctx: Dictionary = {}) -> void:
+	ctx = _clean_ctx(ctx)
 	var taken := {}
 	for r in responses(event):
 		for u in _pick(r, ctx):
@@ -81,6 +82,20 @@ func trigger(event: String, ctx: Dictionary = {}) -> void:
 				taken[u.id] = true
 				if r.has("talk") and r.get("do", "") != "look" and randf() < float(r.get("talk_chance", 0.3)): # (look speaks on arrival)
 					sim.life.say(u, str(r["talk"]), "", bool(r.get("talk_force", false)))
+
+## The context from outside made safe: places are finite points ([x, y] from JSON becomes one),
+## people are people; anything else is dropped (and the defaults apply).
+func _clean_ctx(ctx: Dictionary) -> Dictionary:
+	var out := ctx.duplicate()
+	for k in ["at", "danger"]:
+		if not out.has(k): continue
+		var p = out[k]
+		if p is Array and p.size() == 2 and (p[0] is int or p[0] is float) and (p[1] is int or p[1] is float): p = Vector2(p[0], p[1])
+		if p is Vector2 and p.is_finite(): out[k] = p
+		else: out.erase(k)
+	for k in ["victim", "attacker"]:
+		if out.has(k) and not (out[k] is Object and "id" in out[k]): out.erase(k)
+	return out
 
 ## The people a response applies to.
 func _pick(r: Dictionary, ctx: Dictionary) -> Array:

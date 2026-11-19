@@ -2135,7 +2135,9 @@ func can_place(type: String, p: Vector2, size := 0.0) -> String:
 ## Whether the stores hold `cost` ({resource: amount}).
 func can_afford(cost: Dictionary) -> bool:
 	for r in cost:
-		if not r in D.RESOURCES or float(stock.get(r, 0.0)) < float(cost[r]): return false # (an unknown resource can't be paid)
+		var n = cost[r]
+		if not r in D.RESOURCES or not (n is int or n is float) or is_nan(float(n)) or n < 0: return false # (an unknown resource, or a price that is no number, can't be paid)
+		if float(stock[r]) < float(n): return false
 	return true
 
 ## Pay `cost` from the stores, all or nothing: false (and nothing taken) if it can't be paid.

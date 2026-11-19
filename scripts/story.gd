@@ -70,6 +70,7 @@ func tick(dt: float) -> void:
 			run(tg["do"], null)
 
 func holds(w: Dictionary) -> bool:
+	if not bad_keys(w, COND_TYPES).is_empty(): return false # (a malformed condition never holds)
 	if w.has("time") and sim.time < float(w["time"]): return false
 	if w.has("day") and sim.day() < int(w["day"]): return false
 	if w.has("pop") and sim.living().size() < int(w["pop"]): return false
@@ -125,6 +126,56 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
 	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart"]
 
+## What each action key and condition key takes. Input from outside (a scenario, a config,
+## a game master) is checked against these before it runs: an action with a value of the wrong
+## type is skipped, a condition with one never holds. num: a finite number within ±1e6;
+## nums: {id: num}; text: a key or [key, var names...]; pos: [x, y], a Vector2 or a place name.
+const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str", "alert": "text", "at": "pos", "level": "str",
+	"spawn": "str", "offsets": "positions", "give": "nums", "reveal": "pos", "r": "num", "flag": "str", "mood": "num", "devotion": "num",
+	"insight": "nums", "culture": "nums", "invent": "str", "boon": "effects", "remember": "text", "who": "str", "impact": "num", "xp": "nums",
+	"panic": "num", "weather": "str", "react": "str", "feat": "str", "tale": "str", "join": "str", "great_flood": "any", "open": "str",
+	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
+	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
+	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
+	"with": "str", "say": "text", "depart": "any"}
+const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
+	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
+	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
+	"after": "str", "told": "str", "joined": "str", "happened": "str"}
+
+static func _num_ok(v) -> bool:
+	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
+
+static func _pos_ok(v) -> bool:
+	if v is Vector2: return v.is_finite()
+	if v is Array: return v.size() == 2 and _num_ok(v[0]) and _num_ok(v[1])
+	return v is String
+
+## Whether `v` is of `kind` (see ACTION_TYPES).
+static func type_ok(v, kind: String) -> bool:
+	match kind:
+		"num": return _num_ok(v)
+		"str": return v is String or v is StringName
+		"bool": return v is bool
+		"dict": return v is Dictionary
+		"list": return v is Array
+		"nums":
+			if not v is Dictionary: return false
+			for k in v:
+				if not k is String or not _num_ok(v[k]): return false
+			return true
+		"text": return v is String or (v is Array and not v.is_empty() and v.all(func(x): return x is String))
+		"pos": return _pos_ok(v)
+		"effects": return v is Array and v.all(func(e): return e is Dictionary and str(e.get("stat", "")) in D.EFFECT_STATS \
+			and (e.has("mul") or e.has("add")) and _num_ok(e.get("mul", 1.0)) and _num_ok(e.get("add", 0.0)) and e.get("of", "") is String)
+		"positions": return v is Array and v.all(func(x): return _pos_ok(x) and not x is String)
+	return true
+
+## The keys of `d` whose values are not of the type `types` gives them (unknown keys are fine:
+## they are ignored by whoever reads `d`).
+static func bad_keys(d: Dictionary, types: Dictionary) -> Array:
+	return d.keys().filter(func(k): return types.has(k) and not type_ok(d[k], types[k]))
+
 ## A text: an English key, or [key, var names...] filled from `vars` (GDScript % is
 ## positional: the names are in the key's placeholder order).
 func text(v, vars: Dictionary = {}) -> String:
@@ -132,7 +183,8 @@ func text(v, vars: Dictionary = {}) -> String:
 		if v.is_empty(): return ""
 		var key: String = tr(str(v[0]))
 		var args: Array = v.slice(1).map(func(n): return vars.get(n, ""))
-		return key % args if not args.is_empty() else key
+		if args.is_empty() or key.replace("%%", "").count("%") != args.size(): return key # (a key that doesn't fit its names is shown as it is)
+		return key % args
 	return tr(str(v))
 
 ## The people an action is for: "all" (grown-ups), "best:<skill>", "fighters:<n>" (the
@@ -159,6 +211,9 @@ func people(who: String, vars: Dictionary = {}) -> Array:
 ## actions may add to them (e.g. "chosen" sets chosen_name for the result text).
 func run(actions: Array, c, vars: Dictionary = {}) -> void:
 	for a in actions:
+		if not a is Dictionary or not bad_keys(a, ACTION_TYPES).is_empty():
+			push_warning("story.run: skipped malformed action %s" % str(a).left(200))
+			continue
 		if a.has("event"):
 			if not sim.flags.has(a["event"]): # (also lets a demo switch an event off)
 				sim.flags[a["event"]] = true
@@ -272,14 +327,18 @@ func _say(t, ev: Dictionary, vars: Dictionary = {}) -> String:
 	return s
 
 ## A number in a dilemma: a number, the name of a var, or {"per_pop": k}.
+## A number in a dilemma: a number, a var's name, or {"per_pop": n}. NAN if it is none of
+## these (a price of NAN can't be paid).
 func _num(v, vars: Dictionary) -> float:
-	if v is String: return float(vars.get(v, 0))
-	if v is Dictionary: return float(v.get("per_pop", 0)) * sim.living().size()
-	return float(v)
+	if v is String: v = vars.get(v, 0)
+	elif v is Dictionary: v = v.get("per_pop", 0) * sim.living().size() if _num_ok(v.get("per_pop", 0)) else NAN
+	return float(v) if _num_ok(v) else NAN
 
 func _cost(o: Dictionary, vars: Dictionary) -> Dictionary:
 	var out := {}
-	for r in o.get("cost", {}): out[r] = _num(o["cost"][r], vars)
+	var cost = o.get("cost", {})
+	if not cost is Dictionary: return {"food": INF} # (a price that makes no sense can't be paid)
+	for r in cost: out[r] = _num(cost[r], vars)
 	return out
 
 func affords(o: Dictionary, vars: Dictionary = {}) -> bool:
@@ -326,7 +385,18 @@ func options(ev: Dictionary) -> Array:
 		for i in mini(D.CHOSEN.size(), 4):
 			out.append({"label": D.CHOSEN[i]["label"], "desc": D.CHOSEN[i]["desc"], "cost_note": false, "do": [{"chosen": i}], "result": ev.get("result", "")})
 		return out
-	return ev.get("options", [])
+	var opts = ev.get("options", [])
+	return opts.filter(_option_ok) if opts is Array else []
+
+## A choice that can be offered: a label, and its conditions, needs and actions in the right
+## shape (a malformed one from outside is left out rather than offered or run).
+func _option_ok(o) -> bool:
+	if not o is Dictionary or not type_ok(o.get("label"), "text"): return false
+	for k in ["when", "needs"]:
+		if o.has(k) and not o[k] is Dictionary: return false
+	for k in ["do", "else_do"]:
+		if o.has(k) and not o[k] is Array: return false
+	return true
 
 ## What the HUD shows: {title, text, options: [{label, desc, enabled}]}.
 func dilemma_view(ev: Dictionary, vars: Dictionary = {}) -> Dictionary:
