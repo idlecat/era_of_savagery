@@ -1665,8 +1665,7 @@ func kill_unit(u: E.Unit, killer) -> void:
 			killer.raid = false
 			killer.goal = killer.den
 			killer.path = []
-	if vice["steward"] == u.id: vice["steward"] = -1
-	if vice["warchief"] == u.id: vice["warchief"] = -1
+	vacate(u)
 
 # ------------------------------------------------------------------ predators
 func spawn_predator(p: Vector2, goal: Variant = null) -> E.Predator:
@@ -1997,10 +1996,9 @@ func appoint_block(u: E.Unit, role: String) -> String:
 
 func appoint(u: E.Unit, role: String) -> bool:
 	if appoint_block(u, role) != "": return false
-	for k in vice:
-		if vice[k] == u.id: vice[k] = -1
+	vacate(u)
 	var old := unit_by_id(vice[role]) # (the one replaced steps down)
-	if old and old != u: old.title = ""
+	if old: vacate(old)
 	vice[role] = u.id
 	u.title = "Steward" if role == "steward" else "War Chief"
 	remember(u, tr("was appointed %s of the tribe on Day %d") % [tr(u.title), day()], 7)
@@ -2025,9 +2023,16 @@ func dismiss(role: String) -> bool:
 	if not vice.has(role) or vice[role] < 0: return false
 	vice[role] = -1
 	if u == null: return true
-	u.title = ""
+	vacate(u)
 	add_log(tr("%s steps down as Vice-Chieftain.") % tr(u.name), "vice", [u])
 	return true
+
+## `u` holds no office any more (dismissed, replaced, dead or gone): the one place an office
+## and its title are cleared together.
+func vacate(u: E.Unit) -> void:
+	for k in vice:
+		if vice[k] == u.id: vice[k] = -1
+	u.title = ""
 
 ## Free for other work: no job, or only an idle act of everyday life (life.gd).
 func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
@@ -2068,6 +2073,7 @@ func check_invariants() -> Array:
 	for u in units:
 		if ids.has(u.id): bad.append("two units share id %d" % u.id)
 		ids[u.id] = true
+		if u.dead and u.title != "": bad.append("%s is dead but still titled %s" % [u.name, u.title])
 		if u.dead: continue
 		for j in [u.job, u.resume_job]:
 			if not j.is_empty() and not j.get("type", "") in JOB_TYPES: bad.append("%s has a job of unknown type %s" % [u.name, str(j.get("type"))])

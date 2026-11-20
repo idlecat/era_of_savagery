@@ -675,9 +675,7 @@ func resolve(_id: String, idx: int) -> String:
 func depart(u: E.Unit) -> void:
 	if u == null or u.dead or u.gone or not u.role in ["", "child"]: return
 	u.role = "leaving"
-	u.title = ""
-	if sim.vice["steward"] == u.id: sim.vice["steward"] = -1
-	if sim.vice["warchief"] == u.id: sim.vice["warchief"] = -1
+	sim.vacate(u)
 	u.resume_job = {}
 	sim.wake(u)
 	sim.set_job(u, {"type": "depart", "to": sim.way_out(u.pos, 20.0)})

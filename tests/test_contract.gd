@@ -2917,6 +2917,7 @@ func test_source_rules() -> void:
 		"logic comparing the displayed activity (u.act is display text: read u.doing or the job)": RegEx.create_from_string("\\.act\\s*(==|!=)|\\.act\\.(begins_with|ends_with|contains)\\(|\\bin\\s+[a-z_]+\\.act\\b|match\\s+[a-z_.]*\\.act\\s*:"),
 		"times of day compared by hand (use sim.is_day_part)": RegEx.create_from_string("day_frac\\(\\)\\s*[<>]=?\\s*0\\.\\d"),
 		"calls to another module's private functions (make them public)": RegEx.create_from_string("\\bsim\\.(?:[a-z]+\\.)?_(?!cache)[a-z][a-z_]*\\("),
+		"offices cleared by hand (use sim.vacate, which clears the title too)": RegEx.create_from_string("vice\\[\"(steward|warchief)\"\\]\\s*=[^=]"),
 		"idle checked by hand (an idle act is idle too: use sim.is_idle or sim.spare_hand)": RegEx.create_from_string("^(?!.*func is_idle).*(get\\(\"type\", \"\"\\)\\s*(in\\s*\\[\"\"|==\\s*\"\"|!=\\s*\"\")|\\bjt\\s*(==|!=)\\s*\"\"|job\\.is_empty\\(\\) or [a-z_.]*job\\.get\\(\"type\", \"\"\\) == \"life\")"),
 	}
 	var bad_examples := ['if u.act == "Fighting":', 'x.act.begins_with("Dancing")', 'if "Idle" in u.act:', "if sim.day_frac() < 0.74:", "sim._end_errand(u)", "sim.react._start_aid(o)", 'u.job.get("type", "") in ["", "gather"]', 'if jt != "" and jt != "gather":', 'not (u.job.is_empty() or u.job.get("type", "") == "life")']
