@@ -12,6 +12,8 @@ var world
 var llm
 
 var top_stats: RichTextLabel
+var top_title: Label
+var bbcode_tag := RegEx.create_from_string("\\[[^\\]]*\\]") # strips bbcode to measure text
 var pause_btn: Button
 var speed_btns: Array = []
 var left_title: Label
@@ -327,9 +329,9 @@ func _build_top(root: Control) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	p.add_child(h)
-	var title := _label("ERA OF SAVAGERY · Clan Chronicles", 18, COL_ACCENT)
-	title.autowrap_mode = TextServer.AUTOWRAP_OFF
-	h.add_child(title)
+	top_title = _label("ERA OF SAVAGERY · Clan Chronicles", 18, COL_ACCENT)
+	top_title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	h.add_child(top_title)
 	top_stats = _rich(0, false)
 	top_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_stats.custom_minimum_size = Vector2(0, 38)
@@ -660,9 +662,56 @@ func _refresh_top() -> void:
 		var oc: String = "#ff8a7a" if sim.ox_care < 25 or sim.ox_hunger > 0 else "#e0c89a"
 		top_stats.text += "   [color=%s]%s[/color]" % [oc, tr("Oxen %d/%d") % [sim.oxen, sim.ox_cap()]]
 		top_stats.tooltip_text += "\n" + tr("Oxen: %d of %d (pens). Care %d%%. Each ox eats food and lets one gatherer carry 50%% more.") % [sim.oxen, sim.ox_cap(), roundi(sim.ox_care)]
+	_fit_top_stats(top_stats.text)
 	pause_btn.text = "Resume" if sim.paused else "Pause"
 	for i in speed_btns.size():
 		speed_btns[i].modulate = COL_ACCENT if sim.speed == [1, 2, 4][i] else Color.WHITE
+
+## Lays the top-bar stats out in the room left by the buttons: the items (the date line, then each
+## stock separated by three spaces) flow onto as few lines as fit, never breaking inside an item,
+## with the font shrinking a little before a third line is needed, so nothing is cut off. When the
+## room is tight the game's title steps aside (the window title still names the game).
+func _fit_top_stats(text: String) -> void:
+	var head: String = text.get_slice("\n", 0)
+	var items: Array = [head]
+	for it in text.substr(head.length() + 1).split("   ", false): items.append(it)
+	var avail: float = maxf(top_stats.size.x - 6.0, 100.0)
+	var spare: float = top_title.size.x + 10.0 # what showing the title costs (or would give back)
+	var fit: Array = _flow_top(items, avail)
+	if top_title.visible and (fit[0] < 12 or fit[1].size() > 2):
+		top_title.visible = false
+		fit = _flow_top(items, avail + spare)
+	elif not top_title.visible and avail - spare > 100.0:
+		var with_title: Array = _flow_top(items, avail - spare)
+		if with_title[0] >= 12 and with_title[1].size() <= 2:
+			top_title.visible = true
+			fit = with_title
+	top_stats.add_theme_font_size_override("normal_font_size", fit[0])
+	top_stats.add_theme_font_size_override("bold_font_size", fit[0])
+	top_stats.add_theme_constant_override("line_separation", -2 if fit[1].size() <= 2 else -3)
+	top_stats.text = "\n".join(fit[1])
+
+## [font size, lines] for the top-bar items in a width: the largest size (13 down to 10) that fits
+## them on two lines (three from size 11 down); the date line stands alone on the first.
+func _flow_top(items: Array, avail: float) -> Array:
+	var font: Font = top_stats.get_theme_font("normal_font")
+	var lines: Array = []
+	var fs := 13
+	for size in [13, 12, 11, 10]:
+		fs = size
+		lines = [""]
+		var w := 0.0
+		var gap: float = font.get_string_size("   ", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		for i in items.size():
+			var iw: float = font.get_string_size(bbcode_tag.sub(items[i], "", true), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			if i == 0 or (i > 1 and w + gap + iw <= avail):
+				lines[-1] += ("" if w == 0.0 else "   ") + items[i]
+				w += (0.0 if w == 0.0 else gap) + iw
+			else:
+				lines.append(items[i])
+				w = iw
+		if lines.size() <= 2 or (size <= 11 and lines.size() <= 3): break
+	return [fs, lines]
 
 func _refresh_left() -> void:
 	var sel: Array = world.selected_units()
