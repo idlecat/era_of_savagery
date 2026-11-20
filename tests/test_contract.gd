@@ -37,10 +37,18 @@ func _initialize() -> void:
 	var listed: Array = all.map(func(t): return t.get_method())
 	var unlisted: Array = get_script().get_script_method_list().map(func(m): return m["name"]).filter(func(n): return n.begins_with("test_") and not n in listed)
 	check(unlisted.is_empty(), "every test_* function is in the list above (missing: %s)" % ", ".join(unlisted))
+	# A script error doesn't throw (the function just stops and the run goes on), so every
+	# error the engine reports during a test fails it.
+	var errs := ErrorCount.new()
+	OS.add_logger(errs)
 	for t in all:
 		if not only.is_empty() and not only.any(func(o): return o in t.get_method()): continue
 		seed(42)
+		var before := errs.n
+		errs.last = ""
 		t.call()
+		check(errs.n == before, "%s raised no engine error (%d: %s)" % [t.get_method(), errs.n - before, errs.last])
+	OS.remove_logger(errs)
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
 
