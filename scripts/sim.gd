@@ -971,7 +971,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	_find_effects(u, amt)
 	if j["dropoff"] >= 0:
 		var c = contracts.by_id(j["dropoff"])
-		if c:
+		if c and contracts.is_running(c):
 			contracts.deposit(c, j["res"], amt, u)
 			return
 	stock[j["res"]] += amt
@@ -1931,7 +1931,7 @@ func tick(dt: float) -> void:
 		fog_t = 0.2
 		fog_update()
 	for p in predators: update_predator(p, dt)
-	predators = predators.filter(func(p): return not p.fled)
+	predators = predators.filter(func(p): return not p.fled and not p.dead)
 	_update_guardian(dt)
 	contracts.update(dt)
 	evo.update(dt)
@@ -2067,8 +2067,13 @@ func check_invariants() -> Array:
 		if u.morale < -0.01 or u.morale > 100.01: bad.append("%s has morale %.1f" % [u.name, u.morale])
 		if u.fatigue < -0.01 or u.fatigue > 100.01: bad.append("%s has fatigue %.1f" % [u.name, u.fatigue])
 		if u.role == "contract" and contracts.by_id(u.contract_id) == null: bad.append("%s is on missing contract %d" % [u.name, u.contract_id])
+		for j in [u.job, u.resume_job]:
+			var dc = contracts.by_id(int(j.get("dropoff", -1)))
+			if dc and not contracts.is_running(dc): bad.append("%s still hauls to the %s contract %d" % [u.name, dc.status, dc.id])
 		var role := "steward" if u.title == "Steward" else ("warchief" if u.title == "War Chief" else "")
 		if u.title != "" and (role == "" or vice[role] != u.id): bad.append("%s is titled %s but holds no such office" % [u.name, u.title])
+	for p in predators:
+		if p.dead: bad.append("a slain %s is still kept" % p.kind)
 	for role in vice:
 		if vice[role] < 0: continue
 		var h := unit_by_id(vice[role])

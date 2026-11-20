@@ -1002,13 +1002,14 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 			sim.popup(c.site + Vector2(0, -50), tr("Totem Ward!"), Color("#c8a8ff"), true)
 			_set_status(c, "executing")
 		"retreat":
-			for u in crew(c, true):
+			var fleeing := crew(c, true)
+			for u in fleeing:
 				if c.kind == "war": sim.remember(u, tr("fled from the battle with the %s on Day %d") % [tr(sim.rivals.clans[c.plan["target"]]["name"]), sim.day()], 7)
 				else: sim.remember(u, tr("abandoned the half-built camp '%s' on Day %d") % [c.plan["plan_id"], sim.day()], 7)
-				_release(u)
-				sim.assign_flee(u)
 			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees for home.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
 			c.status = "abandoned"
+			_disband(c)
+			for u in fleeing: sim.assign_flee(u)
 		"rest":
 			c.resting_ids.append(ld.id)
 			sim.set_job(ld, {"type": "move", "to": D.VILLAGE, "flee": true})
@@ -1048,6 +1049,15 @@ func _release(u: E.Unit) -> void:
 	u.contract_id = -1
 	u.job_key = ""
 
+## The one way a contract lets its people go (done, failed or abandoned): the crew is
+## released and idle, and no one keeps (or comes back to) work that hauls to it.
+func _disband(c: E.Contract) -> void:
+	var members := crew(c, true).filter(func(u): return u.contract_id == c.id)
+	for u in members: _release(u)
+	for u in sim.living():
+		if int(u.resume_job.get("dropoff", -1)) == c.id: u.resume_job = {}
+		if u in members or int(u.job.get("dropoff", -1)) == c.id: sim.set_job(u, {})
+
 func _complete(c: E.Contract) -> void:
 	c.status = "done"
 	c.progress = 1.0
@@ -1078,8 +1088,7 @@ func _complete(c: E.Contract) -> void:
 			sim.gain_xp(u, "craft", 10)
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
 			u.home = c.site
-		_release(u)
-		sim.set_job(u, {})
+	_disband(c)
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
 	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % settlement_label(c), ld,
 		{"desc": tr("A new settlement on the frontier: %s.") % ", ".join(built.map(func(n): return tr(n))), "at": c.site})
@@ -1094,8 +1103,7 @@ func _complete_war(c: E.Contract) -> void:
 		var lead: bool = u == ld
 		sim.remember(u, (tr("led the war party against the %s on Day %d (%s)") if lead else tr("fought in the war party against the %s on Day %d (%s)")) % [cname, sim.day(), spoils], 9 if lead else 7)
 		sim.gain_xp(u, "combat", 15 if lead else 10)
-		_release(u)
-		sim.set_job(u, {})
+	_disband(c)
 	sim.popup(D.VILLAGE + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
 	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [c.plan["plan_id"], cname, spoils], "contract")
 	sim.contract_finished.emit(c)
@@ -1111,8 +1119,7 @@ func _complete_research(c: E.Contract) -> void:
 			sim.remember(u, tr("helped %s %s %s on Day %d") % [tr(ld.name), tr("discover") if fresh else tr("refine"), tr(t["name"]), sim.day()], 6)
 		sim.evo.learn(u, id)
 		sim.gain_xp(u, "lore", 8)
-		_release(u)
-		sim.set_job(u, {})
+	_disband(c)
 	sim.gain_xp(ld, "combat", 8) # leadership
 	if not fresh:
 		sim.stock["lore"] += 15
@@ -1130,15 +1137,14 @@ func _complete_seek(c: E.Contract) -> void:
 	for u in crew(c, true):
 		sim.remember(u, (tr("searched %s and found %s on Day %d") % [c.plan.get("place_name", ""), ", ".join(names), sim.day()]) if not found.is_empty() else (tr("searched %s and found nothing new on Day %d") % [c.plan.get("place_name", ""), sim.day()]), 5 if not found.is_empty() else 2)
 		sim.gain_xp(u, skill, 10 if not found.is_empty() else 4)
-		_release(u)
-		sim.set_job(u, {})
+	_disband(c)
 	if found.is_empty(): sim.add_log(tr("The search '%s' is over: %s found nothing new in %s.") % [c.plan["plan_id"], tr(ld.name), c.plan.get("place_name", "")], "contract", [ld])
 	else: sim.add_log(tr("The search '%s' is over: %s's crew found %s.") % [c.plan["plan_id"], tr(ld.name), ", ".join(names)], "contract", [ld])
 	sim.contract_finished.emit(c)
 
 func _fail(c: E.Contract, why: String) -> void:
 	c.status = "failed"
-	for u in crew(c, true): _release(u)
+	_disband(c)
 	sim.add_log(tr("Contract '%s' failed: %s") % [c.plan["plan_id"], why], "danger")
 
 func _step_text(s: Dictionary) -> String:
