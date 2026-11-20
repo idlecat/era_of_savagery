@@ -596,7 +596,7 @@ func _watch_passers(alive: Array) -> void:
 	var leaders: Array = alive.filter(func(o): return (o.title != "" or o.hero) and not o.path.is_empty())
 	if leaders.is_empty(): return
 	for u in alive:
-		if not u.job.is_empty() or u.sleeping or not u.path.is_empty(): continue
+		if not sim.is_idle(u) or u.sleeping or not u.path.is_empty(): continue
 		for l in leaders:
 			if l != u and l.pos.distance_to(u.pos) < 90.0:
 				u.face = l.pos

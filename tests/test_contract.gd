@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_spare_hands, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2917,8 +2917,9 @@ func test_source_rules() -> void:
 		"logic comparing the displayed activity (u.act is display text: read u.doing or the job)": RegEx.create_from_string("\\.act\\s*(==|!=)|\\.act\\.(begins_with|ends_with|contains)\\(|\\bin\\s+[a-z_]+\\.act\\b|match\\s+[a-z_.]*\\.act\\s*:"),
 		"times of day compared by hand (use sim.is_day_part)": RegEx.create_from_string("day_frac\\(\\)\\s*[<>]=?\\s*0\\.\\d"),
 		"calls to another module's private functions (make them public)": RegEx.create_from_string("\\bsim\\.(?:[a-z]+\\.)?_(?!cache)[a-z][a-z_]*\\("),
+		"idle checked by hand (an idle act is idle too: use sim.is_idle or sim.spare_hand)": RegEx.create_from_string("^(?!.*func is_idle).*(get\\(\"type\", \"\"\\)\\s*(in\\s*\\[\"\"|==\\s*\"\"|!=\\s*\"\")|\\bjt\\s*(==|!=)\\s*\"\"|job\\.is_empty\\(\\) or [a-z_.]*job\\.get\\(\"type\", \"\"\\) == \"life\")"),
 	}
-	var bad_examples := ['if u.act == "Fighting":', 'x.act.begins_with("Dancing")', 'if "Idle" in u.act:', "if sim.day_frac() < 0.74:", "sim._end_errand(u)", "sim.react._start_aid(o)"]
+	var bad_examples := ['if u.act == "Fighting":', 'x.act.begins_with("Dancing")', 'if "Idle" in u.act:', "if sim.day_frac() < 0.74:", "sim._end_errand(u)", "sim.react._start_aid(o)", 'u.job.get("type", "") in ["", "gather"]', 'if jt != "" and jt != "gather":', 'not (u.job.is_empty() or u.job.get("type", "") == "life")']
 	for ex in bad_examples:
 		check(rules.values().any(func(r): return r.search(ex) != null), "the source rules catch: %s" % ex)
 	var hits := {}
@@ -3000,6 +3001,23 @@ func test_regrowth() -> void:
 			sim.nodes.erase(nd)
 	Cultures.reset()
 	check(n > 80 and stuck.is_empty(), "%d emptied finds all grow back (stuck: %s)" % [n, ", ".join(stuck.slice(0, 8))])
+
+func test_spare_hands() -> void:
+	print("\n== Chores go to the idle, an idle act included ==")
+	var sim = _new_sim()
+	var folk: Array = sim.living().filter(func(o): return o.role == "" and o.title == "")
+	for o in folk: sim.set_job(o, {"type": "build", "struct_id": -1})
+	var near = folk[0]
+	var far = folk[1]
+	near.pos = D.VILLAGE + Vector2(10, 0)
+	far.pos = D.VILLAGE + Vector2(200, 0)
+	sim.set_job(near, {"type": "gather", "res": "wood", "dropoff": -1})
+	sim.set_job(far, {"type": "life", "act": "fire"})
+	check(sim.spare_hand(far) == 0 and sim.spare_hand(near) == 1 and sim.spare_hand(folk[2]) == -1, "an idle act is spare, gathering less so, building not at all")
+	sim.oxen = 2
+	sim.add_structure("aurochs_pen", D.VILLAGE + Vector2(-150, 120), true)
+	sim._send_herder()
+	check(far.job.get("type", "") == "tend", "the herder is the one at an idle act, not the nearer gatherer (%s)" % far.job.get("type", ""))
 
 ## A game as the player gets it: every system on (hardships, festivals, crisis, director,
 ## everyday life), on the default map and on a random one, ticked for days while the world's

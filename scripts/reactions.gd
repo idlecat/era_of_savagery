@@ -374,7 +374,7 @@ func do_shelter(u: E.Unit, j: Dictionary, dt: float) -> void:
 ## Only people standing about come (no work, or an idle act of life.gd), and only while
 ## everyday life is on (sim.life.on); "chance" each, at most "count" at once.
 func _start_look(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
-	if not sim.life.on or u.sleeping or sim.in_hut(u) or not (u.job.is_empty() or u.job.get("type", "") == "life"): return false
+	if not sim.life.on or u.sleeping or sim.in_hut(u) or not sim.is_idle(u): return false
 	if u.role != "" and u.role != "child": return false
 	if randf() >= float(r.get("chance", 1.0)): return false
 	if sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "look" and o.job.get("r", {}) == r).size() >= int(r.get("count", 5)): return false

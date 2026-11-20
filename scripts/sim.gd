@@ -1199,9 +1199,9 @@ func _resettle(dt: float) -> void:
 	for p in homes:
 		if p in crowded or residents_of(p).size() >= beds_at(p): continue
 		for from in crowded:
-			var movers: Array = residents_of(from).filter(func(u): return u.role == "" and u.title == "" and not u.sleeping and u.job.get("type", "") in ["", "gather"])
+			var movers: Array = residents_of(from).filter(func(u): return u.title == "" and spare_hand(u) >= 0)
 			if movers.is_empty(): continue
-			movers.sort_custom(func(a, b): return a.job.is_empty() and not b.job.is_empty())
+			movers.sort_custom(func(a, b): return spare_hand(a) < spare_hand(b))
 			var u: E.Unit = movers[0]
 			u.home = p
 			set_job(u, {"type": "move", "to": p + Vector2(randf_range(-40, 40), randf_range(-30, 30))})
@@ -1274,13 +1274,7 @@ func _lend_oxen() -> void:
 func _send_herder() -> void:
 	var ps := pens()
 	if ps.is_empty(): return
-	var best: E.Unit = null
-	for u in units:
-		if u.dead or u.role != "" or u.sleeping or u.title == "War Chief": continue
-		var jt: String = u.job.get("type", "")
-		if jt != "" and jt != "gather": continue
-		if best == null or (jt == "" and best.job.get("type", "") != "") or \
-			((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(ps[0].pos) < best.pos.distance_to(ps[0].pos)): best = u
+	var best := _nearest_spare(ps[0].pos, INF)
 	if best == null: return
 	set_aside(best)
 	set_job(best, {"type": "tend", "pen_id": ps[0].id, "t": 0.0})
@@ -1354,14 +1348,7 @@ func _burials(dt: float) -> void:
 				add_log(tr("%s's body was never found. A stone at the burial ground keeps their name.") % tr(b.name), "story", [b])
 			continue
 		if rest_time() or not active_predators_near(b.pos, 400).is_empty(): continue
-		var best: E.Unit = null
-		for u in units:
-			if u.dead or u.role != "" or u.sleeping or u.title == "War Chief": continue
-			var jt: String = u.job.get("type", "")
-			if jt != "" and jt != "gather": continue
-			if u.pos.distance_to(b.pos) > BURY_RANGE: continue
-			if best == null or (jt == "" and best.job.get("type", "") != "") or \
-				((jt == "") == (best.job.get("type", "") == "") and u.pos.distance_to(b.pos) < best.pos.distance_to(b.pos)): best = u
+		var best := _nearest_spare(b.pos, BURY_RANGE)
 		if best == null: continue
 		set_aside(best)
 		set_job(best, {"type": "bury", "body_id": b.id, "phase": "fetch", "t": 0.0})
@@ -2045,6 +2032,25 @@ func dismiss(role: String) -> bool:
 ## Free for other work: no job, or only an idle act of everyday life (life.gd).
 func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
 
+## How readily a grown-up can be called away for a chore: 0 idle (no work, or an idle act),
+## 1 gathering (work that keeps), -1 not to be called (other work, asleep, a crew, a child).
+func spare_hand(u: E.Unit) -> int:
+	if u.dead or u.role != "" or u.sleeping: return -1
+	if is_idle(u): return 0
+	return 1 if u.job.get("type", "") == "gather" else -1
+
+## The spare hand nearest `at` (within `reach`), the idle before gatherers; the War Chief stays.
+func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
+	var best: E.Unit = null
+	var best_k := 0
+	for u in units:
+		var k := spare_hand(u)
+		if k < 0 or u.title == "War Chief" or u.pos.distance_to(at) > reach: continue
+		if best == null or k < best_k or (k == best_k and u.pos.distance_to(at) < best.pos.distance_to(at)):
+			best = u
+			best_k = k
+	return best
+
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
 const JOB_TYPES := ["move", "gather", "bury", "tend", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
 	"life", "meal", "depart", "art", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
@@ -2325,7 +2331,7 @@ func _send_renovators(list: Array, helpers: Array) -> void:
 		for p in settlements():
 			var here: Array = list.filter(func(s): return settlement_of(s.pos) == p)
 			if here.is_empty(): continue
-			var free: Array = living().filter(func(u): return u.role == "" and not taken.has(u.id) and u.job.get("type", "") in ["", "ritual"] and D.region_at(u.home) == D.region_at(p))
+			var free: Array = living().filter(func(u): return u.role == "" and not taken.has(u.id) and (is_idle(u) or u.job.get("type", "") == "ritual") and D.region_at(u.home) == D.region_at(p))
 			free.sort_custom(func(a, b): return a.home.distance_to(p) < b.home.distance_to(p))
 			var crew: Array = free.filter(func(u): return u.home.distance_to(p) < 450).slice(0, 3)
 			if crew.is_empty(): crew = free.slice(0, 1)
