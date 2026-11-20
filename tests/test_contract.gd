@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_spare_hands, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -3002,6 +3002,18 @@ func test_regrowth() -> void:
 			sim.nodes.erase(nd)
 	Cultures.reset()
 	check(n > 80 and stuck.is_empty(), "%d emptied finds all grow back (stuck: %s)" % [n, ", ".join(stuck.slice(0, 8))])
+
+func test_find_data() -> void:
+	print("\n== What a find brings on discovery is its data ==")
+	var sim = _new_sim()
+	var u = sim.living()[0]
+	var lore: float = sim.stock["lore"]
+	sim.discover_find("willow", u, u.pos)
+	check(is_equal_approx(sim.stock["lore"], lore + float(D.FINDS["willow"]["gives"]["lore"])), "willow bark gives its lore (%.0f -> %.0f)" % [lore, sim.stock["lore"]])
+	var before: float = sim.evo.insight_frac("tools")
+	sim.discover_find("flint", u, u.pos)
+	check(sim.evo.insight_frac("tools") > before or sim.has_tech("tools"), "flint brings insight into tools (%.2f -> %.2f)" % [before, sim.evo.insight_frac("tools")])
+	check(Cultures.validate({"id": "t", "name": "T", "desc": "d", "finds": [{"id": "f", "name": "F", "desc": "d", "gives": {"gold": 3}}]}).size() > 0, "a pack find that gives an unknown resource is refused")
 
 func test_spare_hands() -> void:
 	print("\n== Chores go to the idle, an idle act included ==")

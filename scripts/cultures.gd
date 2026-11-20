@@ -137,7 +137,7 @@ const TOP_KEYS := ["id", "name", "desc", "place", "period", "history", "source",
 const COMMON := ["id", "name", "desc", "history", "source"]
 const INVENTION_KEYS := ["kind", "practice", "needs", "effects", "hint", "words"]
 const FIND_KEYS := ["group", "res", "amount", "rate", "regrow", "winter", "needs", "where", "count", "cluster", "act",
-	"practice", "practice_x", "look", "effects", "seed", "culture"]
+	"practice", "practice_x", "look", "effects", "seed", "culture", "gives"]
 const PERSON_KEYS := ["epithet", "as", "stats", "memory", "when", "label", "chance", "text"]
 const EVENT_KEYS := ["title", "text", "when", "chance", "options", "do"]
 const OPTION_KEYS := ["label", "desc", "cost", "needs", "do", "result", "else_do", "else_result"]
@@ -264,6 +264,8 @@ static func _check_find(e, w: String, refs: Dictionary, err: Callable) -> void:
 	for t in e.get("seed", {}):
 		if t not in refs["tech"]: err.call(w + ".seed", "unknown tech '%s'" % t)
 	_check_axes(e.get("culture", {}), w + ".culture", err)
+	var gv = e.get("gives", {})
+	if not gv is Dictionary or gv.keys().any(func(r): return not r in RESOURCES or not (gv[r] is float or gv[r] is int)): err.call(w + ".gives", "must map resources (%s) to numbers" % ", ".join(RESOURCES))
 	_check_effects(e.get("effects", []), w + ".effects", err)
 
 static func _check_person(e, w: String, refs: Dictionary, err: Callable) -> void:

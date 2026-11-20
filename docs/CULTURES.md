@@ -156,7 +156,8 @@ stat to `D.EFFECT_STATS`, then call `inv.mul()`/`inv.add()` where the rule lives
 - `look`: which base find it is drawn as (`mushroom`, `tubers`, `grain`, `honey`, `fish`,
   `willow`, `yarrow`, `flint`, `copper`, `tin`, `ochre`, `salt`, `obsidian`).
 - `seed`: insight into techs on discovery (a fraction of the cost). `culture`: culture
-  drift on discovery. `effects`: apply while the find is known.
+  drift on discovery. `gives`: resources added on discovery (`{"lore": 5}`). `effects`:
+  apply while the find is known.
 
 ## people
 

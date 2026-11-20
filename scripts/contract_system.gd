@@ -1122,8 +1122,9 @@ func _complete_research(c: E.Contract) -> void:
 	_disband(c)
 	sim.gain_xp(ld, "combat", 8) # leadership
 	if not fresh:
-		sim.stock["lore"] += 15
-		sim.add_log(tr("'%s' finished, but %s was already known - the work became 15 lore.") % [c.plan["plan_id"], tr(t["name"])], "contract")
+		var gives: Dictionary = sim.RULES["research"]["known_gives"]
+		sim.give(gives)
+		sim.add_log(tr("'%s' finished, but %s was already known - the work became %d lore.") % [c.plan["plan_id"], tr(t["name"]), int(gives.get("lore", 0))], "contract")
 	else:
 		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [c.plan["plan_id"], tr(ld.name), tr(t["name"])], "contract", [ld])
 	sim.contract_finished.emit(c)

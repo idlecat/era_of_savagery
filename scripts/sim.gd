@@ -1136,14 +1136,9 @@ func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	remember(u, tr("found %s on Day %d") % [tr(fd["name"]), day()], 6)
 	inv.feat("find", tr("Found %s") % tr(fd["name"]), u, {"desc": tr(fd["desc"]), "source": fd.get("source", ""), "history": fd.get("history", ""), "at": at})
 	gain_xp(u, "lore" if fd["group"] == "medicine" else "forage", 5)
-	match id:
-		"flint": evo.seed("tools", 0.45, u)
-		"grain": evo.seed("farming", 0.25, u)
-		"copper", "tin": evo.seed("bronze", 0.12, u)
-		"ochre": evo.drift("spiritual", 3.0)
-		"willow", "yarrow": stock["lore"] += 5
-	for t in fd.get("seed", {}): evo.seed(t, float(fd["seed"][t]), u) # a culture find's insight
+	for t in fd.get("seed", {}): evo.seed(t, float(fd["seed"][t]), u) # the insight it brings
 	for ax in fd.get("culture", {}): evo.drift(ax, float(fd["culture"][ax]))
+	give(fd.get("gives", {}))
 
 ## What a load does when it reaches the stores, beyond the food or lore it is.
 func _find_effects(u: E.Unit, amt: int) -> void:

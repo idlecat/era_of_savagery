@@ -181,7 +181,7 @@ const STRINGS := {
 	"helped %s %s %s on Day %d": "帮助%s%s%s（第 %d 天）",
 	"discover": "发现",
 	"refine": "精进",
-	"'%s' finished, but %s was already known - the work became 15 lore.": "「%s」完成了，但%s早已为人所知——这番功夫化作 15 点学识。",
+	"'%s' finished, but %s was already known - the work became %d lore.": "「%s」完成了，但%s早已为人所知——这番功夫化作 %d 点学识。",
 	"Research contract '%s' complete: %s now knows %s.": "研究契约「%s」完成：%s如今掌握了%s。",
 	"Contract '%s' failed: %s": "契约「%s」失败：%s",
 	"gather %d wood": "采集 %d 木材",

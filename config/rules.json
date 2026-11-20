@@ -85,6 +85,7 @@
   "reach": 700,
   "min_hp": 0.4
  },
+ "research": {"_doc": "A research contract that finishes a tech the tribe already knows turns the work into this (contract_system.gd _complete_research).", "known_gives": {"lore": 15}},
  "ward": {"_doc": "The totem ward, a chieftain's answer to beasts attacking a contract crew (contract_system.gd): what it costs and how far it scares them.", "cost": {"lore": 10}, "radius": 600},
  "triggers": {
   "_doc": "When the built-in dilemmas come up (conditions as in scenario scripts).",
