@@ -1889,13 +1889,15 @@ func tick(dt: float) -> void:
 	if _cache_live_t <= 0.0: # (a tree that became a stump a moment ago can wait a second to start regrowing)
 		_cache_live_t = 1.0
 		_cache_live = nodes.filter(func(n): return n.kind != "tree" and n.kind != "boulder")
+	var winter: bool = hz.winter()
 	for n in _cache_live:
+		var fd: Dictionary = D.FINDS.get(n.kind, {})
+		if not fd.is_empty(): # any find, the base game's or a culture's, grows back by its own "regrow"
+			if float(fd["regrow"]) > 0.0 and (fd["winter"] or not winter): n.amount = minf(n.max_amount, n.amount + float(fd["regrow"]) * dt)
+			continue
 		match n.kind:
 			"bush":
 				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * berry_k)
-			"mushroom", "tubers", "grain", "honey", "fish", "willow", "yarrow", "salt":
-				var fd: Dictionary = D.FINDS[n.kind]
-				if fd["winter"] or not hz.winter(): n.amount = minf(n.max_amount, n.amount + fd["regrow"] * dt)
 			"stump", "burnt":
 				n.regrow_t -= dt * regrow_k
 				if n.regrow_t <= 0:
