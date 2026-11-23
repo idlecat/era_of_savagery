@@ -25,6 +25,9 @@ var sprite_dirs: Array = [] # screen direction each of the 8 baked facings looks
 var selected: Array = [] # unit ids
 const PALISADE_GAP := 8.0 # clearance between a wall's stakes and a building on its line
 var selected_struct := -1 # a building picked for the building panel (units unselected)
+var hover_unit := -1 # unit under the cursor: a faint white ring invites a click
+var hover_struct := -1 # building under the cursor, likewise
+var zoom_target := 1.25 # eased zoom: _zoom_by moves the target, _zoom_step glides there
 var build_type := ""
 var build_size := 0.0 # radius for a wall being laid out
 var road_start: Variant = null # the Road tool: where the road begins, once clicked
@@ -102,6 +105,7 @@ func setup(s) -> void:
 	font = ThemeDB.fallback_font
 	cam = Camera2D.new()
 	cam.zoom = Vector2(1.25, 1.25)
+	zoom_target = 1.25
 	cam.position = iso(D.VILLAGE + Vector2(240, 0))
 	add_child(cam)
 	cam.make_current()
@@ -315,6 +319,8 @@ func _process(delta: float) -> void:
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
 	night.color = _sky_tint()
 	_grade_step(delta)
+	_zoom_step(delta)
+	_update_hover()
 	_sync_lights()
 	if sim.guardian and not sim.guardian.dead:
 		guardian_trail.push_front(sim.guardian.pos)
@@ -620,9 +626,14 @@ func _edge_dir() -> Vector2:
 	elif mp.y >= r.end.y - EDGE_PX: v.y += 1
 	return v
 
-## Zoom by factor k keeping the world point under the cursor fixed.
+## Zoom by factor k: the target glides there over a few frames (_zoom_step),
+## keeping the world point under the cursor fixed while it moves.
 func _zoom_by(k: float) -> void:
-	var z := clampf(cam.zoom.x * k, 0.45, 2.4)
+	zoom_target = clampf(zoom_target * k, 0.45, 2.4)
+
+func _zoom_step(delta: float) -> void:
+	if is_equal_approx(cam.zoom.x, zoom_target): return
+	var z: float = lerpf(cam.zoom.x, zoom_target, minf(1.0, delta * 12.0))
 	var before := get_global_mouse_position()
 	cam.zoom = Vector2(z, z)
 	cam.force_update_scroll()
@@ -785,10 +796,17 @@ func draw_overlay() -> void:
 	if sst:
 		var sr: float = sim.struct_r(sst) + 6.0
 		ci.draw_set_transform(iso(sst.pos), 0.0, Vector2(1.0, 0.5))
-		ci.draw_arc(Vector2.ZERO, sr * 1.06, 0, TAU, 48, Color("#ffe066"), 2.5 / 0.75)
+		for i in 12: # the same rotating dashes as a picked person
+			var a0 := float(i) / 12 * TAU + t * 1.6
+			ci.draw_arc(Vector2.ZERO, sr * 1.06, a0, a0 + TAU / 36, 6, Color("#ffe066"), 2.5 / 0.75)
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	for s in sim.structures:
-		if _in_view(s.pos): _draw_structure_overlay(s)
+		if _in_view(s.pos):
+			if s.id == hover_struct and s.id != selected_struct and s.built: # a faint ring: this can be picked
+				ci.draw_set_transform(iso(s.pos), 0.0, Vector2(1.0, 0.5))
+				ci.draw_arc(Vector2.ZERO, sim.struct_r(s) * 1.06, 0, TAU, 48, Color(1, 1, 1, 0.35), 1.5)
+				ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+			_draw_structure_overlay(s)
 	for u in sim.units:
 		if _in_view(u.pos): _draw_unit_overlay(u)
 	var abed := {} # hut id -> sleepers inside
@@ -1651,6 +1669,42 @@ func _draw_site_ring(c) -> void:
 	for i in 32:
 		var a0 := float(i) / 32 * TAU + t * 0.2
 		ci.draw_arc(c.site, 125, a0, a0 + TAU / 64, 4, Color(col, 0.6), 4)
+	if c.status in ["interrupted", "defending"]: # a pulse that says: the crew needs you
+		var k: float = fposmod(t * 0.5, 1.0)
+		ci.draw_arc(c.site, 30 + 110 * k, 0, TAU, 48, Color(col, 0.7 * (1.0 - k)), 3)
+
+## Rotating dashed ring around a picked figure — reads as "selected" at a glance,
+## and never mistaken for a danger or a mission marker.
+func _sel_ring(b: Vector2, r: float) -> void:
+	for i in 10:
+		var a0 := float(i) / 10 * TAU + t * 1.6
+		ci.draw_arc(b, r, a0, a0 + TAU / 30, 6, Color("#ffe066"), 2.0)
+
+## Who and what is under the cursor (rings only; the HUD tooltip uses hover_info).
+func _update_hover() -> void:
+	hover_unit = -1
+	hover_struct = -1
+	if _ui_has_pointer() or build_type != "": return
+	var sm := get_global_mouse_position()
+	var m := uniso(sm)
+	var bd := 16.0
+	for u in sim.units:
+		if u.dead or u.sleeping or sim.in_hut(u) or not sim.is_visible(u.pos) or not _in_view(u.pos): continue
+		var d := _pick_dist(sm, u.pos, 26)
+		if d < bd:
+			bd = d
+			hover_unit = u.id
+	if hover_unit >= 0: return
+	for s in sim.structures:
+		if not sim.is_explored(s.pos) or not _in_view(s.pos) or s.type == "burial_ground": continue
+		var r: float = sim.struct_r(s)
+		if D.STRUCTURES[s.type].get("ring", false):
+			if absf(s.pos.distance_to(m) - r) < 14:
+				hover_struct = s.id
+				return
+		elif s.pos.distance_to(m) < r + 10:
+			hover_struct = s.id
+			return
 
 func _site_col(c) -> Color:
 	match c.status:
@@ -1720,7 +1774,8 @@ func _draw_unit(u) -> void:
 	if u.role == "child": _scale_about(b, FIG_SCALE * 0.68) # children are small
 	_ell(b + Vector2(2, 0), 9, 4, SHADOW)
 	if u.hero: _ell(b, 15 + sin(t * 4) * 1.5, 7.5, Color(1, 0.85, 0.3, 0.3))
-	if sel: _ell_line(b, 14, 7, Color("#ffe066"), 2)
+	if sel: _sel_ring(b, 14)
+	elif u.id == hover_unit: _ell_line(b, 14, 7, Color(1, 1, 1, 0.45), 1.5)
 	if u.role == "contract": _ell_line(b, 11, 5.5, Color(0.55, 0.8, 1.0, 0.8), 1.5)
 	var busy: bool = DOING_ANIM.has(u.doing)
 	if art and art.has("man_idle_0_0"):
@@ -1813,7 +1868,8 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 ## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
 ## Asleep in the open: lying down under a hide, with drifting z's.
 func _draw_sleeper(u, b: Vector2) -> void:
-	if u.id in selected: _ell_line(b, 16, 7, Color("#ffe066"), 2)
+	if u.id in selected: _sel_ring(b, 16)
+	elif u.id == hover_unit: _ell_line(b, 16, 7, Color(1, 1, 1, 0.45), 1.5)
 	_ell(b + Vector2(1, 1), 17, 6.5, Color("#6e5236")) # a hide bedroll
 	_ell(b, 15, 5.2, Color("#9a7650"))
 	if art and art.has("man_dead_0_0"):
