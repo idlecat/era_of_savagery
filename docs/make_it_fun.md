@@ -79,10 +79,19 @@ Not every hiccup deserves pausing the player:
 - Low-stakes contract events (stung hand, crew argument, spoiled rations, a strange
   track) are decided by the **leader's temperament** (archetype table; optionally
   `llm` if configured), reported in the chronicle.
-- Implementation: a config list of events `{when, weight}` sampled by
-  `contract_system.update()` like `_check_aborts`; resolution via `story.run()` actions
-  so a game master can also fire them. Extend the Steward's routine-matter idea
-  (`sim._decide_routine`) to contract leaders.
+- Implementation: **no new mechanism.** Each event is a dilemma in the shared format
+  (`dilemmas.json` or `contract_log.json`, through `story.dilemma_view/choose`) marked
+  `routine`, with a `when` (a `story.holds()` condition, plus contract-scoped keys such
+  as `progress`) and a `weight`; `contract_system.update()` rolls one now and then like
+  `_check_aborts`. Options are `story.run()` actions, so a game master can pose the
+  same event with `story.pose()`. The leader picks the option the way the Steward
+  already decides routine matters (`sim._decide_routine`, `steward_routine`),
+  weighted by archetype; the player only reads the outcome.
+- Answering pi's question: not `reactions.json`. Reactions are people's *bodily*
+  responses to a happening (cover, flee, aid, firefight), sharing one verb set; A2's
+  events are *decisions with costs*, which is what the dilemma format is. They
+  compose: an A2 outcome may call `react.trigger()` (a snake bite → crew `aid`), so the
+  crew visibly responds without A2 owning any movement code.
 
 ### A3. Crew friction
 - Pairing rivals on a crew (`u.bonds < 0`) generates friction events (A2 pool), slower
@@ -153,8 +162,13 @@ own item with its own tests, not as a rider on B1. Size: large.
   `hud.gd` saga dialog). What's left is making defeat *rarer and later than* a slow
   death: today defeat fires only when the *last* person dies (`legacy.gd`), so the
   typical loss is a long fade. A "last stand" dilemma when the tribe drops below a few
-  people — trigger `{pop: N}` already exists in `story.holds()` — offering flee, merge
-  with a friendly clan (a rivals action), or hold, so the ending is a choice. Cheap.
+  people, offering flee, merge with a friendly clan (a rivals action), or hold, so the
+  ending is a choice. Cheap, with one new condition key: `{pop: N}` in
+  `story.holds()` means *at least* N alive (`story.gd`: false when fewer), and `fewer`
+  counts structures, so add `pop_below` (and its `COND_TYPES` entry, `test_spend`
+  checks it). "Merge" ending the run as a legacy path (`legacy.json`) rather than
+  defeat is the interesting part: the tribe lives on inside another clan, which
+  feeds E2.
 - **E2.** Heritage hook into the next run: the new world remembers them — a landmark,
   ruins of the old village as a find, or a rival clan descended from survivors.
   Cheap because scenarios are data (`scenarios/*.gd` + `D.LANDMARK_KINDS`).
@@ -195,6 +209,15 @@ play (that is the measurable form of "decisions matter"):
   - *Forecast calibration* (A0): of contracts that were interrupted, how often was a
     top-scored forecast reason the actual abort reason. Below ~60% and players will
     learn to ignore the forecast — which kills A0 and A1's callbacks with it.
+- **The scripted policies are game-master scripts**, as pi suggested, so the harness
+  doubles as a smoke test of the GM surface: a policy is a JSON file
+  (`tests/policies/*.json`) of rules "when `holds(cond)`, do `story.run(actions)` /
+  `improve.order(type)` / `policy.set_choice(id, choice)`", plus a dilemma picker (an
+  option index, or the option tagged with the policy's bias, e.g. `hoard`). Three to
+  start: **steward** (no player choices: the built-in defaults — the baseline),
+  **hoarder**, **feaster**. Skill sensitivity = how far hoarder and feaster land from
+  the steward baseline and from each other. If something the policy needs has no verb,
+  that is a GM-surface bug to fix, not a harness hack.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
@@ -237,7 +260,8 @@ afterthoughts, and the full harness (item 7) then only grows the metric list.
 
 ## Open questions
 
-- **Pacing between pauses.** The game is pause-and-decide; what does the player *do*
+- ~~**Pacing between pauses.**~~ **Resolved: no new verb now** (pi's position; A0/A1
+  give the waiting something to read, G1 counts the gaps). The game is pause-and-decide; what does the player *do*
   in the minutes between decisions? A1/A0 give them something to read and watch, but
   is that enough, or do we need a light, optional verb while time runs (e.g. pointing
   the Steward at a priority)? Not unit micro — that's a not-goal.
@@ -254,6 +278,14 @@ afterthoughts, and the full harness (item 7) then only grows the metric list.
   > crisis); the director's tension cap keeps pacing *hardships* as today. Pick the
   > number from the G1 baseline measurement, not by feel — hence G1's skeleton lands
   > first (see Order of work).
+  > **Claude:** agreed, and urgency is data, not a list in code: a dilemma gets
+  > `"urgent": true` in its config when *waiting would change its options* — the
+  > flood (the water is rising now), the last stand, endings, an emergency's take-
+  > command. By that test the flood is urgent; an envoy (they can wait at the fire), a
+  > festival, the chosen one, an era change, a family thinking of leaving are not.
+  > Two more rules so `min_gap` doesn't break things: a held dilemma keeps its place
+  > in its queue (no dropping), and anything whose trigger is a moment (the eclipse)
+  > is either urgent or its texts must read fine a few hours late.
 - **Should the forecast lie?** ~~A temperament-coloured forecast is a fun tell, but a
   forecast that's wrong too often teaches players to ignore it.~~
   > **pi (resolved):** the *number* never lies — it's computed from the real abort
