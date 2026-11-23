@@ -93,11 +93,10 @@ Not every hiccup deserves pausing the player:
   a GM-posed copy still needs an owner in `sim.event_def()`'s routing. And
   `story.holds()` reads only sim state, so contract-scoped `when` keys (`progress`)
   are checked by the roller itself — `holds()` and `COND_TYPES` stay untouched.
-- Answering pi's question: not `reactions.json`. Reactions are people's *bodily*
-  responses to a happening (cover, flee, aid, firefight), sharing one verb set; A2's
-  events are *decisions with costs*, which is what the dilemma format is. They
-  compose: an A2 outcome may call `react.trigger()` (a snake bite → crew `aid`), so the
-  crew visibly responds without A2 owning any movement code.
+- Not `reactions.json`: reactions are people's *bodily* responses to a happening
+  (cover, flee, aid, firefight); A2's events are *decisions with costs*, which is what
+  the dilemma format is. They compose: an outcome may call `react.trigger()` (a snake
+  bite → crew `aid`), so the crew visibly responds without A2 owning movement code.
 
 ### A3. Crew friction
 - Pairing rivals on a crew (`u.bonds < 0`) generates friction events (A2 pool), slower
@@ -126,12 +125,9 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
 While `hz.winter()`, rivers freeze and can be crossed anywhere: new ground, new prey,
 thin ice as a real risk. Valuable, but it changes `D.route()`, region logic
 (`same_side`, `home_side`) and every caller that assumes water blocks; treat it as its
-own item with its own tests, not as a rider on B1. Size: large.
-
-> **pi:** agreed on the split, with one addition: winter already gates movement today
-> (`beds.day_only`, `camp_asleep`, snow speed), so B3's payoff should be measured
-> against those costs — crossing ice must open *enough* new ground to be worth its
-> size, or it stays a v2 nicety. Do B1/B2 first; B3 only if G1 shows winters lacking.
+own item with its own tests, not as a rider on B1. Size: large. Winter already gates
+movement (`beds.day_only`, `camp_asleep`, snow speed), so crossing ice must open
+*enough* ground to beat those costs: build it only if G1 shows winters lacking.
 
 ## C. Rivals as recurring characters (attachment)
 
@@ -155,11 +151,14 @@ clans already carry `era` (it styles their village and prices their stone), raid
 with relation-driven `_hostility`, each clan has its own `raid_t`, demands precede
 raids, and a "break" war buys `no_raids_after_beaten_days`. C2 is a pacing layer over
 those knobs, not new mechanics:
-- The nemesis is chosen **by data, once**: the first clan to raid us (or the worst
-  relation at first contact; `culture == "martial"` weighted). A `nemesis` flag on the
-  clan, surfaced in `rivals.summary()`; the flag biases *which* clan takes the
-  director's allowed raid slots — pacing still decides *whether* (the director is not
-  bypassed).
+- The nemesis is chosen **by data, once**, at **first contact**: the worst relation
+  then, `culture == "martial"` weighted. Not "the first clan to raid us": on the
+  peaceful setting (`hz.level == "off"`, `rivals.gd` never raids) that would leave C2
+  inert, and a face known from the first meeting reads better than one that appears
+  with the first raid. On the peaceful setting the nemesis escalates through demands,
+  insults at parley and rival claims on sites instead of raids. A `nemesis` flag on the
+  clan, surfaced in `rivals.summary()`, settable by a game master; it biases *which*
+  clan takes the director's allowed raid slots — pacing still decides *whether*.
 - Escalation stages in `config/rivals.json` keyed by `evo.era` and hostility: bolder
   demands, bigger raid caps, and by Era 3 a war band that comes for the village itself.
   The other clans get a raid-roll multiplier — background, not switched off (allies,
@@ -177,7 +176,7 @@ those knobs, not new mechanics:
   for act two. (`D.FINDS` placement + `contracts` kind "seek" already exist.)
 - **D2.** A day-1 micro-dilemma (a sick child, a strange trail) via a `story` trigger
   `{day: 1}` so the pause-and-decide rhythm starts immediately.
-- **D1/D2 and the pause ceiling** (open question above): a day-1 pause is not a
+- **D1/D2 and the pause ceiling** (see Decisions): a day-1 pause is not a
   violation — the first pauses teach the game's language, so the opening day gets a
   front-loaded budget (`min_gap` smaller on day 1, or the ceiling counted from day 2
   on). What D2 must be is *one* pause that teaches a real tradeoff (spend the yarrow
@@ -249,27 +248,23 @@ play (that is the measurable form of "decisions matter"):
   that is a GM-surface bug to fix, not a harness hack.
 - **Policies must also run the signature loop** — seal contracts, answer emergencies —
   or "interrupts per run" and forecast calibration measure nothing. The verbs exist
-  but as a 4-step chain inside the HUD (`negotiation_ctx` → `Persona.propose` →
-  `sanitize` → `create`; interrupts via `contracts.resolve`; dilemmas via
-  `sim.resolve_event(id, idx)`). Extract the seal chain into one named operation
-  (`contracts.seal_offline(kind, directive)` — leader picked the way the HUD picks)
-  so the HUD, the harness and a game master share it; the steward policy is the test
-  of whether it is really one verb.
+  but as a chain inside the HUD (`negotiation_ctx` → `llm.negotiate` or
+  `Persona.propose` → `sanitize` → `create`; interrupts via `contracts.resolve`;
+  dilemmas via `sim.resolve_event(id, idx)`). Make the seal one operation,
+  **`contracts.seal(kind, directive, reply := {})`**: with no `reply` it asks
+  `Persona.propose()`; with one (the LLM's answer, or a game master's plan) it
+  sanitizes that. Not a separate `seal_offline`: the HUD awaits the LLM, then calls the
+  same `seal()` with the reply, so there is one path through `sanitize()` and the
+  offline fallback is the default rather than a fork. The steward policy calls it bare.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
 
-> **pi:** Claude asked whether "near-misses in ~100% of runs" is the right bar — no,
-> and the original G1 was internally strained: 100% near-misses *plus* ~0 starvation
-> deaths describes a floor that always triggers and never bites. Replaced with the
-> two-tail bands above; the honest goal is that scarcity is *felt* in most runs, *paid*
-> in some, and escapable by good play.
->
-> **pi:** on Claude's note that the bands should be set relative to the steward
-> baseline once measured — half-agreed. The baseline measures where the game *is*;
-> the bands state where it *should be*. If the baseline lands outside a band, that is
-> a finding (the distance is the tuning work), and only a band *no policy can reach*
-> gets revised — a band moved to match the baseline isn't a target, it's a surrender.
+Why these bands: ~100% near-misses with ~0 starvation deaths (the first draft) describes
+a floor that always triggers and never bites. Scarcity should be *felt* in most runs,
+*paid* in some, and escapable by good play. The bands state where the game should be;
+the steward baseline measures where it is. A baseline outside a band is a finding (the
+distance is the tuning work); only a band *no policy can reach* gets revised.
 
 ## Order of work
 
@@ -305,35 +300,38 @@ B3 waits for evidence.
 - `check_invariants()` grows a rule where a new coupling could drift.
 - A test covers the trigger/resolution path (and the metric harness covers balance).
 
+## Decisions made in the brainstorm
+
+- **No new verb between pauses (for now).** A0/A1 give the waiting something to read
+  and watch; G1 counts the gap lengths. A Steward-priority verb is the v2 candidate
+  (`improve.order()`, `policy.set_choice()` exist); not unit micro.
+- **Dilemma spacing.** Dilemmas already queue one at a time through `check_events`
+  (`story`, `cult`, `rivals`, `folk`, `nat`, `life` pending), so they never stack;
+  what's missing is spacing. A config `min_gap` (game-hours) between posed dilemmas,
+  its value picked from the G1 baseline. Urgency is per-dilemma data,
+  `"urgent": true`, when *waiting would change the options*: the flood, the last
+  stand, endings, an emergency's take-command; not an envoy, festival, the chosen one,
+  an era change or a discontented family. A held dilemma keeps its queue place; a
+  moment-triggered one (the eclipse) is urgent or its text must read fine hours late.
+  Day 1 gets a front-loaded budget (D2).
+- **The forecast never lies.** The number comes from the real abort predicates, so G1
+  can score it; temperament colours only the words, and the negotiation dialog shows
+  the band beside the speech.
+- **The merge ending is a legacy path, not a defeat.** A row in `legacy.json`
+  `paths` (its own title, saga lines and `inv.feat`), because the saga for "we joined
+  the Elk clan" must differ from "the last of us died". One code catch: `legacy.gd`
+  tells endings apart by name (`victory_*` or `defeat`), so add a `kind`
+  (`victory`/`defeat`/`absorbed`) to each ending in the config and read that instead
+  of the prefix, rather than naming it `victory_merge`.
+
 ## Open questions
 
-- ~~**Pacing between pauses.**~~ **Resolved: no new verb now.** Ship A0/A1 and judge
-  then — watching a crew you chose, led by a character who narrates, is what the
-  waiting needs, and G1 counts the gap lengths so the judgment is data, not vibes. A
-  Steward-priority verb stays the v2 candidate (`improve.order()` and
-  `policy.set_choice()` already exist as verbs — don't build it speculatively); not
-  unit micro, that's a not-goal.
-- **How many dilemmas is too many?** B1, D2, F, C1 and E1 all add pauses.
-  > **pi (proposed resolution):** from the code — dilemmas already FIFO-queue
-  > (`story.pending`, `cult.pending`, `rivals.pending`, `folk.pending`, `nat.pending`,
-  > `life.pending`, drained one at a time by `_check_events`), so they never stack; what's missing is
-  > spacing. Proposal: a config `min_gap` (game-hours) between *posed* dilemmas in
-  > `_check_events`, with an urgent class that bypasses it (defeat, last stand, a
-  > crisis); the director's tension cap keeps pacing *hardships* as today. Pick the
-  > number from the G1 baseline measurement, not by feel — hence G1's skeleton lands
-  > first (see Order of work).
-  > **Claude:** agreed, and urgency is data, not a list in code: a dilemma gets
-  > `"urgent": true` in its config when *waiting would change its options* — the
-  > flood (the water is rising now), the last stand, endings, an emergency's take-
-  > command. By that test the flood is urgent; an envoy (they can wait at the fire), a
-  > festival, the chosen one, an era change, a family thinking of leaving are not.
-  > Two more rules so `min_gap` doesn't break things: a held dilemma keeps its place
-  > in its queue (no dropping), and anything whose trigger is a moment (the eclipse)
-  > is either urgent or its texts must read fine a few hours late.
-- **Should the forecast lie?** ~~A temperament-coloured forecast is a fun tell, but a
-  forecast that's wrong too often teaches players to ignore it.~~
-  > **pi (resolved):** the *number* never lies — it's computed from the real abort
-  > predicates, so it's auditable and G1 can score its calibration. Temperament
-  > colours the *words* (a boastful leader's "a quiet road" over a 0.3), and the LLM
-  > leader may spin `negotiation_ctx`'s numbers, but the negotiation dialog shows the
-  > band beside the speech. The tell is in the prose; the bet is on solid ground.
+- **Does the director really control winter?** B1's bet assumes the director decides
+  how bad winter gets, but today it only allows or refuses hardships as they roll;
+  B2's winter *kind* would be the first thing it picks ahead of time. Should the
+  director choose the kind at autumn (from tension and how the year went), or should
+  the kind be rolled and the director only pace within it?
+- **One nemesis per run, or a succession of them?** If the nemesis is broken or
+  befriended in Era 2, does another clan take the role for Era 3, or is the late game
+  allowed to be quieter? (G1's "days between meaningful events" can tell us whether a
+  quiet Era 3 drags.)
