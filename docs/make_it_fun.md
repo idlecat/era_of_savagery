@@ -46,8 +46,8 @@ interruption feel earned ("I knew it").
   tribal knowledge, not omniscience, which quietly makes scouting valuable: better
   maps, better odds.
 - Phrasing and thresholds in config (`contract_log.json` `forecast` bands, zh); the
-  leader's temperament colours the *words*, never the number (see Open questions —
-  resolved there: an honest, auditable number; a characterful spin on top).
+  leader's temperament colours the *words*, never the number (see Decisions: an
+  honest, auditable number; a characterful spin on top).
 - Shown in the negotiation dialog and fed into `negotiation_ctx()` so the LLM leader
   argues from the same numbers. Size: small. Risk: low (read-only).
 
@@ -114,11 +114,16 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
 - Feast now (mood) vs. bank food.
 - Send a winter hunting party now (a contract with a forecast, A0) vs. keep everyone
   home by the fire.
-- The `director` controls how bad the winter gets, so the bet is real, not theater.
+- The `director` controls how bad the winter gets — it picks the winter *kind* when
+  autumn begins (see Decisions) — so the bet is real, not theater.
 
 ### B2. Winters differ
-- Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) drawn from
-  `config/events.json` with the director pacing them; year 3 must not equal year 1.
+- Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) as rows in
+  `config/events.json`; **the director picks the kind when autumn begins** (see
+  Decisions) and `hz` reads it to weight its winter weather rolls, cold and wolf
+  numbers — the per-season data it already reads. The kind stays hidden; B1 quotes 2–3
+  **signs** of it ("the geese left early"), and a no-repeat rule on `hz.year()` keeps
+  year 3 from equalling year 1.
 - The eclipse/festival events show the pattern to copy.
 
 ### B3. The frozen river (split out of B1: it is the big one)
@@ -155,8 +160,12 @@ those knobs, not new mechanics:
   then, `culture == "martial"` weighted. Not "the first clan to raid us": on the
   peaceful setting (`hz.level == "off"`, `rivals.gd` never raids) that would leave C2
   inert, and a face known from the first meeting reads better than one that appears
-  with the first raid. On the peaceful setting the nemesis escalates through demands,
-  insults at parley and rival claims on sites instead of raids. A `nemesis` flag on the
+  with the first raid. On the peaceful setting the nemesis escalates without raids —
+  with one code note: demands sleep on that setting *today* too (the demand roll sits
+  inside `_raids`, behind its `level == "off"` bail), while trespass anger
+  (`_trespass`) and hunter encounters (`_hunters`) still run. So peaceful escalation
+  means lifting the demand roll out of that bail, plus new `rivals.json` data for
+  parley insults and rival claims on sites. A `nemesis` flag on the
   clan, surfaced in `rivals.summary()`, settable by a game master; it biases *which*
   clan takes the director's allowed raid slots — pacing still decides *whether*.
 - Escalation stages in `config/rivals.json` keyed by `evo.era` and hostility: bolder
@@ -167,6 +176,11 @@ those knobs, not new mechanics:
   buy peace (tribute parley), or befriend/vassalize them. Bookend it with `inv.feat()`
   (first raid survived, the feud ended) — and note C1's ledger is what makes the
   nemesis a *person* who remembers the feud, so C2 lands after C1.
+- **Succession is reactive, never automatic** (see Decisions): a befriended or
+  vassalized nemesis stays won; a broken one is already benched
+  (`no_raids_after_beaten_days`). Only if G1 shows the late game dragging does a
+  successor rise, by the same data rule (worst relation then), introduced through C1's
+  ledger — the new chief quotes the old feud.
   Size: small–medium.
 
 ## D. The first ten minutes (decision fun)
@@ -323,15 +337,32 @@ B3 waits for evidence.
   tells endings apart by name (`victory_*` or `defeat`), so add a `kind`
   (`victory`/`defeat`/`absorbed`) to each ending in the config and read that instead
   of the prefix, rather than naming it `victory_merge`.
+- **The director authors winter.** When autumn begins it picks the winter kind from
+  the year's state (tension, deaths, food, last year's kind) — `pick_winter()` in the
+  same shape as its mercy gifts: state in, story out, deterministic and testable.
+  The kind is decided *before* B1 is posed but stays hidden; the dilemma quotes signs,
+  so the bet is against a fixed hidden fact and G1 can score the signs' hit rate the
+  way it scores the forecast. Why not roll the kind later and let the director only
+  pace within it: then B1's stakes are exactly the theater B1 exists to fix. (The
+  director is the documented LLM-GM seat, so choosing ahead of time is a small
+  promotion of it; A0's forecast must not leak the choice — it reads current threats
+  only.)
+- **Nemesis succession is reactive, not automatic.** Replacing a befriended nemesis
+  would punish the diplomatic game C1/C2 exist to make matter, so a won feud stays
+  won; a broken one is benched by `no_raids_after_beaten_days`. If — only if — G1's
+  "days between meaningful events" shows the late game dragging, a successor is
+  promoted by the same data rule and introduced through C1's ledger. The mechanism is
+  the director gaining a floor to match its cap: the cap stops pile-ups, a `bored()`
+  query (tension near zero for N days) stops boredom — the missing twin of `allow()`.
 
 ## Open questions
 
-- **Does the director really control winter?** B1's bet assumes the director decides
-  how bad winter gets, but today it only allows or refuses hardships as they roll;
-  B2's winter *kind* would be the first thing it picks ahead of time. Should the
-  director choose the kind at autumn (from tension and how the year went), or should
-  the kind be rolled and the director only pace within it?
-- **One nemesis per run, or a succession of them?** If the nemesis is broken or
-  befriended in Era 2, does another clan take the role for Era 3, or is the late game
-  allowed to be quieter? (G1's "days between meaningful events" can tell us whether a
-  quiet Era 3 drags.)
+No design forks remain — what's left are numbers the G1 baseline must set, and one
+playtest judgment:
+
+- the `min_gap` value (game-hours between posed dilemmas; the day-1 budget aside);
+- the final band values (near-miss %, famine-consequence %, the day-20 death band);
+- the Era-3 quiet threshold that promotes a successor nemesis — if the late game
+  doesn't drag, none is ever promoted;
+- whether the winter signs say enough without saying too much: G1 scores their hit
+  rate, but only a playtest says if the *words* land.
