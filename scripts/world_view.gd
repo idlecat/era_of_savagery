@@ -34,6 +34,9 @@ var drag_start: Variant = null # screen-space
 var mid_drag := false
 var cam: Camera2D
 var night: CanvasModulate
+var grade_mat: ShaderMaterial # full-screen seasonal colour grade (grade.gdshader)
+var grade_sat := 1.0
+var grade_con := 1.0
 var lights := {} # structure id -> PointLight2D
 var light_tex: GradientTexture2D
 var font: Font
@@ -104,6 +107,16 @@ func setup(s) -> void:
 	cam.make_current()
 	night = CanvasModulate.new()
 	add_child(night)
+	var grade_layer := CanvasLayer.new() # seasonal colour grade, under the vignette and the HUD
+	grade_layer.layer = 4
+	var grade_rect := ColorRect.new()
+	grade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	grade_mat = ShaderMaterial.new()
+	grade_mat.shader = load("res://shaders/grade.gdshader")
+	grade_rect.material = grade_mat
+	grade_layer.add_child(grade_rect)
+	add_child(grade_layer)
 	var vig := CanvasLayer.new()
 	vig.layer = 5
 	var vr := TextureRect.new()
@@ -301,6 +314,7 @@ func _process(delta: float) -> void:
 	_pan_keys(delta)
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
 	night.color = _sky_tint()
+	_grade_step(delta)
 	_sync_lights()
 	if sim.guardian and not sim.guardian.dead:
 		guardian_trail.push_front(sim.guardian.pos)
@@ -491,12 +505,57 @@ func _part_k(name: String) -> float:
 	var span := fposmod(float(w[1]) - a, 1.0)
 	return clampf(fposmod(sim.day_frac() - a, 1.0) / maxf(span, 0.001), 0.0, 1.0)
 
-## Time-of-day colour grading: warm golden dusk, blue night, pink dawn.
+## Time-of-day colour grading: warm golden dusk, blue night, pink dawn; seasons and
+## weather lay a mood over the whole day (fresh spring, amber autumn, gray storms).
 func _sky_tint() -> Color:
 	var c := Color.WHITE
 	if sim.is_day_part("dusk"): c = Color.WHITE.lerp(Color(1.0, 0.88, 0.74), sin(_part_k("dusk") * PI))
 	elif sim.is_day_part("dawn"): c = Color.WHITE.lerp(Color(1.0, 0.78, 0.82), sin(_part_k("dawn") * PI) * 0.8)
+	if sim.hz.on():
+		match sim.hz.season_idx():
+			0: c = c.lerp(Color(0.92, 1.0, 0.90), 0.16) # spring: faint fresh green
+			2: c = c.lerp(Color(1.0, 0.90, 0.76), 0.14) # autumn: amber
+		c = c.lerp(Color(0.86, 0.91, 1.0), sim.hz.snow * 0.4) # snow cover cools the light
+	match sim.hz.weather:
+		"rain": c = c.lerp(Color(0.80, 0.83, 0.88), 0.35)
+		"storm": c = c.lerp(Color(0.68, 0.71, 0.78), 0.5)
+		"blizzard": c = c.lerp(Color(0.82, 0.86, 0.94), 0.45)
+		"drought": c = c.lerp(Color(1.0, 0.93, 0.78), 0.25)
 	return c.lerp(Color(0.30, 0.34, 0.55), sim.night_amt * 0.85)
+
+## Ease the full-screen grade toward the season's and weather's mood; slow enough
+## that a change of weather feels like the sky turning, not a filter switching.
+func _grade_step(delta: float) -> void:
+	var sat := 1.05
+	var con := 1.03
+	if sim.hz.on():
+		match sim.hz.season_idx():
+			0:
+				sat = 1.08
+				con = 1.02
+			1:
+				sat = 1.10
+				con = 1.05
+			2:
+				sat = 1.09
+				con = 1.05
+			3:
+				sat = 0.88
+				con = 1.02
+	match sim.hz.weather:
+		"rain":
+			sat -= 0.15
+		"storm":
+			sat -= 0.25
+			con -= 0.03
+		"blizzard":
+			sat -= 0.2
+	sat -= sim.night_amt * 0.12
+	var k := minf(1.0, delta * 0.5)
+	grade_sat = lerpf(grade_sat, sat, k)
+	grade_con = lerpf(grade_con, con, k)
+	grade_mat.set_shader_parameter("saturation", grade_sat)
+	grade_mat.set_shader_parameter("contrast", grade_con)
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -1165,18 +1224,26 @@ func _draw_node(n) -> void:
 		_smoke(b - Vector2(0, 40 * n.sz), n.id)
 		return
 	match n.kind:
-		"tree":
-			if _sprite(("pine_%d" if n.id % 3 == 2 else "leaf_%d") % (n.id % 4) + _snowy(), b, n.sz): return
+		"tree": # a baked sprite has no shadow of its own; the hand-drawn fallback casts one
+			var tn := ("pine_%d" if n.id % 3 == 2 else "leaf_%d") % (n.id % 4) + _snowy()
+			if art != null and art.has(tn): _ell(b + Vector2(12 * n.sz, 4 * n.sz), 18 * n.sz, 7 * n.sz, SHADOW)
+			if _sprite(tn, b, n.sz): return
 		"bush":
-			if _sprite(("bush_full" if n.amount >= 5 else "bush_bare") + _snowy(), b): return
+			var bn := ("bush_full" if n.amount >= 5 else "bush_bare") + _snowy()
+			if art != null and art.has(bn): _ell(b + Vector2(4, 2), 13, 5, SHADOW)
+			if _sprite(bn, b): return
 		"stump":
-			if _sprite("stump" + _snowy(), b): return
+			var sn := "stump" + _snowy()
+			if art != null and art.has(sn): _ell(b + Vector2(2, 1), 7, 3.5, SHADOW)
+			if _sprite(sn, b): return
 		"carcass":
 			if n.from_deer and _sprite("deer_dead_%d_0" % (n.id % 8), b, 1.1): return
 		"deer":
 			if _beast_sprite("deer", "n%d" % n.id, b): return
 		"boulder":
-			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, clampf(n.amount / 40.0, 0.45, 1.0)): return
+			var bk := clampf(n.amount / 40.0, 0.45, 1.0)
+			if art != null and art.has("rock_%d" % (n.id % 3)): _ell(b + Vector2(8, 3), 22 * bk, 8 * bk, SHADOW)
+			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, bk): return
 	match n.kind:
 		"tree":
 			_draw_tree_shape(n, b)
@@ -1289,27 +1356,38 @@ func _draw_structure(s) -> void:
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
 	if not s.built and _draw_site_stage(s, b): return
+	# contact shadow for baked structure sprites (the hand-drawn fallbacks cast their own):
+	# draws the ellipse and reports whether the sprite exists, so the fallback path stays untouched
+	var spr_shadow := func(key: String, r: float) -> bool:
+		if art == null or not art.has(key): return false
+		_ell(b + Vector2(r * 0.3, r * 0.15), r * 1.15, r * 0.5, SHADOW)
+		return true
 	if s.built and s.type == "farm_plot":
 		var season: String = ["spring", "summer", "autumn", "winter"][sim.hz.season_idx()] if sim.hz.on() else "summer"
 		if _sprite("farm_" + season, b): return
 	var west_dock: bool = s.type == "fishing_dock" and D.river_info(s.pos)["n"].x < 0.0 # on the river's west side
-	if s.built and s.type == "fishing_dock" and _sprite(("dock_w" if west_dock else "dock") + _snowy(), b):
-		var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
-		ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
-		return
-	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
-		if _sprite(s.type + _snowy(), b):
-			if s.decor > 0: _decor(s, b, 18.0)
-			match s.type:
-				"smelter": _smoke(b - Vector2(-4, 36), s.id)
-				"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
+	if s.built and s.type == "fishing_dock":
+		var dk := ("dock_w" if west_dock else "dock") + _snowy()
+		if art != null and art.has(dk): _ell(b, 46, 14, SHADOW * 0.6)
+		if _sprite(dk, b):
+			var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
+			ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
 			return
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
+		if spr_shadow.call(s.type + _snowy(), float(sim.struct_r(s))):
+			if _sprite(s.type + _snowy(), b):
+				if s.decor > 0: _decor(s, b, 18.0)
+				match s.type:
+					"smelter": _smoke(b - Vector2(-4, 36), s.id)
+					"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
+				return
 	match s.type:
 		"burial_ground": _burial_ground(s, b)
 		"hut", "large_hut":
 			var big: bool = s.type == "large_hut"
 			var r := 27.0 if big else 20.0
-			if s.built and _sprite("%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()], b):
+			var home_key := "%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()]
+			if s.built and spr_shadow.call(home_key, r) and _sprite(home_key, b):
 				if s.decor > 0: _decor(s, b, r)
 				if sim.has_tech("fire"): _smoke(b - Vector2(0, (32 if s.style == 1 else 36) + (6 if big else 0)), s.id)
 				if s.reno: _scaffold(b, r)
@@ -1728,6 +1806,8 @@ func _beast_sprite(kind: String, key: String, b: Vector2, sc := 1.1) -> bool:
 	var name := "%s_idle_%d_0" % [kind, di]
 	if moving.get(key, false): name = "%s_walk_%d_%d" % [kind, di, int(anim_t * 10.0 + key.hash() % 7) % 6]
 	if attacking.has(key) and art.has("%s_attack_%d_0" % [kind, di]): name = "%s_attack_%d_%d" % [kind, di, int(anim_t * 8.0) % 4]
+	if not art.has(name): return false
+	_ell(b + Vector2(2, 1), 12, 4.5, SHADOW)
 	return _sprite(name, b, sc)
 
 ## Pre-rendered villager: 8 facings, idle / walk / work frames, clothes tinted per person.
