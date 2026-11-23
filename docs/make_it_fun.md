@@ -87,6 +87,12 @@ Not every hiccup deserves pausing the player:
   same event with `story.pose()`. The leader picks the option the way the Steward
   already decides routine matters (`sim._decide_routine`, `steward_routine`),
   weighted by archetype; the player only reads the outcome.
+- Two wrinkles from the code: `_decide_routine` only sees `sim.DILEMMAS` and requires a
+  Steward, so the contract side uses the *pattern*, not the function — the leader
+  resolves the roll inside `contract_system` without ever posing (no pause, no queue);
+  a GM-posed copy still needs an owner in `sim.event_def()`'s routing. And
+  `story.holds()` reads only sim state, so contract-scoped `when` keys (`progress`)
+  are checked by the roller itself — `holds()` and `COND_TYPES` stay untouched.
 - Answering pi's question: not `reactions.json`. Reactions are people's *bodily*
   responses to a happening (cover, flee, aid, firefight), sharing one verb set; A2's
   events are *decisions with costs*, which is what the dilemma format is. They
@@ -144,9 +150,25 @@ own item with its own tests, not as a rider on B1. Size: large.
   is what the successor *inherits*, which is the drama.
 
 ### C2. One horizon threat at a time
-- Let one clan escalate across eras (raids grow, then demands, then war) while the
-  others stay background — drama needs a face. Config: a "nemesis" flag in
-  `config/rivals.json` with escalation stages gated by `evo.era` and relation.
+Drama needs a face; today all clans roll the same raid dice. Grounding from the code:
+clans already carry `era` (it styles their village and prices their stone), raids scale
+with relation-driven `_hostility`, each clan has its own `raid_t`, demands precede
+raids, and a "break" war buys `no_raids_after_beaten_days`. C2 is a pacing layer over
+those knobs, not new mechanics:
+- The nemesis is chosen **by data, once**: the first clan to raid us (or the worst
+  relation at first contact; `culture == "martial"` weighted). A `nemesis` flag on the
+  clan, surfaced in `rivals.summary()`; the flag biases *which* clan takes the
+  director's allowed raid slots — pacing still decides *whether* (the director is not
+  bypassed).
+- Escalation stages in `config/rivals.json` keyed by `evo.era` and hostility: bolder
+  demands, bigger raid caps, and by Era 3 a war band that comes for the village itself.
+  The other clans get a raid-roll multiplier — background, not switched off (allies,
+  trade and parley still matter; a world with one actor is as flat as one with none).
+- The arc must close through **existing endings**: break them (war contract `break`),
+  buy peace (tribute parley), or befriend/vassalize them. Bookend it with `inv.feat()`
+  (first raid survived, the feud ended) — and note C1's ledger is what makes the
+  nemesis a *person* who remembers the feud, so C2 lands after C1.
+  Size: small–medium.
 
 ## D. The first ten minutes (decision fun)
 
@@ -155,6 +177,13 @@ own item with its own tests, not as a rider on B1. Size: large.
   for act two. (`D.FINDS` placement + `contracts` kind "seek" already exist.)
 - **D2.** A day-1 micro-dilemma (a sick child, a strange trail) via a `story` trigger
   `{day: 1}` so the pause-and-decide rhythm starts immediately.
+- **D1/D2 and the pause ceiling** (open question above): a day-1 pause is not a
+  violation — the first pauses teach the game's language, so the opening day gets a
+  front-loaded budget (`min_gap` smaller on day 1, or the ceiling counted from day 2
+  on). What D2 must be is *one* pause that teaches a real tradeoff (spend the yarrow
+  on the sick child, or save it), and the last scripted pause of its day. D1 isn't a
+  pause at all — a seek contract is the signature mechanic running free, which is
+  exactly the point of putting it in minute one.
 
 ## E. Failure is a story (all three)
 
@@ -218,6 +247,14 @@ play (that is the measurable form of "decisions matter"):
   **hoarder**, **feaster**. Skill sensitivity = how far hoarder and feaster land from
   the steward baseline and from each other. If something the policy needs has no verb,
   that is a GM-surface bug to fix, not a harness hack.
+- **Policies must also run the signature loop** — seal contracts, answer emergencies —
+  or "interrupts per run" and forecast calibration measure nothing. The verbs exist
+  but as a 4-step chain inside the HUD (`negotiation_ctx` → `Persona.propose` →
+  `sanitize` → `create`; interrupts via `contracts.resolve`; dilemmas via
+  `sim.resolve_event(id, idx)`). Extract the seal chain into one named operation
+  (`contracts.seal_offline(kind, directive)` — leader picked the way the HUD picks)
+  so the HUD, the harness and a game master share it; the steward policy is the test
+  of whether it is really one verb.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
@@ -227,27 +264,37 @@ play (that is the measurable form of "decisions matter"):
 > deaths describes a floor that always triggers and never bites. Replaced with the
 > two-tail bands above; the honest goal is that scarcity is *felt* in most runs, *paid*
 > in some, and escapable by good play.
+>
+> **pi:** on Claude's note that the bands should be set relative to the steward
+> baseline once measured — half-agreed. The baseline measures where the game *is*;
+> the bands state where it *should be*. If the baseline lands outside a band, that is
+> a finding (the distance is the tuning work), and only a band *no policy can reach*
+> gets revised — a band moved to match the baseline isn't a target, it's a surrender.
 
 ## Order of work
 
 | # | Item | Size | Feeds |
 |---|------|------|-------|
+| 0 | G1 skeleton: baseline metrics + steward policy | small | everything (inputs) |
 | 1 | A0 forecast + A1 leader's field log | small | anticipation |
 | 2 | B1 autumn decision | medium | anticipation |
 | 3 | C1 rival chief as a character | medium | attachment |
-| 4 | D1/D2 opening minutes | small | decision |
-| 5 | B2 varied winters | small–medium | anticipation |
-| 6 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment |
-| 7 | G1–G3 metric harness | medium | everything (tuning) |
+| 4 | C2 nemesis clan | small–medium | attachment, anticipation |
+| 5 | D1/D2 opening minutes | small | decision |
+| 6 | B2 varied winters | small–medium | anticipation |
+| 7 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment |
 | 8 | F player-set challenges | small–medium | attachment, replay |
 | 9 | E1 last stand, E2 heritage | medium | all |
-| 10 | B3 frozen river | large | anticipation, exploration |
+| 10 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) |
+| 11 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration |
 
-1–4 convert the proudest systems (contracts, seasons, rivals) from mechanisms into
-stories; do those first. But land the **G1 skeleton early** (a minimal version: pauses
-per game-hour, interrupts per run, near-miss counts) *before* the pause-adding items
-arrive — the pause ceiling and the near-miss bands are inputs to B1/D2/F/C1/E1, not
-afterthoughts, and the full harness (item 7) then only grows the metric list.
+Row 0 lands before anything that adds a pause: the pause ceiling, the near-miss bands
+and the forecast-calibration floor are all *inputs* measured against the steward
+baseline, not afterthoughts — the skeleton is just the metric counters plus the
+steward policy and its dilemma auto-picker, and item 10 grows it into the full canary
+(more policies, calibration, CI, director tuning). 1–5 convert the proudest systems
+(contracts, seasons, rivals) from mechanisms into stories; C2 rides on C1's ledger;
+B3 waits for evidence.
 
 ## Definition of done per item
 
@@ -260,15 +307,12 @@ afterthoughts, and the full harness (item 7) then only grows the metric list.
 
 ## Open questions
 
-- ~~**Pacing between pauses.**~~ **Resolved: no new verb now** (pi's position; A0/A1
-  give the waiting something to read, G1 counts the gaps). The game is pause-and-decide; what does the player *do*
-  in the minutes between decisions? A1/A0 give them something to read and watch, but
-  is that enough, or do we need a light, optional verb while time runs (e.g. pointing
-  the Steward at a priority)? Not unit micro — that's a not-goal.
-  > **pi:** my instinct: ship A0/A1 and *then* judge — watching a crew you chose, led
-  > by a character who narrates, is what AoE2 spectators already do. A Steward-priority
-  > verb is the right v2 candidate because `improve.order()` and `policy.set_choice()`
-  > already exist as verbs; don't build it speculatively.
+- ~~**Pacing between pauses.**~~ **Resolved: no new verb now.** Ship A0/A1 and judge
+  then — watching a crew you chose, led by a character who narrates, is what the
+  waiting needs, and G1 counts the gap lengths so the judgment is data, not vibes. A
+  Steward-priority verb stays the v2 candidate (`improve.order()` and
+  `policy.set_choice()` already exist as verbs — don't build it speculatively); not
+  unit micro, that's a not-goal.
 - **How many dilemmas is too many?** B1, D2, F, C1 and E1 all add pauses.
   > **pi (proposed resolution):** from the code — dilemmas already FIFO-queue
   > (`story.pending`, `cult.pending`, `rivals.pending`, `folk.pending`, `nat.pending`,
