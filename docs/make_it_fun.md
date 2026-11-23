@@ -244,13 +244,25 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
   the Hunt; names in config, culture packs rename them). Two, not three: five skills ×
   three ranks is fifteen trials to write, translate and balance, and the player has to
   learn them all; ten is plenty, and a Master stays rare. Routine XP stops at Lv 4;
-  the Proven trial opens Lv 5–7, the Master trial Lv 8–10. Each trial is a deed from
-  data:
-  - forage: lead a hunt that brings down a wolf or bigger;
-  - craft: be lead builder of a longhouse (or a masterpiece, `folk` art);
-  - lore: heal someone near death, or lead research to a breakthrough;
-  - combat: stand in a defence that drives off a raid;
-  - trade: seal a treaty or a caravan bargain.
+  the Proven trial opens Lv 5–7, the Master trial Lv 8–10. A trial opens only when
+  routine XP has filled to its ceiling (the sheet says so), so the deed is the door,
+  not a clock. Each trial is a deed from data — Proven is *you proved yourself under
+  pressure*, Master is *you changed the tribe*:
+  - forage: Proven — lead a hunt that brings down a wolf or bigger; Master — lead one
+    that brings down a saber-tooth tiger.
+  - craft: Proven — be lead builder of a longhouse, or make a masterpiece (`folk`
+    already rolls them); Master — teach: a student working beside you finishes their
+    own Proven trial (the same teacher credit powers H3's teaching).
+  - lore: Proven — heal someone near death, or lead research to a breakthrough;
+    Master — lead the research that opens a new era.
+  - combat: Proven — stand in a defence that drives off a raid (present and fighting
+    when the war band gives up and flees); Master — lead a war contract to victory.
+  - trade: Proven — seal a treaty or a caravan bargain; Master — bring a clan to an
+    alliance or vassalage.
+- One trial per rank is enough, and no more gates above Master: a Master's continuing
+  game is teaching (H3), not more trials, and past Master the levels stay quiet
+  numbers feeding the per-level effects that already exist (combat DEF, the trader's
+  haggle, masterpiece odds) — no third rank, no new curve to tune.
 - Trials are usually run **through a contract**, so the player sets them up: pick the
   candidate as leader, read the odds (A0: "with Ama leading, one in three we come back
   hurt"), and accept that a failed trial can cost a wound or worse. The green hunter vs.
@@ -266,7 +278,9 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
   master trader trade 5 (`master_lv`), the eclipse's wise one lore 3. With the cap at 4,
   everything at 3 stays reachable by work alone, and trade 5 now needs a Proven trader,
   which is right. As ranks land, those thresholds should name a rank (`"rank":
-  "proven"`) instead of a number, so retuning the curve can't silently move them.
+  "proven"`) instead of a number, so retuning the curve can't silently move them —
+  including `unit_def`'s Centurion Aura (a hardcoded `combat >= 5`) and the two HUD
+  reads of Lv 5 (the unlock text and the blue column tint).
 
 ### H2. A rank-up is an occasion; a level-up is quiet
 - A rank-up gets an initiation by the fire (the `folk` festival/ritual pattern), a title
@@ -279,6 +293,12 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
 - A rank lets the person do something new: lead a war party, tame aurochs, teach. Some
   things the tribe wants **need a master** (I4's grand altar needs a Master Builder,
   bronze a master smith), so having one is a goal with a payoff.
+- **Ranks absorb today's Lv-5 "unlocks", and must make them real.** `D.SKILL_UNLOCKS`
+  already promises "Beast Taming", "Megalithic & Bronze Craft", "Totem Miracles" at
+  Lv 5, but only the Centurion Aura has a hook in the rules; the rest are labels on a
+  log line. The Proven rank's unlock list replaces that table outright: each entry
+  becomes a real verb or is cut — one honest system instead of two promises that
+  disagree.
 - **Know-how lives in the family line** (one person = one family line). A master can
   teach: people working beside them learn that skill faster, and a new line grown from
   theirs starts part-way up it. If a master dies before anyone else holds the rank, it
@@ -288,6 +308,9 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
 ### H4. Shape in code
 - `config/ranks.json`: per skill, ranks `{cap_lv, title, trial (a condition),
   rewards (effects in the `{stat, mul|add}` format, unlocks)}`; texts with zh.
+  `D.SKILL_UNLOCKS` folds into these rows (one unlock list per rank, no second
+  table), and the rules that read a level (`healer_lore`, `skilled_lv`, `master_lv`,
+  the Centurion Aura) read a `sim.rank(u, skill)` query instead of a number.
 - New state: a per-person **deed record** (kills by kind, contracts led, masterpieces,
   heals) that trials are checked against — unit-scoped condition keys (new
   `COND_TYPES` entries, checked by a `ranks` helper, like A2's contract-scoped keys).
@@ -310,9 +333,11 @@ in the game, and so should **where** and **when** it goes up (I2, I3).
   in all. Each answers a pressure the game already makes (raids, winter, sickness,
   lore, trade) and has a cost or trade-off: where it stands, what it uses, what it
   excludes. No building that is just "+5% of something".
-- **Upgrades before new types.** Palisade → stone wall, totem shrine → temple, large
-  hut → longhouse: the camp visibly grows up instead of sprawling (`sim.upgrade(id, to)`
-  and `rules.json` "upgrades" exist; era styles via `D.STYLED` exist).
+- **Upgrades before new types.** Palisade → stone wall, totem shrine → temple → grand
+  altar, large hut → longhouse: the camp visibly grows up instead of sprawling
+  (`sim.upgrade(id, to)` and `rules.json` "upgrades" exist — hut → large hut and
+  shrine → altar are already rows there, so the temple slots into a chain that
+  exists; era styles via `D.STYLED` exist).
 - **No new resources** (the not-goal): costs use wood, stone, copper/tin, goods, lore.
 - **No per-building management**: buildings work by being there and by who lives near
   them, as today. No worker slots, no queues, no upkeep menus.
@@ -322,37 +347,56 @@ in the game, and so should **where** and **when** it goes up (I2, I3).
 
 ### I2. Where it's built matters
 Every spot is a trade-off the player can read, built from the map's real geography
-(rivers, fords, flood band, land kind, regions) rather than a hidden bonus grid. The
+(rivers, fords, the flood band, the wall) rather than a hidden bonus grid. The
 map has no elevation (the "hills" ores use are only far-off spots), so nothing here may
 assume high ground.
-A short list of named **site factors** does all of it:
-- **The river bank** — fertile and close to fish and water, but inside the spring flood
-  band, where floods already knock buildings down. Fields there grow more; huts and
-  granaries there are a gamble. The best land is the riskiest. Today the Great Flood
-  knocks down whatever is within a hardcoded `river_dist < 220` (`sim.gd`), not the
-  band the ghost would show; both must read one flood-band rule in config, or the
+**Four site factors** are all a player ever has to learn (the eight-factor draft was a
+syllabus, not a choice); each shows one face in the ghost's words:
+- **The river band** — one factor, two faces. Inside the spring flood band, fields
+  grow more and fish and water are close, but floods knock buildings down (the silt
+  feed `nat.food_mult` and the flood damage already exist). The best land is the
+  riskiest. Today the band is six numbers that can disagree: the drawn `flood_half()`
+  (peaks at river 46 + 110), the spring flood's damage radii (170 buildings, 160 wild
+  plants, 130 people) and the Great Flood's hardcoded 220/260 (`sim.gd`). One band
+  width in config — ghost, spring flood and Great Flood all derive from it — or the
   placement warning lies.
 - **Inside or outside the wall.** The palisade's size is chosen (`s.size`) and costs
   with it: a big ring is expensive and slow, a tight one leaves the fields, docks and
   pens outside. Raiders go for what's outside first (food in an outer granary, the
   pen's oxen); a wall is a decision about what you're willing to lose. `sim.inside_wall`
   exists; what's new is raid targeting: today a raid marches on `D.VILLAGE` (or an
-  outpost), so "outside first" is a rule `rivals.launch_raid` has to learn.
+  outpost), so "outside first" is a rule `rivals.launch_raid` has to learn — and it
+  stays one target choice, because walls block no one's feet today (`inside_wall` is a
+  DEF bonus, not a fence): raiders *prefer* the undefended granary outside, take it
+  (`rivals.steal` already exists, and the thief turns home) and usually leave; only
+  C2's big war band goes for the village itself. No pathing, no gate AI; I4's Gate is
+  one place to stand, not a door simulation.
 - **Packed or spread.** A tight camp is cheap to wall and quick to walk, and burns
   together; a spread one is safe from fire and hard to defend. This needs one new rule:
   today fire reaches buildings only from burning trees (`nature.gd`, `building_radius`)
   or a lightning strike on one building; a burning building must also set neighbours
   within a config radius alight. That rule, not a placement bonus, is what makes
-  spacing a choice.
-- **Chokepoints and sight.** Rivers mean raiders come over fords (`D.FORDS`,
-  `D.route()`): a lookout or tower at the ford sees them a day early, one in the middle
-  of the village sees them at the door.
-- **Close to the work.** Distance is already walking time (the granary as a drop-off
-  near the fields); keep that the main pull, so where people live and work shapes the
-  layout naturally.
-- **Near people, not near buildings.** Auras work on the people around them, as the
-  bonfire and weapon rack do now — no "+10% next to a temple" adjacency puzzles. A
-  temple matters because the village gathers there, not because of its neighbours.
+  spacing a choice — and it is cheap because its answers exist: a burning building is
+  the wildfire state on a structure (the `firefight` reaction already has
+  `near_building` and knows to run and beat out flames), and the `burns` flag (I6)
+  says which types catch.
+- **Close to the work and the ford.** Distance is already walking time (the granary as
+  a drop-off near the fields) — keep that the main pull, so where people live and work
+  shapes the layout naturally. Fords fold into the same measure (`D.FORDS`,
+  `D.route()`): raiders cross there, and a tower near one is the single building whose
+  whole value is its place — it sees them a day early and feeds A0's forecast; a tower
+  in the middle of the village sees them at the door.
+
+Keep both new rules (fire spread and raid targeting): each is one rule, and each makes
+a *different* factor real — spacing and the wall. If one must go, fire spread goes
+first: fire already reaches buildings from burning trees, while raid targeting carries
+the bigger Era-2/3 payoff and C2 leans on it.
+
+Two non-factors keep it honest: auras work on the **people around them**, as the
+bonfire and weapon rack do now — no "+10% next to a temple" adjacency puzzles; a
+temple matters because the village gathers there. And land kind stays about the wild
+(herds, weather, wildfire chances) — the fertility story belongs to the river band, so
+no per-tile soil bonus.
 
 The placement ghost shows the site's value and risk in words, from the same factors
 ("Fertile river soil: fields grow half again as much. Flood land: about one spring in
@@ -361,10 +405,13 @@ so the Steward lays out a sensible camp when the player doesn't, and a game mast
 gets `sim.site_value(type, pos)`.
 
 **The Steward plays it safe.** If the Steward's layout were as good as the best one,
-placing buildings yourself would be pointless. So the Steward is sound but cautious: it
-never builds in the flood band, always walls the granary in, keeps fire gaps. The bold
-layouts — fields on the river bank, a tight camp, a tower out at the ford — are the
-player's to choose, and that's where the reward is.
+placing buildings yourself would be pointless. Today it already is cautious by
+construction: `improve.spot()` searches rings around the village, keeps a `gap` between
+buildings and never comes within `wet_reach()` of the river — and it never builds a
+palisade at all (walls are not in the improvements list; they are the player's move or
+a settle contract's). Keep that shape: sound but never bold — no river-band fields,
+no tower out at the ford. The bold layouts are the player's to choose, and that's
+where the reward is.
 
 ### I3. When it's built matters
 - **Seasons.** Building in deep winter is slow (snow, short days, `beds.day_only`);
@@ -391,7 +438,7 @@ player's to choose, and that's where the reward is.
 | 2 | Temple (shrine → temple) | lore, morale | rituals, festivals, rank initiations; the centre the village gathers round |
 | 3 | Stone wall + towers (palisade upgrade) | Era-3 raids | holds against C2's war band if up in time; how much it encloses is the choice |
 | 3 | Trading post | trade | caravans come more often and pay better (`rivals` traders); by the road or ford they arrive on |
-| 3 | Grand altar (temple → grand altar; exists today as its own type) | legacy | the era's wonder, already Victory by Wisdom's piece; now an upgrade of the temple that needs a Master Builder (H3) |
+| 3 | Grand altar (temple → grand altar) | legacy | the era's wonder, already Victory by Wisdom's piece; the shrine → altar upgrade is already a `rules.json` row, so the temple slots into a chain that exists — the new part is the Master Builder requirement (H3) |
 
 No separate megalith: the grand altar already is the Era-3 wonder (Yinglong, Victory
 by Wisdom), so a second wonder would compete with it. Making it the end of the
@@ -412,9 +459,10 @@ through the eras instead of three unrelated ones.
   (`art_baker.gd`, bump `ART_VERSION`) with the procedural fallback.
 - `improve.gd` (the Steward's layouts) learns the new types from config, so the camp
   also grows when the player doesn't micromanage it.
-- Site factors are a small set of named verbs in code (`river_bank`, `flood_band`,
-  `in_wall`, `crowding`, `near_ford`, `land`, `walk_to`), each building's
-  config picks and weights them (`{"site": {"flood_band": {"food": 1.5, "risk": ...}}}`),
+- Site factors are a small set of named verbs in code (`river_band`, `in_wall`,
+  `crowding`, `near_ford`, `walk_to` — one per factor above, `near_ford` used by
+  towers), each building's config picks and weights them
+  (`{"site": {"river_band": {"food": 1.5, "risk": ...}}}`),
   and their texts are config with zh. One function, `sim.site_value(type, pos)`,
   returns `{factors, risks}` for the ghost, the Steward and a game master.
 - The building-type lists written into the code (what lightning can strike in
@@ -496,7 +544,7 @@ distance is the tuning work); only a band *no policy can reach* gets revised.
 | 9 | I structures to config, then Era-1/2 buildings and upgrades | medium | builder |
 | 10 | F player-set challenges | small–medium | attachment, replay |
 | 11 | E1 last stand, E2 heritage | medium | all |
-| 12 | I Era-3 buildings (walls/towers, trading post, megalith) | medium | builder, C2, H |
+| 12 | I Era-3 buildings (walls/towers, trading post, temple → grand altar line) | medium | builder, C2, H |
 | 13 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) |
 | 14 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration |
 
@@ -507,7 +555,7 @@ steward policy and its dilemma auto-picker, and item 13 grows it into the full c
 (more policies, calibration, CI, director tuning). 1–5 convert the proudest systems
 (contracts, seasons, rivals) from mechanisms into stories; C2 rides on C1's ledger;
 B3 waits for evidence. Era-3 buildings come after C2 and H, which give the walls
-something to stop and the megalith a master to build it.
+something to stop and the grand altar a master to build it.
 
 ## Definition of done per item
 
@@ -561,12 +609,14 @@ something to stop and the megalith a master to build it.
 
 ## Open questions
 
-No design forks remain — what's left are numbers the G1 baseline must set, and one
-playtest judgment:
+No design forks remain — what's left are numbers the G1 baseline must set, and two
+playtest judgments:
 
 - the `min_gap` value (game-hours between posed dilemmas; the day-1 budget aside);
 - the final band values (near-miss %, famine-consequence %, the day-20 death band);
 - the Era-3 quiet threshold that promotes a successor nemesis — if the late game
   doesn't drag, none is ever promoted;
 - whether the winter signs say enough without saying too much: G1 scores their hit
-  rate, but only a playtest says if the *words* land.
+  rate, but only a playtest says if the *words* land;
+- whether four site factors read on the ghost without a tutorial — the fire gap is the
+  candidate to cut if not (its rule is invisible until the first burn).
