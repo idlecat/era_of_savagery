@@ -26,6 +26,21 @@ nothing fun gated on a configured LLM.
 The signature mechanic is currently the least dramatic phase: a progress % and substate
 text between interruptions.
 
+### A0. Read the odds before you seal — prerequisite for anticipation
+You can only anticipate what you can read. Before sealing, the leader states the risk
+in plain words, from data: *"Wolves were seen past the ford. One in four we come back
+hurt."* This turns sealing into a bet rather than a click, and makes every later
+interruption feel earned ("I knew it").
+- A pure query over state the sim already has: known predators/raiders near the route
+  (`D.route()` waypoints), season and weather (`hz.summary()`), crew hp/skill, distance,
+  the `director`'s current tension cap. Returns `{risk: 0..1, reasons: [...]}`; a
+  `contracts.forecast(plan)` that a game master can call too.
+- Phrasing and thresholds in config (`contract_log.json` `forecast` bands, zh); the
+  leader's temperament colours it (a boastful leader understates the risk, a cautious
+  one overstates it — a tell the player learns).
+- Shown in the negotiation dialog and fed into `negotiation_ctx()` so the LLM leader
+  argues from the same numbers. Size: small. Risk: low (read-only).
+
 ### A1. The leader's field log — first to build
 Milestone and flavor lines emitted during execution, chosen from data by
 **archetype x trigger**:
@@ -36,6 +51,11 @@ Milestone and flavor lines emitted during execution, chosen from data by
 - Emitted through `add_log(..., "contract")` + a `sim.spoke(unit, text)` bubble at the
   leader occasionally. Target: something to read every ~30 s of contract time.
 - Offline by construction (pure data). Size: small. Risk: low.
+- Today the contract writes ~13 log lines in its whole life, almost all at seal,
+  interrupt and end (`contract_system.gd`); the middle is silent. Budget the lines:
+  at most one per trigger per contract, and a cooldown, or the chronicle drowns.
+- The log should call back to the forecast (A0): "No sign of the wolves yet." / "The
+  wolves found us, as I feared."
 
 ### A2. Small interruptions resolve through character
 Not every hiccup deserves pausing the player:
@@ -56,15 +76,20 @@ Not every hiccup deserves pausing the player:
 
 ## B. Winter as a planned boss fight (anticipation)
 
-### B1. The autumn decision
+### B1. The autumn decision (without ice)
 One big dilemma when autumn begins (a `story.holds()` trigger on season + day, config in
 `dilemmas.json`), posing bets on how bad winter is:
 - Slaughter the herd for meat vs. keep the oxen (touches `sim.oxen`, `_herd()`).
 - Feast now (mood) vs. bank food.
-- A winter hunt across the **frozen river**: while `hz.winter()`, fords become
-  crossable anywhere (`D.route()` gains an ice mode) — new ground, new prey, thin ice
-  as a real risk (a `hz` hazard keyed to crossing events).
+- Send a winter hunting party now (a contract with a forecast, A0) vs. keep everyone
+  home by the fire.
 - The `director` controls how bad the winter gets, so the bet is real, not theater.
+
+### B3. The frozen river (split out of B1: it is the big one)
+While `hz.winter()`, rivers freeze and can be crossed anywhere: new ground, new prey,
+thin ice as a real risk. Valuable, but it changes `D.route()`, region logic
+(`same_side`, `home_side`) and every caller that assumes water blocks; treat it as its
+own item with its own tests, not as a rider on B1. Size: large.
 
 ### B2. Winters differ
 - Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) drawn from
@@ -74,8 +99,9 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
 ## C. Rivals as recurring characters (attachment)
 
 ### C1. The rival chief is a person
-- Give each clan's chief a name, archetype and a memory of every parley, raid and slight
-  (surface the existing `grudges`); the chief appears with a voice in parley dilemmas
+- Chiefs already have a name and epithet (`rivals.json`, `rivals.parley_ctx`). What's
+  missing is memory: a list of every parley, raid, gift and slight (surface the
+  existing `grudges`), quoted back in parley ("You came with spears last spring"); the chief appears with a voice in parley dilemmas
   (`rivals` events already run through `story.dilemma_view()`).
 - Chiefs age and die: a successor with a different temperament resets the diplomatic
   game mid-run (a `rivals.json` event, offline via `rivals.chief_reply()`).
@@ -95,8 +121,10 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
 
 ## E. Failure is a story (all three)
 
-- **E1.** On defeat, `llm.saga()` (offline: persona) tells the tribe's legend from the
-  feat list and chronicle.
+- **E1.** ~~Defeat saga~~ — already exists (`legacy.saga_ctx("defeat")`,
+  `hud.gd` saga dialog). What's left is making defeat *rarer and later than* a slow
+  death: a "last stand" dilemma when the tribe drops below a few people (flee, merge
+  with a friendly clan, hold), so the ending is a choice.
 - **E2.** Heritage hook into the next run: the new world remembers them — a landmark,
   ruins of the old village as a find, or a rival clan descended from survivors.
   Cheap because scenarios are data (`scenarios/*.gd` + `D.LANDMARK_KINDS`).
@@ -128,15 +156,16 @@ The sim is deterministic, headless and config-driven with a full test harness �
 
 | # | Item | Size | Feeds |
 |---|------|------|-------|
-| 1 | A1 leader's field log | small | anticipation |
-| 2 | B1 autumn decision (+ ford-ice mode) | medium | anticipation |
+| 1 | A0 forecast + A1 leader's field log | small | anticipation |
+| 2 | B1 autumn decision | medium | anticipation |
 | 3 | C1 rival chief as a character | medium | attachment |
 | 4 | D1/D2 opening minutes | small | decision |
 | 5 | B2 varied winters | small–medium | anticipation |
 | 6 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment |
 | 7 | G1–G3 metric harness | medium | everything (tuning) |
 | 8 | F player-set challenges | small–medium | attachment, replay |
-| 9 | E1/E2 defeat legend + heritage | medium | all |
+| 9 | E1 last stand, E2 heritage | medium | all |
+| 10 | B3 frozen river | large | anticipation, exploration |
 
 1–4 convert the proudest systems (contracts, seasons, rivals) from mechanisms into
 stories; do those first.
@@ -149,3 +178,14 @@ stories; do those first.
   and its state is readable from a `summary()`/`world_ctx()`-style view.
 - `check_invariants()` grows a rule where a new coupling could drift.
 - A test covers the trigger/resolution path (and the metric harness covers balance).
+
+## Open questions
+
+- **Pacing between pauses.** The game is pause-and-decide; what does the player *do*
+  in the minutes between decisions? A1/A0 give them something to read and watch, but
+  is that enough, or do we need a light, optional verb while time runs (e.g. pointing
+  the Steward at a priority)? Not unit micro — that's a not-goal.
+- **How many dilemmas is too many?** B1, D2, F, C1 and E1 all add pauses. G1 should
+  measure pauses per game-hour and we should pick a ceiling before building them.
+- **Should the forecast lie?** A temperament-coloured forecast (A0) is a fun tell, but
+  a forecast that's wrong too often teaches players to ignore it.
