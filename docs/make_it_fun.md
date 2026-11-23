@@ -251,8 +251,10 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
   - forage: Proven — lead a hunt that brings down a wolf or bigger; Master — lead one
     that brings down a saber-tooth tiger.
   - craft: Proven — be lead builder of a longhouse, or make a masterpiece (`folk`
-    already rolls them); Master — teach: a student working beside you finishes their
-    own Proven trial (the same teacher credit powers H3's teaching).
+    already rolls them); Master — lead the build crew in which another crew
+    member passes their own Proven trial. Using the contract crew as "beside you"
+    needs no new state: the crew list is already the record of who worked with whom,
+    and H3's teaching bonus reads the same crew.
   - lore: Proven — heal someone near death, or lead research to a breakthrough;
     Master — lead the research that opens a new era.
   - combat: Proven — stand in a defence that drives off a raid (present and fighting
@@ -293,6 +295,19 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
 - A rank lets the person do something new: lead a war party, tame aurochs, teach. Some
   things the tribe wants **need a master** (I4's grand altar needs a Master Builder,
   bronze a master smith), so having one is a goal with a payoff.
+- **What each rank unlocks** (replacing `D.SKILL_UNLOCKS`; every entry is a gate on
+  something that exists, so each is one check, not a new system):
+
+  | Skill | Proven | Master |
+  |-------|--------|--------|
+  | forage | the aurochs pen fills only while a Proven forager tends it (taming) | hunts they lead steer clear of known dens and see tracks first: A0's odds for their crew improve |
+  | craft | upgrades (`sim.upgrade`) need a Proven crafter as lead builder; the smelter works while one lives | the stone wall and the grand altar need a Master Builder |
+  | lore | heals as a healer (`healer_lore`) and leads research at full rate | while they live, what they know can't be lost (`evo` oral loss) |
+  | combat | the Centurion Aura (exists, `sim.gd`) | may lead a war contract |
+  | trade | may go as envoy or caravan haggler at the master trader's rate (`master_lv`) | treaties they seal hold longer |
+
+  The craft row is the stake H3 wants: if the tribe's only Proven crafter dies, bronze
+  stops until someone else proves themselves.
 - **Ranks absorb today's Lv-5 "unlocks", and must make them real.** `D.SKILL_UNLOCKS`
   already promises "Beast Taming", "Megalithic & Bronze Craft", "Totem Miracles" at
   Lv 5, but only the Centurion Aura has a hook in the rules; the rest are labels on a
@@ -371,6 +386,12 @@ syllabus, not a choice); each shows one face in the ghost's words:
   (`rivals.steal` already exists, and the thief turns home) and usually leave; only
   C2's big war band goes for the village itself. No pathing, no gate AI; I4's Gate is
   one place to stand, not a door simulation.
+- *Is that enough Era-2 payoff for a wall?* Yes, if what's behind it is safe: when every
+  store is inside, raiders must fight the people on the wall (who have its DEF bonus)
+  to steal anything, and a raid that can't steal gives up sooner (the thief's turn-
+  home rule, triggered by losses instead of loot). The payoff is measurable: food lost
+  per raid, walled vs. unwalled, in G1. The gate and towers add to it; they don't carry
+  it.
 - **Packed or spread.** A tight camp is cheap to wall and quick to walk, and burns
   together; a spread one is safe from fire and hard to defend. This needs one new rule:
   today fire reaches buildings only from burning trees (`nature.gd`, `building_radius`)
