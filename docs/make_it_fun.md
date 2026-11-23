@@ -31,13 +31,23 @@ You can only anticipate what you can read. Before sealing, the leader states the
 in plain words, from data: *"Wolves were seen past the ford. One in four we come back
 hurt."* This turns sealing into a bet rather than a click, and makes every later
 interruption feel earned ("I knew it").
-- A pure query over state the sim already has: known predators/raiders near the route
-  (`D.route()` waypoints), season and weather (`hz.summary()`), crew hp/skill, distance,
-  the `director`'s current tension cap. Returns `{risk: 0..1, reasons: [...]}`; a
-  `contracts.forecast(plan)` that a game master can call too.
+- A pure query over state the sim already has, built **from the plan's own abort
+  conditions** (`_check_aborts`): each condition in `c.plan["abort_conditions"]`
+  gets a score from the same predicates that would fire it — `enemy_attack` from known
+  predators/raiders near the route corridor (`active_predators_near` along `D.route()`
+  waypoints, as `env_data()` already does for the site), `hp_below_N%` from leader/crew
+  hp, `natural_disaster` from season and `hz`/`nat` chances, `heavy_losses` from crew
+  combat levels — plus season (`hz.summary()`), distance and the director's tension/
+  held list (`director.summary()`). Returns `{risk: 0..1, reasons: [...]}`; a
+  `contracts.forecast(plan)` that a game master can call too. Building it from the real
+  triggers (not a bespoke vibe score) is what makes it calibratable — see G1.
+- **Fog of war applies**: only threats the tribe has *seen* count (`is_explored` filter,
+  met clans' stances, found dens — the `env_data()` pattern). The leader forecasts from
+  tribal knowledge, not omniscience, which quietly makes scouting valuable: better
+  maps, better odds.
 - Phrasing and thresholds in config (`contract_log.json` `forecast` bands, zh); the
-  leader's temperament colours it (a boastful leader understates the risk, a cautious
-  one overstates it — a tell the player learns).
+  leader's temperament colours the *words*, never the number (see Open questions —
+  resolved there: an honest, auditable number; a characterful spin on top).
 - Shown in the negotiation dialog and fed into `negotiation_ctx()` so the LLM leader
   argues from the same numbers. Size: small. Risk: low (read-only).
 
@@ -51,11 +61,18 @@ Milestone and flavor lines emitted during execution, chosen from data by
 - Emitted through `add_log(..., "contract")` + a `sim.spoke(unit, text)` bubble at the
   leader occasionally. Target: something to read every ~30 s of contract time.
 - Offline by construction (pure data). Size: small. Risk: low.
-- Today the contract writes ~13 log lines in its whole life, almost all at seal,
-  interrupt and end (`contract_system.gd`); the middle is silent. Budget the lines:
-  at most one per trigger per contract, and a cooldown, or the chronicle drowns.
+- Correction after reading the code: the middle is *not* fully silent today — `c.substate`
+  updates live, and `_clog` keeps a 12-line ring (`c.events`, top 3 shown in the HUD's
+  contracts panel). What's missing is character and reach: the lines are mechanical
+  ("Step 2 done: gather wood"), they never reach the chronicle or a speech bubble, and
+  there's no archetype flavour. So build A1 **by extending `_clog`** (the ring already
+  *is* the budget — keep the cap), and treat the two channels differently: panel lines
+  and `sim.spoke` bubbles are cheap (one per trigger per contract, per A2's pool);
+  `add_log(..., "contract")` chronicle lines stay scarce (seal, first structure raised,
+  interrupt, end) so the chronicle doesn't drown.
 - The log should call back to the forecast (A0): "No sign of the wolves yet." / "The
-  wolves found us, as I feared."
+  wolves found us, as I feared." — which only works if A0's scores come from the real
+  abort predicates.
 
 ### A2. Small interruptions resolve through character
 Not every hiccup deserves pausing the player:
@@ -85,26 +102,37 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
   home by the fire.
 - The `director` controls how bad the winter gets, so the bet is real, not theater.
 
+### B2. Winters differ
+- Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) drawn from
+  `config/events.json` with the director pacing them; year 3 must not equal year 1.
+- The eclipse/festival events show the pattern to copy.
+
 ### B3. The frozen river (split out of B1: it is the big one)
 While `hz.winter()`, rivers freeze and can be crossed anywhere: new ground, new prey,
 thin ice as a real risk. Valuable, but it changes `D.route()`, region logic
 (`same_side`, `home_side`) and every caller that assumes water blocks; treat it as its
 own item with its own tests, not as a rider on B1. Size: large.
 
-### B2. Winters differ
-- Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) drawn from
-  `config/events.json` with the director pacing them; year 3 must not equal year 1.
-- The eclipse/festival events show the pattern to copy.
+> **pi:** agreed on the split, with one addition: winter already gates movement today
+> (`beds.day_only`, `camp_asleep`, snow speed), so B3's payoff should be measured
+> against those costs — crossing ice must open *enough* new ground to be worth its
+> size, or it stays a v2 nicety. Do B1/B2 first; B3 only if G1 shows winters lacking.
 
 ## C. Rivals as recurring characters (attachment)
 
 ### C1. The rival chief is a person
-- Chiefs already have a name and epithet (`rivals.json`, `rivals.parley_ctx`). What's
-  missing is memory: a list of every parley, raid, gift and slight (surface the
-  existing `grudges`), quoted back in parley ("You came with spears last spring"); the chief appears with a voice in parley dilemmas
-  (`rivals` events already run through `story.dilemma_view()`).
+- Chiefs already have a name and epithet, and the LLM chief already sees the last four
+  grudges (`rivals.parley_ctx` → `wrongs_remembered`). The real gaps, from the code:
+  grudges are **undated** strings ("last spring" is unverifiable), they record only
+  **wrongs** (no gifts, kept oaths, parleys — `rivals.change()` appends only below
+  `grudge_at`), and the **offline** `chief_reply()` never quotes them. So C1 = a dated,
+  typed ledger (`{day, kind, text}` appended in `rivals._deed()`, which already funnels
+  every deed) surfaced three ways: quoted in parley dilemma texts
+  ("You came with spears last spring"), in `chief_reply()`'s offline speech, and in
+  `summary()` for a game master.
 - Chiefs age and die: a successor with a different temperament resets the diplomatic
-  game mid-run (a `rivals.json` event, offline via `rivals.chief_reply()`).
+  game mid-run (a `rivals.json` event, offline via `rivals.chief_reply()`); the ledger
+  is what the successor *inherits*, which is the drama.
 
 ### C2. One horizon threat at a time
 - Let one clan escalate across eras (raids grow, then demands, then war) while the
@@ -123,8 +151,10 @@ own item with its own tests, not as a rider on B1. Size: large.
 
 - **E1.** ~~Defeat saga~~ — already exists (`legacy.saga_ctx("defeat")`,
   `hud.gd` saga dialog). What's left is making defeat *rarer and later than* a slow
-  death: a "last stand" dilemma when the tribe drops below a few people (flee, merge
-  with a friendly clan, hold), so the ending is a choice.
+  death: today defeat fires only when the *last* person dies (`legacy.gd`), so the
+  typical loss is a long fade. A "last stand" dilemma when the tribe drops below a few
+  people — trigger `{pop: N}` already exists in `story.holds()` — offering flee, merge
+  with a friendly clan (a rivals action), or hold, so the ending is a choice. Cheap.
 - **E2.** Heritage hook into the next run: the new world remembers them — a landmark,
   ruins of the old village as a find, or a rival clan descended from survivors.
   Cheap because scenarios are data (`scenarios/*.gd` + `D.LANDMARK_KINDS`).
@@ -141,16 +171,39 @@ own item with its own tests, not as a rider on B1. Size: large.
 
 ## G. Tuning fun with the headless harness (engineering advantage)
 
-The sim is deterministic, headless and config-driven with a full test harness — use it:
+The sim is deterministic, headless and config-driven with a full test harness — use it.
+Targets are **bands with two tails, not one-sided minimums**, and they must respond to
+play (that is the measurable form of "decisions matter"):
 
 - **G1. Metric runs**: a test-style script that plays N seeded games per config variant
-  and reports: deaths by day 20, food-floor near-misses (food < 15% of cap at least
-  twice per run — target ~100% of runs), starvation deaths in year 1 (target ~0),
-  contracts interrupted per run, dilemma frequency, days between meaningful events
-  (hard ceiling via the director's tension cap), time-to-era-2.
+  under at least two scripted policies (e.g. a hoarding autopilot vs a feasting one) and
+  reports:
+  - *Skill sensitivity* — the headline: the distributions below must **differ between
+    policies**. If hoarders and feasters starve at the same rate, food decisions are
+    theater.
+  - Food-floor near-misses (food < 15% of cap): 60–90% of runs at least once, **not**
+    ~100% — a threat in every single run that never kills is a jump-scare without
+    teeth, and it means granaries bought nothing.
+  - Real famine consequences (a starvation death, sickness wave, or a family leaving in
+    `life`'s discontent) in 10–25% of year-1–2 runs: some runs must actually pay, or
+    players learn the floor is safe. Starvation deaths *cluster* in badly-played runs,
+    ~0 in well-played ones — that spread is the point.
+  - Deaths by day 20 as a band (some runs lose someone early; a game where nobody can
+    die before day 20 has no weather), contracts interrupted per run, dilemma/pause
+    frequency per game-hour (feeds the pause ceiling), days between meaningful events,
+    time-to-era-2.
+  - *Forecast calibration* (A0): of contracts that were interrupted, how often was a
+    top-scored forecast reason the actual abort reason. Below ~60% and players will
+    learn to ignore the forecast — which kills A0 and A1's callbacks with it.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
+
+> **pi:** Claude asked whether "near-misses in ~100% of runs" is the right bar — no,
+> and the original G1 was internally strained: 100% near-misses *plus* ~0 starvation
+> deaths describes a floor that always triggers and never bites. Replaced with the
+> two-tail bands above; the honest goal is that scarcity is *felt* in most runs, *paid*
+> in some, and escapable by good play.
 
 ## Order of work
 
@@ -168,7 +221,10 @@ The sim is deterministic, headless and config-driven with a full test harness �
 | 10 | B3 frozen river | large | anticipation, exploration |
 
 1–4 convert the proudest systems (contracts, seasons, rivals) from mechanisms into
-stories; do those first.
+stories; do those first. But land the **G1 skeleton early** (a minimal version: pauses
+per game-hour, interrupts per run, near-miss counts) *before* the pause-adding items
+arrive — the pause ceiling and the near-miss bands are inputs to B1/D2/F/C1/E1, not
+afterthoughts, and the full harness (item 7) then only grows the metric list.
 
 ## Definition of done per item
 
@@ -185,7 +241,23 @@ stories; do those first.
   in the minutes between decisions? A1/A0 give them something to read and watch, but
   is that enough, or do we need a light, optional verb while time runs (e.g. pointing
   the Steward at a priority)? Not unit micro — that's a not-goal.
-- **How many dilemmas is too many?** B1, D2, F, C1 and E1 all add pauses. G1 should
-  measure pauses per game-hour and we should pick a ceiling before building them.
-- **Should the forecast lie?** A temperament-coloured forecast (A0) is a fun tell, but
-  a forecast that's wrong too often teaches players to ignore it.
+  > **pi:** my instinct: ship A0/A1 and *then* judge — watching a crew you chose, led
+  > by a character who narrates, is what AoE2 spectators already do. A Steward-priority
+  > verb is the right v2 candidate because `improve.order()` and `policy.set_choice()`
+  > already exist as verbs; don't build it speculatively.
+- **How many dilemmas is too many?** B1, D2, F, C1 and E1 all add pauses.
+  > **pi (proposed resolution):** from the code — dilemmas already FIFO-queue
+  > (`story.pending`, `cult.pending`, `rivals.pending`, `folk.pending`, `nat.pending`,
+  > `life.pending`, drained one at a time by `_check_events`), so they never stack; what's missing is
+  > spacing. Proposal: a config `min_gap` (game-hours) between *posed* dilemmas in
+  > `_check_events`, with an urgent class that bypasses it (defeat, last stand, a
+  > crisis); the director's tension cap keeps pacing *hardships* as today. Pick the
+  > number from the G1 baseline measurement, not by feel — hence G1's skeleton lands
+  > first (see Order of work).
+- **Should the forecast lie?** ~~A temperament-coloured forecast is a fun tell, but a
+  forecast that's wrong too often teaches players to ignore it.~~
+  > **pi (resolved):** the *number* never lies — it's computed from the real abort
+  > predicates, so it's auditable and G1 can score its calibration. Temperament
+  > colours the *words* (a boastful leader's "a quiet road" over a 0.3), and the LLM
+  > leader may spin `negotiation_ctx`'s numbers, but the negotiation dialog shows the
+  > band beside the speech. The tell is in the prose; the bet is on solid ground.
