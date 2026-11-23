@@ -131,26 +131,35 @@ static func _make_theme() -> Theme:
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = COL_BG
 	panel.border_color = COL_EDGE
-	panel.set_border_width_all(2)
-	panel.set_corner_radius_all(6)
+	panel.set_border_width_all(1)
+	panel.set_corner_radius_all(10)
 	panel.set_content_margin_all(10)
+	panel.shadow_color = Color(0, 0, 0, 0.4)
+	panel.shadow_size = 10
+	panel.shadow_offset = Vector2(0, 3)
 	th.set_stylebox("panel", "PanelContainer", panel)
 	var btn := StyleBoxFlat.new()
 	btn.bg_color = Color(0.28, 0.2, 0.12)
 	btn.border_color = Color(0.6, 0.45, 0.25)
 	btn.set_border_width_all(1)
-	btn.set_corner_radius_all(4)
+	btn.set_corner_radius_all(7)
 	btn.content_margin_left = 10
 	btn.content_margin_right = 10
 	btn.content_margin_top = 5
 	btn.content_margin_bottom = 5
+	btn.shadow_color = Color(0, 0, 0, 0.25)
+	btn.shadow_size = 4
+	btn.shadow_offset = Vector2(0, 1)
 	var hov := btn.duplicate()
 	hov.bg_color = Color(0.4, 0.29, 0.16)
+	hov.border_color = Color(0.78, 0.62, 0.38)
 	var prs := btn.duplicate()
 	prs.bg_color = Color(0.55, 0.38, 0.18)
+	prs.shadow_size = 0
 	var dis := btn.duplicate()
 	dis.bg_color = Color(0.18, 0.15, 0.12)
 	dis.border_color = Color(0.3, 0.25, 0.2)
+	dis.shadow_size = 0
 	th.set_stylebox("normal", "Button", btn)
 	th.set_stylebox("hover", "Button", hov)
 	th.set_stylebox("pressed", "Button", prs)
@@ -174,6 +183,10 @@ static func _make_theme() -> Theme:
 	le.set_content_margin_all(6)
 	th.set_stylebox("normal", "LineEdit", le)
 	th.set_color("font_color", "LineEdit", COL_TEXT)
+	var lef := le.duplicate() # a focused field lights its border
+	lef.border_color = COL_ACCENT
+	lef.set_border_width_all(2)
+	th.set_stylebox("focus", "LineEdit", lef)
 	return th
 
 func _label(text: String, size := 15, col := COL_TEXT) -> Label:
@@ -229,6 +242,9 @@ func _on_alert(a: Dictionary) -> void:
 	b.add_theme_font_size_override("font_size", 16)
 	b.focus_mode = Control.FOCUS_NONE
 	alert_box.add_child(b)
+	b.modulate.a = 0.0 # the banner slides into view
+	var tw := create_tween()
+	tw.tween_property(b, "modulate:a", 1.0, 0.22)
 	alert_items.append([b, Time.get_ticks_msec() + (9000 if a["level"] == "danger" else 6000)])
 	while alert_items.size() > 3:
 		alert_items[0][0].queue_free()
@@ -317,9 +333,11 @@ func _crisis_bar_update() -> void:
 func _expire_alerts() -> void:
 	var now := Time.get_ticks_msec()
 	for it in alert_items.duplicate():
-		if now > it[1]:
-			it[0].queue_free()
+		if now > it[1]: # fade the banner out, then free it
 			alert_items.erase(it)
+			var tw := create_tween()
+			tw.tween_property(it[0], "modulate:a", 0.0, 0.3)
+			tw.tween_callback(it[0].queue_free)
 
 func _build_top(root: Control) -> void:
 	var p := PanelContainer.new()
@@ -1244,7 +1262,7 @@ func _appoint(role: String) -> void:
 
 # ------------------------------------------------------------ modal plumbing
 func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContainer:
-	_close_modal()
+	_close_modal(true)
 	modal_token += 1
 	modal = Control.new()
 	modal.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1258,6 +1276,7 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
 	modal.add_child(cc)
 	var p := PanelContainer.new()
+	p.custom_minimum_size = Vector2(width, 0)
 	p.custom_minimum_size = Vector2(width, 0)
 	if danger:
 		var sb: StyleBoxFlat = modal.theme.get_stylebox("panel", "PanelContainer").duplicate()
@@ -1280,13 +1299,31 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 	v.minimum_size_changed.connect(fit)
 	fit.call()
 	v.add_child(_label(title, 22, Color("#ff8a7a") if danger else COL_ACCENT))
+	# the dialog arrives: the world dims while the panel fades in and settles
+	var tw := create_tween().set_parallel()
+	dim.color.a = 0.0
+	tw.tween_property(dim, "color:a", 0.55, 0.18)
+	cc.modulate.a = 0.0
+	p.scale = Vector2(0.96, 0.96)
+	p.pivot_offset = Vector2(width / 2, 40)
+	tw.tween_property(cc, "modulate:a", 1.0, 0.16)
+	tw.tween_property(p, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	return v
 
-func _close_modal() -> void:
-	if modal:
-		modal.queue_free()
-		modal = null
-		last_modal_closed = Time.get_ticks_msec()
+func _close_modal(instant := false) -> void:
+	if not modal: return
+	var m := modal
+	modal = null
+	last_modal_closed = Time.get_ticks_msec()
+	if instant:
+		m.queue_free()
+		return
+	var dim: ColorRect = m.get_child(0)
+	var tw := create_tween()
+	tw.set_parallel()
+	tw.tween_property(dim, "color:a", 0.0, 0.12)
+	tw.tween_property(m.get_child(1), "modulate:a", 0.0, 0.12)
+	tw.chain().tween_callback(m.queue_free)
 
 func _show_intro() -> void:
 	var v := _open_modal(tr("Era of Savagery · Clan Chronicles"))
