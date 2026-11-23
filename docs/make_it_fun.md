@@ -251,10 +251,11 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
   - forage: Proven — lead a hunt that brings down a wolf or bigger; Master — lead one
     that brings down a saber-tooth tiger.
   - craft: Proven — be lead builder of a longhouse, or make a masterpiece (`folk`
-    already rolls them); Master — lead the build crew in which another crew
-    member passes their own Proven trial. Using the contract crew as "beside you"
-    needs no new state: the crew list is already the record of who worked with whom,
-    and H3's teaching bonus reads the same crew.
+    already rolls them); Master — teach: one of their past crew members finishes a
+    Proven craft trial of their own. Not *during* the master's build (a crew member
+    leads nothing); later, on their own contract — the crew lists in `contracts`
+    already record who worked under whom, so this is a lookup, not new state, and
+    H3's teaching reads the same lists.
   - lore: Proven — heal someone near death, or lead research to a breakthrough;
     Master — lead the research that opens a new era.
   - combat: Proven — stand in a defence that drives off a raid (present and fighting
@@ -296,24 +297,25 @@ Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
   things the tribe wants **need a master** (I4's grand altar needs a Master Builder,
   bronze a master smith), so having one is a goal with a payoff.
 - **What each rank unlocks** (replacing `D.SKILL_UNLOCKS`; every entry is a gate on
-  something that exists, so each is one check, not a new system):
+  something that exists, so each is one check, not a new system — and no gate may
+  block its own trial: what a trial requires, an earlier rank or no rank provides).
+  This is also an audit of today's Lv-5 "unlocks": only the Centurion Aura has a hook
+  in the rules — "Beast Taming", "Megalithic & Bronze Craft" and "Totem Miracles"
+  are labels on a log line. The rank table either makes them real (the forage and
+  craft rows do) or they go: one honest system instead of two promises that disagree.
 
   | Skill | Proven | Master |
   |-------|--------|--------|
-  | forage | the aurochs pen fills only while a Proven forager tends it (taming) | hunts they lead steer clear of known dens and see tracks first: A0's odds for their crew improve |
-  | craft | upgrades (`sim.upgrade`) need a Proven crafter as lead builder; the smelter works while one lives | the stone wall and the grand altar need a Master Builder |
-  | lore | heals as a healer (`healer_lore`) and leads research at full rate | while they live, what they know can't be lost (`evo` oral loss) |
-  | combat | the Centurion Aura (exists, `sim.gd`) | may lead a war contract |
-  | trade | may go as envoy or caravan haggler at the master trader's rate (`master_lv`) | treaties they seal hold longer |
+  | forage | a calf is tamed at dawn only while a Proven forager tends the herd (the `_herd` roll; the first ox still comes with the pen) | each pen holds one more ox while a Master forager lives (`ox_cap`) |
+  | craft | upgrades, renovations and the smelter run while a Proven crafter lives (one check, the way `has_bronze` reads state) | the stone wall and the grand altar need a Master Builder |
+  | lore | heals as a healer (`healer_lore`) and is the eclipse's wise one (both lore-3 checks today) | a living lore Master is a keeper of every tech: one check in `evo`'s oral-loss rule |
+  | combat | the Centurion Aura (exists, `sim.gd`) and may lead a war contract | may be appointed War Chief (`sim.appoint`) |
+  | trade | the master trader's prices (`master_lv` in `folk.haggle` becomes a rank) | treaties they seal hold longer (their seal sets the days) |
 
   The craft row is the stake H3 wants: if the tribe's only Proven crafter dies, bronze
-  stops until someone else proves themselves.
-- **Ranks absorb today's Lv-5 "unlocks", and must make them real.** `D.SKILL_UNLOCKS`
-  already promises "Beast Taming", "Megalithic & Bronze Craft", "Totem Miracles" at
-  Lv 5, but only the Centurion Aura has a hook in the rules; the rest are labels on a
-  log line. The Proven rank's unlock list replaces that table outright: each entry
-  becomes a real verb or is cut — one honest system instead of two promises that
-  disagree.
+  stops until someone else proves themselves. Combat is why the no-blocking rule
+  exists: leading a war contract sits at Proven because winning one is the Master
+  trial — gate it at Master and no one could ever qualify.
 - **Know-how lives in the family line** (one person = one family line). A master can
   teach: people working beside them learn that skill faster, and a new line grown from
   theirs starts part-way up it. If a master dies before anyone else holds the rank, it
@@ -384,14 +386,17 @@ syllabus, not a choice); each shows one face in the ghost's words:
   stays one target choice, because walls block no one's feet today (`inside_wall` is a
   DEF bonus, not a fence): raiders *prefer* the undefended granary outside, take it
   (`rivals.steal` already exists, and the thief turns home) and usually leave; only
-  C2's big war band goes for the village itself. No pathing, no gate AI; I4's Gate is
-  one place to stand, not a door simulation.
-- *Is that enough Era-2 payoff for a wall?* Yes, if what's behind it is safe: when every
-  store is inside, raiders must fight the people on the wall (who have its DEF bonus)
-  to steal anything, and a raid that can't steal gives up sooner (the thief's turn-
-  home rule, triggered by losses instead of loot). The payoff is measurable: food lost
-  per raid, walled vs. unwalled, in G1. The gate and towers add to it; they don't carry
-  it.
+  C2's big war band goes for the village itself. No pathing, no gate AI — where the
+  defenders stand is the player's call (crisis `hold`), not a door's.
+- *Is that enough Era-2 payoff for a wall?* Yes, if what's behind it is *defended*: a
+  raider engaged by anyone fights instead of stealing (`update_predator` only loots
+  when nobody is in reach), so a camp where everyone lives inside the ring is a camp
+  of +3-DEF defenders — and the second half of the rule is a war band that is bloodied
+  and still lootless turning home: the thief's turn-home (`steal` → `fleeing`),
+  triggered by losses instead of loot. One honest limit: with nobody home, walls stop
+  nothing (they block no feet) — which is why the tower's day-early warning, calling
+  people back, matters as much as the stone. Measurable: food lost per raid, walled
+  vs. unwalled, in G1.
 - **Packed or spread.** A tight camp is cheap to wall and quick to walk, and burns
   together; a spread one is safe from fire and hard to defend. This needs one new rule:
   today fire reaches buildings only from burning trees (`nature.gd`, `building_radius`)
@@ -454,8 +459,6 @@ where the reward is.
 | 1 | Lookout tower | raids, fog | at a ford it warns a day early, alone and exposed; feeds A0's forecast (what the tribe has *seen*) |
 | 1 | Drying rack / smokehouse | winter | food keeps longer — only if finished before the frost (B1's bet) |
 | 2 | Longhouse (large hut upgrade) | families | homes more, families in it bond (`life`); a big thing to lose to a flood or a fire |
-| 2 | Gate (on a palisade) | defence vs. movement | facing the fields or the ford sets everyone's walks; one weak point to defend |
-| 2 | Workshop | craft | where masters work and teach (H3); near the stone and the wood shortens every job |
 | 2 | Temple (shrine → temple) | lore, morale | rituals, festivals, rank initiations; the centre the village gathers round |
 | 3 | Stone wall + towers (palisade upgrade) | Era-3 raids | holds against C2's war band if up in time; how much it encloses is the choice |
 | 3 | Trading post | trade | caravans come more often and pay better (`rivals` traders); by the road or ford they arrive on |
@@ -465,6 +468,12 @@ No separate megalith: the grand altar already is the Era-3 wonder (Yinglong, Vic
 by Wisdom), so a second wonder would compete with it. Making it the end of the
 shrine → temple → altar line gives the religious path one building that grows up
 through the eras instead of three unrelated ones.
+
+Cut with the megalith, for honesty's sake: the **Gate** (walls block no feet, so a
+gate that "sets everyone's walks" is a door the game can't back; a rally point is
+already the player's choice in a crisis) and the **Workshop** (teaching reads the
+contract crews, H1; "near the stone and wood shortens every job" is the walk-to
+factor, free). Seven candidates stand; Era 2 keeps the longhouse and the temple.
 
 ### I5. The village grows a name
 - Camp → village → town by what's been built (a rule over `sim.structures`, config),
