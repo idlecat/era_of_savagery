@@ -15,9 +15,12 @@ Three stacked sources — every item below feeds at least one:
    zero LLM) meet a non-deterministic world (wolves, floods, raids, the `director`).
 3. **Attachment fun** — people as characters (traits, `u.memory`, bonds, `life.gd`,
    feats, the chronicle).
+4. **Builder fun** — the camp you raised: watching it grow from huts by a fire into a
+   walled village with a temple, where each building was a choice (sections H, I).
 
 Not-goals (identity protection): no more resources, no unit micro, no combat detail,
-nothing fun gated on a configured LLM.
+nothing fun gated on a configured LLM, and no *Civ 6*: no districts, adjacency puzzles,
+per-building worker slots, production queues or upkeep juggling.
 
 ---
 
@@ -223,6 +226,168 @@ those knobs, not new mechanics:
 - Each challenge is data: `{id, when (holds), track (a condition), reward}` — reuse
   `story.holds()` as the checker.
 
+## H. Ranks earned by deeds (attachment, accomplishment)
+
+Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
+`D.SKILL_UNLOCKS`), but reaching a level is neither an accomplishment nor a challenge:
+- **Time = level.** Of ~40 XP sources most are per-second trickles of ordinary work
+  (building `dt * 0.9`, foraging `dt * 0.12`, study `dt * 0.6`): anyone who chops long
+  enough reaches Lv 5. Nothing hard is ever required.
+- **Every level is the same size.** Each level of each skill of each person gets the
+  same "LEVEL UP!" popup and a log line; by the twentieth it is wallpaper.
+- **The goal is invisible.** Nobody knows what Lv 5 gives until it happens, and Lv 6–10
+  change nothing you can see.
+- **It isn't the player's doing.** You never set up anyone's growth.
+
+### H1. Ranks with trials
+- Each skill gets **three named ranks** (e.g. Hunter → Wolf-Hunter → Master of the Hunt;
+  names in config, culture packs rename them). Routine XP stops at each rank's ceiling
+  (say Lv 3, 6, 9); crossing it takes a **trial**, a deed from data:
+  - forage: lead a hunt that brings down a wolf or bigger;
+  - craft: be lead builder of a longhouse (or a masterpiece, `folk` art);
+  - lore: heal someone near death, or lead research to a breakthrough;
+  - combat: stand in a defence that drives off a raid;
+  - trade: seal a treaty or a caravan bargain.
+- Trials are usually run **through a contract**, so the player sets them up: pick the
+  candidate as leader, read the odds (A0: "with Ama leading, one in three we come back
+  hurt"), and accept that a failed trial can cost a wound or worse. The green hunter vs.
+  the safe veteran becomes a real choice, and the A1 field log has something worth
+  saying ("Ama has never led before. She's holding steady.").
+- The sheet shows the next step: "Next rank: Wolf-Hunter — lead a hunt that brings down
+  a wolf or bigger (0/1)."
+
+### H2. A rank-up is an occasion; a level-up is quiet
+- A rank-up gets an initiation by the fire (the `folk` festival/ritual pattern), a title
+  and earned epithet (`u.epithet`), a visible mark on the sprite (cloth layer tint or a
+  carried item; bump `ART_VERSION`), a memory (`sim.remember`) and an `inv.feat()` — the
+  existing paused celebration dialog, for the tribe's *first* of each rank.
+- Plain level-ups shrink to a small popup with no log line.
+
+### H3. Ranks unlock things, not multipliers
+- A rank lets the person do something new: lead a war party, tame aurochs, teach. Some
+  things the tribe wants **need a master** (I4's megaliths need a Master Builder, bronze
+  a master smith), so having one is a goal with a payoff.
+- **Know-how lives in the family line** (one person = one family line). A master can
+  teach: people working beside them learn that skill faster, and a new line grown from
+  theirs starts part-way up it. If a master dies before anyone else holds the rank, it
+  is gone — `evo`'s knowledge keepers / oral loss, now for crafts. Protecting and
+  teaching masters becomes part of the game; losing a veteran costs something lasting.
+
+### H4. Shape in code
+- `config/ranks.json`: per skill, ranks `{cap_lv, title, trial (a condition),
+  rewards (effects in the `{stat, mul|add}` format, unlocks)}`; texts with zh.
+- New state: a per-person **deed record** (kills by kind, contracts led, masterpieces,
+  heals) that trials are checked against — unit-scoped condition keys (new
+  `COND_TYPES` entries, checked by a `ranks` helper, like A2's contract-scoped keys).
+  Readable in a summary; a game master can pose or grant a trial.
+- First, move what `gain_xp` hardcodes (the `xp_need` curve, the cap of 10, the Lv-5
+  unlock, the `warrior_initiation` ×1.25) into `rules.json`.
+
+## I. Improving the camp (builder fun)
+
+Today there are 13 buildable types over 3 eras (`D.STRUCTURES`), mostly Era 1 basics;
+Era 2 adds the farm plot, granary, aurochs pen and council ring, Era 3 the smelter and
+grand altar. The village never *looks* like it advanced much, and the late eras have
+little to build. More is wanted — walls, towers, temples — **without becoming Civ**.
+And more types alone won't do it: today placement barely matters (`sim.can_place` only
+refuses the river bank and overlaps) and neither does timing. A building should matter
+in the game, and so should **where** and **when** it goes up (I2, I3).
+
+### I1. Rules for every new building
+- **Few, and each one a decision.** About two or three new types per era, ~20 buildable
+  in all. Each answers a pressure the game already makes (raids, winter, sickness,
+  lore, trade) and has a cost or trade-off: where it stands, what it uses, what it
+  excludes. No building that is just "+5% of something".
+- **Upgrades before new types.** Palisade → stone wall, totem shrine → temple, large
+  hut → longhouse: the camp visibly grows up instead of sprawling (`sim.upgrade(id, to)`
+  and `rules.json` "upgrades" exist; era styles via `D.STYLED` exist).
+- **No new resources** (the not-goal): costs use wood, stone, copper/tin, goods, lore.
+- **No per-building management**: buildings work by being there and by who lives near
+  them, as today. No worker slots, no queues, no upkeep menus.
+- **Each era has a headline building** the player looks forward to, and each one feeds
+  another section: walls and towers meet C2's Era-3 war band, the temple runs H's
+  initiations and B's festivals, the master-built megalith is H3's payoff.
+
+### I2. Where it's built matters
+Every spot is a trade-off the player can read, built from the map's real geography
+(rivers, fords, flood band, land kind, hills, regions) rather than a hidden bonus grid.
+A short list of named **site factors** does all of it:
+- **The river bank** — fertile and close to fish and water, but inside the spring flood
+  band (`nat.flood_half()`), where floods already knock buildings down. Fields there
+  grow more; huts and granaries there are a gamble. The best land is the riskiest.
+- **Inside or outside the wall.** The palisade's size is chosen (`s.size`) and costs
+  with it: a big ring is expensive and slow, a tight one leaves the fields, docks and
+  pens outside. Raiders go for what's outside first (food in an outer granary, the
+  pen's oxen); a wall is a decision about what you're willing to lose.
+- **Packed or spread.** Fire spreads between close buildings (wildfire already
+  scorches; lightning, a cooking fire gone wrong). A tight camp is cheap to wall and
+  quick to walk, and burns together; a spread one is safe from fire and hard to defend.
+- **Chokepoints and sight.** Rivers mean raiders come over fords (`D.FORDS`,
+  `D.route()`): a lookout or tower at the ford sees them a day early, one in the middle
+  of the village sees them at the door. On high ground (the hills that copper and tin
+  already use) it sees farther.
+- **Close to the work.** Distance is already walking time (the granary as a drop-off
+  near the fields); keep that the main pull, so where people live and work shapes the
+  layout naturally.
+- **Near people, not near buildings.** Auras work on the people around them, as the
+  bonfire and weapon rack do now — no "+10% next to a temple" adjacency puzzles. A
+  temple matters because the village gathers there, not because of its neighbours.
+
+The placement ghost shows the site's value and risk in words, from the same factors
+("Fertile river soil: fields grow half again as much. Flood land: about one spring in
+three."), the building version of A0's forecast. `improve.gd` scores the same factors,
+so the Steward lays out a sensible camp when the player doesn't, and a game master
+gets `sim.site_value(type, pos)`.
+
+### I3. When it's built matters
+- **Seasons.** Building in deep winter is slow (snow, short days, `beds.day_only`);
+  a field sown after spring yields little that year; a smokehouse is only worth
+  something if it's finished before the frost (B1's autumn bet). Each building's
+  "best season" and penalty are config.
+- **Builders aren't gatherers.** Every hand on a building site is a hand not bringing
+  food or wood; a big project at harvest time is a real cost (`improve.gd`'s
+  `wood_reserve` shows the pattern; a food reserve should join it).
+- **Races against foreseen threats.** The threats warn ahead: C2's escalation stages,
+  B2's winter signs, the A0/tower sightings. The wall has to be up before the war band
+  comes; that's a race the player can see and plan, not a surprise.
+- **Commitments stick.** Demolishing refunds only part (`rules.json` "demolish"), and
+  big works take days, so the order you build in is a real plan.
+
+### I4. Candidates (to be cut to fit, not all built)
+| Era | Building | Answers | Where / when it matters |
+|-----|----------|---------|-------------------------|
+| 1 | Lookout tower | raids, fog | at a ford or on a hill it warns a day early; feeds A0's forecast (what the tribe has *seen*) |
+| 1 | Drying rack / smokehouse | winter | food keeps longer — only if finished before the frost (B1's bet) |
+| 2 | Longhouse (large hut upgrade) | families | homes more, families in it bond (`life`); high ground or flood risk |
+| 2 | Gate (on a palisade) | defence vs. movement | facing the fields or the ford sets everyone's walks; one weak point to defend |
+| 2 | Workshop | craft | where masters work and teach (H3); near the stone and the wood shortens every job |
+| 2 | Temple (shrine upgrade) | lore, morale | rituals, festivals, rank initiations; the centre the village gathers round |
+| 3 | Stone wall + towers (palisade upgrade) | Era-3 raids | holds against C2's war band if up in time; how much it encloses is the choice |
+| 3 | Trading post | trade | caravans come more often and pay better (`rivals` traders); by the road or ford they arrive on |
+| 3 | Megalith / standing stones | legacy | the era's wonder: needs a Master Builder (H3), seen from afar, a victory-path piece |
+
+### I5. The village grows a name
+- Camp → village → town by what's been built (a rule over `sim.structures`, config),
+  each step an `inv.feat()` moment with a snapshot, and the clans' parley texts change
+  how they speak of you.
+
+### I6. Shape in code
+- Move `D.STRUCTURES` into `config/structures.json` first (it's tuning and texts held in
+  a const today), keeping `D.STRUCTURES` as the loaded view; the build menu, placement,
+  contracts' allowed structures (`D.CONTRACT_STRUCTURES`) and `improve.gd` read it.
+- A building's effect is data (the effect-stat format, auras by radius as the weapon
+  rack and bonfire do now), so a new type is mostly config plus a baked model
+  (`art_baker.gd`, bump `ART_VERSION`) with the procedural fallback.
+- `improve.gd` (the Steward's layouts) learns the new types from config, so the camp
+  also grows when the player doesn't micromanage it.
+- Site factors are a small set of named verbs in code (`river_bank`, `flood_band`,
+  `in_wall`, `crowding`, `near_ford`, `high_ground`, `land`, `walk_to`), each building's
+  config picks and weights them (`{"site": {"flood_band": {"food": 1.5, "risk": ...}}}`),
+  and their texts are config with zh. One function, `sim.site_value(type, pos)`,
+  returns `{factors, risks}` for the ghost, the Steward and a game master.
+- G1 checks that it matters: a policy that places at random must do measurably worse
+  than the Steward's scored layout, or the factors are decoration.
+
 ---
 
 ## G. Tuning fun with the headless harness (engineering advantage)
@@ -292,18 +457,22 @@ distance is the tuning work); only a band *no policy can reach* gets revised.
 | 5 | D1/D2 opening minutes | small | decision |
 | 6 | B2 varied winters | small–medium | anticipation |
 | 7 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment |
-| 8 | F player-set challenges | small–medium | attachment, replay |
-| 9 | E1 last stand, E2 heritage | medium | all |
-| 10 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) |
-| 11 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration |
+| 8 | H ranks with trials (after A0: trials lean on the forecast) | medium | attachment, accomplishment |
+| 9 | I structures to config, then Era-1/2 buildings and upgrades | medium | builder |
+| 10 | F player-set challenges | small–medium | attachment, replay |
+| 11 | E1 last stand, E2 heritage | medium | all |
+| 12 | I Era-3 buildings (walls/towers, trading post, megalith) | medium | builder, C2, H |
+| 13 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) |
+| 14 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration |
 
 Row 0 lands before anything that adds a pause: the pause ceiling, the near-miss bands
 and the forecast-calibration floor are all *inputs* measured against the steward
 baseline, not afterthoughts — the skeleton is just the metric counters plus the
-steward policy and its dilemma auto-picker, and item 10 grows it into the full canary
+steward policy and its dilemma auto-picker, and item 13 grows it into the full canary
 (more policies, calibration, CI, director tuning). 1–5 convert the proudest systems
 (contracts, seasons, rivals) from mechanisms into stories; C2 rides on C1's ledger;
-B3 waits for evidence.
+B3 waits for evidence. Era-3 buildings come after C2 and H, which give the walls
+something to stop and the megalith a master to build it.
 
 ## Definition of done per item
 
