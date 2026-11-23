@@ -76,6 +76,7 @@ class Unit:
 	var wake_until: float = -1.0
 	var face: Variant = null # where they look while standing (the fire, the one they talk to)
 	var say: String = "" # a speech mark over their head (already translated)
+	var say_kind: String = "" # the situation it came from (life.gd "talk"): picks the bubble icon
 	var say_until: float = -1.0
 	var say_t: float = 0.0 # when they may speak again
 	var gone: bool = false # left the tribe (also dead + buried: out of every count)

@@ -621,7 +621,7 @@ func say(u: E.Unit, situation: String, arg := "", force := false) -> bool:
 	if lines.is_empty(): return false
 	var line: String = tr(str(lines.pick_random()))
 	if line.contains("%s"): line = line.replace("%s", arg)
-	say_text(u, line)
+	say_text(u, line, situation)
 	return true
 
 ## Fall silent at once (danger interrupts whatever they were saying).
@@ -629,10 +629,12 @@ func hush(u: E.Unit) -> void:
 	u.say = ""
 	u.say_until = -1.0
 
-## Put words in someone's mouth (a story action, a game master).
-func say_text(u: E.Unit, text: String) -> void:
+## Put words in someone's mouth (a story action, a game master). `kind` is the
+## situation it came from, when there is one: it picks the bubble's icon.
+func say_text(u: E.Unit, text: String, kind := "") -> void:
 	var sp: Dictionary = C["speech"]
 	u.say = text.substr(0, MAX_LINE)
+	u.say_kind = kind
 	u.say_until = sim.time + float(sp["time"])
 	u.say_t = sim.time + float(sp["gap"])
 	sim.spoke.emit(u, u.say)

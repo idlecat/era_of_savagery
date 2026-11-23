@@ -2086,7 +2086,16 @@ func _draw_unit_overlay(u) -> void:
 	if u.hp < u.max_hp - 0.5: _bar(b + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
 
 ## A speech mark: a small pale bubble with a tail, fading out at the end.
-func _speech(at: Vector2, text: String, left: float) -> void:
+## Speech situations that have a bubble icon (life.gd talk kinds).
+const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief", "quarrel"]
+
+## A speech mark: out at map zoom, a small icon bubble a player can read at a glance;
+## up close (or for freeform lines from a game master), the words themselves.
+func _speech(at: Vector2, u, left: float) -> void:
+	if cam.zoom.x < 1.2 and u.say_kind in SAY_ICONS:
+		_icon_bubble(at, u.say_kind, left)
+		return
+	var text: String = u.say
 	var a := clampf(left / 0.4, 0.0, 1.0)
 	var size := 12
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12.0
@@ -2100,6 +2109,53 @@ func _speech(at: Vector2, text: String, left: float) -> void:
 	sb.set_border_width_all(1)
 	ci.draw_style_box(sb, r)
 	ci.draw_string(font, Vector2(r.position.x + 6, r.position.y + 14), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.22, 0.15, 0.08, a))
+
+## A round speech bubble with one small pictogram inside, fading out at the end.
+func _icon_bubble(at: Vector2, kind: String, left: float) -> void:
+	var a := clampf(left / 0.4, 0.0, 1.0)
+	var bg := Color(0.98, 0.95, 0.86, 0.92 * a)
+	var c := at - Vector2(0, 14)
+	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-4, 1), at + Vector2(4, 1), at + Vector2(0, 8)]), bg)
+	ci.draw_circle(c, 10.0, bg)
+	ci.draw_arc(c, 9.5, 0, TAU, 24, Color(0.3, 0.22, 0.12, 0.5 * a), 1.0)
+	_say_icon(kind, c, a)
+
+## One pictogram per situation, drawn in code (no art needed): what the person means,
+## readable even when the words would be a smear.
+func _say_icon(kind: String, c: Vector2, a: float) -> void:
+	match kind:
+		"hungry": # a morsel on a bone
+			ci.draw_line(c + Vector2(-4, 4), c + Vector2(3, -3), Color(0.91, 0.86, 0.75, a), 1.6)
+			ci.draw_circle(c + Vector2(-4, 4), 1.7, Color(0.91, 0.86, 0.75, a))
+			_ell(c + Vector2(3.5, -3.5), 3.2, 2.4, Color(0.69, 0.35, 0.23, a))
+		"cold": # a snowflake
+			for i in 3:
+				var d := Vector2.from_angle(i * TAU / 6.0) * 4.0
+				ci.draw_line(c - d, c + d, Color(0.42, 0.68, 0.95, a), 1.4)
+		"sick": # a cross
+			ci.draw_line(c + Vector2(0, -3.5), c + Vector2(0, 3.5), Color(0.5, 0.8, 0.4, a), 2.2)
+			ci.draw_line(c + Vector2(-3.5, 0), c + Vector2(3.5, 0), Color(0.5, 0.8, 0.4, a), 2.2)
+		"chat": # three dots
+			for i in 3:
+				ci.draw_circle(c + Vector2(-4 + i * 4, 0), 1.5, Color(0.35, 0.28, 0.18, a))
+		"friend": # a heart
+			var red := Color(0.85, 0.3, 0.35, a)
+			ci.draw_circle(c + Vector2(-1.8, -1.5), 2.4, red)
+			ci.draw_circle(c + Vector2(1.8, -1.5), 2.4, red)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-3.9, -0.6), c + Vector2(3.9, -0.6), c + Vector2(0, 4.5)]), red)
+		"praise": # a four-point sparkle
+			var gold := Color(0.95, 0.78, 0.25, a)
+			ci.draw_line(c + Vector2(0, -5), c + Vector2(0, 5), gold, 1.6)
+			ci.draw_line(c + Vector2(-5, 0), c + Vector2(5, 0), gold, 1.6)
+			ci.draw_circle(c, 1.4, gold)
+		"grief": # a teardrop
+			var blue := Color(0.45, 0.62, 0.9, a)
+			ci.draw_circle(c + Vector2(0, 1.5), 3.0, blue)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-2.2, -0.2), c + Vector2(2.2, -0.2), c + Vector2(0, -5)]), blue)
+		"quarrel": # a sharp red exclamation
+			var hot := Color(0.85, 0.25, 0.2, a)
+			ci.draw_line(c + Vector2(0, -4.5), c + Vector2(0, 1.5), hot, 2.2)
+			ci.draw_circle(c + Vector2(0, 4.2), 1.5, hot)
 
 func _draw_pred(p) -> void:
 	var b := iso(p.pos)
