@@ -483,9 +483,26 @@ func place_cost(type: String, size := 0.0) -> Dictionary:
 
 ## Inside one of our walls (people there fight better).
 func inside_wall(p: Vector2) -> bool:
+	return _wall_at(p) != null
+
+## The DEF a wall gives the people inside it (config/structures.json "inside_def"; the
+## strongest wall around p, 0 outside every wall).
+func wall_def(p: Vector2) -> float:
+	var best := 0.0
 	for s in structures:
-		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0: return true
-	return false
+		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0:
+			best = maxf(best, float(D.STRUCTURES[s.type].get("inside_def", 0)))
+	return best
+
+func _wall_at(p: Vector2) -> E.Structure:
+	for s in structures:
+		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0: return s
+	return null
+
+## Whether `hazard` (lightning, wildfire, flood, quake) can knock building s down
+## (config/structures.json "hazards").
+func hit_by(s: E.Structure, hazard: String) -> bool:
+	return hazard in D.STRUCTURES[s.type].get("hazards", [])
 
 func struct_near(type: String, p: Vector2, r: float) -> bool:
 	for s in structures:
@@ -511,11 +528,12 @@ func unit_def(u: E.Unit) -> float:
 	if has_tech("hide"): d += 2
 	d += inv.add("def")
 	if has_bronze(): d += 3
-	if inside_wall(u.pos): d += 3
+	d += wall_def(u.pos)
 	d += crisis.def_bonus(u) # (rallied together)
+	var aura: Dictionary = SKILL_RULES["aura"]
 	for o in units: # Centurion Aura
-		if not o.dead and o != u and o.lv("combat") >= 5 and o.pos.distance_to(u.pos) < 110:
-			d *= 1.2
+		if not o.dead and o != u and o.lv("combat") >= int(aura["lv"]) and o.pos.distance_to(u.pos) < float(aura["radius"]):
+			d *= float(aura["def_mult"])
 			break
 	return d
 
@@ -544,21 +562,30 @@ func food_cap() -> int:
 var WALK_HUNGER: float = float(RULES["survival"]["walk_hunger"])
 
 # ------------------------------------------------------------------ XP & memory
-func xp_need(lv: int) -> float: return 25.0 + lv * 20.0
+## Skill levels and XP (rules.json "skills").
+var SKILL_RULES: Dictionary = RULES["skills"]
+## The highest skill level, and the level at which a skill's mastery unlocks.
+var MAX_LV: int = int(SKILL_RULES["max_lv"])
+var UNLOCK_LV: int = int(SKILL_RULES["unlock_lv"])
+
+## The XP it takes to go from level `lv` to the next.
+func xp_need(lv: int) -> float: return float(SKILL_RULES["xp_base"]) + lv * float(SKILL_RULES["xp_per_lv"])
 
 func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 	var s: Dictionary = u.skills[skill]
-	if s["lv"] >= 10 or u.dead: return
-	if skill == "combat" and evo.has_trad("warrior_initiation"): amt *= 1.25
+	if s["lv"] >= MAX_LV or u.dead: return
+	var trads: Dictionary = SKILL_RULES["tradition_xp"]
+	for t in trads:
+		if trads[t].has(skill) and evo.has_trad(t): amt *= float(trads[t][skill])
 	s["xp"] += amt
 	u.xp_acc += amt
-	while s["lv"] < 10 and s["xp"] >= xp_need(s["lv"]):
+	while s["lv"] < MAX_LV and s["xp"] >= xp_need(s["lv"]):
 		s["xp"] -= xp_need(s["lv"])
 		s["lv"] += 1
 		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"), true)
 		add_log(tr("%s reached %s Lv.%d.") % [tr(u.name), tr(D.SKILL_NAMES[skill]), s["lv"]], "xp", [u])
 		life.praise(u, "level_up")
-		if s["lv"] == 5 and not u.unlocked.has(skill):
+		if s["lv"] == UNLOCK_LV and not u.unlocked.has(skill):
 			u.unlocked[skill] = true
 			remember(u, tr("mastered %s and unlocked [%s]") % [tr(D.SKILL_NAMES[skill]).to_lower(), tr(D.SKILL_UNLOCKS[skill])], 7)
 			add_log(tr("%s unlocked [%s]!") % [tr(u.name), tr(D.SKILL_UNLOCKS[skill])], "story", [u])
@@ -987,15 +1014,13 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	s.built = true
 	s.progress = s.work
 	s.style = evo.era
-	if s.type in ["farm_plot", "granary", "aurochs_pen", "fishing_dock"]: evo.drift("settled", 5.0)
+	var drift: Dictionary = D.STRUCTURES[s.type].get("drift", {})
+	for v in drift: evo.drift(v, float(drift[v]))
 	if s.type == "aurochs_pen" and ours(s):
 		oxen += 1
 		ox_care = maxf(ox_care, 80.0)
 		last_herd_day = day() # the next calf comes at a later dawn
 		add_log(tr("An aurochs calf is tamed and led into the new pen. Feed it and tend it, and it will carry our loads."), "build")
-	if s.type in ["totem_shrine", "grand_altar"]: evo.drift("spiritual", 4.0)
-	if s.type in ["weapon_rack", "palisade"]: evo.drift("martial", 2.0)
-	if s.type == "council_ring": evo.drift("ranked", 6.0)
 	var name: String = tr(D.STRUCTURES[s.type]["name"])
 	popup(s.pos + Vector2(0, -30), tr("%s complete!") % name, Color("#b6f28a"), true)
 	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build", [u] if u else [])
@@ -2435,18 +2460,19 @@ func _decide_routine(id: String) -> bool:
 func flood_strike() -> void:
 	cult.on_event("great_flood")
 	flood_fx = 1.0
-	var lost := floori(stock["food"] * 0.5)
+	var gf: Dictionary = nat.C["great_flood"]
+	var lost := floori(stock["food"] * float(gf["food_lost"]))
 	stock["food"] -= lost
 	var hurt := 0
 	for u in living():
-		if D.river_dist(u.pos) < 260:
-			hurt_unit(u, u.max_hp * 0.25, null)
+		if D.river_dist(u.pos) < float(gf["hit_radius"]):
+			hurt_unit(u, u.max_hp * float(gf["hit_damage"]), null)
 			hurt += 1
 			remember(u, tr("survived the Great Flood on Day %d") % day(), 7)
 	for s in structures:
-		if ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < 220:
+		if ours(s) and s.built and hit_by(s, "flood") and D.river_dist(s.pos) < float(gf["building_radius"]):
 			s.built = false
-			s.progress = s.work * 0.4
+			s.progress = s.work * float(gf["rebuild"])
 	add_log(tr("The Great Flood strikes! %d food washed away, %d hurt, riverside structures damaged.") % [lost, hurt], "danger")
 	flags["flood_active"] = time
 

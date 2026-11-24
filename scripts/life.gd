@@ -474,7 +474,7 @@ func _spot(u: E.Unit, at: String) -> Variant:
 		"shelter":
 			var best = null
 			for s in sim.structures:
-				if s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary"] and D.same_side(s.pos, u.pos) and (best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = s
+				if s.built and sim.ours(s) and D.STRUCTURES[s.type].get("cap", 0) > 0 and D.same_side(s.pos, u.pos) and (best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = s
 			if best == null: return null
 			return best.pos + Vector2(randf_range(-18, 18), sim.struct_r(best) + 6)
 		"grave":

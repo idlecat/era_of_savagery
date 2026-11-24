@@ -175,7 +175,7 @@ func strike() -> void:
 			_hit_person(u)
 			return
 	if r < float(cl["hit_person"]) + float(cl["hit_building"]):
-		var targets: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary", "totem_shrine", "weapon_rack", "aurochs_pen", "council_ring", "smelter"])
+		var targets: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and sim.hit_by(s, "lightning"))
 		if not targets.is_empty():
 			var s: E.Structure = targets.pick_random()
 			_flash(s.pos)
@@ -277,7 +277,7 @@ func _fire_tick(dt: float) -> void:
 					_hurt(u, float(cw["burn_damage"]), tr("burned in the wildfire"))
 					if not u.dead: sim.react.trigger("burned", {"victim": u, "cause": "wildfire", "at": n.pos})
 			for s in sim.structures:
-				if s.built and sim.ours(s) and not scorched.has(s.id) and not (s.type in ["burial_ground", "farm_plot", "bonfire"]) and s.pos.distance_to(n.pos) < float(cw["building_radius"]):
+				if s.built and sim.ours(s) and not scorched.has(s.id) and sim.hit_by(s, "wildfire") and s.pos.distance_to(n.pos) < float(cw["building_radius"]):
 					scorched[s.id] = true
 					s.built = false
 					s.progress = s.work * 0.4
@@ -326,7 +326,7 @@ func _flood_strike() -> void:
 			if not u.dead: sim.react.trigger("hurt", {"victim": u, "cause": "flood", "at": u.pos})
 	var damaged: Array = []
 	for s in sim.structures:
-		if sim.ours(s) and s.built and s.type != "palisade" and D.river_dist(s.pos) < float(cf["building_radius"]):
+		if sim.ours(s) and s.built and sim.hit_by(s, "flood") and D.river_dist(s.pos) < float(cf["building_radius"]):
 			s.built = false
 			s.progress = s.work * 0.5
 			damaged.append(tr(D.STRUCTURES[s.type]["name"]))
@@ -432,7 +432,7 @@ func quake() -> void:
 	sim.cult.on_event("earthquake")
 	shake = float(cq["shake"])
 	sim.react.trigger("earthquake", {"at": D.VILLAGE}) # (they tend the hurt once it stops)
-	var cands: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and not (s.type in ["bonfire", "burial_ground", "farm_plot", "palisade"]))
+	var cands: Array = sim.structures.filter(func(s): return s.built and sim.ours(s) and sim.hit_by(s, "quake"))
 	cands.shuffle()
 	var fallen: Array = []
 	for s in cands.slice(0, randi_range(int(cq["collapse"][0]), int(cq["collapse"][1]))):

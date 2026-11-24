@@ -85,6 +85,11 @@
   "log": "The wildfire burns out: %d trees are lost. In time, berries will sprout in the ashes."
  },
 
+ "great_flood": {
+  "_doc": "The Great Flood (sim.flood_strike), when the flood dilemma's warning comes true: the share of the food stores it washes away; people within hit_radius of a river are hurt by hit_damage of their health; buildings within building_radius are knocked down to rebuild of their work.",
+  "food_lost": 0.5, "hit_radius": 260, "hit_damage": 0.25, "building_radius": 220, "rebuild": 0.4
+ },
+
  "flood": {
   "season": 0, "chance": 0.45, "warn_ahead": 15, "length": 45, "extra_width": 110,
   "hit_radius": 130, "hit_damage": 0.2, "building_radius": 170, "crop_radius": 160,

@@ -1,6 +1,8 @@
 ## Static game data: map geometry, structures, techs, traits, name pools.
 extends RefCounted
 
+const Config = preload("res://scripts/config.gd")
+
 ## ---- The map ----
 ## The map is a set of static vars filled by load_map(): either from a scenario
 ## (scenarios/*.gd: a hand-made map with its own tribe, clans, landmarks and scripted
@@ -476,42 +478,20 @@ const BASE_FINDS := {
 static var FINDS: Dictionary = BASE_FINDS.duplicate(true)
 const FIND_GROUPS := {"food": "Foods", "medicine": "Medicines", "ore": "Ores & earths"}
 
-# wood = material cost, work = build points, cap = population capacity
-const STRUCTURES := {
-	"hut":          {"name": "Hut", "desc": "Houses 3 people. At night 3 sleep inside, warm and safe from wolves.", "wood": 15, "work": 30.0, "cap": 3, "r": 20.0},
-	"large_hut":    {"name": "Large Hut", "desc": "Houses 5 people, and 5 can sleep inside at night.", "wood": 22, "work": 42.0, "cap": 5, "r": 26.0},
-	"palisade":     {"name": "Wooden Palisade", "desc": "A ring of stakes: people inside it get +3 DEF. Floods can't wash it away.", "wood": 20, "work": 36.0, "r": 100.0, "ring": true},
-	"fishing_dock": {"name": "Fishing Dock", "desc": "Steady food from the river (less in winter).", "wood": 14, "work": 26.0, "r": 16.0, "food": 0.12},
-	"bonfire":      {"name": "Bonfire", "desc": "Warmth: nobody near it freezes, the sick heal faster, and those who don't fit in huts sleep around it. Lights up the land around it.", "wood": 8, "work": 12.0, "r": 12.0},
-	"weapon_rack":  {"name": "Weapon Rack", "desc": "People near it fight with +20% ATK.", "wood": 10, "work": 16.0, "r": 12.0},
-	"totem_shrine": {"name": "Totem Shrine", "desc": "A trickle of lore. Rituals near it give 50% more lore, and the sick nearby heal faster.", "wood": 18, "work": 30.0, "r": 14.0, "lore": 0.06},
-	"farm_plot":    {"name": "Farm Plot", "desc": "Steady food from the field (none in winter, less in drought).", "wood": 12, "work": 24.0, "r": 28.0, "food": 0.1, "tech": "farming"},
-	"granary":      {"name": "Granary", "desc": "Stores 100 more food (food over the stores' limit rots fast). Houses 4 people, and gatherers drop food here, so build it near the fields.", "wood": 30, "work": 40.0, "r": 20.0, "cap": 4, "tech": "pottery"},
-	"grand_altar":  {"name": "Grand Altar", "desc": "Summons Yinglong the winged dragon to guard the village. Rituals and healing as a shrine. Needed for Victory by Wisdom.", "wood": 60, "stone": 20, "work": 80.0, "r": 24.0, "tech": "totems"},
-	"aurochs_pen":  {"name": "Aurochs Pen", "desc": "Home to up to 2 pack oxen. Each ox eats food and needs tending, and lets one gatherer carry 50% more.", "wood": 25, "work": 30.0, "r": 30.0, "tech": "domestication"}, # keeps the herd (sim.oxen)
-	"smelter":      {"name": "Bronze Smelter", "desc": "Arms the tribe in bronze (+60% ATK, +3 DEF) while it has copper and tin; it uses one of each per day.", "wood": 20, "stone": 20, "work": 45.0, "r": 16.0, "tech": "bronze"},
-	"council_ring": {"name": "Council Ring", "desc": "A trickle of lore. Where the chiefs of the clans can meet: needed for Victory by Unity.", "wood": 15, "stone": 15, "work": 35.0, "r": 30.0, "lore": 0.05, "tech": "code"},
-	# laid out by the tribe itself when the first of them dies (not in the build menu)
-	# a road being built, cell by cell (roads.gd lay(); not in the build menu: the Road tool)
-	"roadworks": {"name": "Road works", "desc": "A road being laid, stretch by stretch.", "wood": 0, "work": 1.0, "r": 12.0},
-	"burial_ground": {"name": "Burial Ground", "desc": "Where the tribe lays its dead to rest.", "wood": 0, "work": 1.0, "r": 40.0},
-}
-## Homes and walls get a new look per era (style = era they were built or renovated in).
-const STYLED := ["hut", "large_hut", "palisade", "granary"]
+## The buildings: config/structures.json "types" (cost, work, footprint, what they do, which
+## hazards can knock them down...). Read-only, like every config.
+static var STRUCTURES: Dictionary = Config.load_cfg("structures")["types"]
+## Homes and walls get a new look per era (style = era they were built or renovated in):
+## the types with "styled" in config/structures.json.
+static var STYLED: Array = STRUCTURES.keys().filter(func(k): return STRUCTURES[k].get("styled", false))
 ## Everything the tribe keeps in its stores (sim.stock): the only resource ids input from
 ## outside (scenarios, configs, culture packs, a game master) may name.
 const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods"]
-const CONTRACT_STRUCTURES := ["hut", "large_hut", "palisade", "fishing_dock", "bonfire", "weapon_rack", "totem_shrine", "farm_plot", "granary"]
-const VILLAGE_BUILDS := ["hut", "palisade", "bonfire", "totem_shrine", "farm_plot", "granary", "aurochs_pen", "smelter", "council_ring", "grand_altar"]
-const STRUCT_ALIASES := {
-	"wooden_palisade": "palisade", "wall": "palisade", "walls": "palisade", "fence": "palisade",
-	"dock": "fishing_dock", "fishing_pier": "fishing_dock", "pier": "fishing_dock",
-	"big_hut": "large_hut", "longhouse": "large_hut", "grand_hut": "large_hut",
-	"fire": "bonfire", "grand_bonfire": "bonfire", "campfire": "bonfire",
-	"rack": "weapon_rack", "weapons_rack": "weapon_rack",
-	"shrine": "totem_shrine", "totem": "totem_shrine",
-	"farm": "farm_plot", "field": "farm_plot", "crop_plot": "farm_plot",
-}
+## What a Task Contract may build, and what the village build menu offers (in order).
+static var CONTRACT_STRUCTURES: Array = Config.load_cfg("structures")["contract_builds"]
+static var VILLAGE_BUILDS: Array = Config.load_cfg("structures")["build_menu"]
+## Other names an LLM may use for a building type (contracts.sanitize maps them).
+static var STRUCT_ALIASES: Dictionary = Config.load_cfg("structures")["aliases"]
 
 ## Knowledge evolves two ways: by PRACTICE (people doing related work build up insight;
 ## "practice" maps activity -> weight) and by spending lore to finish the idea. "words"
