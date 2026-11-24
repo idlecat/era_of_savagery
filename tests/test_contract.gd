@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -336,7 +336,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -3378,6 +3378,61 @@ func test_find_data() -> void:
 	sim.discover_find("flint", u, u.pos)
 	check(sim.evo.insight_frac("tools") > before or sim.has_tech("tools"), "flint brings insight into tools (%.2f -> %.2f)" % [before, sim.evo.insight_frac("tools")])
 	check(Cultures.validate({"id": "t", "name": "T", "desc": "d", "finds": [{"id": "f", "name": "F", "desc": "d", "gives": {"gold": 3}}]}).size() > 0, "a pack find that gives an unknown resource is refused")
+
+## A band against a saber-tooth: it musters out of reach, charges together, rings the
+## beast (flank blows hit harder) and lets its badly hurt fall back (config/hunt.json).
+func test_band_hunt() -> void:
+	print("\n== A band hunts a saber-tooth ==")
+	var sim = _new_sim()
+	sim.predators.clear()
+	var cfg: Dictionary = sim.hunt.rules_for("tiger")
+	check(not cfg.is_empty() and sim.hunt.rules_for("wolf").is_empty(), "the saber-tooth has tactics, wolves are fought straight on")
+	var at: Vector2 = sim.dry_spot(D.VILLAGE + Vector2(260, 160))
+	var tiger = sim.spawn_predator(at)
+	tiger.spd = 0.0 # (stays put: this tests the band, not the chase)
+	var band: Array = sim.living().filter(func(u): return u.role == "").slice(0, 3)
+	for i in band.size():
+		band[i].pos = sim.dry_spot(at + Vector2(-420 + i * 40, -60 + i * 70))
+		band[i].max_hp = 1000.0 # (tough: nobody falls back before that part of the test)
+		band[i].hp = band[i].max_hp
+		sim.assign_attack(band[i], tiger)
+	sim.tick(0.05)
+	check(sim.hunt.bands.has(tiger.id) and not sim.hunt.bands[tiger.id]["go"], "three sent against it muster first instead of running at it")
+	var b: Dictionary = sim.hunt.bands[tiger.id]
+	check(b["rally"].distance_to(at) > float(cfg["engaged_r"]), "the rally point is out of the beast's reach")
+	var early := false
+	var gathered_at_go := false
+	for k in 400:
+		sim.tick(0.05)
+		if not b["go"] and band.any(func(u): return u.pos.distance_to(at) < float(cfg["engaged_r"])): early = true
+		if b["go"]:
+			gathered_at_go = band.all(func(u): return u.pos.distance_to(b["rally"]) <= float(cfg["gather_r"]) + 1.0)
+			break
+	check(not early and b["go"] and gathered_at_go, "nobody goes in alone: they charge once all are at the rally point")
+	check(sim.hunt.summary().size() == 1 and sim.hunt.summary()[0]["charging"], "the band shows in hunt.summary()")
+	var spots: Array = band.map(func(u): return sim.hunt.spot(u, tiger))
+	var spread := true
+	for i in spots.size():
+		for j in range(i + 1, spots.size()): spread = spread and spots[i].distance_to(spots[j]) > 15.0
+	check(spread, "each takes a different place round the beast")
+	tiger.hp = 100000.0
+	for k in 200: sim.tick(0.05)
+	check(band.all(func(u): return u.pos.distance_to(at) <= 24.0), "the band is round it, close enough to strike")
+	check(sim.hunt.dmg_mult(band[0], tiger) > 1.2, "blows hit harder with others on its flanks (x%.2f)" % sim.hunt.dmg_mult(band[0], tiger))
+	band[1].hp = band[1].max_hp * 0.2
+	band[1].last_hit_t = -100.0
+	for k in 40: sim.tick(0.05)
+	check(band[1].pos.distance_to(at) > float(cfg["fall_back_dist"]) * 0.8 and band[1].job.get("type", "") == "attack", "the badly hurt one falls back while the others keep it busy")
+	tiger.hp = 1.0
+	for k in 40: sim.tick(0.05)
+	check(tiger.dead and not sim.hunt.bands.has(tiger.id), "the beast falls and the band breaks up")
+	# a lone hunter doesn't wait for anyone
+	var t2 = sim.spawn_predator(at)
+	t2.spd = 0.0
+	sim.assign_attack(band[0], t2)
+	sim.tick(0.05)
+	check(sim.hunt.bands.has(t2.id) and sim.hunt.bands[t2.id]["go"] and sim.hunt.spot(band[0], t2) == t2.pos, "one alone goes straight at it")
+	sim.dispose()
 
 func test_spare_hands() -> void:
 	print("\n== Chores go to the idle, an idle act included ==")
