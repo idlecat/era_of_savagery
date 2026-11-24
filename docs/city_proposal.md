@@ -65,7 +65,10 @@ with a person = a unit (open question 1) it is required work, not an option.
 - **Careers** exist: families come to live by one trade (`u.calling` grows from what
   the hands do; holders `self_work()` at it when idle and the Steward leaves them
   to it). There is no farmer career yet, and specialist `max` values are small
-  fixed numbers (builder 3, warrior 4) — sized for a band, not a city.
+  fixed numbers (builder 3, warrior 4) — sized for a band, not a city. And
+  `careers.in_words()` — every holder, name → trade — now feeds `evo.world_ctx()`
+  (`trades_people_live_by`): the LLM context this doc's open question 1 called
+  people-free no longer is; it needs the same cap as `treasures`.
 - Missing for a city: bulk storage (warehouse), a well/water, anything that ties
   settlements into one economy.
 
@@ -154,17 +157,30 @@ exposed as game-master operations, per `CLAUDE.md`.
   > stone / lore / art) gaining a `farm` choice, taken ahead of wood when food days
   > fall under N (a `rules.json` number); a game master gets the same verb.
 - **Two staffing sources, one job.** The Steward's picker is the fallback; the
-  steady hands are a **`farmer` career** in `config/careers.json` (open: `built:
-  farm_plot`; `from: {"job:farm": 1.5}`; `work: {"farm": true}`), so the families who
-  keep coming back to the fields become farmers and `self_work()` there when idle —
-  a field district that *grows out of people*, as careers already do for herders and
-  fishers. The same applies to the dock (the `fisher` career gains the dock as a
-  workplace) and the pen (the `herder` career exists). This needs one new career
-  key, not new machinery.
+  steady hands are a **`farmer` career** in `config/careers.json`, so the families
+  who keep coming back to the fields become farmers and go there by themselves.
+  Checked against `careers.gd`: `open: {"built": "farm_plot"}` and
+  `from: {"job:farm": 1.5}` are pure data (an `open` is a `story.holds()`
+  condition; `from` tags are `job:<type>` for any job type — the herder already
+  grows from `job:tend`), but **`work` is a verb, and `go_work()` knows four:
+  `gather`, `build`, `ritual`, `art`** — `{"farm": true}` would be a fifth. Make
+  it one parameterized verb instead: `work: {"work_at": "farm_plot"}` → the
+  nearest worked structure of that type with a free hand-place, the same "who
+  works this plot" query §3.1 already defines, shared with the picker. The
+  `fisher` career takes `work_at: fishing_dock` (today it gathers from fish
+  *nodes*; the dock becomes its workplace) and the `herder` `work_at:
+  aurochs_pen` (today it has no `work` at all, only the `preferred: tend` call).
+  One small branch in `go_work()`, three career entries in data —
+  machinery-light, but not machinery-free.
 - **Career places must scale with the city.** `max` becomes the number shape the
   doc already uses (`{"base": 3, "per_pop": 0.03}`): 3 builders at 40 people, ~30
-  at 1000. Without it a city of 1000 has three builders and the bed governor
-  (§3.2) stalls on careers, not wood.
+  at 1000 (`block()` reads it as a flat int today, so it widens to the shape —
+  one line). The reason is not a stall: career `max` caps nobody's *labour* (the
+  Steward can still send any idle hand to a site); it caps the *specialist layer* —
+  the self-starting, 1.25×-fast, preferred-for-duty hands. A city of 1000 with
+  three builders still raises longhouses, but on whichever idle hands the Steward
+  catches; ~30 builders is what makes the city's building a trade, and lets the
+  bed governor (§3.2) ride on specialists instead of casual labour.
 - **Numbers that must agree** (the previous draft's didn't: ~3× the trickle per
   worker on 80–100 plots is ~3× a city's whole demand). Demand ≈ 2.3 food per person
   per day (≈ 3 in winter, hunger ×1.25); a plot's trickle is 9/day; set
@@ -237,8 +253,9 @@ food (`rivals.json → traders`). They must scale with the clans' own growth (§
 tribute per clan pop, lot size per clan pop, and caravans that come more often to
 a city — the surplus wood (the 6,000 pile) is what a city buys food with, and the
 era-3 Trading Post's `trade_every`/`trade_rate` multipliers are the building that
-turns the caravan share on at town tier. That is
-the diplomacy dividend the rival growth pays for; it is not a second farm.
+turns the share on at city tier (the post is era 3, like the wall the city tier
+requires). That is the diplomacy dividend the rival growth pays for; it is not a
+second farm.
 
 ### 3.2 Births as a rate, plus migration
 
@@ -298,8 +315,11 @@ the diplomacy dividend the rival growth pays for; it is not a second farm.
   so a culture pack or scenario can rename or re-gate them.
 - **Pacing check against the S-curve** (§3.2): village ~day 15, town ~day 45–50,
   city ~day 90. Era 2 (farming, cost 35, `berry` practice) arrives well before the
-  150 mark, so the longhouse is not the binding gate — the headcount is. Town
-  lands at the growth spurt's peak, when beds (the governor) are fullest, so the
+  150 mark, so the longhouse is not the binding gate — the headcount is. The city
+  tier is the opposite: it needs the era-3 Stone Wall, so its timing follows the
+  bronze age, and pop 500 will usually be waiting on the tech — the name arrives
+  with the age, which is the right story. Town lands at the growth spurt's peak,
+  when beds (the governor) are fullest, so the
   first town plague or fire is exactly the "villagehood ends" beat — good drama,
   but the director's spike-death softening (§3.4's `while` list) is a few lines and
   should land with this step, not wait for step 5. The city row then carries the
@@ -382,7 +402,9 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 - The chronicle and the LLM personas (`evo.world_ctx()`) speak of "our village", "the
   town of X", "the city": `hz.summary()`/`evo.world_ctx()` gain a `settlements` list
   with tiers, so a game master can drive it too (`story.run()` actions
-  `{"tier_up": ...}` are not needed; the rule does it, the GM reads it).
+  `{"tier_up": ...}` are not needed; the rule does it, the GM reads it). With
+  careers on main, `world_ctx()` also carries `careers.in_words()` — cap it here
+  (open question 1), or every prompt lists the whole city by name.
 - New game-master operations: `improve.plan(settlement)`, `folk.add_family(n,
   at)`, `sim.tier_of(at)` — each JSON-shaped and clamped at the boundary.
 
@@ -421,11 +443,14 @@ a pinch, a crisis, growth.
    `pop_cap`, raids, the HUD, the metric bands and the victory check, and breaks the
    symmetry with the rival clans' per-unit `pop`/`warriors`. Its perf saving is
    smaller than it looks, since §3.5 is due by ~500 anyway. Consequences: §3.5 is
-   required; the LLM contexts stay small (`evo.world_ctx()` holds no people,
-   `folk.summary()` a children count, `rivals.summary()` capped slices; the one
-   growing list, `treasures`, gets capped: wonders first, then the last 8); a
-   purely visual ambient crowd in `world_view` is out of scope until a city exists
-   to look at.
+   required; the LLM contexts must *stay* small — checked at this branch's commit
+   they were (`folk.summary()` a children count, `rivals.summary()` capped
+   slices), but main's careers have since added `trades_people_live_by:
+   careers.in_words()` (every holder, name → trade) to `evo.world_ctx()`, which
+   would be ~500 names at city scale: cap it — counts per trade plus each trade's
+   notable holder — the same treatment `treasures` gets (wonders first, then the
+   last 8); a purely visual ambient crowd in `world_view` is out of scope until a
+   city exists to look at.
 2. **Job priority vs contracts and the War Chief — settled, no fight.** Field
    staffing draws only from the spare pool (`spare_hand()`: idle or gathering, no
    office, awake — the pen's herder comes from the same pool), so it can never take a
