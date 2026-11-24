@@ -183,7 +183,7 @@ func start_art(u: E.Unit) -> void:
 	var hut = null
 	if kind == "paint":
 		for s in sim.structures:
-			if s.built and sim.ours(s) and s.type in ["hut", "large_hut", "granary", "totem_shrine"] and s.decor < int(ca["max_decor"]) and s.pos.distance_to(u.home) < 350:
+			if s.built and sim.ours(s) and D.STRUCTURES[s.type].get("decor", false) and s.decor < int(ca["max_decor"]) and s.pos.distance_to(u.home) < 350:
 				hut = s
 				break
 		if hut == null: kind = "carve"

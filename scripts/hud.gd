@@ -852,7 +852,7 @@ func _build_ability_table() -> void:
 		for col in SORT_COLS:
 			var val: int = sim.unit_level(u) if col[0] == "lv" else u.lv(col[0])
 			var c := COL_ACCENT if col[0] == sort_key else Color("#d8ccb0")
-			if col[0] != "lv" and val >= 5: c = Color("#7ff0ff") # mastery unlocked
+			if col[0] != "lv" and val >= sim.UNLOCK_LV: c = Color("#7ff0ff") # mastery unlocked
 			var l := _label(str(val), 15, c)
 			l.custom_minimum_size = Vector2(COL_W, 0)
 			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -956,8 +956,8 @@ func _refresh_left_content() -> void:
 	for k in D.SKILLS:
 		var sk: Dictionary = u.skills[k]
 		var need: float = sim.xp_need(sk["lv"])
-		var bars := int(10.0 * sk["xp"] / need) if sk["lv"] < 10 else 10
-		var unlock: String = (tr(" [color=#7ff0ff][%s][/color]") % tr(D.SKILL_UNLOCKS[k])) if sk["lv"] >= 5 else ""
+		var bars := int(10.0 * sk["xp"] / need) if sk["lv"] < sim.MAX_LV else 10
+		var unlock: String = (tr(" [color=#7ff0ff][%s][/color]") % tr(D.SKILL_UNLOCKS[k])) if sk["lv"] >= sim.UNLOCK_LV else ""
 		s += tr("%s  Lv.%d%s\n[bgcolor=#6fb04f]%s[/bgcolor][bgcolor=#3a3226]%s[/bgcolor] [color=#8a7a60]%d/%d xp[/color]\n") % [tr(D.SKILL_NAMES[k]), sk["lv"], unlock, " ".repeat(bars * 3), " ".repeat((10 - bars) * 3), sk["xp"], need]
 	s += tr("\n[color=#ffd36b]MEMORY ARCHIVE[/color] [color=#8a7a60](10 most impactful)[/color]\n")
 	var mem: Array = u.memory.duplicate()

@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -309,7 +309,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2087,6 +2087,31 @@ func test_wall_radius() -> void:
 	var s2 = _new_sim()
 	preload("res://scripts/save_game.gd").decode_into(s2, data)
 	check(s2.struct_by_id(p.id).size == 200.0, "the chosen size is saved")
+
+func test_structures_config() -> void:
+	print("\n== Buildings are data (config/structures.json) ==")
+	var cfg: Dictionary = preload("res://scripts/config.gd").load_cfg("structures")
+	var bad: Array = []
+	for k in cfg["build_menu"] + cfg["contract_builds"] + cfg["aliases"].values():
+		if not D.STRUCTURES.has(k): bad.append(k)
+	check(bad.is_empty(), "the build menu, contract builds and aliases name only real buildings %s" % [bad])
+	var hz_bad: Array = []
+	for k in D.STRUCTURES:
+		for h in D.STRUCTURES[k].get("hazards", []):
+			if not h in ["lightning", "wildfire", "flood", "quake"]: hz_bad.append("%s:%s" % [k, h])
+		for v in D.STRUCTURES[k].get("drift", {}):
+			if not D.CULTURE_AXES.has(v): hz_bad.append("%s drift %s" % [k, v])
+	check(hz_bad.is_empty(), "every hazard and culture drift a building names exists %s" % [hz_bad])
+	var sim = _new_sim()
+	var hut = sim.add_structure("hut", D.VILLAGE + Vector2(300, 0), true)
+	var wall = sim.add_structure("palisade", D.VILLAGE, true)
+	var fire = sim.add_structure("bonfire", D.VILLAGE + Vector2(0, 300), true)
+	check(sim.hit_by(hut, "lightning") and sim.hit_by(hut, "quake") and sim.hit_by(hut, "flood") and sim.hit_by(hut, "wildfire"), "a hut can be struck, shaken, flooded and burned")
+	check(sim.hit_by(wall, "wildfire") and not sim.hit_by(wall, "flood") and not sim.hit_by(wall, "quake") and not sim.hit_by(wall, "lightning"), "a palisade only burns: floods and quakes don't bring it down")
+	check(not sim.hit_by(fire, "wildfire") and sim.hit_by(fire, "flood"), "a bonfire doesn't burn down, but a flood puts it out")
+	check(sim.wall_def(D.VILLAGE + Vector2(50, 0)) == float(D.STRUCTURES["palisade"]["inside_def"]) and sim.wall_def(D.VILLAGE + Vector2(2000, 0)) == 0.0, "a wall's DEF comes from its config, only inside it")
+	check("hut" in D.STYLED and not "bonfire" in D.STYLED, "the era styles follow the styled flag")
+	check(sim.xp_need(0) == float(sim.RULES["skills"]["xp_base"]) and sim.UNLOCK_LV == int(sim.RULES["skills"]["unlock_lv"]), "XP and the mastery level come from rules.json skills")
 
 func test_policies() -> void:
 	print("\n== The Council's policies (config/policies.json) ==")

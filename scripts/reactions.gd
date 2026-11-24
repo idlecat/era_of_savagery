@@ -173,7 +173,7 @@ func _start_cover(r: Dictionary, u: E.Unit) -> bool:
 func open_spot(p: Vector2, clear := 110.0, max_move := 160.0) -> Vector2:
 	var away := Vector2.ZERO
 	for s in sim.structures:
-		if not s.built or s.type in ["farm_plot", "burial_ground", "bonfire"]: continue
+		if not s.built or D.STRUCTURES[s.type].get("open", false): continue
 		var d: float = s.pos.distance_to(p)
 		if d < clear: away += (p - s.pos).normalized() * (clear - d) if d > 1.0 else Vector2(1, 0) * clear
 	var q := p + away.limit_length(max_move)
