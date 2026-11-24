@@ -1747,6 +1747,12 @@ const STRINGS := {
 	"Sounds of the land": "大地之声",
 	# saving (save_game.gd)
 	"Save / Load": "存档 / 读档",
+	"Quit": "退出",
+	"QUIT": "退出游戏",
+	"Leave the game": "离开游戏",
+	"Leave the game? Anything since the last save is lost unless you save now (into the quick save).": "要离开游戏吗？上次存档之后的进度都会丢失，除非现在保存（存入快速存档）。",
+	"Save and quit": "保存并退出",
+	"Quit without saving": "不保存直接退出",
 	"SAVE / LOAD": "存档 / 读档",
 	"F5: quick save · F9: quick load": "F5：快速存档 · F9：快速读档",
 	"Autosave %s": "自动存档 %s",
