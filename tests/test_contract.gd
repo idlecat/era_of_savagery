@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -113,6 +113,32 @@ func test_sanitize() -> void:
 	check(bp["steps"][0]["structure"] == "palisade" and bp["steps"][2]["structure"] == "large_hut", "aliases mapped")
 	check(bp["steps"][1]["target_amount"] == 120, "amount clamped")
 	check(bp["abort_conditions"] == ["enemy_attack", "hp_below_25%"], "aborts whitelisted, enemy_attack forced")
+
+func test_rest_at_nearest_fire() -> void:
+	print("\n== A wounded leader rests at the nearest fire, not back at the village ==")
+	var sim = _new_sim()
+	var u = sim.unit_by_name("Panshi")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "Found a new settlement on the frontier", {}, false)
+	var san: Dictionary = sim.contracts.sanitize(Persona.propose(ctx)["blueprint"], {}, u)
+	var c = sim.contracts.create(san["blueprint"], u, "Found a new settlement on the frontier")
+	var far := Vector2.INF
+	for dir in [Vector2(-1, 1), Vector2(1, 1), Vector2(-1, -1), Vector2(1, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0), Vector2(0, -1)]:
+		var p: Vector2 = D.VILLAGE + dir.normalized() * 600.0
+		if p.x > 50 and p.y > 50 and p.x < D.W - 50 and p.y < D.H - 50 and D.same_side(p, D.VILLAGE) and not D.is_water(p) and D.river_dist(p) > 200.0:
+			far = p
+			break
+	check(far != Vector2.INF, "found a spot far from the village on the home side")
+	if far == Vector2.INF: return
+	u.pos = far
+	var fire = sim.add_structure("bonfire", far + Vector2(60, 0), true)
+	c.abort_reason = "leader_wounded"
+	sim.contracts.resolve(c, "rest")
+	var to: Vector2 = u.job.get("to", Vector2.INF)
+	check(u.id in c.resting_ids and to.distance_to(fire.pos) < 90.0, "the leader heads for the fire beside them (to %s, fire %s)" % [to, fire.pos])
+	u.job = {}
+	u.pos = to
+	sim.contracts._manage_wounded(c)
+	check(u.job.is_empty(), "and stays there to heal instead of walking on to the village")
 
 func test_full_contract() -> void:
 	print("\n== Full contract lifecycle (Panshi, offline) ==")
