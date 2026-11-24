@@ -833,7 +833,7 @@ func draw_overlay() -> void:
 	if not clean: # speech marks last, above names and popups
 		for u in sim.units:
 			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
-				_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u.say, u.say_until - sim.time)
+				_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u, u.say_until - sim.time)
 	if drag_start != null and wall_center == null: # (a box select, not a wall being sized)
 		var m := get_global_mouse_position()
 		var r := Rect2(drag_start, m - drag_start).abs()
@@ -2164,7 +2164,6 @@ func _draw_unit_overlay(u) -> void:
 	_draw_label(b + Vector2(0, -46), title, 14, Color("#fff4d6") if not sel else Color("#ffe066"), true)
 	if u.hp < u.max_hp - 0.5: _bar(b + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
 
-## A speech mark: a small pale bubble with a tail, fading out at the end.
 ## Speech situations that have a bubble icon (life.gd talk kinds).
 const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief", "quarrel"]
 
