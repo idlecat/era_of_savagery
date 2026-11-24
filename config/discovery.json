@@ -55,7 +55,7 @@
   }
  },
  "seek": {
-  "_doc": "Search quests (a Task Contract kind): where each group of finds is looked for (the kinds of place: forest, meadow, riverbank, hills, volcano), how many days the leader may search (days), how far around the place the crew roams (radius), how long a day of searching is (secs_per_day) and how many may go (crew_max). Searchers notice their group's finds with activity.seek odds and seek_range reach.",
+  "_doc": "Search quests (a Task Contract kind): where each group of finds is looked for (the kinds of place: forest, meadow, riverbank, hills, volcano), how many days the leader may search (days), how far around the place the crew roams (radius), how long a day of searching is (secs_per_day) and how many may go (crew_max), how many of the densest wooded cells count as forests (forest_cells). searched: a finished search is remembered (contracts.searched, the last keep of them); for rest_days a place within radius x overlap of one searched for the same group is offered after the fresh places, and the leader is told what was found there. Searchers notice their group's finds with activity.seek odds and seek_range reach.",
   "groups": {
    "food": [
     "forest",
@@ -80,7 +80,13 @@
   "radius": 320,
   "secs_per_day": 45,
   "crew_max": 4,
-  "places": 4
+  "places": 4,
+  "forest_cells": 3,
+  "searched": {
+   "rest_days": 6,
+   "overlap": 1.0,
+   "keep": 40
+  }
  },
  "remembered": {
   "_doc": "The opening (make_it_fun D1): an elder (the best at lore) remembers a find from long ago, the first of prefer that grows on this map. Until found it is rumoured: noticed chance_mult times as easily, a search quest goes for its group unless the chieftain says otherwise, and the leader searches where it grows (place: a find's where as a kind of search place, when they differ). log: elder, find, its description, grows (where it grows, by the find's where).",

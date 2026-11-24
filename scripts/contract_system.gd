@@ -27,6 +27,8 @@ const WAR_OBJECTIVE_TEXT := {
 
 var sim
 var list: Array = []
+## Where search quests have combed, newest last: [{"group", "pos", "day", "found": [find ids], "place"}].
+var searched: Array = []
 ## What leaders say: the forecast before sealing and the field log during the work (A0/A1).
 var LOG: Dictionary = preload("res://scripts/config.gd").load_cfg("contract_log")
 
@@ -247,7 +249,7 @@ func seek_places(group: String, home: Vector2 = D.VILLAGE) -> Array:
 					cells[key] = cells.get(key, 0) + 1
 				var best: Array = cells.keys()
 				best.sort_custom(func(a, b): return cells[a] > cells[b])
-				for key in best.slice(0, 2):
+				for key in best.slice(0, int(_seek_cfg().get("forest_cells", 3))):
 					if cells[key] >= 8: out.append({"kind": "forest", "pos": (Vector2(key) + Vector2(0.5, 0.5)) * 600.0})
 			"meadow": # open land: few trees around
 				for k in 24:
@@ -266,10 +268,29 @@ func seek_places(group: String, home: Vector2 = D.VILLAGE) -> Array:
 			"volcano":
 				if D.has_volcano(): out.append({"kind": "volcano", "pos": D.VOLCANO + (home - D.VOLCANO).normalized() * 420.0})
 	out = out.filter(func(pl): return not D.in_river(pl["pos"]))
-	out.sort_custom(func(a, b): return a["pos"].distance_to(home) < b["pos"].distance_to(home))
+	for pl in out: pl["searched"] = last_search(group, pl["pos"])
+	out.sort_custom(func(a, b): # (places combed lately come after the fresh ones)
+		if a["searched"].is_empty() != b["searched"].is_empty(): return a["searched"].is_empty()
+		return a["pos"].distance_to(home) < b["pos"].distance_to(home))
 	out = out.slice(0, int(_seek_cfg().get("places", 4)))
 	for pl in out: pl["name"] = _place_name(pl, home)
 	return out
+
+## The latest search for `group` that combed the ground around `pos` within the last
+## `seek.searched.rest_days` days ({"group", "pos", "day", "found", "place"}), else {}.
+func last_search(group: String, pos: Vector2) -> Dictionary:
+	var cfg: Dictionary = _seek_cfg().get("searched", {})
+	var reach := float(_seek_cfg().get("radius", 320)) * float(cfg.get("overlap", 1.0))
+	for i in range(searched.size() - 1, -1, -1):
+		var r: Dictionary = searched[i]
+		if sim.day() - int(r["day"]) > int(cfg.get("rest_days", 6)): break
+		if r["group"] == group and r["pos"].distance_to(pos) < reach: return r
+	return {}
+
+## A past search in words for the leader: {"on_day", "found": [names], empty if nothing new}.
+func _search_words(r: Dictionary) -> Dictionary:
+	if r.is_empty(): return {}
+	return {"on_day": int(r["day"]), "found": r["found"].map(func(id): return tr(D.FINDS[id]["name"]))}
 
 ## "the woods to the north-east", "the hills by Flint Ridge"...
 func _place_name(pl: Dictionary, home: Vector2) -> String:
@@ -285,7 +306,7 @@ func seek_env(group: String, home: Vector2 = D.VILLAGE) -> Dictionary:
 	var known: Array = sim.known_finds.keys().filter(func(id): return D.FINDS[id].get("group", "") == group).map(func(id): return tr(D.FINDS[id]["name"]))
 	return {
 		"looking_for": tr(SEEK_WORDS.get(group, "new foods")) if group != "" else tr("whatever is new: foods, healing plants, stones"),
-		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "kind": pl["kind"], "paces_away": roundi(pl["pos"].distance_to(home)), "seen_before": sim.is_explored(pl["pos"])}),
+		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "kind": pl["kind"], "paces_away": roundi(pl["pos"].distance_to(home)), "seen_before": sim.is_explored(pl["pos"]), "we_searched_here": _search_words(pl["searched"])}),
 		"the_elders_remember": {"grows_in": sim.rumoured_place(group), "what": sim.rumoured.keys().filter(func(id): return D.FINDS[id]["group"] == group).map(func(id): return tr(D.FINDS[id]["name"]))} if sim.rumoured_place(group) != "" else {},
 		"already_known_to_the_tribe": known,
 		"days_you_may_search": _seek_cfg().get("days", [1, 3]),
@@ -1557,6 +1578,9 @@ func _complete_seek(c: E.Contract) -> void:
 	var ld := leader(c)
 	var found: Array = c.flags.get("found", [])
 	var names: Array = found.map(func(id): return tr(D.FINDS[id]["name"]))
+	searched.append({"group": str(c.plan["group"]), "pos": c.site, "day": sim.day(), "found": found.duplicate(), "place": str(c.plan.get("place_name", ""))})
+	var keep := int(_seek_cfg().get("searched", {}).get("keep", 40))
+	if searched.size() > keep: searched = searched.slice(searched.size() - keep)
 	var skill: String = str(sim.DISC.get("groups", {}).get(c.plan["group"], {}).get("skill", "forage"))
 	for u in crew(c, true):
 		sim.remember(u, (tr("searched %s and found %s on Day %d") % [c.plan.get("place_name", ""), ", ".join(names), sim.day()]) if not found.is_empty() else (tr("searched %s and found nothing new on Day %d") % [c.plan.get("place_name", ""), sim.day()]), 5 if not found.is_empty() else 2)

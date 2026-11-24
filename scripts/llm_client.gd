@@ -113,7 +113,7 @@ You MUST reply with ONLY one JSON object, no markdown, in this exact shape:
    "days": <days to search, within days_you_may_search>,
    "crew_size": <int 1-%d, including yourself>
  }}
-Look for what the Chieftain asks (looking_for), else what YOUR personality and memories would seek. Choose the place as you would: the cautious stay near, the bold go far into land no one has seen. You do not know what you will find there - speak of hopes, not certainties.
+Look for what the Chieftain asks (looking_for), else what YOUR personality and memories would seek. Choose the place as you would: the cautious stay near, the bold go far into land no one has seen. A place with we_searched_here was combed lately (found: what turned up, [] = nothing new): go back only if you have a reason. You do not know what you will find there - speak of hopes, not certainties.
 Mention at least one memory from your memory_stream naturally. Primal, vivid language; no modern words."""
 
 const WAR_RULES := """The Chieftain asks you to lead a WAR PARTY (a Task Contract) against a neighbouring clan.

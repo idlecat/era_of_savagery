@@ -430,20 +430,27 @@ static func propose_seek(ctx: Dictionary) -> Dictionary:
 	if places.is_empty():
 		return {"speech": I.t("Chieftain, I know of nowhere to look for that."), "blueprint": {}}
 	# where: the cautious stay near, the bold go far, the devout to the hills and the fire mountain
-	var pick := 0
+	# (places combed lately are left alone while fresh ones remain: they come last in the list)
+	var fresh: Array = places.filter(func(p):
+		var w = p.get("we_searched_here", {})
+		return not (w is Dictionary and not w.is_empty()))
+	if fresh.is_empty(): fresh = places
+	var near: int = fresh[0]["index"]
+	var far: int = fresh.back()["index"]
+	var pick := near
 	match arch:
-		"warrior": pick = places.size() - 1
+		"warrior": pick = far
 		"mystic":
-			for p in places:
+			for p in fresh:
 				if not p.get("seen_before", true): pick = p["index"]
 	var told: String = str(env.get("the_elders_remember", {}).get("grows_in", ""))
 	if told != "": # where the elders say it grows
-		for p in places:
+		for p in fresh:
 			if p.get("kind", "") == told:
 				pick = p["index"]
 				break
-	if _any(msg, ["far", "farther", "远"]): pick = places.size() - 1
-	if _any(msg, ["near", "close", "近"]): pick = 0
+	if _any(msg, ["far", "farther", "远"]): pick = far
+	if _any(msg, ["near", "close", "近"]): pick = near
 	var dr: Array = env.get("days_you_may_search", [1, 3])
 	var days: int = {"cautious": 1, "lazy": 1, "warrior": 2, "mystic": 2, "agrarian": 2}.get(arch, 2)
 	if _any(msg, ["long", "longer", "more days", "久", "多几天"]): days = int(dr[1])

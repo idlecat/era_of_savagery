@@ -3466,6 +3466,26 @@ func test_discovery_odds() -> void:
 		if c.status == "done": break
 	check(c.status == "done" and not s2.living().any(func(u): return u.role == "contract" and u.contract_id == c.id), "the search ends and the crew comes home")
 	check(s2.log_lines.any(func(e): return "The search" in e["text"] and "Wild Honey" in e["text"]), "the chronicle tells what they found")
+	# the tribe remembers where it searched: the next search goes somewhere fresh
+	check(s2.contracts.searched.size() == 1 and "honey" in s2.contracts.searched[0]["found"], "the search is remembered (found %s)" % ", ".join(s2.contracts.searched[0]["found"]) if s2.contracts.searched.size() == 1 else "the search is remembered")
+	var woods: Array = s2.contracts.seek_places("food").filter(func(p): return p["kind"] == "forest")
+	check(not woods.is_empty(), "there are woods to search for foods")
+	var combed: Vector2 = woods[0]["pos"] # (woods stay put; riverbanks and meadows move day by day)
+	s2.contracts.searched.append({"group": "food", "pos": combed, "day": s2.day(), "found": [], "place": woods[0]["name"]})
+	var ctx2: Dictionary = s2.contracts.negotiation_ctx(ld, "Find something new", {"kind": "seek", "group": "food", "crew_size": 2}, true, "", {}, [], "seek")
+	var pl2: Array = ctx2["env"]["places_you_could_search"]
+	var there: Array = pl2.filter(func(p): return not p["we_searched_here"].is_empty())
+	var w2: Array = pl2.filter(func(p): return p["place"] == woods[0]["name"])
+	check(w2.is_empty() or w2[0]["we_searched_here"]["found"] == [], "the combed woods are dropped from the list, or the leader is told nothing was found there")
+	check(there.any(func(p): return "Wild Honey" in p["we_searched_here"]["found"]) or not pl2.any(func(p): return p["kind"] == "riverbank"), "and what an earlier search found")
+	check(pl2.back()["we_searched_here"].size() > 0, "places combed lately come after the fresh ones")
+	for arch in ["cautious", "warrior", "mystic", "agrarian"]:
+		ctx2["arch"] = arch
+		var bp2: Dictionary = Persona.propose(ctx2)["blueprint"]
+		check(pl2[int(bp2["place"])]["we_searched_here"].is_empty(), "so a leader (%s) searches somewhere new (%s)" % [arch, pl2[int(bp2["place"])]["place"]])
+	check(s2.contracts.last_search("ore", combed).is_empty(), "a search for foods doesn't count against ores")
+	for rec in s2.contracts.searched: rec["day"] = s2.day() - 99
+	check(s2.contracts.last_search("food", combed).is_empty(), "and after some days the place is worth trying again")
 
 func test_routine_matters() -> void:
 	print("\n== The Steward decides routine matters ==")
