@@ -187,3 +187,5 @@ class Contract:
 	var substate: String = ""
 	var kind: String = "settle" # "settle" (a frontier outpost), "research" (seek new wisdom) or "war" (raid a rival clan)
 	var flags: Dictionary = {} # war: blessed, scouted, spoils
+	var forecast: Dictionary = {} # the odds read at sealing (contracts.forecast): {risk, pct, reasons, words}
+	var said: Dictionary = {} # field-log triggers already spoken (contract_log.json), and the clocks behind them

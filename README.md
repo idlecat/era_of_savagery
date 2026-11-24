@@ -77,6 +77,8 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
 
+**The odds and the field log.** Before you seal, the leader reads the odds aloud from what the tribe knows: beasts and warriors seen near the way, a found den, hostile clans, unexplored land, the season's blizzards and floods, their own wounds, and for a war, the enemy's warriors against yours (*"No one has seen that land. Anything may wait there. One time in three, trouble finds us."*). Only what the tribe has seen counts, so scouting gives better odds. The number comes from the plan's own abort conditions and is the same for every leader; their temperament only colours the words. The LLM leader is given the same numbers. During the work the leader keeps a field log in the contracts panel and now and then says it aloud: milestones, the first building raised, nightfall, weather, someone hurt or growing in skill, a landmark found, and callbacks to the forecast ("No sign of the beasts yet." / "They found us, as I feared."). Lines are in `config/contract_log.json`.
+
 ## Graphics pipeline (pre-rendered 3D sprites)
 
 Like Age of Empires II, objects are modelled in 3D and rendered to sprites. On first launch, `scripts/art_baker.gd` builds low-poly models in code and renders them through an orthographic camera that exactly matches the map's 2:1 isometric projection. Each render gets:

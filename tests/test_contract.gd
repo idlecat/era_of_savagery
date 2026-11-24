@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -336,7 +336,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2277,6 +2277,99 @@ func test_seal() -> void:
 	var x = sim.contracts.available_helpers().filter(func(o): return o.lv("combat") < 5)[0]
 	var r3: Dictionary = sim.contracts.seal(x, "war", "Raid", {"kind": "war", "target": sim.rivals.clans.keys()[0], "objective": "loot"})
 	check(not r3["ok"] and r3["notes"][0] == sim.ranks.block("lead_war", x), "only a Blooded Warrior may lead a war party (%s)" % [r3["notes"]])
+
+func test_forecast() -> void:
+	print("\n== The odds before sealing (contracts.forecast, make_it_fun A0) ==")
+	var sim = _new_sim()
+	var CS = sim.contracts
+	for junk in [null, "x", 3, {}, {"abort_conditions": "enemy_attack"}, {"kind": "juggling", "abort_conditions": [1, null, "hp_below_x%"]}]:
+		var fj: Dictionary = CS.forecast(junk)
+		check(fj["risk"] >= 0.0 and fj["risk"] <= 1.0 and fj["words"] is String, "junk plans read as no known risk (%s)" % [junk])
+	var u = CS.available_helpers()[0]
+	var plan := {"kind": "settle", "abort_conditions": ["enemy_attack"]}
+	var site: Vector2 = CS.plan_site(plan)
+	var f0: Dictionary = CS.forecast(plan, u)
+	var p = sim.spawn_predator(site + Vector2(60, 0))
+	check(sim.is_explored(site) or CS.forecast(plan, u)["risk"] == f0["risk"], "a beast no one has seen does not count (fog of war)")
+	sim.reveal(site, 900.0)
+	var f1: Dictionary = CS.forecast(plan, u)
+	var beast_text: String = CS._fc_text("beasts") % 1
+	check(f1["reasons"][0]["id"] == "enemy_attack" and f1["reasons"][0]["text"] == beast_text and f1["words"].contains(beast_text), "a seen beast is named in the odds (%s)" % f1["words"])
+	p.dead = true
+	var f2: Dictionary = CS.forecast(plan, u)
+	check(f1["risk"] > f2["risk"], "and raises the risk (%d%% with it, %d%% without)" % [f1["pct"], f2["pct"]])
+	# the season: blizzards in winter
+	sim.hz.level = "normal"
+	var dplan := {"kind": "settle", "abort_conditions": ["natural_disaster"]}
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 1 + 5.0 # summer
+	var summer: float = CS.forecast(dplan, u)["risk"]
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + 5.0 # winter
+	var fw: Dictionary = CS.forecast(dplan, u)
+	check(fw["risk"] > summer + 0.2 and fw["reasons"][0]["text"] == CS._fc_text("blizzard"), "winter brings blizzard odds (%d%% vs %d%% in summer)" % [fw["pct"], roundi(summer * 100)])
+	# the number is the tribe's; the temperament only colours the words
+	var a = sim.living().filter(func(o): return sim.arch(o) == "warrior")[0]
+	var b = sim.living().filter(func(o): return sim.arch(o) == "cautious")[0]
+	var fa: Dictionary = CS.forecast(dplan, a)
+	var fb: Dictionary = CS.forecast(dplan, b)
+	check(fa["risk"] == fb["risk"] and fa["words"] != fb["words"], "a warrior and a cautious leader read the same odds in their own words")
+	# a wounded leader
+	var wplan := {"kind": "settle", "abort_conditions": ["hp_below_40%"]}
+	var fine: float = CS.forecast(wplan, u)["risk"]
+	u.hp = u.max_hp * 0.45
+	var fh: Dictionary = CS.forecast(wplan, u)
+	check(fh["risk"] > fine and fh["reasons"][0]["text"] == CS._fc_text("hurt"), "a leader who is already hurt says so")
+	u.hp = u.max_hp
+	# the negotiation sees it, and a sealed contract keeps it
+	var ctx: Dictionary = CS.negotiation_ctx(u, "", {}, false)
+	check(ctx["forecast"].has("risk_pct") and ctx["forecast"]["words"] != "", "the leader's negotiation context carries the odds (%s)" % ctx["forecast"]["words"])
+	var r: Dictionary = CS.seal(u, "settle", "Found a settlement")
+	var c = r["contract"]
+	check(r["ok"] and c.forecast.has("risk") and c.events.any(func(e): return e.contains(c.forecast["words"])), "a sealed contract keeps the odds it was sealed on")
+	check(CS.summary(c)["forecast_at_sealing"]["risk_pct"] == c.forecast["pct"], "and its summary reports them")
+
+func test_field_log() -> void:
+	print("\n== The leader's field log (make_it_fun A1) ==")
+	var sim = _new_sim()
+	var CS = sim.contracts
+	var u = CS.available_helpers()[0]
+	var c = CS.seal(u, "settle", "Found a settlement")["contract"]
+	c.status = "executing"
+	var name: String = tr(u.name)
+	var n0: int = c.events.size()
+	c.progress = 0.3
+	CS._field_log(c, 0.1)
+	check(c.events.size() == n0 + 1 and c.events[0].contains(name), "a quarter done: the leader says so (%s)" % c.events[0])
+	CS._field_log(c, 0.1)
+	check(c.events.size() == n0 + 1, "once per milestone")
+	c.progress = 0.55
+	CS._field_log(c, 0.1)
+	var top: String = c.forecast["reasons"][0]["id"]
+	var quiet: Array = CS.LOG["log"]["talk"]["quiet:" + top].map(func(t): return tr(t))
+	check(quiet.any(func(t): return c.events[0].contains(t)), "halfway with no trouble: a callback to the forecast (%s)" % c.events[0])
+	var n1: int = c.events.size()
+	CS._field_log(c, float(CS.LOG["log"]["chatter_secs"]) + 1.0)
+	check(c.events.size() == n1 + 1, "after a quiet stretch the leader chatters (%s)" % c.events[0])
+	CS._field_log(c, 1.0)
+	check(c.events.size() == n1 + 1, "but not every tick")
+	# a crew member hurt
+	var mate = CS.crew(c)[1] if CS.crew(c).size() > 1 else u
+	mate.hp = mate.max_hp * 0.3
+	CS._field_log(c, 0.1)
+	check(c.events[0].contains(tr(mate.name)), "a near miss is noticed (%s)" % c.events[0])
+	mate.hp = mate.max_hp
+	# the trouble comes: foreseen or not, the leader says which, in the chronicle too
+	c.plan["abort_conditions"] = ["enemy_attack"]
+	sim.spawn_predator(c.site + Vector2(20, 0))
+	check(CS._check_aborts(c), "a beast at the site interrupts the contract")
+	var key: String = "foreseen:enemy_attack" if CS.foresaw(c, "enemy_attack") else "unforeseen"
+	var said: Array = CS.LOG["log"]["talk"][key].map(func(t): return tr(t))
+	check(c.events.any(func(e): return said.any(func(t): return e.contains(t))), "the leader calls back to the odds (%s)" % key)
+	check(sim.log_lines.any(func(l): return said.any(func(t): return l["text"].contains(t))), "and the chronicle hears it")
+	var cut: Dictionary = c.forecast.duplicate(true)
+	c.forecast = {"reasons": [{"id": "natural_disaster", "score": 0.5, "text": ""}]}
+	check(not CS.foresaw(c, "enemy_attack") and CS.foresaw(c, "natural_disaster"), "foresaw() is about the reasons the leader named")
+	c.forecast = cut
+	check(CS.field_say(null, "chatter") == "" and CS.field_say(c, "no_such_trigger") == "", "unknown triggers and no contract say nothing")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

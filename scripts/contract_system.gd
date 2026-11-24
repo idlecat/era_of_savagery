@@ -26,6 +26,8 @@ const WAR_OBJECTIVE_TEXT := {
 
 var sim
 var list: Array = []
+## What leaders say: the forecast before sealing and the field log during the work (A0/A1).
+var LOG: Dictionary = preload("res://scripts/config.gd").load_cfg("contract_log")
 
 func _init(s) -> void:
 	sim = s
@@ -172,7 +174,20 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id).size() + 1),
 		"top_memory": top,
 		"objection": _objection_words(sim.policy.objection(u, kind)),
+		"forecast": ctx_forecast(u, kind, terms, previous),
 	}
+
+## The odds for the negotiation (the leader argues from the same numbers the chieftain
+## sees): of the plan on the table, else of the kind's usual abort conditions.
+func ctx_forecast(u: E.Unit, kind: String, terms: Dictionary, previous: Variant) -> Dictionary:
+	var plan: Dictionary = previous if previous is Dictionary and previous.get("abort_conditions") is Array else {}
+	if plan.is_empty():
+		plan = {"kind": kind, "target": str(terms.get("target", "")), "abort_conditions": LOG["forecast"]["default_aborts"].get(kind, [])}
+		if kind == "seek":
+			var pl := seek_places(str(terms.get("group", "food")) if str(terms.get("group", "")) in SEEK_GROUPS else "food")
+			if not pl.is_empty(): plan["site"] = [pl[0]["pos"].x, pl[0]["pos"].y]
+	var fc := forecast(plan, u)
+	return {"risk_pct": fc["pct"], "words": fc["words"], "reasons": fc["reasons"].map(func(r): return {"trouble": r["id"], "chance_pct": roundi(float(r["score"]) * 100)})}
 
 ## A leader's objection to the tribe's ways, in words for the persona.
 func _objection_words(ob: Dictionary) -> Dictionary:
@@ -535,6 +550,162 @@ func seal(leader: E.Unit, kind := "settle", directive := "", terms := {}, reply:
 	if not san["ok"]: return {"ok": false, "contract": null, "notes": san["notes"]}
 	return {"ok": true, "contract": create(san["blueprint"], leader, directive), "notes": san["notes"]}
 
+# ------------------------------------------------------------ the odds (make_it_fun A0)
+## Where a plan's crew would work: the outpost site, the search place, the war camp
+## before the clan's village, or the workshop by the fire.
+func plan_site(bp: Dictionary) -> Vector2:
+	match str(bp.get("kind", "settle")):
+		"war":
+			var rc: Dictionary = sim.rivals.clans.get(str(bp.get("target", "")), {})
+			if rc.is_empty(): return D.VILLAGE
+			var tp: Vector2 = rc["pos"]
+			var p: Vector2 = tp + (D.VILLAGE - tp).normalized() * 330.0
+			return D.shore(p, 120.0) if D.is_water(p) else p
+		"seek":
+			var st: Variant = bp.get("site")
+			if st is Array and st.size() == 2 and (st[0] is float or st[0] is int) and (st[1] is float or st[1] is int): return Vector2(st[0], st[1])
+			return D.VILLAGE
+		"research":
+			var n := list.filter(func(o): return o.kind == "research").size()
+			return D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
+	return next_site()
+
+## The odds the leader reads before sealing: for each of the plan's abort conditions, the
+## chance it fires, from the same things that would fire it in _check_aborts, as far as the
+## tribe knows them (fog of war: only seen beasts, found dens, met clans). The numbers and
+## words are config/contract_log.json "forecast". A game master may call it with any plan.
+## Returns {risk 0..1, pct, reasons: [{id, score, text}] (most likely first), words}.
+func forecast(bp: Variant, leader: E.Unit = null) -> Dictionary:
+	var F: Dictionary = LOG["forecast"]
+	var plan: Dictionary = bp if bp is Dictionary else {}
+	var kind := str(plan.get("kind", "settle"))
+	if not kind in ["settle", "research", "war", "seek"]: kind = "settle"
+	var conds: Array = plan.get("abort_conditions", []) if plan.get("abort_conditions") is Array else []
+	var site := plan_site(plan)
+	var mult: float = sim.hz.mult()
+	var calm: float = float(F["mercy_mult"]) if sim.time < sim.director.mercy_until else 1.0
+	var enemy := _fc_enemy(F["enemy_attack"], kind, plan, site, mult)
+	var reasons: Array = []
+	for cond in conds:
+		var cs := str(cond)
+		var r := {}
+		if cs == "enemy_attack": r = {"id": "enemy_attack", "score": enemy["score"], "text": enemy["text"]}
+		elif cs == "natural_disaster": r = _fc_disaster(F["natural_disaster"], F["days"].get(kind, 1.0), plan, mult)
+		elif cs == "heavy_losses": r = _fc_losses(F["heavy_losses"], plan, leader)
+		elif cs.begins_with("hp_below_"): r = _fc_wound(F["leader_wounded"], cs, leader, kind, enemy["score"])
+		if r.is_empty() or reasons.any(func(o): return o["id"] == r["id"]): continue
+		r["score"] = clampf(float(r["score"]) * calm, 0.0, 1.0)
+		reasons.append(r)
+	reasons.sort_custom(func(a, b): return a["score"] > b["score"])
+	var safe := 1.0
+	for r in reasons: safe *= 1.0 - float(r["score"])
+	var risk := clampf(1.0 - safe, 0.0, 1.0)
+	return {"risk": snappedf(risk, 0.01), "pct": roundi(risk * 100), "reasons": reasons, "words": forecast_words(risk, reasons, leader)}
+
+## The forecast as the leader says it: the main reasons, the odds in words, and a remark in
+## their temperament's voice (which colours the words, never the number).
+func forecast_words(risk: float, reasons: Array, leader: E.Unit = null) -> String:
+	var F: Dictionary = LOG["forecast"]
+	var parts: Array = []
+	for r in reasons:
+		if parts.size() >= int(F["mentions"]) or float(r["score"]) < float(F["mention_at"]): break
+		if str(r["text"]) != "": parts.append(r["text"])
+	if parts.is_empty() and not reasons.is_empty() and reasons[0].get("quiet", "") != "": parts.append(reasons[0]["quiet"])
+	for b in F["bands"]:
+		if risk < float(b["below"]):
+			parts.append(tr(b["text"]))
+			break
+	if leader != null:
+		var v: String = F["voices"].get("%s:%s" % [sim.arch(leader), "high" if risk >= float(F["high_at"]) else "low"], "")
+		if v != "": parts.append(tr(v))
+	return " ".join(parts)
+
+func _fc_text(key: String) -> String: return tr(LOG["forecast"]["reasons"][key]["text"])
+
+func _fc_enemy(cf: Dictionary, kind: String, plan: Dictionary, site: Vector2, mult: float) -> Dictionary:
+	var score: float = float(cf["base"].get(kind, 0.2)) * mult
+	var texts: Array = []
+	var near_r := float(cf["near_r"])
+	var route_r := float(cf["route_r"])
+	var way: Array = [site] if kind == "research" else D.route(D.VILLAGE, site) + [site]
+	var seen: Array = []
+	for p in sim.predators:
+		if p.dead or p.fled or p.fleeing or p.kind in ["hunter", "trader"] or p.guard or not sim.is_explored(p.pos): continue
+		if p.pos.distance_to(site) < near_r or way.any(func(q): return p.pos.distance_to(q) < route_r): seen.append(p)
+	var beasts: int = seen.filter(func(p): return p.clan == "").size()
+	var warriors: int = seen.size() - beasts
+	if beasts > 0:
+		score += float(cf["beast"]) * beasts
+		texts.append(_fc_text("beasts") % beasts)
+	if warriors > 0:
+		score += float(cf["warrior"]) * warriors
+		texts.append(_fc_text("warriors") % warriors)
+	if kind != "research" and sim.landmarks.any(func(l): return l["kind"] == "den" and l["found"] and l["pos"].distance_to(site) < float(cf["den_r"])):
+		score += float(cf["den"])
+		texts.append(_fc_text("den"))
+	if kind in ["settle", "seek"]:
+		for id in sim.rivals.clans:
+			var rc: Dictionary = sim.rivals.clans[id]
+			if rc["met"] and sim.rivals.stance(id) in ["Hostile", "Blood feud"] and D.same_side(rc["pos"], site):
+				score += float(cf["hostile"])
+				texts.append(_fc_text("hostile") % tr(rc["name"]))
+				break
+		if not sim.is_explored(site):
+			score += float(cf["unknown"])
+			texts.append(_fc_text("unknown"))
+	if kind == "war": texts.append(_fc_text("war"))
+	if kind != "research":
+		var dm: Array = cf["dist_mult"]
+		score *= clampf(D.route_len(D.VILLAGE, site) / float(cf["dist_ref"]), float(dm[0]), float(dm[1]))
+	return {"score": minf(score, float(cf["max"])), "text": texts[0] if not texts.is_empty() else "", "quiet": _fc_text("quiet") if texts.is_empty() else ""}
+
+func _fc_disaster(cf: Dictionary, days: float, plan: Dictionary, mult: float) -> Dictionary:
+	var si: int = sim.hz.season_idx()
+	if str(plan.get("kind", "")) == "seek": days = float(plan.get("days", 1)) * float(_seek_cfg().get("secs_per_day", 45)) / D.DAY_LEN
+	var safe := 1.0
+	var worst := ""
+	var rolls := maxf(1.0, float(cf["rolls_per_day"]) * days)
+	for w in sim.hz.WEATHER:
+		var wd: Dictionary = sim.hz.WEATHER[w]
+		if not wd.get("disaster", false): continue
+		var ch: float = float(wd["chance"][si]) * mult
+		if ch <= 0.0: continue
+		safe *= pow(1.0 - minf(ch, 0.99), rolls)
+		worst = "blizzard" if w == "blizzard" else "weather"
+	var fl: Dictionary = sim.nat.C["flood"]
+	if si == int(fl["season"]):
+		safe *= pow(1.0 - minf(float(fl["chance"]) * mult * float(cf["flood_mult"]), 0.99), maxf(1.0, days))
+		if worst == "": worst = "flood"
+	var p := 1.0 - safe
+	var inc: String = sim.hz.incoming
+	if (inc != "" and sim.hz.WEATHER.get(inc, {}).get("disaster", false)) or sim.nat.flood_at > 0:
+		p = maxf(p, float(cf["incoming"]))
+		worst = "incoming"
+	return {"id": "natural_disaster", "score": minf(p, float(cf["max"])), "text": _fc_text(worst) if worst != "" else ""}
+
+func _fc_wound(cf: Dictionary, cond: String, leader: E.Unit, kind: String, enemy: float) -> Dictionary:
+	var pct := clampf(float(cond.trim_prefix("hp_below_").trim_suffix("%")), 1.0, 99.0)
+	var fight: float = 1.0 if kind == "war" else enemy
+	var lv: int = leader.lv("combat") if leader else 1
+	var p: float = fight * float(cf["wound"]) * pct / float(cf["ref_pct"]) * maxf(0.2, 1.0 - float(cf["per_combat_lv"]) * (lv - 1))
+	var text := _fc_text("fight") if p >= 0.05 else ""
+	if leader and leader.hp < leader.max_hp * (pct / 100.0 + float(cf["hurt_margin"])):
+		p += float(cf["hurt"])
+		text = _fc_text("hurt")
+	return {"id": "leader_wounded", "score": minf(p, float(cf["max"])), "text": text}
+
+func _fc_losses(cf: Dictionary, plan: Dictionary, leader: E.Unit) -> Dictionary:
+	var rc: Dictionary = sim.rivals.clans.get(str(plan.get("target", "")), {})
+	var foes: int = int(rc.get("warriors", 2)) + 1
+	var n := clampi(_int(plan.get("crew_size"), 3), 1, 6)
+	var helpers := available_helpers(leader.id if leader else -1)
+	helpers.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
+	var strength := float(leader.lv("combat")) if leader else 1.0
+	for u in helpers.slice(0, n - 1): strength += u.lv("combat")
+	var p: float = float(cf["base"]) + float(cf["per_defender"]) * foes - float(cf["per_strength"]) * strength
+	if sim.has_bronze(): p *= float(cf["bronze"])
+	return {"id": "heavy_losses", "score": clampf(p, 0.02, float(cf["max"])), "text": (_fc_text("outnumbered") if foes > n else _fc_text("match")) % [foes, n]}
+
 func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	var c := E.Contract.new()
 	c.id = sim.uid()
@@ -542,17 +713,8 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	c.directive = directive
 	c.leader_id = leader.id
 	c.kind = bp.get("kind", "settle")
-	if c.kind == "war":
-		var tp: Vector2 = sim.rivals.clans[bp["target"]]["pos"]
-		c.site = tp + (D.VILLAGE - tp).normalized() * 330.0
-		if D.is_water(c.site): c.site = D.shore(c.site, 120.0)
-	elif c.kind == "seek":
-		c.site = Vector2(bp["site"][0], bp["site"][1])
-	elif c.kind == "research":
-		var n := list.filter(func(o): return o.kind == "research").size()
-		c.site = D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
-	else:
-		c.site = next_site()
+	c.site = plan_site(bp)
+	c.forecast = forecast(bp, leader)
 	c.t = sim.time
 	for s in bp["steps"]:
 		var rs: Dictionary = s.duplicate()
@@ -582,12 +744,91 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 		sim.evo.drift("martial", 5.0)
 	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract", c.crew_ids.map(func(id): return sim.unit_by_id(id)))
 	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
+	_clog(c, tr("%s: \"%s\" (risk %d%%)") % [tr(leader.name), c.forecast["words"], c.forecast["pct"]])
 	sim.policy.on_contract(c)
 	return c
 
 func _clog(c: E.Contract, text: String) -> void:
 	c.events.push_front("[Day %d] %s" % [sim.day(), text])
 	if c.events.size() > 12: c.events.pop_back()
+
+# ------------------------------------------------------------ the field log (make_it_fun A1)
+## The leader says a line for `trigger` (contract_log.json "log" talk; lines for their
+## archetype, `<trigger>:<arch>`, are preferred) into the contract's log, aloud now and then
+## (`aloud`: always), and into the chronicle for the "chronicle" triggers. `once`: only the
+## first time per contract. Returns the line said ("" if none). A game master may call it.
+func field_say(c: E.Contract, trigger: String, arg := "", once := true, aloud := false) -> String:
+	var L: Dictionary = LOG["log"]
+	if c == null or not is_running(c) and trigger != "done" or (once and c.said.has(trigger)): return ""
+	var ld := leader(c)
+	if ld == null or ld.dead: return ""
+	var talk: Dictionary = L["talk"]
+	var lines: Array = talk.get("%s:%s" % [trigger, sim.arch(ld)], [])
+	var base: Array = talk.get(trigger, [])
+	if lines.is_empty() or (not base.is_empty() and randf() >= float(L["arch_chance"])): lines = base
+	if lines.is_empty(): return ""
+	c.said[trigger] = true
+	c.said["t"] = float(c.said.get("clock", 0.0))
+	var line: String = tr(str(lines.pick_random()))
+	if line.contains("%s"): line = line.replace("%s", arg)
+	var quoted: String = tr("%s: \"%s\"") % [tr(ld.name), line]
+	_clog(c, quoted)
+	if (aloud or randf() < float(L["bubble_chance"])) and not ld.sleeping and not sim.in_hut(ld): sim.life.say_text(ld, line, "contract")
+	if trigger.get_slice(":", 0) in L["chronicle"]: sim.add_log(quoted, "contract", [ld])
+	return line
+
+## Did the leader name this trouble when they read the odds (among the reasons they spoke)?
+func foresaw(c: E.Contract, reason: String) -> bool:
+	var F: Dictionary = LOG["forecast"]
+	var rs: Array = c.forecast.get("reasons", [])
+	for i in mini(rs.size(), int(F["mentions"])):
+		if rs[i]["id"] == reason and float(rs[i]["score"]) >= float(F["mention_at"]): return true
+	return false
+
+## Each tick of an executing contract: the milestones and happenings worth a line.
+func _field_log(c: E.Contract, dt: float) -> void:
+	var L: Dictionary = LOG["log"]
+	var clock: float = float(c.said.get("clock", 0.0)) + dt
+	c.said["clock"] = clock
+	for q in [25, 50, 75]:
+		var key := "progress_%d" % q
+		if c.progress < q / 100.0 or c.said.has(key): continue
+		var rs: Array = c.forecast.get("reasons", [])
+		if not (q == 50 and c.interruptions == 0 and not rs.is_empty() and field_say(c, "quiet:" + str(rs[0]["id"])) != ""): field_say(c, key)
+		c.said[key] = true
+		return
+	if not c.said.has("first_built"):
+		for id in c.struct_ids:
+			var s = sim.struct_by_id(id)
+			if s and s.built:
+				field_say(c, "first_built", tr(D.STRUCTURES[s.type]["name"]), true, true)
+				return
+	var w: String = sim.hz.weather
+	if c.said.get("weather_was", w) != w and w != "clear":
+		c.said["weather_was"] = w
+		field_say(c, "weather", tr(sim.hz.weather_name()), false)
+		return
+	c.said["weather_was"] = w
+	for u in crew(c, true):
+		var nk := "near_%d" % u.id
+		if u.hp < u.max_hp * float(L["near_miss_hp"]) and not c.said.has(nk):
+			c.said[nk] = true
+			field_say(c, "near_miss", tr(u.name), false)
+			return
+	if clock - float(c.said.get("t", 0.0)) > float(L["chatter_secs"]): field_say(c, "chatter", "", false)
+
+## A crew member grew in a skill (sim.gain_xp): the leader notices, once per person.
+func on_level(u: E.Unit) -> void:
+	var c := by_id(u.contract_id)
+	if c == null or not is_running(c) or u.id == c.leader_id or c.said.has("lv_%d" % u.id): return
+	c.said["lv_%d" % u.id] = true
+	field_say(c, "level_up", tr(u.name), false)
+
+## A landmark was found (sim._discover): a crew working near it says so.
+func on_landmark(lm: Dictionary) -> void:
+	for c in list:
+		if is_running(c) and crew(c).any(func(u): return u.pos.distance_to(lm["pos"]) < 700.0):
+			field_say(c, "landmark", tr(lm["name"]), false, true)
 
 func crew(c: E.Contract, include_resting := false) -> Array:
 	var out: Array = []
@@ -612,6 +853,9 @@ func update(dt: float) -> void:
 		if not is_running(c): continue
 		if c.kind != "war" and sim.camp_asleep() and c.status != "interrupted":
 			c.substate = tr("Camping for the night")
+			if c.status == "executing" and c.said.get("night", -1) != sim.day():
+				c.said["night"] = sim.day()
+				field_say(c, "nightfall", "", false)
 			continue
 		c.state_t += dt
 		_manage_wounded(c)
@@ -628,6 +872,7 @@ func update(dt: float) -> void:
 				if _check_aborts(c): continue
 				_run_step(c, dt)
 				c.progress = _progress(c) # (a scenario may script an ambush at some progress: story.gd)
+				if c.status == "executing": _field_log(c, dt)
 			"defending": _defend(c, dt)
 			"sheltering":
 				for u in crew(c): _ensure(u, "c%d_shelter" % c.id, func(): sim.assign_move(u, c.site + Vector2(randf_range(-30, 30), randf_range(-30, 30))))
@@ -864,6 +1109,7 @@ func _next_step(c: E.Contract) -> void:
 		var skill: String = {"gather_wood": "forage", "gather_food": "forage", "gather_stone": "forage", "build": "craft", "ritual": "lore", "experiment": "lore"}.get(step["action"], "combat")
 		sim.gain_xp(u, skill, 6)
 	_clog(c, tr("Step %d done: %s.") % [c.step_idx + 1, desc])
+	if c.step_idx + 1 < c.steps.size(): field_say(c, "step_done", desc, false)
 	c.step_idx += 1
 
 func _slot_for(c: E.Contract, type: String) -> Vector2:
@@ -949,6 +1195,7 @@ func _check_aborts(c: E.Contract) -> bool:
 	_set_status(c, "interrupted")
 	for u in crew(c): sim.set_job(u, {})
 	_clog(c, tr("ABORT CONDITION: %s at %d%% progress.") % [tr(reason), roundi(c.progress * 100)])
+	field_say(c, ("foreseen:" + reason) if foresaw(c, reason) else "unforeseen", "", false, true)
 	sim.add_log(tr("Contract '%s' interrupted (%s). The leader's LLM node is re-awakening...") % [c.plan["plan_id"], tr(reason)], "danger")
 	sim.paused = true
 	sim.contract_interrupted.emit(c)
@@ -993,6 +1240,7 @@ func summary(c: E.Contract) -> Dictionary:
 		"reason": c.abort_reason, "disaster": sim.flags.get("disaster", "blizzard") if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
 		"crew": crew_state, "tribe_lore": roundi(sim.stock["lore"]),
 		"idle_warriors_in_village": available_helpers().size(),
+		"forecast_at_sealing": {"risk_pct": c.forecast.get("pct", 0), "words": c.forecast.get("words", "")},
 	}
 
 func _threat_text(site: Vector2) -> String:
@@ -1093,6 +1341,7 @@ func _disband(c: E.Contract) -> void:
 
 func _complete(c: E.Contract) -> void:
 	c.status = "done"
+	field_say(c, "done", "", true, true)
 	c.progress = 1.0
 	sim.stock["wood"] += c.wood
 	c.wood = 0

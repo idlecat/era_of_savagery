@@ -53,6 +53,11 @@ interruption feel earned ("I knew it").
   honest, auditable number; a characterful spin on top).
 - Shown in the negotiation dialog and fed into `negotiation_ctx()` so the LLM leader
   argues from the same numbers. Size: small. Risk: low (read-only).
+- **Built:** `contracts.forecast(plan, leader)` → `{risk, pct, reasons, words}`, numbers and
+  words in `config/contract_log.json` `forecast`; kept on the contract as `c.forecast`,
+  shown in the dialog ("The odds: …"), in `negotiation_ctx()["forecast"]` (the LLM is told
+  not to claim another number) and in `summary(c)`. Calibrated with the G1 harness (see G1).
+  The director's tension is not used (the leader can't know it); only its mercy lowers the odds.
 
 ### A1. The leader's field log — first to build
 Milestone and flavor lines emitted during execution, chosen from data by
@@ -76,6 +81,12 @@ Milestone and flavor lines emitted during execution, chosen from data by
 - The log should call back to the forecast (A0): "No sign of the wolves yet." / "The
   wolves found us, as I feared." — which only works if A0's scores come from the real
   abort predicates.
+- **Built:** `contracts.field_say(c, trigger, arg)` (a GM verb too) and `_field_log()` per
+  tick: progress 25/50/75, first building, step done, crew level-up, landmark, weather,
+  nightfall, near miss, chatter after 30 s of silence, done; callbacks `quiet:<reason>` at
+  50%, `foreseen:<reason>` / `unforeseen` on an interrupt (`contracts.foresaw()`). Lines by
+  `trigger:archetype` in `contract_log.json` `log`; panel always, bubble by chance, chronicle
+  only for the first building and the callbacks.
 
 ### A2. Small interruptions resolve through character
 Not every hiccup deserves pausing the player:
@@ -608,6 +619,13 @@ play (that is the measurable form of "decisions matter"):
   in 75% of runs (day 6–10). Still open: near-misses at 100% for steward and feaster
   (band 60–90%), still no starvation deaths, and feaster ≈ steward on famine at 4 seeds
   (run more seeds before tuning further).
+  **Forecast calibration** (A0, same runs, 47 contracts): per reason the forecast now
+  matches what happened (enemy_attack 50% forecast / 49% first abort, natural_disaster
+  30 / 31, leader_wounded 10 / 6); the top-forecast reason was the actual abort in 61% of
+  interrupted contracts (floor 60%; 81% before tuning, when the numbers were off by 2–3x
+  but beasts ranked lower). New finding: **outpost contracts are interrupted in 94% of
+  runs** (research 25%): every outpost pauses at least once, so an interrupt is not yet a
+  surprise. Worth tuning against before the A2 events add more.
   5. Found while building it: requiring full XP at Lv 4 on top of the deed kept the
      craft gate shut in every run (the leader moves to the outpost and stops building);
      the trial now opens on reaching Lv 4 and the deed is the door.

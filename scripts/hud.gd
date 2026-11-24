@@ -1654,6 +1654,8 @@ func _neg_show_bp(san: Dictionary) -> void:
 		s += tr(" %d. %s\n") % [i, sim.contracts.step_text(st)]
 		i += 1
 	s += tr("[color=#ff9b7a]abort on:[/color] %s\n") % ", ".join(bp["abort_conditions"].map(func(a): return _abort_text(a)))
+	var fc: Dictionary = sim.contracts.forecast(bp, neg["leader"])
+	s += tr("[color=#ffd36b]The odds:[/color] %s [color=#b8a888](risk %d%%)[/color]\n") % [fc["words"], fc["pct"]]
 	for n in san["notes"]: s += tr("[color=#ff8a7a]⚠ %s[/color]\n") % n
 	if neg.get("show_json", false): s += tr("\n[color=#7a8a98][code]%s[/code][/color]") % JSON.stringify(bp, "  ")
 	neg["bpview"].text = s

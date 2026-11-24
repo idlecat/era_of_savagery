@@ -174,10 +174,12 @@ func negotiate(ctx: Dictionary) -> Dictionary:
 	if not ctx.get("objection", {}).is_empty() and ctx.get("history", []).is_empty():
 		var ob: Dictionary = ctx["objection"]
 		system += "\nYou dislike one of the tribe's ways: %s is now \"%s\", and you would have it be \"%s\". Before your plan, tell the Chieftain so in one sentence, in character (you might say: %s / %s). Your plan still follows the ways in force." % [ob["way"], ob["now"], ob["you_want"], ob["your_complaint"], ob["your_plea"]]
+	if not ctx.get("forecast", {}).is_empty(): system += "\nThe odds of trouble on this task, as the tribe's knowledge reads them, are given to you (the_odds_as_the_tribe_reads_them). Argue from those numbers; you may colour them with your temperament, but never claim a different number."
 	var user := {
 		"directive": ctx["directive"],
 		"your_profile": ctx["leader"],
 		"target_environment": ctx["env"],
+		"the_odds_as_the_tribe_reads_them": ctx.get("forecast", {}),
 		"chieftain_terms": ctx["terms"] if ctx.get("terms_set", false) else "none - propose your own",
 		"ideas_within_reach": ctx.get("candidates", []) if research else null,
 		"conversation_so_far": ctx.get("history", []),

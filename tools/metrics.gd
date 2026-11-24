@@ -15,7 +15,8 @@
 ##               contracts.seal() (the offline persona plans it) when none is running
 ##   rules       [{when: conditions (story.holds), every_days (default 1), once,
 ##                 do: story actions, order: structure (improve.order), set: {policy: choice}}]
-## Forecast calibration (A0) is reported once A0 exists.
+## Forecast calibration (A0): contracts.forecast() read at sealing (c.forecast) against the
+## first abort reason each contract actually met.
 extends SceneTree
 
 const Sim = preload("res://scripts/sim.gd")
@@ -49,7 +50,7 @@ func _initialize() -> void:
 			print("  %s seed %d: %s" % [pid, seed0 + i, _short(r)])
 	_report(rows, pols)
 	if a.has("out"):
-		var keys: Array = rows[0].keys() if not rows.is_empty() else []
+		var keys: Array = rows[0].keys().filter(func(k): return k != "forecasts") if not rows.is_empty() else []
 		var csv := ",".join(keys) + "\n"
 		for r in rows: csv += ",".join(keys.map(func(k): return str(r[k]).replace(",", ";"))) + "\n"
 		var f := FileAccess.open(a["out"], FileAccess.WRITE)
@@ -85,7 +86,11 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1}
 	var meaningful: Array = [0.0] # game times of meaningful events
 	sim.feat_added.connect(func(_f): r["feats"] += 1; meaningful.append(sim.time))
-	sim.contract_interrupted.connect(func(_c): r["interrupts"] += 1; meaningful.append(sim.time))
+	var first_abort := {}
+	sim.contract_interrupted.connect(func(c):
+		r["interrupts"] += 1
+		meaningful.append(sim.time)
+		if not first_abort.has(c.id): first_abort[c.id] = c.abort_reason)
 	sim.crisis_started.connect(func(_c): r["crises"] += 1; meaningful.append(sim.time))
 	var days := int(a.get("days", "12"))
 	var dt := float(a.get("dt", "0.1"))
@@ -134,6 +139,15 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	meaningful.sort()
 	for i in range(1, meaningful.size()): r["max_gap_days"] = maxf(r["max_gap_days"], snappedf((meaningful[i] - meaningful[i - 1]) / D.DAY_LEN, 0.1))
 	r["min_food_frac"] = snappedf(r["min_food_frac"], 0.01)
+	var fcs: Array = []
+	for c in sim.contracts.list:
+		if c.forecast.is_empty() or (sim.contracts.is_running(c) and not first_abort.has(c.id)): continue # (still under way, no verdict yet)
+		var scores := {}
+		for x in c.forecast["reasons"]: scores[x["id"]] = x["score"]
+		var first: String = first_abort.get(c.id, "")
+		fcs.append({"kind": c.kind, "risk": c.forecast["risk"], "top": c.forecast["reasons"][0]["id"] if not c.forecast["reasons"].is_empty() else "",
+			"first": first, "named": first != "" and sim.contracts.foresaw(c, first), "scores": scores})
+	r["forecasts"] = fcs
 	sim.dispose()
 	return r
 
@@ -238,7 +252,47 @@ func _report(rows: Array, pols: Array) -> void:
 	if summ.has("hoarder") and summ.has("feaster"):
 		var d: float = absf(summ["hoarder"]["min_food"] - summ["feaster"]["min_food"]) + absf(summ["hoarder"]["famine"] - summ["feaster"]["famine"]) + absf(summ["hoarder"]["near_miss"] - summ["feaster"]["near_miss"])
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
-	print("Forecast calibration: n/a (A0 not built yet)")
+	_calibration(rows)
+
+## Forecast calibration (A0): of the contracts that were interrupted, how often the
+## top-forecast reason was the first abort (the G1 floor: ~60%), and whether the risk read
+## at sealing matches how often contracts were interrupted at all (pooled over policies;
+## per reason: mean forecast chance vs how often it was the first abort).
+func _calibration(rows: Array) -> void:
+	var fcs: Array = []
+	for r in rows: fcs.append_array(r["forecasts"])
+	if fcs.is_empty():
+		print("Forecast calibration: no contracts ended")
+		return
+	var hit: Array = fcs.filter(func(f): return f["first"] != "")
+	var top := hit.filter(func(f): return f["top"] == f["first"]).size()
+	var named := hit.filter(func(f): return f["named"]).size()
+	print("\nForecast calibration (%d contracts ended, %d interrupted):" % [fcs.size(), hit.size()])
+	if not hit.is_empty():
+		var share := float(top) / hit.size()
+		print("  top reason was the abort: %d%%%s; named in the words: %d%%" % [roundi(share * 100), "  <- below the 60% floor" if share < 0.6 else "", roundi(float(named) / hit.size() * 100)])
+	for b in [[0.0, 0.3], [0.3, 0.6], [0.6, 1.01]]:
+		var fb: Array = fcs.filter(func(f): return f["risk"] >= b[0] and f["risk"] < b[1])
+		if fb.is_empty(): continue
+		print("  risk %d-%d%%: %d contracts, forecast %d%%, interrupted %d%%" % [b[0] * 100, mini(100, b[1] * 100), fb.size(), roundi(_mean(fb, "risk") * 100), roundi(fb.filter(func(f): return f["first"] != "").size() * 100.0 / fb.size())])
+	var kinds := {}
+	for f in fcs: kinds[f["kind"]] = true
+	for k in kinds:
+		var fk: Array = fcs.filter(func(f): return f["kind"] == k)
+		var ea: Array = fk.filter(func(f): return f["scores"].has("enemy_attack"))
+		var ea_mean := 0.0
+		for f in ea: ea_mean += float(f["scores"]["enemy_attack"])
+		print("  %-9s %d contracts, forecast %d%%, interrupted %d%%; enemy_attack forecast %d%%, first abort %d%%" % [k, fk.size(), roundi(_mean(fk, "risk") * 100), roundi(fk.filter(func(f): return f["first"] != "").size() * 100.0 / fk.size()),
+			roundi(ea_mean / maxf(1, ea.size()) * 100), roundi(ea.filter(func(f): return f["first"] == "enemy_attack").size() * 100.0 / maxf(1, ea.size()))])
+	var ids := {}
+	for f in fcs:
+		for k in f["scores"]: ids[k] = true
+	for k in ids:
+		var with: Array = fcs.filter(func(f): return f["scores"].has(k))
+		var mean := 0.0
+		for f in with: mean += float(f["scores"][k])
+		print("  %-17s forecast %3d%%, was the first abort %3d%% (%d contracts)" % [k, roundi(mean / with.size() * 100), roundi(with.filter(func(f): return f["first"] == k).size() * 100.0 / with.size()), with.size()])
+
 
 func _mean(rs: Array, k: String) -> float:
 	var t := 0.0

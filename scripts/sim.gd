@@ -590,6 +590,7 @@ func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 		s["lv"] += 1
 		reached = s["lv"] >= top
 		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"))
+		if u.role == "contract": contracts.on_level(u)
 	if s["lv"] >= top and s["lv"] < MAX_LV: s["xp"] = minf(s["xp"], xp_need(s["lv"])) # (it fills, and waits for the trial)
 	if reached and s["lv"] < MAX_LV: ranks.on_full(u, skill)
 
@@ -2635,6 +2636,7 @@ func fog_update() -> void:
 
 func _discover(lm: Dictionary) -> void:
 	lm["found"] = true
+	contracts.on_landmark(lm)
 	var finder: E.Unit = null
 	for u in living():
 		if finder == null or u.pos.distance_to(lm["pos"]) < finder.pos.distance_to(lm["pos"]): finder = u
