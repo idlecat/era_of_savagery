@@ -16,6 +16,9 @@ class Unit:
 	var def: float
 	var spd: float
 	var skills: Dictionary = {} # skill -> {"lv": int, "xp": float}
+	var arms: Dictionary = {} # weapon -> {"lv": int, "xp": float}: mastery (arms.gd)
+	var knack: Dictionary = {} # weapon -> talent for it, fixed from birth (1.0 = ordinary)
+	var wield: String = "" # the weapon they are told to carry ("" = their own choice)
 	var memory: Array = [] # [{day, text, impact, t}]
 	var job: Dictionary = {} # empty = idle
 	var job_key: String = ""

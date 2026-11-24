@@ -145,7 +145,7 @@ const TALE_KEYS := ["text", "when", "tell", "do", "moral"]
 const WHEN_KEYS := ["time", "day", "pop", "flag", "found", "met", "tech", "invention", "find", "era", "season", "built",
 	"devotion", "mood", "deaths", "culture", "after", "told", "joined", "happened"]
 const DO_KEYS := ["log", "kind", "alert", "at", "level", "give", "reveal", "r", "flag", "mood", "devotion", "insight", "spawn", "offsets",
-	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join", "xp", "panic", "weather", "react"]
+	"culture", "invent", "boon", "remember", "who", "impact", "feat", "tale", "join", "xp", "panic", "weather", "react", "wield", "arms_xp"]
 const PERSON_AS := ["chosen", "founder", "wanderer", "ancestor"]
 const RESOURCES := D.RESOURCES
 const WHERE := ["forest", "forest_edge", "meadow", "river", "riverbank", "hills_home", "hills_far"]

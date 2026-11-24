@@ -151,6 +151,18 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	for i in range(1, meaningful.size()): r["max_gap_days"] = maxf(r["max_gap_days"], snappedf((meaningful[i] - meaningful[i - 1]) / D.DAY_LEN, 0.1))
 	r["min_food_frac"] = snappedf(r["min_food_frac"], 0.01)
 	r["mood_end"] = roundi(sim.folk.mood)
+	var nem: String = sim.rivals.nemesis_id()
+	r["nemesis"] = nem
+	r["feud_over"] = nem != "" and sim.rivals.clans[nem].get("feud_over", false)
+	r["nemesis_raids"] = 0
+	r["other_raids"] = 0
+	r["successions"] = 0
+	for id in sim.rivals.clans:
+		var cl: Dictionary = sim.rivals.clans[id]
+		var n: int = cl.get("ledger", []).filter(func(e): return e["kind"] == "raided").size()
+		if id == nem: r["nemesis_raids"] += n
+		else: r["other_raids"] += n
+		if float(cl.get("chief_t", 0.0)) > 0.0: r["successions"] += 1
 	r["winter_mood"] = roundi(r["winter_mood"] / maxf(1, r["winter_n"]))
 	r["winter_cold_hp"] = roundi(r["winter_cold_hp"])
 	for k in r.keys():
@@ -313,6 +325,8 @@ func _report(rows: Array, pols: Array) -> void:
 		for k in r["causes"]:
 			var key: String = k.get_slice(" (", 0)
 			causes[key] = causes.get(key, 0) + 1
+	print("\nRivals (nemesis, its raids / other clans' raids, feud over, chiefs succeeded):")
+	for r in rows: print("  %s seed %d: %-7s %d / %d  over %s  successions %d" % [r["policy"], r["seed"], r["nemesis"], r["nemesis_raids"], r["other_raids"], r["feud_over"], r["successions"]])
 	print("\nThe first winter (kind, autumn choice -> winter deaths, min food, empty-store hours):")
 	for r in rows:
 		if r["winter_kind"] != "": print("  %s seed %d: %-6s %-38s -> deaths %d, min food %d%%, empty %.0fh, mood %d, packs %d, blizzards %d, held %d, cold hp %d, bitten %d" % [r["policy"], r["seed"], r["winter_kind"], r["autumn_pick"], r["winter_deaths"], roundi(r["winter_min_food"] * 100), r["winter_hungry_h"], r["winter_mood"], r["winter_packs"], r["winter_blizzards"], r["winter_held"], r["winter_cold_hp"], r["winter_bitten"]])

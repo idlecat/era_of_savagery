@@ -338,7 +338,9 @@
    "sent_gifts": {"text": "you sent gifts instead of warriors", "weight": 2},
    "left_alone": {"text": "you left us to fight alone", "weight": -10},
    "spared": {"text": "you spared us when you could have crushed us", "weight": 15},
-   "took_tribute": {"text": "you crushed us under a heavy tribute", "weight": -15}
+   "took_tribute": {"text": "you crushed us under a heavy tribute", "weight": -15},
+   "marked": {"text": "we swore that your tribe would be our enemy", "weight": -8},
+   "feud_over": {"text": "the feud between our peoples came to an end", "weight": 12}
   }
  },
 
@@ -357,5 +359,23 @@
    "martial": [["Harn", "the Young Spear"], ["Ruk", "Iron-Jaw"], ["Teka", "Who Never Kneels"], ["Bor", "the Red Hand"], ["Kael", "Wolf-Born"]],
    "spiritual": [["Mira", "Who Hears the Rain"], ["Oen", "the Patient"], ["Lai", "Moon-Daughter"], ["Suri", "Who Walks Softly"], ["Tam", "the Dreamer"]]
   }
+ },
+
+ "nemesis": {
+  "_doc": "One horizon threat at a time (rivals.gd; make_it_fun C2). The nemesis is picked once: at a first contact the clan met takes the part if its score (minus its relation, + pick.martial for a martial clan) is at least pick.min_score; if none has by pick.by_day, the worst of the clans met (not allies or vassals). A game master may set it (rivals.set_nemesis). While the feud runs the nemesis raids and demands from hostile_at (other clans from raids.hostile_at), its raid timer is raid_every_mult as long, the other clans' others_every_mult (they fall back, not silent), and the stage for the tribe's era (stages: the last whose era has come) adds warriors to each raid band, multiplies its demands and shortens its raid timer. The feud ends when the nemesis is in one of over_stances, at peace, our vassal, or beaten at home over_defeats times; holding off its first raid and the end of the feud are achievements (feats, %s = the clan). marked: what the tribe is told when the nemesis is chosen (clan vars).",
+  "on": true,
+  "pick": {"martial": 15, "min_score": 15, "by_day": 6},
+  "hostile_at": -5,
+  "raid_every_mult": 0.75,
+  "others_every_mult": 1.5,
+  "stages": [
+   {"era": 1, "size_add": 0, "demand_mult": 1.0, "every_mult": 1.0},
+   {"era": 2, "size_add": 1, "demand_mult": 1.3, "every_mult": 0.85},
+   {"era": 3, "size_add": 3, "demand_mult": 1.7, "every_mult": 0.7}
+  ],
+  "over_stances": ["Friendly", "Trusted", "Allied", "Vassal"],
+  "over_defeats": 2,
+  "marked": ["%s %s of the %s has sworn that our tribe will be their enemy.", "chief", "epithet", "clan_name"],
+  "feats": {"first_raid": "Held off the first raid of the %s", "over": "Ended the feud with the %s"}
  }
 }

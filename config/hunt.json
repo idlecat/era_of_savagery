@@ -14,16 +14,11 @@
   "out_popup": "Won't face it alone!"
  },
  "archers": {
-  "_doc": "Archers: people with `skill` at min_lv or more fight from afar once the tribe has a weapon - the first of `weapons` whose `when` holds (conditions as in scenario scripts). In a band they muster with the others, then stand off range x0.8 from the beast spread in an arc (spread radians either side of the band's side), step back when it comes within `keep`, and every `cd` seconds shoot for mult x their attack (no flanking bonus). flight: seconds a missile is drawn in the air. xp: combat XP a shot (half that in the skill).",
+  "_doc": "Archers: people who carry a ranged weapon (config/weapons.json: range, keep, cd, needs) fight from afar. In a band they muster with the others, then stand off range x0.8 from the beast spread in an arc (spread radians either side of the band's side), step back when it comes within `keep`, and every weapon `cd` seconds shoot for their attack (it holds the weapon; no flanking bonus); without a band they stand off on their own side. flight: seconds a missile is drawn in the air. xp: combat XP a shot (half that in `skill`, which also adds 4% a level to critical shots).",
   "skill": "forage",
-  "min_lv": 3,
   "spread": 0.7,
   "flight": 0.35,
-  "xp": 0.8,
-  "weapons": [
-   {"id": "bow", "when": {"invention": "bow"}, "range": 150, "keep": 85, "mult": 0.9, "cd": 1.3, "act": "Shooting arrows"},
-   {"id": "sling", "when": {"invention": "sling"}, "range": 105, "keep": 70, "mult": 0.6, "cd": 1.5, "act": "Slinging stones"}
-  ]
+  "xp": 0.8
  },
  "kinds": {
   "tiger": {

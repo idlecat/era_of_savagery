@@ -66,6 +66,7 @@ var sheet_research_btn: Button
 var sheet_seek_btn: Button
 var sheet_envoy_btn: Button
 var sheet_war_btn: Button
+var sheet_weapon_btn: Button
 var clans_btns: HFlowContainer
 var clans_sig := ""
 var reno_btn: Button
@@ -437,6 +438,10 @@ func _build_left(root: Control) -> void:
 		var sel: Array = world.selected_units()
 		if sel.size() == 1: open_negotiation(sel[0], "war"), "Tier 2: a war Task Contract against a neighbouring clan - the leader plans the raid")
 	sheet_box.add_child(sheet_war_btn)
+	sheet_weapon_btn = _button("Carry: own choice", func():
+		var sel: Array = world.selected_units()
+		if sel.size() == 1: _cycle_weapon(sel[0]), "Which weapon this person carries into a fight: their own choice (what they are best with), or one you name")
+	sheet_box.add_child(sheet_weapon_btn)
 	var hb := HBoxContainer.new()
 	sheet_box.add_child(hb)
 	sheet_steward_btn = _button("Appoint Steward", func(): _appoint("steward"), "Tier 3: auto-manages idle villagers")
@@ -986,6 +991,7 @@ func _refresh_left_content() -> void:
 			s += tr("[color=%s]Next rank: %s - %s (%d/%d)[/color]\n") % [col_t, tr(nd.get("title", nr)), tr(nd.get("desc", "")).to_lower(), pg["done"], pg["need"]]
 			var ul: Array = sim.ranks.unlocks(k, nr)
 			if not ul.is_empty(): s += tr("[color=#8a7a60]  then: %s[/color]\n") % "; ".join(ul.map(func(x): return tr(x).to_lower()))
+	if u.role != "child": s += _weapons_block(u)
 	s += tr("\n[color=#ffd36b]MEMORY ARCHIVE[/color] [color=#8a7a60](10 most impactful)[/color]\n")
 	var mem: Array = u.memory.duplicate()
 	mem.sort_custom(func(a, b): return a["day"] > b["day"])
@@ -1012,6 +1018,38 @@ func _refresh_left_content() -> void:
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
 	_vice_button(sheet_steward_btn, u, "steward")
 	_vice_button(sheet_chief_btn, u, "warchief")
+	sheet_weapon_btn.visible = not child and not u.dead
+	var wnow: Dictionary = sim.arms.wielded(u)
+	sheet_weapon_btn.text = (tr("Carry: %s") % tr(str(sim.arms.def(u.wield)["name"]))) if u.wield != "" else (tr("Carry: own choice (%s)") % tr(str(wnow.get("name", "Club"))))
+
+## The sheet's weapons: each the tribe has (and those it can't use yet), the person's
+## mastery and knack, and what they carry.
+func _weapons_block(u) -> String:
+	var s := tr("\n[color=#ffd36b]WEAPONS[/color]\n")
+	var wnow := str(sim.arms.wielded(u).get("id", ""))
+	for w in sim.arms.weapons():
+		var id: String = w["id"]
+		if not sim.arms.open(id): continue
+		var lvl: int = sim.arms.lv(u, id)
+		var a: Dictionary = u.arms.get(id, {"xp": 0.0})
+		var top := int(sim.arms.C["mastery"]["max_lv"])
+		var need: float = sim.arms.xp_need(lvl)
+		var bars := 10 if lvl >= top else int(10.0 * float(a["xp"]) / need)
+		var mark: String = tr(" [color=#7ff0ff]◀ carries[/color]") if id == wnow else ""
+		if lvl >= int(sim.arms.C["mastery"]["master_lv"]): mark = tr(" [color=#ffd36b][Master][/color]") + mark
+		var kw: String = sim.arms.knack_word(sim.arms.knack(u, id))
+		s += tr("%s  Lv.%d  [color=#b8a888](%s)[/color]%s\n[bgcolor=#c8873a]%s[/bgcolor][bgcolor=#3a3226]%s[/bgcolor]\n") % [tr(str(w["name"])), lvl, tr(kw), mark, " ".repeat(bars * 3), " ".repeat((10 - bars) * 3)]
+		if not sim.arms.can_use(u, id):
+			var needs: Dictionary = w.get("needs", {})
+			s += tr("[color=#8a7a60]  needs %s[/color]\n") % ", ".join(needs.keys().map(func(k): return "%s Lv.%d" % [tr(D.SKILL_NAMES[k]), int(needs[k])]))
+	return s
+
+## The sheet's weapon button: the next choice for what this person carries.
+func _cycle_weapon(u) -> void:
+	var ch: Array = sim.arms.choices(u)
+	var i := ch.find(u.wield)
+	sim.arms.set_wield(u, str(ch[(i + 1) % ch.size()]))
+	_refresh_left()
 
 ## Why this person can't lead a Task Contract from where they are ("" when they can).
 func _lead_block(u) -> String:
@@ -2440,7 +2478,7 @@ func _open_legacy() -> void:
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"],
 	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)
@@ -2485,7 +2523,7 @@ func open_achievements() -> void:
 ## up and wait while any other dialog (an event, a negotiation) is open.
 const SETTINGS_CFG := "user://settings.cfg"
 const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
-	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "story": "☼", "tale": "❦", "hero": "★"}
+	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "story": "☼", "tale": "❦", "hero": "★"}
 
 func _feat_pref() -> bool:
 	var cf := ConfigFile.new()

@@ -1,0 +1,53 @@
+{
+ "_doc": "Weapons and weapon mastery (arms.gd, sim.arms). Each weapon in `weapons` is open to the tribe while its `when` holds (conditions as in scenario scripts: usually the invention that makes it; {} = always). kind melee: struck at `reach`, a blow every `cd` seconds; kind ranged: shot from up to `range`, stepping back when a foe comes within `keep` (hunt.gd shoots). atk: multiplies the wielder's attack. crit: added to the chance of a critical blow. needs: {skill: level} the wielder must have (aiming takes a hunter's eye). rating: how good the weapon is when people choose which to carry. act: what they are doing with it. start_skill: people start with this weapon's mastery at that skill's level (the club, everyone's first weapon).",
+ "weapons": [
+  {"id": "club", "name": "Club", "kind": "melee", "when": {}, "atk": 1.0, "cd": 1.0, "reach": 24, "crit": 0.0, "rating": 1.0, "start_skill": "combat",
+   "desc": "A knotted branch: everyone's first weapon."},
+  {"id": "spear", "name": "Spear", "kind": "melee", "when": {"invention": "spear"}, "atk": 1.25, "cd": 1.05, "reach": 32, "crit": 0.02, "rating": 1.3,
+   "desc": "A fire-hardened point on a long shaft: strikes from a step farther and harder."},
+  {"id": "axe", "name": "Stone Axe", "kind": "melee", "when": {"invention": "war_axe"}, "atk": 1.5, "cd": 1.25, "reach": 22, "crit": 0.06, "rating": 1.45,
+   "desc": "A hafted stone head: slow, but every blow tells."},
+  {"id": "sling", "name": "Sling", "kind": "ranged", "when": {"invention": "sling"}, "needs": {"forage": 3}, "atk": 0.6, "cd": 1.5, "range": 105, "keep": 70, "crit": 0.0, "rating": 1.15,
+   "act": "Slinging stones", "desc": "Stones hurled from afar, out of a beast's reach."},
+  {"id": "bow", "name": "Bow", "kind": "ranged", "when": {"invention": "bow"}, "needs": {"forage": 3}, "atk": 0.9, "cd": 1.3, "range": 150, "keep": 85, "crit": 0.02, "rating": 1.5,
+   "act": "Shooting arrows", "desc": "A bent stave and a sinew string: shoots farther and harder than the sling."}
+ ],
+ "mastery": {
+  "_doc": "Mastery of each weapon rises with use, like a skill: the XP from level lv to the next is xp_base + xp_per_lv x lv, up to max_lv. XP: blow_xp a blow or shot, kill_xp a kill, hunt_xp a deer brought down with it (all times the person's talent for the weapon). Each level: atk_per_lv more attack, cd_per_lv quicker blows (at most cd_max off), crit_per_lv more critical blows. Reaching master_lv makes them a master of that weapon (log, memory, the tribe's first master of each weapon is an achievement). popup (a level: weapon, level), log (person, weapon), remember (weapon, day), title (the achievement: weapon): texts.",
+  "max_lv": 10,
+  "xp_base": 12,
+  "xp_per_lv": 10,
+  "blow_xp": 1.0,
+  "kill_xp": 8,
+  "hunt_xp": 2.5,
+  "atk_per_lv": 0.05,
+  "cd_per_lv": 0.02,
+  "cd_max": 0.2,
+  "crit_per_lv": 0.01,
+  "master_lv": 7,
+  "popup": "%s Lv.%d",
+  "log": "%s has mastered the %s.",
+  "remember": "became a master of the %s on Day %d",
+  "title": "The first master of the %s"
+ },
+ "talent": {
+  "_doc": "Everyone has a knack for each weapon, fixed from birth (rolled from the person, not the game's dice): a value between min and max, and with gifted_chance a gift instead (gifted). traits: a person's first trait multiplies it per weapon. The knack multiplies the XP they get with it, and how keen they are to carry it. words: how the sheet names a knack (the first whose `at` it reaches, from the top).",
+  "min": 0.6,
+  "max": 1.3,
+  "gifted_chance": 0.15,
+  "gifted": 1.7,
+  "traits": {
+   "belligerent": {"club": 1.2, "spear": 1.15, "axe": 1.25},
+   "cautious": {"sling": 1.2, "bow": 1.25, "axe": 0.85},
+   "gluttonous": {"spear": 1.15},
+   "devout": {"sling": 1.1},
+   "lazy": {"club": 1.1, "axe": 0.8}
+  },
+  "words": [
+   {"at": 1.6, "word": "gifted"},
+   {"at": 1.15, "word": "apt"},
+   {"at": 0.85, "word": "fair"},
+   {"at": 0.0, "word": "clumsy"}
+  ]
+ }
+}

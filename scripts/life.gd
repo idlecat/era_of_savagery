@@ -7,7 +7,8 @@
 ## Everything tunable is in config/life.json; the verbs of the idle acts are coded here:
 ##   sit    - go to a spot (the fire, a hut's eaves, a grave, the camp's edge, right here) and stay
 ##   chat   - find someone idle nearby and talk (the bond grows, or they quarrel)
-##   work   - a small chore at home (mend tools, scrape a hide): a pose and a little xp
+##   work   - a small chore at home (mend tools, scrape a hide): a pose and a little xp;
+##            `near`: at one of our buildings of that type; `arms_xp`: weapon practice a second
 ##   water  - fetch water from the nearest river and carry it home
 ##   watch  - watch the children play (one's own kin first)
 ##   gaze   - walk a little way out and look at the land or the water
@@ -410,6 +411,13 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 				job["to"] = to + Vector2(randf_range(-12, 12), 14)
 		"work":
 			job["to"] = _home_spot(u)
+			if a.has("near"): # (at one of our buildings of that type, the nearest)
+				var best = null
+				for st in sim.structures:
+					if st.built and sim.ours(st) and st.type == str(a["near"]) and D.same_side(st.pos, u.pos) \
+							and (best == null or st.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = st
+				if best == null: return false
+				job["to"] = best.pos + Vector2.from_angle(randf() * TAU) * randf_range(22.0, 40.0)
 		"water":
 			var c: Vector2 = D.nearest_river_point(u.pos)
 			if c == u.pos or c.distance_to(u.pos) > float(a.get("reach", 600)) or not D.same_side(D.shore(c, 10.0), u.pos): return false
@@ -458,6 +466,7 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 			return false
 	job["acts"] = a.get("acts", [])
 	job["xp"] = a.get("xp", {})
+	if a.has("arms_xp"): job["arms_xp"] = float(a["arms_xp"])
 	if a.has("talk"):
 		job["talk"] = a["talk"]
 		job["talk_chance"] = float(a.get("talk_chance", 0.3))
@@ -562,6 +571,7 @@ func do_act(u: E.Unit, j: Dictionary, dt: float) -> void:
 					sim.step_move(u, dt, sim.unit_speed(u) * 0.6)
 			elif j.has("face"): u.face = j["face"]
 			for k in j.get("xp", {}): sim.gain_xp(u, k, float(j["xp"][k]) * dt)
+			if j.has("arms_xp"): sim.arms.practice(u, str(sim.arms.wielded(u).get("id", "")), float(j["arms_xp"]) * dt)
 			j["t"] += dt
 			if j["t"] >= float(j["time"]):
 				if j["act"] == "mourn": u.grief *= 0.6 # (it eases the heart)

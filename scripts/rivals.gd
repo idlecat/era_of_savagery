@@ -158,7 +158,8 @@ func summary() -> Array:
 		if not c["met"]: continue
 		out.append({"clan": tr(c["name"]), "chieftain": tr(c["chief"]), "stance": tr(stance(id)),
 			"their_ways": tr(c["desc"]), "wrongs_remembered": c["grudges"].slice(-3), "treaties": treaty_text(id),
-			"chief_temper": tr(temper(id).get("word", "")), "remembers": ledger_lines(id, 3)})
+			"chief_temper": tr(temper(id).get("word", "")), "remembers": ledger_lines(id, 3),
+			"nemesis": c.get("nemesis", false), "feud_over": c.get("feud_over", false)})
 	return out
 
 func change(id: String, amount: float, reason := "") -> void:
@@ -223,6 +224,7 @@ func update(dt: float) -> void:
 		var c: Dictionary = clans[id]
 		_ensure_chief(c)
 		_succession(c)
+		_feud(c)
 		# drift back toward the clan's temperament (slowly)
 		var gw: Dictionary = C["relations"]["goodwill"]
 		var target: float = c["base"] + float(temper(id).get("base", 0.0)) + sim.inv.add("relation") + (float(gw["peace"]) if has_treaty(id, "peace") else 0.0) + (float(gw["alliance"]) if has_treaty(id, "alliance") else 0.0) + (float(gw["vassal"]) if c["vassal"] > 0 else 0.0)
@@ -239,6 +241,7 @@ func update(dt: float) -> void:
 		if randf() < dt / (D.DAY_LEN * float(cp["pop_every_days"])): c["pop"] = mini(int(cp["max_pop"]), c["pop"] + 1)
 		c["warriors"] = clampi(c["warriors"], 0, int(c["pop"] / int(cp["max_warrior_share"])))
 		if randf() < dt / (D.DAY_LEN * float(cp["warrior_every_days"])) and c["warriors"] < int(c["pop"] / int(cp["warrior_share"])): c["warriors"] += 1
+	_pick_nemesis()
 
 ## First contact: the first time any of their people or homes is in sight.
 func _contact(c: Dictionary) -> void:
@@ -259,6 +262,7 @@ func _contact(c: Dictionary) -> void:
 	sim.inv.feat("contact", tr("Met the %s") % tr(c["name"]), finder,
 		{"desc": tr("%s Their chief is %s %s.") % [tr(c["desc"]), tr(c["chief"]), tr(c["epithet"])], "at": c["pos"]})
 	pending.append("contact_" + c["id"])
+	_pick_nemesis(c["id"])
 
 ## Daily tribute and treaty expiry.
 func _treaties(c: Dictionary) -> void:
@@ -304,11 +308,15 @@ func on_structure_placed(s) -> void:
 func _raids(c: Dictionary, dt: float) -> void:
 	if sim.hz.level == "off": return # peaceful setting: neighbours never raid
 	var cr: Dictionary = C["raids"]
-	if c["relation"] > float(cr["hostile_at"]) or at_peace(c["id"]): return
+	var N: Dictionary = C["nemesis"]
+	var feud := feud_id()
+	var ours: bool = feud == c["id"]
+	if c["relation"] > (float(N["hostile_at"]) if ours else float(cr["hostile_at"])) or at_peace(c["id"]): return
 	c["raid_t"] -= dt
 	if c["raid_t"] > 0: return
 	var hostility := _hostility(c)
-	c["raid_t"] = D.DAY_LEN * lerpf(float(cr["every_days"][0]), float(cr["every_days"][1]), hostility) * Config.rand_in(cr["jitter"]) * (float(cr["winter_mult"]) if sim.hz.winter() else 1.0)
+	var pace: float = (float(N["raid_every_mult"]) * float(feud_stage().get("every_mult", 1.0))) if ours else (float(N["others_every_mult"]) if feud != "" else 1.0) # (the nemesis comes more often; the others fall back)
+	c["raid_t"] = D.DAY_LEN * lerpf(float(cr["every_days"][0]), float(cr["every_days"][1]), hostility) * Config.rand_in(cr["jitter"]) * (float(cr["winter_mult"]) if sim.hz.winter() else 1.0) * pace
 	# a known clan often sends a messenger first: pay, or they come for it
 	var cd: Dictionary = C["demands"]
 	if not sim.director.allow("clan_raid"): # (the director: the tribe needs a breath)
@@ -316,7 +324,7 @@ func _raids(c: Dictionary, dt: float) -> void:
 		return
 	if c["met"] and sim.time - c["last_demand"] > D.DAY_LEN * float(cd["every_days"]) and randf() < float(cd["chance"]) and not ("demand_" + c["id"]) in pending:
 		c["last_demand"] = sim.time
-		c["demand"] = int(float(cd["food"]["base"]) + hostility * float(cd["food"]["hostility"])) + (int(cd["food"]["winter"]) if sim.hz.winter() else 0)
+		c["demand"] = int((float(cd["food"]["base"]) + hostility * float(cd["food"]["hostility"]) + (float(cd["food"]["winter"]) if sim.hz.winter() else 0.0)) * (float(feud_stage().get("demand_mult", 1.0)) if ours else 1.0))
 		pending.append("demand_" + c["id"])
 		sim.director.note("demand")
 		return
@@ -330,8 +338,10 @@ func _hostility(c: Dictionary) -> float:
 func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
 	var hostility := _hostility(c)
-	var size := mini(c["warriors"], int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0))
+	var stage_add: int = int(feud_stage().get("size_add", 0)) if feud_id() == c["id"] else 0
+	var size := mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add)
 	if size < 1: return
+	if feud_id() == c["id"]: c["raid_live"] = true
 	var target: Vector2 = D.VILLAGE
 	var outposts: Array = sim.contracts.list.filter(func(k): return k.kind == "settle" and sim.contracts.is_running(k))
 	if not outposts.is_empty() and randf() < float(cr["outpost_chance"]): target = outposts[0].site
@@ -339,7 +349,7 @@ func launch_raid(c: Dictionary) -> void:
 		var w := _spawn(c, "warrior", target + Vector2(randf_range(-60, 60), randf_range(-50, 50)))
 		w.raid = true
 		w.raid_t = float(cr["give_up_s"])
-	c["warriors"] -= size
+	c["warriors"] = maxi(0, c["warriors"] - size)
 	note(c["id"], "raided")
 	if not c["met"]:
 		c["met"] = true # strangers attack: contact by force
@@ -353,6 +363,75 @@ func _hunters(c: Dictionary, dt: float) -> void:
 	if c["hunter_t"] > 0: return
 	c["hunter_t"] = D.DAY_LEN * float(C["people"]["hunter_every_days"])
 	_spawn(c, "hunter")
+
+# ------------------------------------------------------------ the nemesis (make_it_fun C2)
+## The clan that has made us its enemy ("" = none yet): one face for the horizon threat.
+func nemesis_id() -> String:
+	for id in clans:
+		if clans[id].get("nemesis", false): return id
+	return ""
+
+## The nemesis while the feud runs ("" when there is none or it has ended).
+func feud_id() -> String:
+	var id := nemesis_id()
+	return id if id != "" and not clans[id].get("feud_over", false) else ""
+
+## Make a clan the nemesis (a game master's verb too; "" clears it). Returns false for an
+## unknown clan.
+func set_nemesis(id: String) -> bool:
+	if id != "" and not clans.has(id): return false
+	for k in clans: clans[k]["nemesis"] = false
+	if id == "": return true
+	var c: Dictionary = clans[id]
+	c["nemesis"] = true
+	c["feud_over"] = false
+	note(id, "marked")
+	if c["met"]:
+		var N: Dictionary = C["nemesis"]
+		sim.add_log(_txt(N["marked"], c), "danger")
+		sim.alert(_txt(N["marked"], c), c["pos"], "warn")
+	return true
+
+## How much a clan wants to be our enemy: the worse the relation, the more; martial clans more.
+func nemesis_score(id: String) -> float:
+	var c: Dictionary = clans[id]
+	return -float(c["relation"]) + (float(C["nemesis"]["pick"]["martial"]) if c["culture"] == "martial" else 0.0)
+
+## Choose the nemesis once: at a first contact the clan met takes the part if its score is at
+## least min_score; if none has by by_day, the worst of the clans met.
+func _pick_nemesis(just_met := "") -> void:
+	if nemesis_id() != "" or not bool(C["nemesis"].get("on", true)): return
+	var P: Dictionary = C["nemesis"]["pick"]
+	if just_met != "":
+		if nemesis_score(just_met) >= float(P["min_score"]): set_nemesis(just_met)
+		return
+	if sim.day() < int(P["by_day"]): return
+	var best := ""
+	for id in clans:
+		if clans[id]["met"] and clans[id]["vassal"] <= 0 and not has_treaty(id, "alliance") and (best == "" or nemesis_score(id) > nemesis_score(best)): best = id
+	if best != "": set_nemesis(best)
+
+## The escalation stage of the feud now (nemesis "stages": the last whose era has come).
+func feud_stage() -> Dictionary:
+	var out: Dictionary = {}
+	for st in C["nemesis"]["stages"]:
+		if sim.evo.era >= int(st["era"]): out = st
+	return out
+
+## The feud's milestones: their first raid held off, and its end (befriended, at peace,
+## vassals, or beaten at home over_defeats times), both achievements.
+func _feud(c: Dictionary) -> void:
+	if not c.get("nemesis", false) or c.get("feud_over", false): return
+	var N: Dictionary = C["nemesis"]
+	if c.get("raid_live", false) and not sim.predators.any(func(p): return p.clan == c["id"] and p.raid and not p.dead and not p.fled):
+		c["raid_live"] = false
+		if not c.get("first_raid_held", false):
+			c["first_raid_held"] = true
+			sim.inv.feat("feud", tr(N["feats"]["first_raid"]) % tr(c["name"]), null, {"at": D.VILLAGE})
+	if stance(c["id"]) in N["over_stances"] or at_peace(c["id"]) or c["vassal"] > 0 or c.get("defeats", 0) >= int(N["over_defeats"]):
+		c["feud_over"] = true
+		note(c["id"], "feud_over")
+		sim.inv.feat("feud", tr(N["feats"]["over"]) % tr(c["name"]), null, {"at": c["pos"]})
 
 # ------------------------------------------------------------ the ledger and the chief (make_it_fun C1)
 ## Fill in what an older save lacks (the ledger and the chief's temper came later).

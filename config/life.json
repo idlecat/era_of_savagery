@@ -116,7 +116,7 @@
  },
 
  "idle": {
-  "_doc": "What grown-ups at home do when nobody needs them: every `every` seconds of idling one act is picked, weighted by `weight` plus `more` for each condition that holds. `needs`: conditions that must all hold; `when`: tribe conditions as in scenario scripts (story.holds). Conditions: dusk, morning, cold, wet, tired, hurt, hungry, grieving, low_spirits, high_spirits, children, kin_child, can_art, trait:<trait>. Verbs (do): sit (at: fire, here, shelter, grave, edge), chat, work (a chore at home), water, watch (the children), gaze, ritual (lasts until new orders), art (folk.gd), wander. acts: [walking there, doing it] ('%s': the other person); pose: the drawn pose there (sit, talk, build, gather, ritual).",
+  "_doc": "What grown-ups at home do when nobody needs them: every `every` seconds of idling one act is picked, weighted by `weight` plus `more` for each condition that holds. `needs`: conditions that must all hold; `when`: tribe conditions as in scenario scripts (story.holds). Conditions: dusk, morning, cold, wet, tired, hurt, hungry, grieving, low_spirits, high_spirits, children, kin_child, can_art, trait:<trait>. Verbs (do): sit (at: fire, here, shelter, grave, edge), chat, work (a chore at home, or `near` one of our buildings of that type; arms_xp: weapon practice a second with the weapon they carry, arms.gd), water, watch (the children), gaze, ritual (lasts until new orders), art (folk.gd), wander. acts: [walking there, doing it] ('%s': the other person); pose: the drawn pose there (sit, talk, build, gather, ritual).",
   "every": [2, 4],
   "acts": [
    {"id": "fire", "do": "sit", "at": "fire", "weight": 2, "more": {"dusk": 6, "cold": 5, "tired": 3, "wet": -2}, "time": [10, 18],
@@ -125,6 +125,8 @@
     "acts": ["Going to talk with %s", "Talking with %s"], "pose": "talk", "talk": "chat"},
    {"id": "mend", "do": "work", "weight": 2, "time": [8, 14], "acts": ["Mending tools", "Mending tools"], "pose": "build", "xp": {"craft": 0.04}},
    {"id": "hide", "do": "work", "weight": 2, "when": {"tech": "hide"}, "time": [8, 14], "acts": ["Scraping a hide", "Scraping a hide"], "pose": "gather", "xp": {"craft": 0.03}},
+   {"id": "spar", "do": "work", "near": "weapon_rack", "weight": 1.5, "more": {"trait:belligerent": 3, "tired": -3, "hurt": -4}, "when": {"built": "weapon_rack"}, "time": [8, 14],
+    "acts": ["Going to the weapon rack", "Weapon practice"], "pose": "attack", "xp": {"combat": 0.03}, "arms_xp": 0.12},
    {"id": "water", "do": "water", "weight": 1.5, "reach": 600, "time": [1, 2], "acts": ["Fetching water", "Carrying water home"]},
    {"id": "kids", "do": "watch", "weight": 1, "more": {"kin_child": 5}, "needs": ["children"], "reach": 400, "time": [8, 14],
     "acts": ["Watching the children play", "Watching the children play"], "pose": "gather", "talk": "kids", "talk_chance": 0.3},

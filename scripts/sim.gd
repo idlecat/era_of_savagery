@@ -23,6 +23,7 @@ const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
 const Reactions = preload("res://scripts/reactions.gd")
 const Hunt = preload("res://scripts/hunt.gd")
+const Arms = preload("res://scripts/arms.gd")
 const Life = preload("res://scripts/life.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
@@ -109,6 +110,7 @@ var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var react: Reactions # how people respond to quakes, fires, the hurt... (reactions.gd)
 var hunt: Hunt # how a band fights a dangerous beast: muster, charge together, ring it (hunt.gd)
+var arms: Arms # weapons, who carries which, and weapon mastery (arms.gd)
 var life: Life # meals, idle acts, bonds, spirits and weariness, speech (life.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
@@ -139,6 +141,7 @@ func _init() -> void:
 	cult = Culture.new(self)
 	react = Reactions.new(self)
 	hunt = Hunt.new(self)
+	arms = Arms.new(self)
 	life = Life.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
@@ -337,6 +340,7 @@ func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 		u.memory.append(m.duplicate())
 	u.wander_t = randf_range(0, 4)
 	u.hero = def.get("hero", false)
+	arms.init_unit(u)
 	return u
 
 func add_structure(type: String, p: Vector2, built := false, owner := "village", paid := false) -> E.Structure:
@@ -519,11 +523,12 @@ func struct_near(type: String, p: Vector2, r: float) -> bool:
 func unit_atk(u: E.Unit) -> float:
 	var a := u.atk * (1.0 + 0.15 * u.lv("combat"))
 	if has_tech("tools"): a += 2
-	a += inv.atk_bonus() # the sling
+	a += inv.atk_bonus()
 	if evo.has_trad("warrior_initiation"): a += 2
 	if has_bronze(): a *= 1.6
 	elif knows_find("obsidian"): a *= 1.15 # black-glass blades
 	if struct_near("weapon_rack", u.pos, 160): a *= 1.2
+	a *= arms.atk_mult(u) # (the weapon they carry, and how well they know it)
 	if u.role == "contract":
 		var c = contracts.by_id(u.contract_id)
 		if c and c.flags.get("blessed", false): a *= 1.15 # the war dance
@@ -844,14 +849,19 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			u.act = "Fighting"
 			if hunt.holding(u, p, dt): return # mustering with the band, or fallen back hurt
 			u.doing = "fight"
+			if not arms.ranged(u).is_empty(): # (a sling or a bow: from afar)
+				hunt.shoot(u, p, dt)
+				return
+			var reach := arms.reach(u)
 			var at := hunt.spot(u, p) # (a place in the ring round it)
-			approach(u, at, 22.0 if at == p.pos else 4.0, dt)
-			var close := u.pos.distance_to(p.pos) <= 24
+			approach(u, at, reach - 2.0 if at == p.pos else 4.0, dt)
+			var close := u.pos.distance_to(p.pos) <= reach
 			u.face = p.pos if close else null
 			if close and u.cd <= 0:
-				u.cd = 1.0
+				u.cd = arms.cd(u)
 				var dmg := unit_atk(u) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def)) * hunt.dmg_mult(u, p)
-				var crit := randf() < 0.05 * u.lv("forage")
+				var crit := randf() < 0.05 * u.lv("forage") + arms.crit(u)
+				arms.used(u)
 				damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 				gain_xp(u, "combat", 1.2)
 		"envoy":
@@ -962,6 +972,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			n.vel = Vector2.ZERO
 			gain_xp(u, "forage", 3)
 			gain_xp(u, "combat", 1)
+			arms.hunted(u)
 			if randf() < 0.05 * u.lv("forage"):
 				popup(u.pos + Vector2(0, -30), tr("Lethal strike!"), Color("#ffb36b"))
 				n.amount += 5
@@ -1728,6 +1739,7 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 		if u:
 			u.kills += 1
 			gain_xp(u, "combat", 18)
+			arms.used(u, true)
 			ranks.deed(u, "slay_" + ("warrior" if p.clan != "" else p.kind))
 			if p.clan != "": # a person, not a beast
 				remember(u, tr("struck down a %s on Day %d") % [tr(p.name), day()], 8)

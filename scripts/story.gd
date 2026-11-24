@@ -19,7 +19,8 @@
 ##         {"weather": kind} (config/events.json weather.kinds), {"react": event, "at"} (sim.react),
 ##         {"tale": tale id} (told now), {"join": person id} (a culture's people arrive),
 ##         {"prepare": {stat: mult}} (for the coming winter: hz.prepare), {"slaughter": n} (oxen, 0 = all),
-##         {"ledger": kind, "clan"} (written into the clan's ledger: rivals.note)
+##         {"ledger": kind, "clan"} (written into the clan's ledger: rivals.note),
+##         {"wield": weapon id, "who"} ("" = their own choice), {"arms_xp": {weapon: n}, "who"} (sim.arms)
 ## The culture system (culture.gd) runs its events and tales through holds() and run() too.
 ##
 ## Dilemmas share one data format, run by dilemma_view()/dilemma_choose() for culture
@@ -127,7 +128,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -140,7 +141,7 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
@@ -260,6 +261,11 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 		if a.has("xp"):
 			for u in people(a.get("who", "all"), vars):
 				for k in a["xp"]: sim.gain_xp(u, k, float(a["xp"][k]))
+		if a.has("wield"):
+			for u in people(a.get("who", "all"), vars): sim.arms.set_wield(u, str(a["wield"]))
+		if a.has("arms_xp"):
+			for u in people(a.get("who", "all"), vars):
+				for k in a["arms_xp"]: sim.arms.practice(u, str(k), float(a["arms_xp"][k]))
 		if a.has("hurt"): # (a fraction of max HP)
 			for u in people(a.get("who", "all"), vars): sim.hurt_unit(u, u.max_hp * float(a["hurt"]), null)
 		if a.has("morale"): # one family's spirits (the tribe's mood is "mood")

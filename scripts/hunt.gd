@@ -4,8 +4,8 @@
 ## A band: everyone whose job is "attack" on the same beast. It doesn't trickle in one by
 ## one: it musters at a rally point out of the beast's reach, charges together, takes
 ## places in a ring round it (blows from the flanks hit harder) and lets its badly hurt
-## step back while the others keep the beast busy. Its archers (good hunters, once the
-## tribe has a sling or a bow) keep their distance and shoot from afar.
+## step back while the others keep the beast busy. Its archers (those who carry a sling or
+## a bow: sim.arms) keep their distance and shoot from afar.
 ##
 ## Nobody faces it alone unless they are a match for it (can_solo): someone alone the beast
 ## comes for runs to the others and calls for help (the "hunt_help" reactions), and one
@@ -37,21 +37,15 @@ func _init(s) -> void:
 func rules_for(kind: String) -> Dictionary:
 	return C.get("kinds", {}).get(kind, {})
 
-## The weapon someone shoots with ({} = not an archer): a good enough hunter, with the
-## best weapon the tribe has (config "archers").
-func weapon(u: E.Unit) -> Dictionary:
-	var a: Dictionary = C.get("archers", {})
-	if a.is_empty() or u.role == "child" or u.lv(str(a["skill"])) < int(a["min_lv"]): return {}
-	for w in a.get("weapons", []):
-		if sim.story.holds(w.get("when", {})): return w
-	return {}
+## The ranged weapon someone shoots with ({} = not an archer): the sling or bow they carry
+## (sim.arms: weapons need a good enough hunter's eye, config/weapons.json "needs").
+func weapon(u: E.Unit) -> Dictionary: return sim.arms.ranged(u)
 
 ## Whether someone could kill the beast on their own: they would outlast it by the
 ## config's solo_margin, blow for blow (from afar, with their weapon, if an archer).
 func can_solo(u: E.Unit, p: E.Predator) -> bool:
 	var al: Dictionary = C["alone"]
-	var w := weapon(u)
-	var hit: float = sim.unit_atk(u) * (10.0 / (10.0 + p.def)) * (float(w["mult"]) / float(w["cd"]) if not w.is_empty() else 1.0)
+	var hit: float = sim.unit_atk(u) * (10.0 / (10.0 + p.def)) / maxf(0.1, sim.arms.cd(u))
 	var bitten: float = p.atk * (10.0 / (10.0 + sim.unit_def(u))) / 1.25
 	if hit <= 0.0: return false
 	return u.hp / maxf(bitten, 0.01) >= p.hp / hit * float(al["solo_margin"])
@@ -227,6 +221,13 @@ func _charge(p: E.Predator, band: Array, cfg: Dictionary) -> void:
 	if not words.is_empty() and not lead.sleeping: sim.life.say_text(lead, tr(str(words.pick_random())), "hunt")
 	if cfg.has("popup"): sim.popup(bands[p.id]["rally"] + Vector2(0, -30), tr(str(cfg["popup"])), Color("#ffd36b"))
 
+## An archer at any foe (a band's or not): shoots with the weapon they carry, from their
+## own side when there is no band. Called by the attack job.
+func shoot(u: E.Unit, p: E.Predator, dt: float) -> void:
+	var w := weapon(u)
+	if w.is_empty(): return
+	_shoot(u, p, bands.get(p.id, {"rally": u.pos, "archers": [u.id]}), w, dt)
+
 ## An archer keeps the beast at arm's length plus a spear's throw: stands off on the band's
 ## side (spread in an arc), steps back when it comes too close, shoots when in range.
 func _shoot(u: E.Unit, p: E.Predator, b: Dictionary, w: Dictionary, dt: float) -> void:
@@ -248,11 +249,12 @@ func _shoot(u: E.Unit, p: E.Predator, b: Dictionary, w: Dictionary, dt: float) -
 	u.face = p.pos
 	u.doing = "fight"
 	if u.cd > 0: return
-	u.cd = float(w["cd"])
-	var dmg: float = sim.unit_atk(u) * float(w["mult"]) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def))
-	var crit := randf() < 0.04 * u.lv(str(a["skill"]))
-	sim.damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
+	u.cd = sim.arms.cd(u)
+	var dmg: float = sim.unit_atk(u) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def)) # (unit_atk holds the weapon)
+	var crit: bool = randf() < 0.04 * u.lv(str(a["skill"])) + sim.arms.crit(u)
 	shots.append({"from": u.pos, "to": p.pos, "t": 0.0, "life": float(a["flight"]), "weapon": str(w["id"])})
+	sim.arms.used(u)
+	sim.damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 	sim.gain_xp(u, "combat", float(a["xp"]))
 	sim.gain_xp(u, str(a["skill"]), float(a["xp"]) * 0.5)
 

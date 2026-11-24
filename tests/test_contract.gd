@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -372,7 +372,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2562,6 +2562,56 @@ func test_chief_ledger() -> void:
 	R.update(0.05)
 	check(c["chief_t"] > before_reign, "a chief's reign ends in time")
 	check(sim.check_invariants().is_empty(), "invariants hold")
+
+func test_nemesis() -> void:
+	print("\n== One horizon threat: the nemesis (make_it_fun C2) ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	sim.hz.level = "normal"
+	var ochre: Dictionary = R.clans["ochre"]
+	var heron: Dictionary = R.clans["heron"]
+	heron["met"] = true
+	heron["relation"] = 10.0
+	R._pick_nemesis("heron")
+	check(R.nemesis_id() == "", "a friendly clan met first is not made the nemesis")
+	ochre["met"] = true
+	ochre["relation"] = -10.0
+	R._pick_nemesis("ochre")
+	check(R.nemesis_id() == "ochre" and ochre["ledger"].any(func(e): return e["kind"] == "marked"), "a hostile martial clan met is (score %.0f), and swears it" % R.nemesis_score("ochre"))
+	check(sim.log_lines.any(func(l): return l["text"].contains(tr(ochre["name"]))), "the tribe is told")
+	check(not R.set_nemesis("nobody") and R.nemesis_id() == "ochre", "an unknown clan can't be made nemesis")
+	# the nemesis comes more often; the others fall back
+	for c in [ochre, heron]:
+		c["relation"] = -40.0
+		c["raid_t"] = 0.0
+		c["last_demand"] = sim.time
+	R._raids(ochre, 0.01)
+	R._raids(heron, 0.01)
+	check(ochre["raid_t"] < heron["raid_t"] * 0.8, "the nemesis's next raid comes sooner (%.0fs vs %.0fs)" % [ochre["raid_t"], heron["raid_t"]])
+	# escalation by era
+	sim.evo.era = 3
+	ochre["warriors"] = 10
+	var n0: int = sim.predators.filter(func(p): return p.clan == "ochre" and p.raid).size()
+	R.launch_raid(ochre)
+	var band: Array = sim.predators.filter(func(p): return p.clan == "ochre" and p.raid and not p.dead)
+	check(band.size() - n0 >= 2 + int(R.feud_stage()["size_add"]), "by the third age its war bands are bigger (%d)" % (band.size() - n0))
+	var f0: int = sim.inv.feats.size()
+	for p in band: p.dead = true
+	R._feud(ochre)
+	check(sim.inv.feats.size() == f0 + 1 and ochre["first_raid_held"], "holding off its first raid is an achievement")
+	# the feud ends when they are won over
+	ochre["relation"] = 30.0
+	R._feud(ochre)
+	check(ochre["feud_over"] and R.feud_id() == "" and sim.inv.feats.size() == f0 + 2, "befriended, the feud is over (an achievement), and stays won")
+	check(R.summary().any(func(x): return x["nemesis"] and x["feud_over"]), "the summary shows the nemesis and the feud's end")
+	# by day 6 without a candidate, the worst clan met is chosen
+	var sim2 = _new_sim()
+	for id in ["heron", "tusk"]: sim2.rivals.clans[id]["met"] = true
+	sim2.rivals.clans["heron"]["relation"] = 20.0
+	sim2.rivals.clans["tusk"]["relation"] = 5.0
+	sim2.time = D.DAY_LEN * 6 + 1.0
+	sim2.rivals._pick_nemesis()
+	check(sim2.rivals.nemesis_id() == "tusk", "by day 6 the worst clan met becomes the nemesis")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
