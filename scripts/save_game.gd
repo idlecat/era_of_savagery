@@ -35,6 +35,22 @@ static func write(slot: String, sim, settings: Dictionary, extra := {}) -> Strin
 	return ""
 
 ## What the save list shows.
+## The chronicle that ended last (legacy.heritage()), for the next one to remember (E2):
+## kept in user://heritage.json across games. Only plain values are kept.
+const HERITAGE := "user://heritage.json"
+
+static func write_heritage(h: Dictionary) -> void:
+	var f := FileAccess.open(HERITAGE, FileAccess.WRITE)
+	if f == null: return
+	f.store_string(JSON.stringify({"hero": str(h.get("hero", "")), "ending": str(h.get("ending", "")), "clan": str(h.get("clan", "")), "day": int(h.get("day", 0)), "era": int(h.get("era", 1))}))
+	f.close()
+
+static func read_heritage() -> Dictionary:
+	if not FileAccess.file_exists(HERITAGE): return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(HERITAGE))
+	if not d is Dictionary: return {}
+	return {"hero": str(d.get("hero", "")).left(40), "ending": str(d.get("ending", "")).left(20), "clan": str(d.get("clan", "")).left(20), "day": int(d.get("day", 0)), "era": int(d.get("era", 1))}
+
 static func header(sim, settings: Dictionary) -> Dictionary:
 	return {"day": sim.day(), "pop": sim.living().size(), "era": sim.evo.era, "map": settings.get("map", ""),
 		"culture": settings.get("culture", ""), "saved": Time.get_datetime_string_from_system(false, true),

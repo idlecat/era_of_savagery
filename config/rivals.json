@@ -340,7 +340,8 @@
    "spared": {"text": "you spared us when you could have crushed us", "weight": 15},
    "took_tribute": {"text": "you crushed us under a heavy tribute", "weight": -15},
    "marked": {"text": "we swore that your tribe would be our enemy", "weight": -8},
-   "feud_over": {"text": "the feud between our peoples came to an end", "weight": 12}
+   "feud_over": {"text": "the feud between our peoples came to an end", "weight": 12},
+   "kin": {"text": "the people of %s came to live among us long ago; their blood is ours", "weight": 12}
   }
  },
 

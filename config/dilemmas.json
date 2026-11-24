@@ -342,6 +342,22 @@
    }
   ]
  },
+ "last_stand": {
+  "_doc": "The last stand (make_it_fun E1): posed once when few are left (rules.json triggers.last_stand). Joining a clan ends the chronicle as the merged ending (legacy.json), not a defeat; it needs a clan that would take us in (legacy.refuge(): met, Friendly or better, or at peace). Vars: clan, clan_name, can_merge, pop.",
+  "title": "The Last Stand",
+  "text": ["Only %d of us are left. Around the fire the survivors ask what will become of the tribe.", "pop"],
+  "options": [
+   {"label": "We hold the fire", "desc": "We stay and fight on, however few. (Spirits rise; the chronicle goes on.)",
+    "do": [{"morale": 30, "who": "all"}, {"mood": 15}, {"remember": "swore with the last of the tribe to hold the fire on Day %d", "who": "all", "impact": 9}],
+    "result": "The survivors bank the fire high and swear to keep it burning."},
+   {"label": "We join our friends", "desc": ["Walk to the fires of the %s and live on among them. (The chronicle ends here, not in defeat.)", "clan_name"],
+    "needs": {"var": "can_merge"},
+    "do": [{"merge": true}],
+    "result": ["The last of our people set out for the %s.", "clan_name"],
+    "else_do": [{"mood": -5}],
+    "else_result": "No clan would take us in. The survivors stay by the fire."}
+  ]
+ },
  "first_day": {
   "_doc": "The first day's fever (make_it_fun D2): posed once by rules.json triggers.first_day when the game starts with its opening (sim.opening); someone falls ill first. One pause that teaches a tradeoff, and the elder's remembered remedy (D1) is one answer. Vars: sick, sick_who, herb, elder.",
   "title": "Fever on the First Day",

@@ -102,6 +102,10 @@
    "pop": 12,
    "day": 3
   },
+  "last_stand": {
+   "pop_below": 4,
+   "day": 3
+  },
   "first_day": {
    "time": 50
   },

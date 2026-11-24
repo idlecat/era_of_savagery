@@ -54,7 +54,7 @@ const TEXT_KEYS := ["text", "title", "label", "desc", "result", "else_result", "
 	"hit_remember", "name", "acts", "reason", "grudge", "speaker_default", "pro", "con", "remember_heard", "remember_stand",
 	"act", "lowest_word", "arrive", "word", "quote", "marked", "say", "reward_text", "accept", "decline", "decline_desc", "taken_log", "declined_log", "met_feat", "failed_log"]
 ## Keys whose values are all texts ({id: text} or {id: [texts]}).
-const TEXT_TABLES := ["voices", "treasures", "warn", "titles", "happened", "outcome", "talk", "dates", "tags", "names", "feats", "grows", "spots"]
+const TEXT_TABLES := ["voices", "treasures", "warn", "titles", "happened", "outcome", "talk", "dates", "tags", "names", "feats", "grows", "spots", "intro"]
 ## Keys holding lists of texts (nested lists too; numbers in them are skipped).
 const TEXT_LISTS := ["acts", "words", "signs"]
 

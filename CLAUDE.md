@@ -31,7 +31,7 @@ $GODOT --path . --quit-after 200 2>&1 | grep "SCRIPT ERROR"       # quick compil
 - Culture packs: `$GODOT --headless --path . --script res://tools/check_culture.gd [-- --pack=res://cultures/<id> --skeleton]` validates `cultures/*/culture.json` and lists texts missing from its `zh.json`. Format: `docs/CULTURES.md`.
 - Model gallery (bakes only the chosen sprites, no full rebake): `$GODOT --path . --script res://tests/art_gallery.gd -- --out=/path.png --keys=man_walk_3_2,deer_idle_1_0 [--match=pine_*] [--scale=2] [--cols=6]`.
 - At launch `new_game_ui.gd` (the New Game screen: Random map or Scenario) picks the map unless `--map=` or `--shot=` is given (screenshots default to the `the_ford` scenario; `classic` is an alias). Restart (`reload_current_scene`) shows it again. `--demo=overview` shows the whole map without fog.
-- `$GODOT` user data lives in `~/Library/Application Support/Godot/app_userdata/Era of Savagery- Clan Chronicles (POC)/` (LLM settings incl. API key, `settings.cfg` language, `art_cache_v<N>/` baked sprites). `project.godot` pins that folder with `config/custom_user_dir_name` (it was named after the old project name), so renaming the project doesn't lose saved settings or the art cache.
+- `$GODOT` user data lives in `~/Library/Application Support/Godot/app_userdata/Era of Savagery- Clan Chronicles (POC)/` (LLM settings incl. API key, `settings.cfg` language, `art_cache_v<N>/` baked sprites, `heritage.json`: the last chronicle that ended, remembered by the next fresh game). `project.godot` pins that folder with `config/custom_user_dir_name` (it was named after the old project name), so renaming the project doesn't lose saved settings or the art cache.
 
 ## Architecture
 

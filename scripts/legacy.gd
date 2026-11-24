@@ -22,6 +22,7 @@ var sim
 var achieved := {} # path -> day
 var pending := ""
 var check_t := 0.0
+var merged_with := "" # the clan the tribe joined (the "merged" ending)
 
 func _init(s) -> void:
 	sim = s
@@ -68,10 +69,10 @@ func update(dt: float) -> void:
 			return
 
 func owns_event(id: String) -> bool:
-	return id.begins_with("victory_") or id == "defeat"
+	return id.begins_with("victory_") or id == "defeat" or id == "merged"
 
 func path_of(id: String) -> String:
-	return "defeat" if id == "defeat" else id.trim_prefix("victory_")
+	return id if id in ["defeat", "merged"] else id.trim_prefix("victory_")
 
 # ------------------------------------------------------------ the saga
 ## The storyteller: the living soul with the most lore (or the last one who died).
@@ -97,7 +98,7 @@ func saga_ctx(path: String) -> Dictionary:
 		clans.append({"clan": tr(c["name"]), "chieftain": tr(c["chief"]), "fate": tr(R.stance(id)) if c["met"] else tr("never met")})
 	var teller := storyteller()
 	return {
-		"path": path, "ending": tr((C["defeat"] if path == "defeat" else C["paths"][path])["title"]), "day": sim.day(), "age": tr(D.ERA_NAMES[sim.evo.era]),
+		"path": path, "ending": tr(ending(path)["title"]), "joined": tr(sim.rivals.clans[merged_with]["name"]) if path == "merged" and sim.rivals.clans.has(merged_with) else "", "day": sim.day(), "age": tr(D.ERA_NAMES[sim.evo.era]),
 		"people_living": sim.living().size(), "people_fallen": sim.units.filter(func(u): return u.dead).size(),
 		"wisdom": D.TECHS.filter(func(t): return sim.has_tech(t["id"])).map(func(t): return tr(t["name"])),
 		"traditions": sim.evo.world_ctx()["traditions"], "culture": sim.evo.culture_summary(),
@@ -110,7 +111,7 @@ func saga_ctx(path: String) -> Dictionary:
 ## Offline saga: stitched from the same facts.
 func saga_offline(ctx: Dictionary) -> String:
 	var lines: Array = []
-	var pd: Dictionary = C["defeat"] if ctx["path"] == "defeat" else C["paths"][ctx["path"]]
+	var pd: Dictionary = ending(str(ctx["path"]))
 	var opening: String = tr(pd["opening"])
 	lines.append(opening)
 	for d in ctx["great_deeds"].slice(0, 6):
@@ -123,9 +124,10 @@ func saga_offline(ctx: Dictionary) -> String:
 # ------------------------------------------------------------ events
 func event_def(id: String) -> Dictionary:
 	var path := path_of(id)
-	var pd: Dictionary = C["defeat"] if path == "defeat" else C["paths"][path]
+	var pd: Dictionary = ending(path)
 	var co: Dictionary = C["options"]
 	var opts: Array = [{"label": tr(co["restart"]["label"]), "desc": tr(co["restart"]["desc"]), "enabled": true}]
+	if path == "merged": return {"title": tr(pd["title"]), "text": tr(pd["text"]) % tr(sim.rivals.clans[merged_with]["name"]), "options": opts}
 	if path != "defeat": opts.push_front({"label": tr(co["continue"]["label"]), "desc": sim.story.text(co["continue"]["desc"], {"n": sim.living().size()}), "enabled": true})
 	return {"title": tr(pd["title"]), "text": tr(pd["text"]), "options": opts}
 
@@ -133,5 +135,46 @@ func event_def(id: String) -> Dictionary:
 func resolve(id: String, idx: int) -> Dictionary:
 	pending = ""
 	var path := path_of(id)
-	var restart: bool = path == "defeat" or idx == 1
+	var restart: bool = path in ["defeat", "merged"] or idx == 1
 	return {"text": tr(C["options"]["restart" if restart else "continue"]["result"]), "restart": restart}
+
+# ------------------------------------------------------------ the last stand and heritage (make_it_fun E)
+## The config entry of an ending: a victory path, "defeat" or "merged".
+func ending(path: String) -> Dictionary:
+	if path == "defeat" or path == "merged": return C[path]
+	return C["paths"].get(path, C["defeat"])
+
+## The friendliest clan that would take the tribe in: met, Friendly or better (or at peace
+## with us), highest relation first. "" if none would.
+func refuge() -> String:
+	var R = sim.rivals
+	var best := ""
+	for id in R.clans:
+		var c: Dictionary = R.clans[id]
+		if not c["met"] or not (R.stance(id) in ["Friendly", "Trusted", "Allied", "Vassal"] or R.at_peace(id)): continue
+		if best == "" or c["relation"] > R.clans[best]["relation"]: best = id
+	return best
+
+## The tribe joins clan `id` and the chronicle ends there: a legacy ending of its own
+## ("merged", legacy.json), not a defeat. The "merge" story action; a game master's verb.
+func merge(id: String) -> bool:
+	if not sim.rivals.clans.has(id) or achieved.has("merged") or achieved.has("defeat"): return false
+	merged_with = id
+	achieved["merged"] = sim.day()
+	pending = "merged"
+	return true
+
+## What the next chronicle may remember of this one (main.gd writes it to user:// when a
+## game ends and gives it to the next sim as sim.heritage): who they were, how it ended.
+func heritage() -> Dictionary:
+	var hero: E.Unit = null
+	var fame := {}
+	for u in sim.units:
+		if u.role == "child": continue
+		fame[u.id] = 0
+		for m in u.memory: fame[u.id] += int(m["impact"])
+		if hero == null or fame[u.id] > fame.get(hero.id, -1): hero = u
+	var end := "defeat" if achieved.has("defeat") else ("merged" if achieved.has("merged") else "")
+	for p in C["paths"]:
+		if end == "" and achieved.has(p): end = p
+	return {"hero": hero.name if hero else "", "ending": end, "clan": merged_with, "day": sim.day(), "era": sim.evo.era}

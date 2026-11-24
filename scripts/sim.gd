@@ -202,9 +202,37 @@ func new_game() -> void:
 	_fog_init()
 	fog_update()
 	if opening: remember_find()
+	_remember_heritage()
+
+## E2: the chronicle before this one is remembered (sim.heritage, from main.gd): the old
+## camp of that people stands as a landmark somewhere on our side of the water, the elders
+## tell of them, and a clan they joined remembers the kinship (legacy.json "heritage").
+func _remember_heritage() -> void:
+	if heritage.is_empty() or str(heritage.get("hero", "")) == "": return
+	var H: Dictionary = legacy.C["heritage"]
+	var hero: String = tr(str(heritage["hero"]))
+	var at := Vector2.INF
+	for k in 60:
+		var p: Vector2 = D.VILLAGE + Vector2.from_angle(randf() * TAU) * preload("res://scripts/config.gd").rand_in(H["dist"])
+		if p.x > 150 and p.y > 150 and p.x < D.W - 150 and p.y < D.H - 150 and D.home_side(p) and not D.is_water(p) and D.river_dist(p) > 200.0:
+			at = p
+			break
+	if at != Vector2.INF:
+		var L: Dictionary = H["landmark"]
+		landmarks.append({"id": "old_fire", "kind": str(L["kind"]), "name": tr(L["name"]) % hero, "pos": at, "found": false,
+			"text": tr(L["text"]) % hero, "reward": L["reward"].duplicate(), "devotion": float(L.get("devotion", 0.0))})
+	var end := str(heritage.get("ending", ""))
+	var clan := str(heritage.get("clan", ""))
+	if end == "merged" and rivals.clans.has(clan):
+		var c: Dictionary = rivals.clans[clan]
+		c["relation"] = clampf(float(c["relation"]) + float(H["kin_relation"]), -100.0, 100.0)
+		rivals.note(clan, "kin", [hero])
+		add_log(tr(H["intro"]["merged"]) % [hero, tr(c["name"])], "story")
+	else: add_log(tr(H["intro"].get(end, H["intro"]["defeat"])) % hero, "story")
 
 # ------------------------------------------------------------ the opening (make_it_fun D1/D2)
 var opening := true # the opening's remembered find and first-day fever (tests switch it off)
+var heritage := {} # the chronicle before this one (main.gd, from user://): legacy.heritage()
 var hearth_t := 0.0 # (longhouse bonds, every 2 s)
 var rumoured := {} # find id -> who remembers it: known of, not yet found (discovery.json "remembered")
 
@@ -2528,6 +2556,9 @@ func check_events() -> void:
 	elif opening and not flags.has("first_day") and story.holds(RULES["triggers"]["first_day"]):
 		flags["first_day"] = true
 		_first_day()
+	elif not flags.has("last_stand") and story.holds(RULES["triggers"]["last_stand"]): # few are left: the ending is a choice
+		flags["last_stand"] = true
+		_fire_event("last_stand")
 	elif challenges.offered != "" and not challenges.posed: # the council proposes a challenge
 		challenges.posed = true
 		_fire_event("challenge")
@@ -2615,6 +2646,11 @@ var DILEMMAS: Dictionary = preload("res://scripts/config.gd").load_cfg("dilemmas
 func _dilemma_vars(id: String) -> Dictionary:
 	var v := {}
 	if id == "autumn": v.merge(hz.autumn_vars())
+	if id == "last_stand":
+		var refuge: String = legacy.refuge()
+		v["clan"] = refuge
+		v["clan_name"] = tr(rivals.clans[refuge]["name"]) if refuge != "" else tr("no clan")
+		v["can_merge"] = refuge != ""
 	if id == "first_day":
 		var sick := unit_by_id(int(flags.get("first_day_sick", -1)))
 		var herb: String = rumoured.keys()[0] if not rumoured.is_empty() else ""

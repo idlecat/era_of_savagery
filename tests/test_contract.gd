@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_last_stand_and_heritage, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2812,6 +2812,48 @@ func test_challenges() -> void:
 	CH.resolve("challenge", 1)
 	check(CH.done["temple"] == "declined" and CH.offered == "" and CH.active.is_empty(), "the council lets it pass, and does not ask again")
 	check(not CH.offer("nonsense"), "an unknown challenge can't be offered")
+
+func test_last_stand_and_heritage() -> void:
+	print("\n== The last stand and heritage (make_it_fun E) ==")
+	var sim = _new_sim()
+	sim.time = D.DAY_LEN * 3 + 5.0
+	for u in sim.living().slice(3): u.dead = true
+	check(sim.story.holds({"pop_below": 4}) and not sim.story.holds({"pop_below": 3}), "pop_below: fewer than N alive")
+	sim.check_events()
+	check(sim.pending_event == "last_stand", "with 3 left, the last stand is posed")
+	var view: Dictionary = sim.event_def("last_stand")
+	check(view["options"].size() == 2, "hold the fire, or join friends")
+	# no friend: joining is not possible, holding is
+	var r: Dictionary = sim.resolve_event("last_stand", 1)
+	check(sim.legacy.pending == "" and not sim.legacy.achieved.has("merged"), "with no clan to take us in, the tribe stays")
+	check(sim.flags.has("last_stand"), "posed once")
+	# with a friend: the merged ending, a legacy path of its own
+	sim.rivals.clans["heron"]["met"] = true
+	sim.rivals.clans["heron"]["relation"] = 30.0
+	check(sim.legacy.refuge() == "heron", "a friendly clan would take us in")
+	sim.flags.erase("last_stand")
+	sim.check_events()
+	sim.resolve_event("last_stand", 1)
+	check(sim.legacy.pending == "merged" and sim.legacy.merged_with == "heron", "the last of the tribe join the Heron: the merged ending")
+	var ev: Dictionary = sim.event_def("merged")
+	check(ev["text"].contains(tr(sim.rivals.clans["heron"]["name"])) and ev["options"].size() == 1, "its own ending text, and the chronicle ends")
+	var ctx: Dictionary = sim.legacy.saga_ctx("merged")
+	check(sim.legacy.saga_offline(ctx).begins_with(tr(sim.legacy.C["merged"]["opening"])), "and its own saga")
+	var h: Dictionary = sim.legacy.heritage()
+	check(h["ending"] == "merged" and h["clan"] == "heron" and h["hero"] != "", "the heritage record: who, how (%s)" % str(h))
+	# the next chronicle remembers
+	var nxt = Sim.new()
+	nxt.hz.level = "off"
+	nxt.opening = false
+	nxt.challenges.on = false
+	nxt.heritage = h
+	var rel0: float = float(D.RIVALS.filter(func(c): return c["id"] == "heron")[0]["start"])
+	nxt.new_game()
+	var lm: Array = nxt.landmarks.filter(func(l): return l["id"] == "old_fire")
+	check(lm.size() == 1 and lm[0]["name"].contains(tr(h["hero"])) and D.home_side(lm[0]["pos"]), "the old fire stands as a landmark on our side of the water")
+	check(nxt.rivals.clans["heron"]["relation"] > rel0 and nxt.rivals.clans["heron"]["ledger"].any(func(e): return e["kind"] == "kin"), "the Heron remember their kin")
+	check(nxt.log_lines.any(func(l): return l["text"].contains(tr(h["hero"]))), "the elders tell of them")
+	nxt.dispose()
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

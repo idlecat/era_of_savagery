@@ -2741,7 +2741,7 @@ func _show_ending(id: String) -> void:
 	var L = sim.legacy
 	var path: String = L.path_of(id)
 	var d: Dictionary = sim.event_def(id)
-	var v := _open_modal(("☠ " if path == "defeat" else "♛ ") + d["title"], 900, path == "defeat")
+	var v := _open_modal({"defeat": "☠ ", "merged": "☉ "}.get(path, "♛ ") + d["title"], 900, path == "defeat")
 	var token := modal_token
 	var head := _rich(0, true)
 	var ctx: Dictionary = L.saga_ctx(path)
@@ -2760,7 +2760,9 @@ func _show_ending(id: String) -> void:
 		bh.add_child(_button(tr(o["label"]), func():
 			var res: Dictionary = sim.resolve_event(id, idx)
 			_close_modal()
-			if res.get("restart", false): get_tree().reload_current_scene()
+			if res.get("restart", false):
+				preload("res://scripts/save_game.gd").write_heritage(sim.legacy.heritage()) # (the next chronicle remembers this one)
+				get_tree().reload_current_scene()
 			else: sim.paused = false))
 		i += 1
 	var r: Dictionary = await llm.saga(ctx, L.saga_offline(ctx))

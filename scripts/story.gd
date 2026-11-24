@@ -77,6 +77,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("time") and sim.time < float(w["time"]): return false
 	if w.has("day") and sim.day() < int(w["day"]): return false
 	if w.has("pop") and sim.living().size() < int(w["pop"]): return false
+	if w.has("pop_below") and sim.living().size() >= int(w["pop_below"]): return false
 	if w.has("oxen") and sim.oxen < int(w["oxen"]): return false
 	if w.has("friend_any") and bool(w["friend_any"]) != sim.rivals.clans.keys().any(func(id): return sim.rivals.clans[id]["met"] and sim.rivals.stance(id) in ["Friendly", "Trusted", "Allied", "Vassal"]): return false
 	if w.has("outposts") and sim.contracts.list.filter(func(k): return k.kind == "settle" and k.status == "done").size() < int(w["outposts"]): return false
@@ -130,7 +131,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -143,11 +144,11 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
-	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num"}
+	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "pop_below": "num"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
@@ -314,6 +315,7 @@ func _clan_actions(a: Dictionary, vars: Dictionary) -> void:
 	if a.has("relation"): sim.rivals.change(cid, float(a["relation"]), text(a["reason"], vars) if a.has("reason") else "")
 	if a.has("raid_delay_days"): cl["raid_t"] = D.DAY_LEN * float(a["raid_delay_days"])
 	if a.has("ledger"): sim.rivals.note(cid, str(a["ledger"]))
+	if a.has("merge"): sim.legacy.merge(cid) # (the tribe joins this clan: the "merged" ending)
 	if a.has("raid"): sim.rivals.launch_raid(cl)
 	if a.has("clear_treaties"): cl["treaties"].clear()
 	if a.has("vassal"): cl["vassal"] = int(a["vassal"])

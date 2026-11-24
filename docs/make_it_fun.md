@@ -316,6 +316,19 @@ those knobs, not new mechanics:
 - **E2.** Heritage hook into the next run: the new world remembers them — a landmark,
   ruins of the old village as a find, or a rival clan descended from survivors.
   Cheap because scenarios are data (`scenarios/*.gd` + `D.LANDMARK_KINDS`).
+- **Built.** E1: `rules.json` triggers `last_stand` (`pop_below` 4, from day 3; the new
+  condition key), the `last_stand` dilemma: hold the fire (morale, mood, a sworn memory)
+  or join the friendliest clan that would take us in (`legacy.refuge()`; the option `needs`
+  it). Joining is the new `merge` story action → `legacy.merge(clan)` → the `merged`
+  ending in `legacy.json` (its own title, text, saga opening and closing; restart only).
+  Not built: "flee to new land" (moving the village itself touches every system keyed on
+  `D.VILLAGE`). E2: when a chronicle ends and a new one begins, the HUD writes
+  `legacy.heritage()` (the most renowned person, the ending, the clan joined) to
+  `user://heritage.json` (`SaveGame.write_heritage`); `main.gd` gives it to the next fresh
+  game as `sim.heritage` (not to loads or screenshots), and `sim._remember_heritage()`
+  places "The Old Fire of <name>" (a stones landmark with lore and devotion) on our side of
+  the water, has the elders tell of them, and makes a clan they joined start friendlier
+  with a `kin` ledger entry (`legacy.json` `heritage`).
 
 ## F. Player-set stakes mid-run (attachment, replay)
 

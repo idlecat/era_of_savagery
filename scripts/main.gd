@@ -72,6 +72,7 @@ func _ready() -> void:
 	await get_tree().process_frame # let "Forging the world…" show while the land is built
 	await get_tree().process_frame
 	sim = Sim.new()
+	if data.is_empty() and not Array(OS.get_cmdline_user_args()).any(func(a): return a.begins_with("--shot")): sim.heritage = SaveGame.read_heritage() # (a fresh chronicle remembers the last one)
 	sim.new_game()
 	if not data.is_empty():
 		SaveGame.decode_into(sim, data["sim"])

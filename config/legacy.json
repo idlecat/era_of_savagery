@@ -64,6 +64,25 @@
   "opening": "Hear how the last fire of our tribe went out.",
   "closing": "After %d days, no one was left to tend the fire. Only the wind remembers us."
  },
+ "merged": {
+  "title": "One Fire Among Many",
+  "text": "Too few to stand alone, the last of our people walk to the fires of the %s and are taken in. Our tribe ends; our blood goes on.",
+  "opening": "Hear how the last of our tribe joined another people and lived on among them.",
+  "closing": "After %d days, our fire went out, but our children's children sit at another."
+ },
+ "heritage": {
+  "_doc": "What the next chronicle remembers of the last one (sim._remember_heritage; written by main.gd when a game ends): a landmark at the old camp (kind, name and text with the most renowned person's name, reward, devotion), dist from the new village (a range), the elders' words (intro by how it ended: %s the person, then the clan for merged), and kin_relation: a clan the old tribe joined starts this much friendlier and remembers it (ledger kind).",
+  "dist": [700, 1300],
+  "landmark": {"kind": "stones", "name": "The Old Fire of %s", "text": "found the cold hearth where the people of %s once lived, ringed with old stones", "reward": {"lore": 25}, "devotion": 6.0},
+  "intro": {
+   "defeat": "The elders tell of a people who lived on this land before us: the people of %s, whose fire went out.",
+   "merged": "The elders tell of the people of %s, who lived here before us and went to live among the %s.",
+   "conquest": "The elders tell of the people of %s, who once made every clan bend the knee.",
+   "unity": "The elders tell of the people of %s, who once brought the clans to one fire.",
+   "wisdom": "The elders tell of the people of %s, who once knew all that could be known."
+  },
+  "kin_relation": 15
+ },
  "closing": "After %d days, our people still stand, and their tale is told at every fire.",
  "options": {
   "continue": {
