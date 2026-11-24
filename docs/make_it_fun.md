@@ -241,6 +241,17 @@ those knobs, not new mechanics:
   successor rise, by the same data rule (worst relation then), introduced through C1's
   ledger — the new chief quotes the old feud.
   Size: small–medium.
+- **Built:** `rivals.json` `nemesis`; picked at first contact by `nemesis_score()`
+  (-relation, +15 if martial, at least 15) or by day 6 the worst clan met;
+  `rivals.set_nemesis()` for a game master; `feud_id()` while the feud runs. The nemesis
+  raids from relation -5 (others from -15), on a 0.75x timer, the others on 1.5x; stages by
+  era add warriors (+1, +3), demand more (x1.3, x1.7) and come sooner. Achievements for its
+  first raid held off and for the feud's end (Friendly or better, peace, vassal, or beaten
+  at home twice); the ledger records "marked" and "feud_over". **Not built:** escalation on
+  the peaceful setting (demands there would need the refused demand's raid made
+  level-aware, which other paths rely on). **Measured** (20 days, 4 seeds): on The Ford the
+  nemesis is always the Red Ochre; it raided 0–1 times under the steward, 1–3 under the
+  feaster, other clans 0; 1–3 chiefs succeeded per run; no feud ended in 20 days.
 
 ## D. The first ten minutes (decision fun)
 
