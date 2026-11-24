@@ -589,7 +589,7 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 		sim.evo.seed(t["teach"], float(C["parley"]["seal"]["teach"]), envoy)
 		sim.remember(envoy, tr("was taught the secret of %s by the %s on Day %d") % [tr(sim.evo.tech_def(t["teach"])["name"]), tr(c["name"]), sim.day()], 7)
 	if t["treaty"] != "none":
-		c["treaties"][t["treaty"]] = {"until": sim.time + t["days"] * D.DAY_LEN, "tribute": t["tribute"]}
+		c["treaties"][t["treaty"]] = {"until": sim.time + t["days"] * sim.ranks.amount("long_treaties", "mult", 1.0, envoy) * D.DAY_LEN, "tribute": t["tribute"]}
 		if t["treaty"] == "peace": c["tribute_day"] = sim.day()
 		if t["treaty"] == "alliance":
 			c["treaties"].erase("hunting_rights") # allies hunt freely anyway

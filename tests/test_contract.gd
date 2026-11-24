@@ -60,6 +60,7 @@ func _new_sim():
 	s.crisis.on = false # (no emergency mode either; test_crisis switches it on)
 	s.director.on = false # (nor pacing: hardship tests roll their own; test_director switches it on)
 	s.life.on = false # (nor everyday life: meals, idle acts, spirits, speech; test_life switches it on)
+	s.ranks.gates = false # (nor rank gates on upgrades, bronze, taming, war leaders; test_ranks switches them on)
 	s.new_game()
 	return s
 
@@ -2159,6 +2160,45 @@ func test_ranks() -> void:
 	var d0: float = sim.unit_def(a)
 	b.skills["combat"]["lv"] = R.min_lv(sim.RULES["skills"]["aura"]["rank"])
 	check(sim.unit_def(a) > d0, "a Blooded Warrior nearby gives the Centurion Aura")
+	# what ranks unlock (the gates), switched on
+	var g = _new_sim()
+	g.ranks.gates = true
+	for o in g.living():
+		for k in D.SKILLS: o.skills[k]["lv"] = mini(o.skills[k]["lv"], 4)
+	var hut = g.add_structure("hut", D.VILLAGE + Vector2(260, 40), true)
+	g.stock["wood"] = 500; g.stock["stone"] = 500
+	var why: String = g.upgrade(hut.id, "large_hut")
+	check(why == g.ranks.block("fine_craft") and why != "", "no Proven crafter: no upgrades (%s)" % why)
+	g.techs["bronze"] = true; g.stock["copper"] = 5; g.stock["tin"] = 5
+	g.add_structure("smelter", D.VILLAGE + Vector2(-260, 40), true)
+	check(not g.has_bronze(), "no Proven crafter: no bronze, even with a smelter and ore")
+	var smith = g.living()[0]
+	smith.skills["craft"]["lv"] = g.ranks.min_lv("proven")
+	check(g.has_bronze() and g.upgrade(hut.id, "large_hut") == "", "a Proven crafter opens upgrades and bronze")
+	smith.skills["craft"]["lv"] = 4
+	check(not g.has_bronze(), "when the only Proven crafter is gone, bronze stops")
+	var w = g.living()[1]
+	check(g.appoint_block(w, "warchief") == "rank" and not g.ranks.may(w, "lead_war"), "War Chief and war leaders need a Blooded Warrior")
+	w.skills["combat"]["lv"] = g.ranks.min_lv("proven")
+	check(g.appoint_block(w, "warchief") == "" and g.ranks.may(w, "lead_war"), "a Blooded Warrior can be War Chief and lead a war party")
+	var cap0: int = g.ox_cap()
+	g.add_structure("aurochs_pen", D.VILLAGE + Vector2(0, 300), true)
+	var per: int = g.ox_cap() - cap0
+	g.living()[2].skills["forage"]["lv"] = g.ranks.min_lv("master")
+	check(g.ox_cap() - cap0 == per + int(g.ranks.gate("big_pens")["add"]) and g.ranks.tribe_can("tame"), "a Master forager: bigger pens, and calves can be tamed")
+	check(g.ranks.summary()["gates"]["fine_craft"] == false and g.ranks.summary()["gates"]["big_pens"], "the summary shows which gates are open")
+	var lost: Array = []
+	g.techs["fire"] = true
+	var keeper = g.living()[3]
+	keeper.skills["lore"]["lv"] = g.ranks.min_lv("master")
+	var only = g.living()[4]
+	for id in g.evo.knowers: g.evo.knowers[id] = {}
+	g.evo.knowers["fire"][only.id] = true
+	g.evo.oral_tradition = true
+	g.evo.codified = false
+	only.dead = true
+	g.evo.on_death(only)
+	check(g.has_tech("fire"), "a living lore Master keeps a secret whose last knower died")
 
 func test_policies() -> void:
 	print("\n== The Council's policies (config/policies.json) ==")

@@ -377,7 +377,7 @@ func is_day_part(name: String) -> bool:
 	return (f >= float(w[0]) and f < float(w[1])) if float(w[0]) <= float(w[1]) else (f >= float(w[0]) or f < float(w[1]))
 func has_tech(t: String) -> bool: return techs.has(t)
 ## Bronze arms the tribe only while a smelter stands and has copper and tin to work.
-func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1
+func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1 and ranks.tribe_can("fine_craft")
 func knows_find(id: String) -> bool: return known_finds.has(id)
 func struct_exists(type: String) -> bool:
 	for s in structures:
@@ -1243,7 +1243,7 @@ var TEND_TIME: float = float(RULES["herds"]["tend_time"])
 func pens() -> Array:
 	return structures.filter(func(s): return s.built and ours(s) and s.type == "aurochs_pen")
 
-func ox_cap() -> int: return pens().size() * OX_PER_PEN
+func ox_cap() -> int: return pens().size() * (OX_PER_PEN + int(ranks.amount("big_pens", "add", 0.0))) # (a Master forager: bigger pens)
 func oxen_working() -> bool: return oxen > 0 and ox_care > 0.0
 
 ## Oxen eat, give milk, need tending, and are lent to the gatherers working furthest out.
@@ -1276,7 +1276,7 @@ func _herd(dt: float) -> void:
 	# a new calf at dawn, if there is room, food and care
 	if day() != last_herd_day and not rest_time() and is_day_part("morning"):
 		last_herd_day = day()
-		if cap > oxen and oxen > 0 and ox_care >= 50 and stock["food"] >= 30:
+		if cap > oxen and oxen > 0 and ox_care >= 50 and stock["food"] >= 30 and ranks.tribe_can("tame"): # (it takes a Proven forager)
 			oxen += 1
 			add_log(tr("A calf is tamed in the Aurochs Pen. The herd is now %d.") % oxen, "build")
 	herd_t -= dt
@@ -2011,6 +2011,7 @@ func vice_slots() -> int: return mini(vice.size(), 1 + (1 if has_tech("code") el
 func appoint_block(u: E.Unit, role: String) -> String:
 	if u.role == "child": return "child"
 	if vice[role] == u.id: return "already"
+	if role == "warchief" and not ranks.may(u, "war_chief"): return "rank"
 	var used := 0
 	for k in vice:
 		if vice[k] >= 0 and k != role and vice[k] != u.id: used += 1
@@ -2276,6 +2277,7 @@ func upgrades_for(s: E.Structure) -> Array:
 		var why := ""
 		if b.has("tech") and not has_tech(b["tech"]): why = tr("Requires %s") % tr(evo.tech_def(b["tech"])["name"])
 		elif not s.built or s.reno: why = tr("Busy")
+		elif ranks.block("fine_craft") != "": why = ranks.block("fine_craft")
 		elif stock["wood"] < w or stock["stone"] < st: why = tr("Needs %d wood and %d stone") % [w, st] if st > 0 else tr("Needs %d wood") % w
 		out.append({"to": to, "wood": w, "stone": st, "why": why})
 	return out
@@ -2300,6 +2302,7 @@ func upgrade(id: int, to: String, helpers: Array = []) -> String:
 func renovate_one(id: int, helpers: Array = []) -> String:
 	var s := struct_by_id(id)
 	if s == null or not s in outdated(): return tr("Nothing to renovate")
+	if ranks.block("fine_craft") != "": return ranks.block("fine_craft")
 	var cost := reno_cost([s])
 	if not spend(cost):
 		return tr("Needs %d wood and %d stone") % [cost["wood"], cost["stone"]] if cost["stone"] > 0 else tr("Needs %d wood") % cost["wood"]

@@ -27,6 +27,17 @@
    "master": {"title": "Peacemaker", "desc": "Bring a clan into an alliance", "trial": {"seal_alliance": 1}}
   }
  },
+ "_gates_doc": "What a rank lets people do (ranks.gd may/tribe_can/tribe_has). Each gate names the skill and rank it takes and its desc (shown on the sheet). A tribe gate holds while anyone living holds the rank; a person gate is about that person. tame: calves are tamed in the pens (sim._herd). big_pens: each pen holds `add` more oxen (sim.ox_cap). fine_craft: upgrades, renovations and bronze working (sim.upgrades_for, renovate_one, has_bronze). keeper: their knowledge keeps every known secret from dying out (evo.on_death). lead_war: may lead a war party (contracts). war_chief: may be appointed War Chief (sim.appoint_block). long_treaties: treaties they seal last `mult` times as long (rivals.seal). The Centurion Aura and the master trader's prices name their rank in rules.json (skills.aura.rank, folk.trade.master_rank). blocked: why a gate is shut (var: the rank's title).",
+ "gates": {
+  "tame": {"skill": "forage", "rank": "proven", "desc": "Calves can be tamed in the pens"},
+  "big_pens": {"skill": "forage", "rank": "master", "desc": "Each pen holds one more ox", "add": 1},
+  "fine_craft": {"skill": "craft", "rank": "proven", "desc": "Upgrades, renovations and bronze working"},
+  "keeper": {"skill": "lore", "rank": "master", "desc": "No secret is forgotten while they live"},
+  "lead_war": {"skill": "combat", "rank": "proven", "desc": "May lead a war party"},
+  "war_chief": {"skill": "combat", "rank": "proven", "desc": "May be appointed War Chief"},
+  "long_treaties": {"skill": "trade", "rank": "master", "desc": "Treaties they seal last half again as long", "mult": 1.5}
+ },
+ "blocked": "Needs a %s",
  "first_feat": true,
  "log": "%s has proven themselves: now a %s!",
  "popup": "RANK! %s",

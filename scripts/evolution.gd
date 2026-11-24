@@ -164,7 +164,7 @@ func on_death(u: E.Unit) -> void:
 		var id: String = t["id"]
 		if not knowers[id].has(u.id): continue
 		knowers[id].erase(u.id)
-		if oral_tradition and not codified and sim.has_tech(id) and keepers(id).is_empty():
+		if oral_tradition and not codified and sim.has_tech(id) and keepers(id).is_empty() and not sim.ranks.tribe_has("keeper"): # (a lore Master keeps it)
 			_lose(id, u)
 
 func _lose(id: String, u: E.Unit) -> void:

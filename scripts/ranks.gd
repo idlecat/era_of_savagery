@@ -14,6 +14,8 @@ const E = preload("res://scripts/entities.gd")
 var C: Dictionary = preload("res://scripts/config.gd").load_cfg("ranks")
 
 var sim
+## The rank gates are enforced (tests switch them off to keep older rules; C["gates"]).
+var gates := true
 
 func _init(s) -> void:
 	sim = s
@@ -134,6 +136,47 @@ func learned_under(u: E.Unit, leader: E.Unit, skill: String) -> void:
 	if not u.mentors.has(skill): u.mentors[skill] = []
 	if not leader.id in u.mentors[skill]: u.mentors[skill].append(leader.id)
 
+# ------------------------------------------------------------ what ranks unlock
+## A gate's entry in config ({skill, rank, desc, ...}), or {}.
+func gate(id: String) -> Dictionary: return C.get("gates", {}).get(id, {})
+
+## True when someone living holds the gate's rank (whatever the `gates` switch says: for bonuses).
+func tribe_has(id: String) -> bool:
+	var g := gate(id)
+	if g.is_empty(): return false
+	for u in sim.living():
+		if has(u, g["skill"], g["rank"]): return true
+	return false
+
+## The tribe may do what the gate allows (someone living holds its rank, or gates are off).
+func tribe_can(id: String) -> bool: return not gates or gate(id).is_empty() or tribe_has(id)
+
+## u may do what the gate allows.
+func may(u: E.Unit, id: String) -> bool:
+	var g := gate(id)
+	return not gates or g.is_empty() or has(u, g["skill"], g["rank"])
+
+## Why a gate is shut ("Needs a Builder"); "" when it is open (for u, or for the tribe if u is null).
+func block(id: String, u: E.Unit = null) -> String:
+	if (u != null and may(u, id)) or (u == null and tribe_can(id)): return ""
+	var g := gate(id)
+	return tr(C["blocked"]) % tr(def(g["skill"], g["rank"]).get("title", g["rank"]))
+
+## A gate's number (`add`, `mult`) while it holds for the tribe (u null) or for u; else `none`.
+func amount(id: String, key: String, none: float, u: E.Unit = null) -> float:
+	var g := gate(id)
+	if g.is_empty() or not g.has(key): return none
+	var holds := tribe_has(id) if u == null else has(u, g["skill"], g["rank"])
+	return float(g[key]) if holds else none
+
+## What a rank in a skill unlocks: the descs of its gates.
+func unlocks(skill: String, rank_id: String) -> Array:
+	var out: Array = []
+	var gs: Dictionary = C.get("gates", {})
+	for id in gs:
+		if gs[id]["skill"] == skill and gs[id]["rank"] == rank_id: out.append(gs[id]["desc"])
+	return out
+
 ## A game master's grant: give u the deeds of the next trial in `skill` and its full XP, so
 ## the rank comes now. Returns false if there is no next rank.
 func grant(uid: int, skill: String) -> bool:
@@ -155,4 +198,6 @@ func summary() -> Dictionary:
 			var r := rank(u, skill)
 			if r != "": held[u.name + ":" + skill] = r
 			if trial_open(u, skill): ready.append({"who": u.name, "skill": skill, "rank": next_rank(u, skill), "trial": def(skill, next_rank(u, skill)).get("desc", "")})
-	return {"held": held, "ready": ready}
+	var open := {}
+	for id in C.get("gates", {}): open[id] = tribe_has(id)
+	return {"held": held, "ready": ready, "gates": open}

@@ -240,9 +240,14 @@ those knobs, not new mechanics:
 > Craft and combat Masters teach through `u.mentors` (contract crews). The Centurion
 > Aura and the master trader read a rank; `D.SKILL_UNLOCKS` is gone; level-ups are a
 > small popup only; rank-ups log, remember, and the tribe's first of each is a feat.
-> `ranks.grant()` and `ranks.summary()` for a game master. **Not yet:** H3's other gates
-> (taming, ox cap, the craft gate, oral loss, War Chief, treaty days), H2's fire-side
-> initiation and sprite mark, trials set up through contracts with the A0 forecast.
+> `ranks.grant()` and `ranks.summary()` for a game master.
+> **Second slice:** H3's gates are data (`ranks.json` `gates`): taming, bigger pens, the
+> craft gate (upgrades, renovations, bronze), the lore keeper, war leaders and War Chief,
+> longer treaties. Deviation: War Chief needs a *Proven* warrior, not a Master — a Master
+> needs a war won, which would leave most runs without a War Chief. The lore Proven row
+> (healer, wise one) stays at lore 3 as H1 says (reachable by work). **Not yet:** H2's
+> fire-side initiation and sprite mark; trials set up through contracts with the A0
+> forecast; a director mercy if the last Proven crafter dies (watch it in G1).
 
 Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
 `D.SKILL_UNLOCKS`), but reaching a level is neither an accomplishment nor a challenge:

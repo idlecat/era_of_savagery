@@ -984,6 +984,8 @@ func _refresh_left_content() -> void:
 			var pg: Dictionary = sim.ranks.trial_progress(u, k)
 			var col_t: String = "#ffd36b" if sim.ranks.trial_open(u, k) else "#8a7a60"
 			s += tr("[color=%s]Next rank: %s - %s (%d/%d)[/color]\n") % [col_t, tr(nd.get("title", nr)), tr(nd.get("desc", "")).to_lower(), pg["done"], pg["need"]]
+			var ul: Array = sim.ranks.unlocks(k, nr)
+			if not ul.is_empty(): s += tr("[color=#8a7a60]  then: %s[/color]\n") % "; ".join(ul.map(func(x): return tr(x).to_lower()))
 	s += tr("\n[color=#ffd36b]MEMORY ARCHIVE[/color] [color=#8a7a60](10 most impactful)[/color]\n")
 	var mem: Array = u.memory.duplicate()
 	mem.sort_custom(func(a, b): return a["day"] > b["day"])
@@ -1000,7 +1002,9 @@ func _refresh_left_content() -> void:
 	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or not D.home_side(u.pos)
 	sheet_seek_btn.disabled = on_contract or child or not D.home_side(u.pos)
 	sheet_envoy_btn.disabled = u.role != ""
-	sheet_war_btn.disabled = u.role != "" or not D.home_side(u.pos) or not sim.rivals.clans.values().any(func(c): return c["met"])
+	var war_why: String = sim.ranks.block("lead_war", u)
+	sheet_war_btn.disabled = u.role != "" or not D.home_side(u.pos) or not sim.rivals.clans.values().any(func(c): return c["met"]) or war_why != ""
+	sheet_war_btn.text = tr("Lead a war party (%s)") % war_why.to_lower() if war_why != "" else tr("Lead a war party…")
 	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
 	sheet_research_btn.text = tr("Seek new wisdom…") if not sim.evo.candidates().is_empty() else tr("No new wisdom within reach")
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
@@ -1241,6 +1245,9 @@ func _vice_button(b: Button, u, role: String) -> void:
 		"child":
 			b.text = tr("Appoint Steward") if steward else tr("Appoint War Chief")
 			b.tooltip_text = tr("Too young to lead")
+		"rank":
+			b.text = tr("War Chief (%s)") % sim.ranks.block("war_chief", u).to_lower()
+			b.tooltip_text = tr("Only one who has proven themselves in battle can be War Chief.")
 		"no_slot":
 			b.text = tr("Steward (no slot)") if steward else tr("War Chief (no slot)")
 			var other = sim.unit_by_id(sim.vice["warchief" if steward else "steward"])
@@ -1760,7 +1767,8 @@ func _event_choose(id: String, idx: int) -> void:
 	if r.get("open_war", "") != "":
 		var foe: String = r["open_war"]
 		v.add_child(_label("Choose who leads the war party:", 15, COL_DIM))
-		var fighters: Array = sim.contracts.available_helpers()
+		var fighters: Array = sim.contracts.available_helpers().filter(func(o): return sim.ranks.may(o, "lead_war"))
+		if fighters.is_empty(): v.add_child(_label(sim.ranks.block("lead_war", sim.contracts.available_helpers()[0]) if not sim.contracts.available_helpers().is_empty() else tr("No one can lead a war party now."), 14, COL_DIM))
 		fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
 		for u in fighters.slice(0, 5):
 			var who = u
