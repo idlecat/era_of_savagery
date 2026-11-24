@@ -174,7 +174,7 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 		seek_group = preload("res://scripts/persona_engine.gd").SEEK_TASTE.get(sim.arch(u), "food")
 	return {
 		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
-		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(next_site()) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else (seek_env(seek_group, _home(u)) if kind == "seek" else research_env())),
+		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(next_site()) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else (seek_env(seek_group, _home(u), u) if kind == "seek" else research_env())),
 		"seek_group": seek_group,
 		"directive": directive, "terms": terms, "terms_set": terms_set,
 		"player_message": player_message, "previous": previous, "history": history,
@@ -301,7 +301,8 @@ func _place_name(pl: Dictionary, home: Vector2) -> String:
 	if pl.has("lm") and pl["lm"]["found"]: return tr("the rocks by %s") % tr(pl["lm"]["name"])
 	return tr(what) % tr(dir)
 
-func seek_env(group: String, home: Vector2 = D.VILLAGE) -> Dictionary:
+## `leader_u`: who would lead it (their crew, best eyes first, is shown as `searchers`).
+func seek_env(group: String, home: Vector2 = D.VILLAGE, leader_u: E.Unit = null) -> Dictionary:
 	var places: Array = seek_places(group if group in SEEK_GROUPS else "food", home)
 	var known: Array = sim.known_finds.keys().filter(func(id): return D.FINDS[id].get("group", "") == group).map(func(id): return tr(D.FINDS[id]["name"]))
 	return {
@@ -310,8 +311,40 @@ func seek_env(group: String, home: Vector2 = D.VILLAGE) -> Dictionary:
 		"the_elders_remember": {"grows_in": sim.rumoured_place(group), "what": sim.rumoured.keys().filter(func(id): return D.FINDS[id]["group"] == group).map(func(id): return tr(D.FINDS[id]["name"]))} if sim.rumoured_place(group) != "" else {},
 		"already_known_to_the_tribe": known,
 		"days_you_may_search": _seek_cfg().get("days", [1, 3]),
+		"searchers": _searchers(group, leader_u),
 		"population": sim.living().size(), "season_and_weather": sim.hz.summary(),
 	}
+
+## Searchers in the order they would be taken: those who can tell all the group's unknown finds
+## first, then the keenest eyes (sim.find_eye).
+func seek_crew(helpers: Array, group: String) -> Array:
+	var out := helpers.duplicate()
+	out.sort_custom(func(a, b):
+		var ba: int = sim.blind_to(a, group).size()
+		var bb: int = sim.blind_to(b, group).size()
+		if ba != bb: return ba < bb
+		return sim.find_eye(a, group) > sim.find_eye(b, group))
+	return out
+
+## Who may go with `leader`: free helpers on their land, not the Steward or the War Chief.
+func crew_pool(leader: E.Unit) -> Array:
+	return available_helpers(leader.id, leader.pos).filter(func(u): return sim.vice["steward"] != u.id and sim.vice["warchief"] != u.id)
+
+## The leader and the helpers a search would take, in the order they would be taken
+## (crew_size n = the first n), each in words.
+func _searchers(group: String, leader_u: E.Unit) -> Dictionary:
+	if leader_u == null: return {}
+	var g := group if group in SEEK_GROUPS else "food"
+	return {"you": _seeker_words(leader_u, g),
+		"would_go_with_you_in_this_order": seek_crew(crew_pool(leader_u), g).slice(0, int(_seek_cfg().get("crew_max", 4)) - 1).map(func(u): return _seeker_words(u, g))}
+
+## A searcher in words for the leader: skill, telling traits, eye, what they would miss.
+func _seeker_words(u: E.Unit, group: String) -> Dictionary:
+	var g: Dictionary = sim.DISC.get("groups", {}).get(group, {})
+	var sk := str(g.get("skill", "forage"))
+	return {"name": tr(u.name), "skill": tr(D.SKILL_NAMES[sk]), "level": u.lv(sk),
+		"traits_that_count": g.get("traits", {}).keys().filter(func(t): return u.has_trait(t)).map(func(t): return tr(D.TRAITS[t]["name"])),
+		"eye": snappedf(sim.find_eye(u, group), 0.01), "cannot_tell": sim.blind_to(u, group).size()}
 
 func _sanitize_seek(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	var notes: Array = []
@@ -775,8 +808,9 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	var skill := "craft"
 	if bp["focus"] in ["hunting", "defense", "war"]: skill = "combat"
 	elif bp["focus"] in ["farming", "fishery"]: skill = "forage"
-	var helpers := available_helpers(leader.id, leader.pos).filter(func(u): return sim.vice["steward"] != u.id and sim.vice["warchief"] != u.id)
-	helpers.sort_custom(func(a, b): return a.lv(skill) + a.lv("craft") * 0.5 > b.lv(skill) + b.lv("craft") * 0.5)
+	var helpers := crew_pool(leader)
+	if c.kind == "seek": helpers = seek_crew(helpers, str(bp["group"]))
+	else: helpers.sort_custom(func(a, b): return a.lv(skill) + a.lv("craft") * 0.5 > b.lv(skill) + b.lv("craft") * 0.5)
 	c.crew_ids = [leader.id]
 	for u in helpers.slice(0, bp["crew_size"] - 1): c.crew_ids.append(u.id)
 	for id in c.crew_ids:

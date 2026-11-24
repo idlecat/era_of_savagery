@@ -1245,9 +1245,7 @@ var DISC: Dictionary = preload("res://scripts/config.gd").load_cfg("discovery") 
 ## the find's group, their skill in it, their temperament, what they are doing, its rarity.
 func find_chance(u: E.Unit, id: String) -> float:
 	var g: Dictionary = DISC.get("groups", {}).get(str(D.FINDS[id].get("group", "food")), {})
-	var p := float(g.get("chance", 0.005)) * (1.0 + float(g.get("per_lv", 0.3)) * u.lv(str(g.get("skill", "forage"))))
-	for t in g.get("traits", {}):
-		if u.has_trait(t): p *= float(g["traits"][t])
+	var p := float(g.get("chance", 0.005)) * find_eye(u, str(D.FINDS[id].get("group", "food")))
 	var act: Dictionary = DISC.get("activity", {})
 	var seek: String = str(u.job.get("seek", ""))
 	var jt: String = u.job.get("type", "")
@@ -1256,6 +1254,19 @@ func find_chance(u: E.Unit, id: String) -> float:
 	elif jt in ["explore", "gather", "build"]: k = jt
 	p *= float(act.get(k, act.get("default", 1.0)))
 	return p * float(DISC.get("finds", {}).get(id, 1.0)) * (float(DISC["remembered"]["chance_mult"]) if rumoured.has(id) else 1.0)
+
+## How keen `u`'s eye is for finds of `group` (1 = no skill, no telling trait): their level in
+## the group's skill and their temperament (config/discovery.json groups), as in find_chance().
+func find_eye(u: E.Unit, group: String) -> float:
+	var g: Dictionary = DISC.get("groups", {}).get(group, {})
+	var p := 1.0 + float(g.get("per_lv", 0.3)) * u.lv(str(g.get("skill", "forage")))
+	for t in g.get("traits", {}):
+		if u.has_trait(t): p *= float(g["traits"][t])
+	return p
+
+## The finds of `group` still unknown that `u` could not tell if they walked past them (their needs).
+func blind_to(u: E.Unit, group: String) -> Array:
+	return D.FINDS.keys().filter(func(id): return D.FINDS[id].get("group", "") == group and not knows_find(id) and not can_recognise(u, id))
 
 func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	if knows_find(id): return

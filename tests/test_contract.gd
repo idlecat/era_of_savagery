@@ -3484,6 +3484,20 @@ func test_discovery_odds() -> void:
 		var bp2: Dictionary = Persona.propose(ctx2)["blueprint"]
 		check(pl2[int(bp2["place"])]["we_searched_here"].is_empty(), "so a leader (%s) searches somewhere new (%s)" % [arch, pl2[int(bp2["place"])]["place"]])
 	check(s2.contracts.last_search("ore", combed).is_empty(), "a search for foods doesn't count against ores")
+	# the crew: the keenest eyes for what is sought go, and the leader is told who they are
+	var sv: Dictionary = ctx2["env"]["searchers"]
+	check(sv["you"]["name"] == tr(ld.name) and not sv["would_go_with_you_in_this_order"].is_empty(), "the leader is told who would search with them")
+	var pool: Array = s2.contracts.crew_pool(ld)
+	var herbalist = pool[0]
+	var crafter = pool[1]
+	for u in pool: u.skills["lore"]["lv"] = 0
+	herbalist.skills["lore"]["lv"] = 2
+	crafter.skills["craft"]["lv"] = 4
+	var order: Array = s2.contracts.seek_crew(pool, "medicine")
+	check(order[0] == herbalist and s2.find_eye(herbalist, "medicine") > s2.find_eye(crafter, "medicine"), "for healing plants, the one who knows lore goes first (eye %.2f)" % s2.find_eye(herbalist, "medicine"))
+	var mc: Dictionary = s2.contracts.sanitize({"group": "medicine", "crew_size": 2}, {"kind": "seek", "group": "medicine"}, ld)
+	var k2 = s2.contracts.create(mc["blueprint"], ld, "Find healing plants")
+	check(k2.crew_ids.has(herbalist.id) and not k2.crew_ids.has(crafter.id), "and the search for healing plants takes them, not the best crafter")
 	for rec in s2.contracts.searched: rec["day"] = s2.day() - 99
 	check(s2.contracts.last_search("food", combed).is_empty(), "and after some days the place is worth trying again")
 
