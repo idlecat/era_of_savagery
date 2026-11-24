@@ -243,8 +243,7 @@ func _on_alert(a: Dictionary) -> void:
 	b.focus_mode = Control.FOCUS_NONE
 	alert_box.add_child(b)
 	b.modulate.a = 0.0 # the banner slides into view
-	var tw := create_tween()
-	tw.tween_property(b, "modulate:a", 1.0, 0.22)
+	b.create_tween().tween_property(b, "modulate:a", 1.0, 0.22) # bound to the banner: freed with it
 	alert_items.append([b, Time.get_ticks_msec() + (9000 if a["level"] == "danger" else 6000)])
 	while alert_items.size() > 3:
 		alert_items[0][0].queue_free()
@@ -335,7 +334,7 @@ func _expire_alerts() -> void:
 	for it in alert_items.duplicate():
 		if now > it[1]: # fade the banner out, then free it
 			alert_items.erase(it)
-			var tw := create_tween()
+			var tw: Tween = it[0].create_tween()
 			tw.tween_property(it[0], "modulate:a", 0.0, 0.3)
 			tw.tween_callback(it[0].queue_free)
 
@@ -1311,7 +1310,6 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
 	modal.add_child(cc)
 	var p := PanelContainer.new()
-	p.custom_minimum_size = Vector2(width, 0)
 	p.custom_minimum_size = Vector2(width, 0)
 	if danger:
 		var sb: StyleBoxFlat = modal.theme.get_stylebox("panel", "PanelContainer").duplicate()

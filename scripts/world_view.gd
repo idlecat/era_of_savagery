@@ -28,6 +28,7 @@ var selected_struct := -1 # a building picked for the building panel (units unse
 var hover_unit := -1 # unit under the cursor: a faint white ring invites a click
 var hover_struct := -1 # building under the cursor, likewise
 var zoom_target := 1.25 # eased zoom: _zoom_by moves the target, _zoom_step glides there
+var zoom_last := 1.25 # the zoom _zoom_step last set: anything else was set from outside
 var build_type := ""
 var build_size := 0.0 # radius for a wall being laid out
 var road_start: Variant = null # the Road tool: where the road begins, once clicked
@@ -106,6 +107,7 @@ func setup(s) -> void:
 	cam = Camera2D.new()
 	cam.zoom = Vector2(1.25, 1.25)
 	zoom_target = 1.25
+	zoom_last = 1.25
 	cam.position = iso(D.VILLAGE + Vector2(240, 0))
 	add_child(cam)
 	cam.make_current()
@@ -632,9 +634,16 @@ func _edge_dir() -> Vector2:
 func _zoom_by(k: float) -> void:
 	zoom_target = clampf(zoom_target * k, 0.45, 2.4)
 
+## A zoom set straight on the camera (a loaded save, a screenshot demo) becomes the target.
 func _zoom_step(delta: float) -> void:
-	if is_equal_approx(cam.zoom.x, zoom_target): return
+	if not is_equal_approx(cam.zoom.x, zoom_last):
+		zoom_target = cam.zoom.x
+		zoom_last = cam.zoom.x
+		return
+	if cam.zoom.x == zoom_target: return
 	var z: float = lerpf(cam.zoom.x, zoom_target, minf(1.0, delta * 12.0))
+	if absf(z - zoom_target) < 0.002: z = zoom_target
+	zoom_last = z
 	var before := get_global_mouse_position()
 	cam.zoom = Vector2(z, z)
 	cam.force_update_scroll()
@@ -864,7 +873,6 @@ func _draw_season_ground() -> void:
 	if hz.season_idx() == 2: ci.draw_rect(world, Color(0.85, 0.5, 0.15, 0.13))
 	if hz.dry(): ci.draw_rect(world, Color(0.85, 0.7, 0.35, 0.2))
 
-## Rain, snow and blizzards are drawn over the visible screen area only.
 ## How hard the wind blows right now (0..1): a slow gust pattern, much stronger
 ## in rain, storms and blizzards. Calm air stays below the bend threshold so
 ## tree items keep their cached draw in fine weather.
@@ -879,7 +887,8 @@ const WIND_BEND := 0.28 # how far a full-gale crown leans, as a shear factor
 func _bend_matrix(b: Vector2): # null when the air is calm
 	var k := wind_k()
 	if k < 0.3: return null
-	return Transform2D(Vector2(1, 0), Vector2(-WIND_BEND * k, 1), -b)
+	# shear x by -s*(y - b.y), composed with the item's base translate(-b)
+	return Transform2D(Vector2(1, 0), Vector2(-WIND_BEND * k, 1), Vector2(-b.x + WIND_BEND * k * b.y, -b.y))
 
 func _bend_dx(sz: float) -> float:
 	var k := wind_k()
@@ -926,6 +935,7 @@ func _storm_flash() -> float:
 	if k < 0.34: return 0.55
 	return 0.1
 
+## Rain, snow and blizzards are drawn over the visible screen area only.
 func _draw_weather() -> void:
 	var hz = sim.hz
 	if not hz.on(): return
@@ -1300,9 +1310,10 @@ func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
 ## Every tree is itself: a touch of hue and brightness jitter keyed to its id,
 ## so a wall of sprites doesn't read as the same tree stamped over and over.
 func _tint(id: int) -> Color:
-	var f1: float = float(id % 211) / 211.0
-	var f2: float = float((id * 7 + 13) % 97) / 97.0
-	return Color.from_hsv(fposmod(0.02 + f1 * 0.09, 1.0), 0.22 + 0.18 * f2, 0.86 + 0.2 * f1)
+	var v: float = 0.9 + 0.1 * float(id % 211) / 211.0 # brightness
+	var r: float = 0.96 + 0.06 * float((id * 7 + 13) % 97) / 97.0 # a little warmer or cooler
+	var bl: float = 0.95 + 0.06 * float((id * 13 + 5) % 89) / 89.0
+	return Color(v * minf(r, 1.0), v, v * minf(bl, 1.0))
 
 func _draw_node(n) -> void:
 	var b := iso(n.pos)
@@ -1336,8 +1347,9 @@ func _draw_node(n) -> void:
 			if _beast_sprite("deer", "n%d" % n.id, b): return
 		"boulder":
 			var bk := clampf(n.amount / 40.0, 0.45, 1.0)
-			if art != null and art.has("rock_%d" % (n.id % 3)): _ell(b + Vector2(8, 3), 22 * bk, 8 * bk, SHADOW)
-			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, bk): return
+			var rk := "rock_%d" % (n.id % 3) + _snowy()
+			if art != null and art.has(rk): _ell(b + Vector2(8, 3), 22 * bk, 8 * bk, SHADOW)
+			if _sprite(rk, b, bk): return
 	match n.kind:
 		"tree":
 			var bend2: Variant = _bend_matrix(b)
@@ -2732,6 +2744,9 @@ func _sync_items() -> void:
 		it.visible = sim.is_explored(o["p"])
 		_touch(it, snow_sig)
 	if full: _moving_nodes.clear()
+	var wk := wind_k()
+	var wind_sig := 1000000 * int(round(wk * 6.0)) if wk >= 0.3 else 0 # gusts re-bend the crowns
+	var wind_view := view.grow(200.0) # tall crowns reach in from just off the edge
 	for n in (sim.nodes if full else _moving_nodes):
 		var key := "n%d" % n.id
 		seen[key] = true
@@ -2740,8 +2755,10 @@ func _sync_items() -> void:
 		var it := _item(key, 0, n, iso(n.pos), anim)
 		if it.dynamic != anim: it.dynamic = anim
 		it.visible = sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)
-		_touch(it, n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0)
-			+ (1000000 * int(round(wind_k() * 6.0)) if wind_k() >= 0.3 else 0)) # gusts re-bend the crowns
+		var sig: int = n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0)
+		if n.kind == "tree" and wind_sig != 0: # in a wind only trees near the screen re-bend; the rest catch up when seen
+			sig = sig + wind_sig if wind_view.has_point(it.position) else it.sig
+		_touch(it, sig)
 	for lm in sim.landmarks:
 		var key: String = "lm_" + lm["id"]
 		seen[key] = true
