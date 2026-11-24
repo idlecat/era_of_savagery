@@ -20,7 +20,6 @@
   "meal_fill_fire": 38,
   "starving_damage": 0.5,
   "store_base": 80,
-  "store_granary": 100,
   "rot": 0.03
  },
  "gathering": {
@@ -78,10 +77,12 @@
  "beds": {
   "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings).",
   "far": 700,
-  "day_only": ["renovate"]
+  "day_only": ["renovate", "field"]
  },
  "vice": {
-  "steward": {"_doc": "How the Steward picks work for each idle person, in this order: a building site near home (build_chance); crafts when there is food_per_head_art food a head and art_wood wood (art_chance); a want (see `wants`) once there is food_per_head food a head; wood when the stores are `full` (share of the cap); food below food_per_head a head; wood below low_wood; else the policy. Gatherers work within area_r of home.",
+  "steward": {"_doc": "How the Steward picks work for each idle person, in this order: a building site near home (build_chance); crafts when there is food_per_head_art food a head and art_wood wood (art_chance); a want (see `wants`) once there is food_per_head food a head; wood when the stores are `full` (share of the cap); food below food_per_head a head; wood below low_wood; else the policy. Gatherers work within area_r of home. Work other than building and crafts is a stint of `shift` [min, max] seconds: then they come back idle (a gatherer hauls the load home first) and are given what is needed then; the chieftain's own orders have no shift. Food work goes first to a field or dock with a free place (structures.json `worked`) when fields_first is on.",
+    "fields_first": true,
+    "shift": [40, 75],
    "build_chance": 0.5, "art_chance": 0.25, "food_per_head_art": 6, "art_wood": 40, "food_per_head": 4, "full": 0.95, "low_wood": 40, "area_r": 900, "xp": 0.5, "practice": 2.0},
   "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work. `wants`: what the tribe runs short of whatever the policy (except lore): while the store holds less than `below` of `res` and `when` holds (conditions as in scenario scripts), `share` of them go and gather it, if any can be gathered within want_reach of home (stone needs the tools; herbs and ore a known find). When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
   "every": 3,
@@ -218,11 +219,11 @@
   }
  },
  "improvements": {
-  "_doc": "The village lays out improvements itself (improve.gd). planner: steward (only while a Steward is appointed) or anyone (the tribe's best at lore plans without one). Every `every` seconds by day, with fewer than `max_sites` of its sites unfinished, the first entry of `list` that is wanted (`when`: conditions as in scenario scripts), known, affordable keeping `wood_reserve`, and has room within `reach` of the village (near the structure type `near`) is laid out. If several are wanted, the Steward's LLM node may choose (`ask`; it waits `ask_wait` seconds, at most once per `ask_every`). A road entry ({\"road\": level id, \"structure\": \"roadworks\", \"cells\", \"min_cells\"}) makes the busiest trails near the village into that road.",
+  "_doc": "The village lays out improvements itself (improve.gd). planner: steward (only while a Steward is appointed) or anyone (the tribe's best at lore plans without one). Every `every` seconds by day, with fewer than `max_sites` of its sites unfinished (a count: a number or {base, per_pop}), the first entry of `list` that is wanted (`when`: conditions as in scenario scripts), known, affordable keeping `wood_reserve`, and has room within `reach` of the village (near the structure type `near`) is laid out. If several are wanted, the Steward's LLM node may choose (`ask`; it waits `ask_wait` seconds, at most once per `ask_every`). A road entry ({\"road\": level id, \"structure\": \"roadworks\", \"cells\", \"min_cells\"}) makes the busiest trails near the village into that road.",
   "on": true,
   "planner": "steward",
   "every": 15,
-  "max_sites": 1,
+  "max_sites": {"base": 1, "per_pop": 0.015},
   "wood_reserve": 10,
   "reach": 450,
   "ring_step": 35,
@@ -246,11 +247,20 @@
     "when": {
      "food_frac": 0.85,
      "fewer": {
-      "granary": 6
+      "granary": {"base": 2, "per_pop": 0.1}
      }
     },
     "near": "farm_plot",
     "reason": "the stores are nearly full and food would rot."
+   },
+   {
+    "upgrade": "large_hut",
+    "structure": "longhouse",
+    "when": {
+     "homeless": 1,
+     "era": 2
+    },
+    "reason": "people sleep in the open: a large hut can become a longhouse."
    },
    {
     "upgrade": "hut",
@@ -265,7 +275,7 @@
     "when": {
      "homeless": 1,
      "fewer": {
-      "hut": 12
+      "hut": {"base": 8, "per_pop": 0.25}
      }
     },
     "reason": "people sleep in the open: there are not enough beds."
@@ -284,7 +294,7 @@
     "when": {
      "pop": 5,
      "fewer": {
-      "farm_plot": 2
+      "farm_plot": {"base": 2, "per_pop": 0.05}
      }
     },
     "reason": "a field gives steady food."
@@ -298,6 +308,15 @@
      }
     },
     "reason": "a shrine brings lore and heals the sick."
+   },
+   {
+    "upgrade": "totem_shrine",
+    "structure": "temple",
+    "when": {
+     "era": 2,
+     "pop": 20
+    },
+    "reason": "the village has grown round its shrine: it wants a temple."
    },
    {
     "structure": "aurochs_pen",

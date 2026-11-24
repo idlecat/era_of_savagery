@@ -101,9 +101,9 @@ func holds(w: Dictionary) -> bool:
 	if w.has("food_frac") and sim.stock["food"] < sim.food_cap() * float(w["food_frac"]): return false
 	if w.has("homeless") and sim.living().size() - sim.pop_cap() < int(w["homeless"]): return false
 	if w.has("wood") and sim.stock["wood"] < float(w["wood"]): return false
-	if w.has("fewer"): # fewer than n of a structure of ours, building sites included
+	if w.has("fewer"): # fewer than n of a structure of ours, building sites included (n: a number or {base, per_pop})
 		for st in w["fewer"]:
-			if sim.structures.filter(func(s): return s.type == st and sim.ours(s)).size() >= int(w["fewer"][st]): return false
+			if sim.structures.filter(func(s): return s.type == st and sim.ours(s)).size() >= count(w["fewer"][st]): return false
 	if w.has("deaths") and sim.units.filter(func(u): return u.dead and not u.gone).size() < int(w["deaths"]): return false
 	if w.has("culture"):
 		for ax in w["culture"]:
@@ -150,11 +150,22 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
-	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
+	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "counts", "deaths": "num", "culture": "nums",
 	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "pop_below": "num", "career": "str"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
+
+## {"base": n, "per_pop": k} (either may be left out): a count that grows with the tribe.
+static func _count_ok(v) -> bool:
+	return v is Dictionary and not v.is_empty() and v.keys().all(func(k): return k in ["base", "per_pop"] and _num_ok(v[k]))
+
+## A count from data: a number, or {"base": n, "per_pop": k} = n + k x the people alive
+## (rounded down; 0 for anything else).
+func count(v) -> int:
+	if _num_ok(v): return int(v)
+	if _count_ok(v): return int(floor(float(v.get("base", 0)) + float(v.get("per_pop", 0)) * sim.living().size()))
+	return 0
 
 static func _pos_ok(v) -> bool:
 	if v is Vector2: return v.is_finite()
@@ -173,6 +184,11 @@ static func type_ok(v, kind: String) -> bool:
 			if not v is Dictionary: return false
 			for k in v:
 				if not k is String or not _num_ok(v[k]): return false
+			return true
+		"counts": # {key: a number, or {"base": n, "per_pop": k}}
+			if not v is Dictionary: return false
+			for k in v:
+				if not k is String or not (_num_ok(v[k]) or _count_ok(v[k])): return false
 			return true
 		"text": return v is String or (v is Array and not v.is_empty() and v.all(func(x): return x is String))
 		"pos": return _pos_ok(v)

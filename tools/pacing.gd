@@ -53,6 +53,9 @@ func _initialize() -> void:
 			if c.status == "interrupted": sim.contracts.resolve(c, sim.contracts.allowed_effects(c)[0])
 		sim.paused = false
 		sim.tick(dt)
+		if sim.is_day_part("morning") or not sim.rest_time(): # (field hands by day)
+			cur["hands_sum"] = float(cur.get("hands_sum", 0.0)) + sim.living().filter(func(u): return u.job.get("type", "") == "field").size()
+			cur["hands_n"] = int(cur.get("hands_n", 0)) + 1
 		if sim.day() != last_day:
 			_close_day(sim)
 			last_day = sim.day()
@@ -60,9 +63,9 @@ func _initialize() -> void:
 			_new_day(sim)
 	if not cur.is_empty() and int(cur["day"]) <= days and sim.time >= end_t: _close_day(sim)
 	var out: String = a.get("out", "")
-	var csv := "seed,level,day,events,danger,warn,nature,crises,deaths,food,food_cap,pop,mood,what\n"
+	var csv := "seed,level,day,events,danger,warn,nature,crises,deaths,food,food_cap,pop,pop_cap,wood,fields,field_hands,mood,what\n"
 	for r in day_rows:
-		csv += "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n" % [sd, sim.hz.level, r["day"], r["events"], r["danger"], r["warn"], r["nature"], r["crises"], r["deaths"], r["food"], r["food_cap"], r["pop"], r["mood"], " ".join(r["what"]).replace(",", ";")]
+		csv += "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%d,%s\n" % [sd, sim.hz.level, r["day"], r["events"], r["danger"], r["warn"], r["nature"], r["crises"], r["deaths"], r["food"], r["food_cap"], r["pop"], r["pop_cap"], r["wood"], r["fields"], r["field_hands"], r["mood"], " ".join(r["what"]).replace(",", ";")]
 	if out != "":
 		var f := FileAccess.open(out, FileAccess.WRITE)
 		f.store_string(csv)
@@ -80,5 +83,9 @@ func _close_day(sim) -> void:
 	cur["food"] = roundi(sim.stock["food"])
 	cur["food_cap"] = sim.food_cap()
 	cur["pop"] = sim.living().size()
+	cur["pop_cap"] = sim.pop_cap()
+	cur["wood"] = roundi(sim.stock["wood"])
+	cur["fields"] = sim.structures.filter(func(s): return s.built and sim.ours(s) and s.type == "farm_plot").size()
+	cur["field_hands"] = float(cur.get("hands_sum", 0.0)) / maxf(1.0, float(cur.get("hands_n", 0))) # (the day's mean, by day)
 	cur["mood"] = roundi(sim.folk.mood)
 	day_rows.append(cur)

@@ -140,7 +140,7 @@ func block(u: E.Unit, id: String) -> String:
 	if u.career == id: return "already"
 	if not is_open(id): return "closed"
 	if u.lv(str(d["skill"])) < int(d.get("min_lv", 0)): return "skill"
-	if d.has("max") and holders(id).size() >= int(d["max"]): return "full"
+	if d.has("max") and holders(id).size() >= sim.story.count(d["max"]): return "full" # (a number, or {base, per_pop})
 	if u.career == "" and held() >= places(): return "places"
 	return ""
 
@@ -196,6 +196,13 @@ func go_work(u: E.Unit) -> bool:
 		var n = sim.find_node(res, u.home, D.region_at(u.home), float(C["reach"]), w.get("kinds", []))
 		if n == null: return false
 		sim.assign_gather(u, res, {"node_id": n.id, "bank": D.region_at(u.home), "area": u.home, "area_r": float(C["reach"])})
+		sim.give_shift(u) # (a stint at the trade, then a look at what the tribe needs)
+		return true
+	if w.has("work_at"): # a field, a dock: the nearest of that type with a free place
+		var f = sim.free_field(u.home, float(C["reach"]), [str(w["work_at"])])
+		if f == null: return false
+		sim.assign_field(u, f)
+		sim.give_shift(u)
 		return true
 	if w.get("build", false):
 		for s in sim.structures:
@@ -205,6 +212,7 @@ func go_work(u: E.Unit) -> bool:
 		return false
 	if w.get("ritual", false):
 		sim.assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
+		sim.give_shift(u)
 		return true
 	if w.get("art", false) and sim.folk.can_art(u):
 		sim.folk.start_art(u)

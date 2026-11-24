@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -3985,6 +3985,100 @@ func test_find_data() -> void:
 
 ## A band against a saber-tooth: it musters out of reach, charges together, rings the
 ## beast (flank blows hit harder) and lets its badly hurt fall back (config/hunt.json).
+func test_worked_fields() -> void:
+	print("\n== Worked fields: labour becomes food (city_proposal step 1) ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	sim.research("farming")
+	var plot = sim.add_structure("farm_plot", sim.dry_spot(D.VILLAGE + Vector2(-160, 140)))
+	sim.complete_structure(plot, null)
+	var hands: int = int(D.STRUCTURES["farm_plot"]["worked"]["hands"])
+	var folk: Array = sim.living().filter(func(x): return x.role == "")
+	check(sim.free_field(D.VILLAGE, 900.0) == plot, "a built field near home has free places")
+	for i in hands: sim.assign_field(folk[i], plot)
+	check(sim.field_hands(plot) == hands and sim.free_field(D.VILLAGE, 900.0) == null, "%d hands fill it; then it has no free place" % hands)
+	for i in 400: sim.tick(0.05) # (walk there)
+	check(folk[0].job.get("type", "") == "field" and folk[0].doing == "till", "they work it, hands busy tilling (%s)" % folk[0].act)
+	var f0: float = sim.stock["food"]
+	for k in 10: sim._do_field(folk[0], folk[0].job, 1.0)
+	var got: float = sim.stock["food"] - f0
+	var per: float = float(D.STRUCTURES["farm_plot"]["worked"]["food"]) * 10.0
+	check(got > per * 0.6 and got < per * 2.0, "a hand at the field adds about its worked food (%.2f in 10 s, ~%.2f)" % [got, per])
+	for i in hands: sim.set_job(folk[i], {})
+	# nothing grows in winter: the field sends its hands away and no one is sent to it
+	sim.hz.level = "normal"
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + 5.0
+	check(sim.hz.winter() and not sim.field_yields(plot) and sim.free_field(D.VILLAGE, 900.0) == null, "no field work in winter")
+	sim.assign_field(folk[0], plot)
+	sim.tick(0.05)
+	check(folk[0].job.get("type", "") != "field", "someone sent to a winter field is free again")
+	sim.hz.level = "off"
+	sim.time = D.DAY_LEN * 0.3
+	# the Steward sends idle hands to the field when food runs short
+	for u in folk: sim.set_job(u, {})
+	sim.appoint(folk[-1], "steward")
+	sim.stock["food"] = 0.0
+	sim.vice_timer = 0.0
+	sim._update_vice(0.05)
+	check(sim.field_hands(plot) == hands, "short of food, the Steward fills the field first (%d)" % sim.field_hands(plot))
+	# a farmer goes to the field by themselves
+	sim.careers.on = true
+	sim.set_job(folk[0], {})
+	folk[0].career = "farmer"
+	for i in range(1, hands): sim.set_job(folk[i], {})
+	check(sim.careers.go_work(folk[0]) and folk[0].job.get("type", "") == "field", "a farmer's trade is the field (work_at)")
+	check(sim.careers.def("builder")["max"] is Dictionary and sim.story.count({"base": 3, "per_pop": 0.03}) == 3 + int(0.03 * sim.living().size()), "career places can grow with the tribe")
+	# fewer than a count that grows with the tribe
+	var n: int = sim.living().size()
+	check(sim.story.holds({"fewer": {"farm_plot": {"per_pop": 2.0 / n}}}) and not sim.story.holds({"fewer": {"farm_plot": {"per_pop": 0.5 / n}}}), "fewer takes {per_pop}: 1 field is fewer than 2, not fewer than 0")
+	check(not sim.story.holds({"fewer": {"farm_plot": {"per_pop": "lots"}}}) and sim.story.count({"bogus": 1}) == 0, "a malformed count holds nothing")
+	# stores come from the buildings' `store`
+	var c0: int = sim.food_cap()
+	sim.research("pottery")
+	var gr = sim.add_structure("granary", sim.dry_spot(D.VILLAGE + Vector2(160, 160)))
+	sim.complete_structure(gr, null)
+	check(sim.food_cap() == c0 + int(D.STRUCTURES["granary"]["store"]), "a granary adds its store (%d -> %d)" % [c0, sim.food_cap()])
+	# a contract may build a longhouse once the second age has come; before that, a large hut
+	var ld = folk[1]
+	var bp := {"steps": [{"action": "build", "structure": "longhouse", "count": 1}]}
+	var san: Dictionary = sim.contracts.sanitize(bp, {"kind": "settle"}, ld)["blueprint"]
+	check(san["steps"].any(func(st): return st.get("structure", "") == "large_hut"), "in the first age a longhouse becomes a large hut")
+	sim.evo.era = 2
+	san = sim.contracts.sanitize(bp, {"kind": "settle"}, ld)["blueprint"]
+	check(san["steps"].any(func(st): return st.get("structure", "") == "longhouse"), "in the second age a contract builds a longhouse")
+	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
+func test_shifts() -> void:
+	print("\n== The Steward's work is a stint: then a new look at what is needed ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var st = sim.living().filter(func(x): return x.role == "")[0]
+	sim.appoint(st, "steward")
+	var u = sim.living().filter(func(x): return x.role == "" and x != st)[0]
+	sim.time = D.DAY_LEN * 0.3
+	for o in sim.living(): sim.set_job(o, {})
+	sim.stock["food"] = 0.0
+	sim.vice_timer = 0.0
+	sim._update_vice(0.05)
+	check(u.job.get("type", "") == "gather" and u.job.has("shift_end"), "the Steward's gathering is a stint (%s)" % str(u.job.get("shift_end", "none")))
+	sim.assign_gather(st, "wood")
+	check(not st.job.has("shift_end"), "an order from the chieftain has no shift")
+	u.job["shift_end"] = sim.time + 1.0
+	u.carry_amt = 3
+	u.carry_type = "food"
+	var ended := false
+	var hauled := false
+	for k in 3000:
+		sim.vice_timer = 999.0 # (the Steward waits: see that they come back idle)
+		sim.tick(0.05)
+		if u.carry_amt == 0: hauled = true
+		if sim.is_idle(u):
+			ended = true
+			break
+	check(ended and hauled, "past the stint they haul the load home and come back idle (hauled %s)" % str(hauled))
+	sim.dispose()
+
 func test_weapons() -> void:
 	print("\n== Weapons: invented, a knack for each, mastery that rises with use ==")
 	var sim = _new_sim()

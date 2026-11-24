@@ -641,15 +641,14 @@ func unit_speed(u: E.Unit) -> float:
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u)
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
-## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
+## Food storage: the village keeps FOOD_STORE_BASE, and each built building of ours its type's `store` (structures.json: the Granary) more;
 ## anything over that rots at FOOD_ROT per second (config/rules.json "survival").
 var FOOD_STORE_BASE: int = int(RULES["survival"]["store_base"])
-var FOOD_STORE_GRANARY: int = int(RULES["survival"]["store_granary"])
 var FOOD_ROT: float = float(RULES["survival"]["rot"])
 func food_cap() -> int:
 	var c := FOOD_STORE_BASE + inv.store_bonus()
 	for s in structures:
-		if s.built and ours(s) and s.type == "granary": c += FOOD_STORE_GRANARY
+		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("store", 0))
 	return c
 ## Hunger per unit of distance walked: a villager walking all day gets ~70% hungrier.
 var WALK_HUNGER: float = float(RULES["survival"]["walk_hunger"])
@@ -745,6 +744,14 @@ func set_job(u: E.Unit, job: Dictionary, key := "") -> void:
 	u.gather_t = 0.0
 	u.face = null
 
+## Make u's current job a stint (rules.json vice.steward `shift`): when it is over they
+## come back idle (a gatherer hauls the load home first) and are given what is needed then.
+## Orders from the chieftain have no shift; the Steward's and a trade's work do.
+func give_shift(u: E.Unit) -> void:
+	if u.job.is_empty(): return
+	var sh: Array = RULES["vice"]["steward"]["shift"]
+	u.job["shift_end"] = time + randf_range(float(sh[0]), float(sh[1]))
+
 func assign_move(u: E.Unit, p: Vector2) -> void: set_job(u, {"type": "move", "to": p})
 func assign_flee(u: E.Unit) -> void:
 	set_job(u, {"type": "move", "to": u.home + Vector2(randf_range(-30, 30), randf_range(-30, 30)), "flee": true})
@@ -833,6 +840,11 @@ func update_unit(u: E.Unit, dt: float) -> void:
 		unit_idle(u, dt)
 		return
 	var j := u.job
+	if j.has("shift_end") and time >= float(j["shift_end"]) and u.resume_job.is_empty(): # (the stint is done: back to the pool, to be given what is needed now)
+		if j["type"] == "gather" and u.carry_amt > 0: j["last_load"] = true # (home with the load first)
+		else:
+			set_job(u, {})
+			return
 	match j["type"]:
 		"move":
 			u.act = "Fleeing" if j.get("flee", false) else "Moving"
@@ -852,6 +864,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			_do_bury(u, j, dt)
 		"tend":
 			_do_tend(u, j, dt)
+		"field":
+			_do_field(u, j, dt)
 		"cover":
 			react.do_cover(u, j, dt)
 		"aid":
@@ -1021,6 +1035,9 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		if approach(u, dp, 20, dt):
 			if u.carry_amt > 0: deposit(u, j, u.carry_amt)
 			u.carry_amt = 0
+			if j.get("last_load", false):
+				set_job(u, {})
+				return
 			j["phase"] = "collect"
 			var kept := node_by_id(j["node_id"]) if j["node_id"] >= 0 else null # back to a half-butchered kill (rules.json gathering)
 			if kept == null or not kept.kind in RULES["gathering"]["return_to"]: j["node_id"] = -1
@@ -1452,6 +1469,51 @@ func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
 		evo.practice(u, "hunt", 1.0)
 		end_errand(u) # back to what they were doing
 
+# ------------------------------------------------------------------ worked fields
+## How many people are working structure `s` (a field or a dock) right now.
+func field_hands(s: E.Structure) -> int:
+	var n := 0
+	for u in units:
+		if not u.dead and u.job.get("type", "") == "field" and int(u.job.get("struct_id", -1)) == s.id: n += 1
+	return n
+
+## Whether working `s` gives anything now (built, ours, worked, and something grows: no field work in winter).
+func field_yields(s: E.Structure) -> bool:
+	return s.built and ours(s) and not s.reno and D.STRUCTURES[s.type].has("worked") and hz.food_mult(s.type) * nat.food_mult(s) > 0.05
+
+## The nearest field or dock of `types` ([] = any worked type) within `reach` of `at`, on
+## `at`'s side of the water, that yields now and has a free place; null if none.
+func free_field(at: Vector2, reach: float, types: Array = []) -> E.Structure:
+	var best: E.Structure = null
+	for s in structures:
+		if not types.is_empty() and not s.type in types: continue
+		if not field_yields(s) or s.pos.distance_to(at) > reach or not D.same_side(s.pos, at): continue
+		if field_hands(s) >= int(D.STRUCTURES[s.type]["worked"]["hands"]): continue
+		if best == null or s.pos.distance_to(at) < best.pos.distance_to(at): best = s
+	return best
+
+## Send u to work field (or dock) `s`: the game master's verb as much as the Steward's.
+func assign_field(u: E.Unit, s: E.Structure, key := "") -> void:
+	set_job(u, {"type": "field", "struct_id": s.id, "slot": field_hands(s)}, key)
+
+func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var s := struct_by_id(int(j.get("struct_id", -1)))
+	if s == null or not field_yields(s):
+		set_job(u, {}) # (gone, or nothing grows now: free for other work)
+		return
+	var w: Dictionary = D.STRUCTURES[s.type]["worked"]
+	var r := struct_r(s)
+	var spot := s.pos + Vector2.from_angle(int(j.get("slot", 0)) * 2.1 + u.id * 0.37) * r * 0.55
+	if not approach(u, spot, 6, dt):
+		u.act = "Walking to work"
+		return
+	u.act = str(w["act"])
+	u.doing = str(w["doing"])
+	var rate := float(w["food"]) * (1.0 + 0.05 * u.lv("forage")) * work_mul(u)
+	stock["food"] += rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
+	gain_xp(u, "forage", dt * 0.1)
+	evo.practice(u, str(w.get("practice", "berry")), dt)
+
 # ------------------------------------------------------------------ burials
 var BURY_RANGE: float = float(RULES["burial"]["range"]) # bodies further out than this are lost to the wild after a day
 var GRAVE_DIG: float = float(RULES["burial"]["dig"])
@@ -1734,6 +1796,7 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 		if u.idle_t > 4:
 			u.idle_t = 0
 			assign_ritual(u, u.home + Vector2(randf_range(-40, 40), randf_range(-50, -20)))
+			give_shift(u)
 		return
 	u.idle_t += dt
 	if u.idle_t > 5.0:
@@ -2206,11 +2269,11 @@ func vacate(u: E.Unit) -> void:
 func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
 
 ## How readily a grown-up can be called away for a chore: 0 idle (no work, or an idle act),
-## 1 gathering (work that keeps), -1 not to be called (other work, asleep, a crew, a child).
+## 1 gathering or working a field (work that keeps), -1 not to be called (other work, asleep, a crew, a child).
 func spare_hand(u: E.Unit) -> int:
 	if u.dead or u.role != "" or u.sleeping: return -1
 	if is_idle(u): return 0
-	return 1 if u.job.get("type", "") == "gather" else -1
+	return 1 if u.job.get("type", "") in ["gather", "field"] else -1
 
 ## The spare hand nearest `at` (within `reach`), the idle before gatherers; the War Chief stays.
 func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
@@ -2225,7 +2288,7 @@ func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
 	return best
 
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
-const JOB_TYPES := ["move", "gather", "bury", "tend", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
+const JOB_TYPES := ["move", "gather", "bury", "tend", "field", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
 	"life", "meal", "depart", "art", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
 
 ## What must always hold in a running game; returns the broken rules ([] when all is well).
@@ -2295,11 +2358,15 @@ func _update_vice(dt: float) -> void:
 			elif steward_policy == "lore": choice = "lore"
 			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
 			else: choice = "food" if randf() < 0.5 else "wood"
+			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" and bool(sw.get("fields_first", true)) else null
+			if field: choice = "field" # (food: a field or dock with a free place before the wild)
 			match choice:
+				"field": assign_field(u, field)
 				"build": assign_build(u, unbuilt)
 				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 				"art": folk.start_art(u)
 				_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])})
+			if choice != "build" and choice != "art": give_shift(u) # (gathering, fields, rites: a stint, then a new look at what is needed)
 			gain_xp(steward, "lore", float(sw["xp"]))
 			evo.practice(steward, "lead", float(sw["practice"]))
 		if not idle.is_empty():

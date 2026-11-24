@@ -2119,7 +2119,7 @@ func _zzz(at: Vector2, seed_: int) -> void:
 
 ## The animation for what a person's hands are doing (u.doing, set by the sim).
 const DOING_ANIM := {"fight": "attack", "ritual": "ritual", "dance": "ritual", "pick": "gather", "craft": "gather", "watch": "gather",
-	"build": "build", "experiment": "build", "paint": "build", "chop": "chop", "butcher": "chop", "quarry": "chop"}
+	"till": "chop", "net": "gather", "build": "build", "experiment": "build", "paint": "build", "chop": "chop", "butcher": "chop", "quarry": "chop"}
 
 ## The feathers a person's ranks put in their hair (ranks.marks): one per ranked skill,
 ## fanned out behind the head; a Master's is longer and gold-tipped.

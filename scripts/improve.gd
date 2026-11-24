@@ -42,7 +42,7 @@ func update(dt: float) -> void:
 	if timer > 0: return
 	timer = float(C.get("every", 15))
 	if not on or sim.rest_time() or planner() == null: return
-	if open_sites() >= int(C.get("max_sites", 1)): return
+	if open_sites() >= maxi(1, sim.story.count(C.get("max_sites", 1))): return # (a number, or {base, per_pop}: a bigger tribe raises more at once)
 	var opts := wanted()
 	if opts.is_empty(): return
 	if opts.size() == 1 or not bool(C.get("ask", true)) or sim.time < quiet_until or sim.advice_wanted.get_connections().is_empty():

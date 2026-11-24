@@ -187,3 +187,28 @@ Two things carry through every step:
   nobody idles awake at night, and 0.25–1 kills a run are left with meat on them. The
   walking share is the finding: hauling round trips eat most of a gatherer's day, which
   is the walk that granaries by the fields, worked fields and roads should cut.
+
+## 5. Progress log
+
+- **2026-11-24, city step 1 begun.** Found while measuring it: **the Steward's work
+  never ended.** A gather job (and a rite) runs until it is replaced, and the Steward
+  only gives work to the idle, so after the first morning nobody was ever idle again:
+  a building site laid out on day 5 stood paid and untouched for 55 days, beds fell as
+  huts aged, and The Ford's tribe sat at 12–13 people for 60 days with 9,500 wood
+  unused (seed 1, normal). The "wood piles up while people starve" of city_proposal
+  §1.1 is this more than the food trickle, and its "32 huts by day 60" were the settle
+  contracts' outposts, not the village. **Fix: shifts.** Work the Steward or a trade
+  hands out is a stint (`rules.json` vice.steward `shift`, 40–75 s); then the person
+  hauls their load home and comes back idle, to be given what is needed then. The
+  chieftain's own orders have no shift. Same seed, 13 days: 20 people and 23 beds
+  instead of 12 and 12.
+- Built with it: worked fields and docks (`structures.json` `worked`, the `field` job,
+  `sim.free_field()`/`assign_field()`, the Steward fills fields first when food runs
+  short, the `farmer` career with the `work_at` verb), counts that grow with the tribe
+  (`{base, per_pop}` for `fewer`, career `max`, `max_sites`), food stores as a `store`
+  key on buildings, the Steward's plan growing with the tribe (fields, huts, granaries
+  per pop; longhouses and the temple as era-2 upgrades), and contracts may build a
+  longhouse from the second age (`instead`: a large hut before it).
+- Not yet in step 1: the plan per settlement (it needs settlement-scoped conditions,
+  which step 3's tiers define, so it moves there), cached `food_cap()`/`pop_cap()`
+  (step 4), the Steward placing docks on the shore.

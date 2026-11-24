@@ -96,7 +96,7 @@ func env_data(site: Vector2) -> Dictionary:
 	var structs := {}
 	for k in D.CONTRACT_STRUCTURES:
 		var sd: Dictionary = D.STRUCTURES[k]
-		if sd.has("tech") and not sim.has_tech(sd["tech"]): continue
+		if sd.has("tech") and not sim.has_tech(sd["tech"]) or sim.evo.era < int(sd.get("era", 1)): continue
 		structs[k] = {"wood": sd["wood"], "houses": sd.get("cap", 0)}
 	return {
 		"target_area": site_area(site),
@@ -454,6 +454,10 @@ func _sanitize_kind(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictiona
 					notes.append(tr("Dropped unknown structure '%s'.") % st)
 					continue
 				var sd: Dictionary = D.STRUCTURES[st]
+				if sim.evo.era < int(sd.get("era", 1)) and D.STRUCTURES.has(str(sd.get("instead", ""))): # (an age not reached yet: its stand-in)
+					notes.append(tr("%s needs a later age; replaced with a %s.") % [tr(sd["name"]), tr(D.STRUCTURES[sd["instead"]]["name"])])
+					st = str(sd["instead"])
+					sd = D.STRUCTURES[st]
 				var water_known := river_known(next_site())
 				if sd.has("tech") and not sim.has_tech(sd["tech"]):
 					notes.append(("%s needs unresearched wisdom; replaced with Fishing Dock." if water_known else "%s needs unresearched wisdom; replaced with a Hut.") % sd["name"])
