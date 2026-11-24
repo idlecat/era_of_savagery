@@ -1017,7 +1017,7 @@ func _refresh_left_content() -> void:
 func _lead_block(u) -> String:
 	if u.role == "child": return tr("a child")
 	if u.role == "contract": return tr("on a contract")
-	if not D.home_side(u.pos): return tr("away from home")
+	if not sim.at_settlement(u.pos): return tr("away from home")
 	return ""
 
 ## Sets a sheet button's label and enables it, or disables it with the reason in its label and tooltip.
@@ -1029,7 +1029,7 @@ func _why_button(b: Button, label: String, why: String, keep := false) -> void:
 	b.text = tr("%s (%s)") % [base, why] if why != "" else label
 	var tip: String = b.get_meta("tip")
 	if why == tr("away from home"):
-		tip = tr("Task Contracts set out from home: bring this person back to the village's side of the river first, over a ford.") + "\n\n" + tip
+		tip = tr("Task Contracts set out from a settlement: bring this person back to the land of one of ours first (over a ford if a river lies between).") + "\n\n" + tip
 	b.tooltip_text = tip
 
 func _cap(s: String) -> String:
@@ -1404,7 +1404,7 @@ func open_negotiation(leader, kind := "settle") -> void:
 	var seek: bool = kind == "seek"
 	var v := _open_modal((tr("RESEARCH CONTRACT · Seeking new wisdom with %s") if research else (tr("WAR CONTRACT · Planning the raid with %s") if war else (tr("SEARCH CONTRACT · Looking for new finds with %s") if seek else tr("TASK CONTRACT · Phase 1: Negotiation with %s")))) % tr(leader.name), 1080)
 	var token := modal_token
-	var max_crew := mini(4 if (research or seek) else (6 if war else 5), sim.contracts.available_helpers(leader.id).size() + 1)
+	var max_crew := mini(4 if (research or seek) else (6 if war else 5), sim.contracts.available_helpers(leader.id, leader.pos).size() + 1)
 	neg = {"leader": leader, "kind": kind, "history": [], "bp": {}, "raw": {}, "terms_set": false, "syncing": false, "busy": false, "calls": 0, "token": token}
 	v.add_child(_label(tr("%s \"%s\" · %s · Lv%d · Craft %d / Combat %d / Lore %d · HP %d/%d") % [tr(leader.name), tr(leader.epithet), ", ".join(trs), sim.unit_level(leader), leader.lv("craft"), leader.lv("combat"), leader.lv("lore"), leader.hp, leader.max_hp], 14, Color("#e6b8ff")))
 	var dh := HBoxContainer.new()

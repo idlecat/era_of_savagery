@@ -44,8 +44,10 @@ func is_running(c: E.Contract) -> bool:
 	return c.status not in ["done", "abandoned", "failed"]
 
 # ------------------------------------------------------------ context for the LLM
-func available_helpers(exclude_id := -1) -> Array:
-	return sim.living().filter(func(u): return u.role == "" and u.id != exclude_id and D.home_side(u.pos))
+## Who can join a Task Contract: free grown-ups at one of our settlements (sim.at_settlement);
+## with `at`, only those on the same land as `at` (a leader's crew comes from where they stand).
+func available_helpers(exclude_id := -1, at: Variant = null) -> Array:
+	return sim.living().filter(func(u): return u.role == "" and u.id != exclude_id and sim.at_settlement(u.pos) and (not (at is Vector2) or D.same_side(u.pos, at)))
 
 func leader_profile(u: E.Unit) -> Dictionary:
 	var skills := {}
@@ -167,11 +169,11 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 		seek_group = preload("res://scripts/persona_engine.gd").SEEK_TASTE.get(sim.arch(u), "food")
 	return {
 		"kind": kind, "world": sim.evo.world_ctx(), "candidates": research_candidates(),
-		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(next_site()) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else (seek_env(seek_group) if kind == "seek" else research_env())),
+		"arch": sim.arch(u), "leader": leader_profile(u), "env": env_data(next_site()) if kind == "settle" else (war_env(terms.get("target", "")) if kind == "war" else (seek_env(seek_group, _home(u)) if kind == "seek" else research_env())),
 		"seek_group": seek_group,
 		"directive": directive, "terms": terms, "terms_set": terms_set,
 		"player_message": player_message, "previous": previous, "history": history,
-		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id).size() + 1),
+		"has_farming": sim.has_tech("farming"), "max_crew": mini(6 if kind == "war" else 5, available_helpers(u.id, u.pos).size() + 1),
 		"top_memory": top,
 		"objection": _objection_words(sim.policy.objection(u, kind)),
 		"forecast": ctx_forecast(u, kind, terms, previous),
@@ -182,9 +184,10 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 func ctx_forecast(u: E.Unit, kind: String, terms: Dictionary, previous: Variant) -> Dictionary:
 	var plan: Dictionary = previous if previous is Dictionary and previous.get("abort_conditions") is Array else {}
 	if plan.is_empty():
-		plan = {"kind": kind, "target": str(terms.get("target", "")), "abort_conditions": LOG["forecast"]["default_aborts"].get(kind, [])}
+		var home := _home(u)
+		plan = {"kind": kind, "target": str(terms.get("target", "")), "abort_conditions": LOG["forecast"]["default_aborts"].get(kind, []), "base": [home.x, home.y]}
 		if kind == "seek":
-			var pl := seek_places(str(terms.get("group", "food")) if str(terms.get("group", "")) in SEEK_GROUPS else "food")
+			var pl := seek_places(str(terms.get("group", "food")) if str(terms.get("group", "")) in SEEK_GROUPS else "food", home)
 			if not pl.is_empty(): plan["site"] = [pl[0]["pos"].x, pl[0]["pos"].y]
 	var fc := forecast(plan, u)
 	return {"risk_pct": fc["pct"], "words": fc["words"], "reasons": fc["reasons"].map(func(r): return {"trouble": r["id"], "chance_pct": roundi(float(r["score"]) * 100)})}
@@ -225,10 +228,10 @@ func _seek_cfg() -> Dictionary: return sim.DISC.get("seek", {})
 ## Where a group of finds could be looked for: places of the kinds the config names for it
 ## (forest, meadow, riverbank, hills, volcano), on any land the tribe can walk to, nearest
 ## first. [{"kind", "pos", "name"}]. The places say where such things grow, not where they are.
-func seek_places(group: String) -> Array:
+## `home`: the settlement the search sets out from (nearest first from there).
+func seek_places(group: String, home: Vector2 = D.VILLAGE) -> Array:
 	var kinds: Array = _seek_cfg().get("groups", {}).get(group, ["forest", "meadow"])
 	var out: Array = []
-	var home: Vector2 = D.VILLAGE
 	var rng := RandomNumberGenerator.new() # (the same places all day: negotiation, plan and contract agree)
 	rng.seed = hash(group) + sim.day() * 7919 + int(D.MAP.get("seed", 0))
 	for kind in kinds:
@@ -262,24 +265,24 @@ func seek_places(group: String) -> Array:
 	out = out.filter(func(pl): return not D.in_river(pl["pos"]))
 	out.sort_custom(func(a, b): return a["pos"].distance_to(home) < b["pos"].distance_to(home))
 	out = out.slice(0, int(_seek_cfg().get("places", 4)))
-	for pl in out: pl["name"] = _place_name(pl)
+	for pl in out: pl["name"] = _place_name(pl, home)
 	return out
 
 ## "the woods to the north-east", "the hills by Flint Ridge"...
-func _place_name(pl: Dictionary) -> String:
-	var d: Vector2 = pl["pos"] - D.VILLAGE
+func _place_name(pl: Dictionary, home: Vector2) -> String:
+	var d: Vector2 = pl["pos"] - home
 	var iso_d := Vector2(d.x - d.y, d.x + d.y) # (screen directions: up is north)
 	var dir: String = ["east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"][posmod(roundi(iso_d.angle() / (TAU / 8)), 8)]
 	var what: String = {"forest": "the woods to the %s", "meadow": "the open meadows to the %s", "riverbank": "the riverbank to the %s", "hills": "the rocky hills to the %s", "volcano": "the slopes of the Fire Mountain to the %s"}[pl["kind"]]
 	if pl.has("lm") and pl["lm"]["found"]: return tr("the rocks by %s") % tr(pl["lm"]["name"])
 	return tr(what) % tr(dir)
 
-func seek_env(group: String) -> Dictionary:
-	var places: Array = seek_places(group if group in SEEK_GROUPS else "food")
+func seek_env(group: String, home: Vector2 = D.VILLAGE) -> Dictionary:
+	var places: Array = seek_places(group if group in SEEK_GROUPS else "food", home)
 	var known: Array = sim.known_finds.keys().filter(func(id): return D.FINDS[id].get("group", "") == group).map(func(id): return tr(D.FINDS[id]["name"]))
 	return {
 		"looking_for": tr(SEEK_WORDS.get(group, "new foods")) if group != "" else tr("whatever is new: foods, healing plants, stones"),
-		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "paces_away": roundi(pl["pos"].distance_to(D.VILLAGE)), "seen_before": sim.is_explored(pl["pos"])}),
+		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "paces_away": roundi(pl["pos"].distance_to(home)), "seen_before": sim.is_explored(pl["pos"])}),
 		"already_known_to_the_tribe": known,
 		"days_you_may_search": _seek_cfg().get("days", [1, 3]),
 		"population": sim.living().size(), "season_and_weather": sim.hz.summary(),
@@ -291,7 +294,7 @@ func _sanitize_seek(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Dictio
 	var pid := RegEx.create_from_string("[^a-z0-9_]").sub(str(bp.get("plan_id", "")).to_lower().replace(" ", "_"), "", true).left(40)
 	out["plan_id"] = pid if pid != "" else "search_%02d" % (list.size() + 1)
 	out["leader_id"] = "unit_%d" % leader.id
-	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 2)), 1, mini(int(_seek_cfg().get("crew_max", 4)), available_helpers(leader.id).size() + 1))
+	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 2)), 1, mini(int(_seek_cfg().get("crew_max", 4)), available_helpers(leader.id, leader.pos).size() + 1))
 	var g := str(bp.get("group", "")).to_lower()
 	g = {"foods": "food", "plants": "medicine", "herbs": "medicine", "healing": "medicine", "stone": "ore", "stones": "ore", "ores": "ore", "minerals": "ore", "mineral": "ore"}.get(g, g)
 	if str(terms.get("group", "")) in SEEK_GROUPS and g != terms["group"]:
@@ -299,7 +302,7 @@ func _sanitize_seek(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Dictio
 		g = terms["group"]
 	if not g in SEEK_GROUPS: g = "food"
 	out["group"] = g
-	var places := seek_places(g)
+	var places := seek_places(g, _home(leader))
 	if places.is_empty(): return {"ok": false, "blueprint": out, "notes": [tr("There is nowhere to search for that.")]}
 	var pi := clampi(_int(bp.get("place"), 0), 0, places.size() - 1)
 	out["place"] = pi
@@ -324,7 +327,19 @@ func emergency_ctx(c: E.Contract) -> Dictionary:
 # ------------------------------------------------------------ blueprint sanitizing
 ## LLM output is untrusted: clamp every number, whitelist every enum. Returns
 ## {"ok": bool, "blueprint": Dictionary, "notes": Array[String]}.
+## The settlement `u` would set out from (the home village when they're away from all of ours).
+func _home(u: E.Unit) -> Vector2:
+	var h: Vector2 = sim.home_of(u.pos)
+	return D.VILLAGE if h == Vector2.INF else h
+
+## The plan's "base" is set here from where the leader stands (never from the LLM).
 func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
+	var r := _sanitize_kind(raw, terms, leader)
+	var home := _home(leader)
+	r["blueprint"]["base"] = [home.x, home.y]
+	return r
+
+func _sanitize_kind(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	var bp0: Dictionary = raw if raw is Dictionary else {}
 	var kind0: String = str(terms.get("kind", bp0.get("kind", "settle")))
 	if kind0 == "research": return _sanitize_research(bp0, terms, leader)
@@ -332,7 +347,7 @@ func sanitize(raw: Variant, terms: Dictionary, leader: E.Unit) -> Dictionary:
 	if kind0 == "seek": return _sanitize_seek(bp0, terms, leader)
 	var notes: Array = []
 	var bp: Dictionary = bp0
-	var max_crew := mini(5, available_helpers(leader.id).size() + 1)
+	var max_crew := mini(5, available_helpers(leader.id, leader.pos).size() + 1)
 	var out := {}
 	var pid := str(bp.get("plan_id", "")).to_lower().replace(" ", "_")
 	var re := RegEx.create_from_string("[^a-z0-9_]")
@@ -402,7 +417,7 @@ func _sanitize_research(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Di
 	var pid := RegEx.create_from_string("[^a-z0-9_]").sub(str(bp.get("plan_id", "")).to_lower().replace(" ", "_"), "", true).left(40)
 	out["plan_id"] = pid if pid != "" else "seek_wisdom_%02d" % (list.size() + 1)
 	out["leader_id"] = "unit_%d" % leader.id
-	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 2)), 1, mini(4, available_helpers(leader.id).size() + 1))
+	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 2)), 1, mini(4, available_helpers(leader.id, leader.pos).size() + 1))
 	var tech := str(bp.get("tech", terms.get("tech", ""))).to_lower()
 	for t in D.TECHS: # accept names as well as ids
 		if tech == t["name"].to_lower(): tech = t["id"]
@@ -472,8 +487,8 @@ func _sanitize_war(bp: Dictionary, terms: Dictionary, leader: E.Unit) -> Diction
 	var pid := RegEx.create_from_string("[^a-z0-9_]").sub(str(bp.get("plan_id", "")).to_lower().replace(" ", "_"), "", true).left(40)
 	out["plan_id"] = pid if pid != "" else "war_on_%s_%02d" % [target, list.size() + 1]
 	out["leader_id"] = "unit_%d" % leader.id
-	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 4)), 2, mini(6, available_helpers(leader.id).size() + 1))
-	if available_helpers(leader.id).is_empty(): out["crew_size"] = 1
+	out["crew_size"] = clampi(_int(bp.get("crew_size"), terms.get("crew_size", 4)), 2, mini(6, available_helpers(leader.id, leader.pos).size() + 1))
+	if available_helpers(leader.id, leader.pos).is_empty(): out["crew_size"] = 1
 	var dance := 0
 	var scout := 0
 	var raw_steps: Array = bp.get("steps", []) if bp.get("steps") is Array else []
@@ -553,21 +568,31 @@ func seal(leader: E.Unit, kind := "settle", directive := "", terms := {}, reply:
 # ------------------------------------------------------------ the odds (make_it_fun A0)
 ## Where a plan's crew would work: the outpost site, the search place, the war camp
 ## before the clan's village, or the workshop by the fire.
+## The settlement a plan sets out from and comes back to (its "base", set by sanitize() from
+## where the leader stood; the home village when missing or not one of ours).
+func base_of(bp: Dictionary) -> Vector2:
+	var b: Variant = bp.get("base")
+	if b is Array and b.size() == 2 and (b[0] is float or b[0] is int) and (b[1] is float or b[1] is int):
+		var p := Vector2(b[0], b[1])
+		if sim.settlements().any(func(q): return q.distance_to(p) < 1.0): return p
+	return D.VILLAGE
+
 func plan_site(bp: Dictionary) -> Vector2:
+	var home := base_of(bp)
 	match str(bp.get("kind", "settle")):
 		"war":
 			var rc: Dictionary = sim.rivals.clans.get(str(bp.get("target", "")), {})
-			if rc.is_empty(): return D.VILLAGE
+			if rc.is_empty(): return home
 			var tp: Vector2 = rc["pos"]
-			var p: Vector2 = tp + (D.VILLAGE - tp).normalized() * 330.0
+			var p: Vector2 = tp + (home - tp).normalized() * 330.0
 			return D.shore(p, 120.0) if D.is_water(p) else p
 		"seek":
 			var st: Variant = bp.get("site")
 			if st is Array and st.size() == 2 and (st[0] is float or st[0] is int) and (st[1] is float or st[1] is int): return Vector2(st[0], st[1])
-			return D.VILLAGE
+			return home
 		"research":
 			var n := list.filter(func(o): return o.kind == "research").size()
-			return D.VILLAGE + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
+			return home + Vector2(-190, 170) + Vector2(70 * (n % 3), -60 * (n % 2))
 	return next_site()
 
 ## The odds the leader reads before sealing: for each of the plan's abort conditions, the
@@ -627,7 +652,7 @@ func _fc_enemy(cf: Dictionary, kind: String, plan: Dictionary, site: Vector2, mu
 	var texts: Array = []
 	var near_r := float(cf["near_r"])
 	var route_r := float(cf["route_r"])
-	var way: Array = [site] if kind == "research" else D.route(D.VILLAGE, site) + [site]
+	var way: Array = [site] if kind == "research" else D.route(base_of(plan), site) + [site]
 	var seen: Array = []
 	for p in sim.predators:
 		if p.dead or p.fled or p.fleeing or p.kind in ["hunter", "trader"] or p.guard or not sim.is_explored(p.pos): continue
@@ -656,7 +681,7 @@ func _fc_enemy(cf: Dictionary, kind: String, plan: Dictionary, site: Vector2, mu
 	if kind == "war": texts.append(_fc_text("war"))
 	if kind != "research":
 		var dm: Array = cf["dist_mult"]
-		score *= clampf(D.route_len(D.VILLAGE, site) / float(cf["dist_ref"]), float(dm[0]), float(dm[1]))
+		score *= clampf(D.route_len(base_of(plan), site) / float(cf["dist_ref"]), float(dm[0]), float(dm[1]))
 	return {"score": minf(score, float(cf["max"])), "text": texts[0] if not texts.is_empty() else "", "quiet": _fc_text("quiet") if texts.is_empty() else ""}
 
 func _fc_disaster(cf: Dictionary, days: float, plan: Dictionary, mult: float) -> Dictionary:
@@ -698,7 +723,7 @@ func _fc_losses(cf: Dictionary, plan: Dictionary, leader: E.Unit) -> Dictionary:
 	var rc: Dictionary = sim.rivals.clans.get(str(plan.get("target", "")), {})
 	var foes: int = int(rc.get("warriors", 2)) + 1
 	var n := clampi(_int(plan.get("crew_size"), 3), 1, 6)
-	var helpers := available_helpers(leader.id if leader else -1)
+	var helpers := available_helpers(leader.id, leader.pos) if leader else available_helpers()
 	helpers.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
 	var strength := float(leader.lv("combat")) if leader else 1.0
 	for u in helpers.slice(0, n - 1): strength += u.lv("combat")
@@ -725,7 +750,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	var skill := "craft"
 	if bp["focus"] in ["hunting", "defense", "war"]: skill = "combat"
 	elif bp["focus"] in ["farming", "fishery"]: skill = "forage"
-	var helpers := available_helpers(leader.id).filter(func(u): return sim.vice["steward"] != u.id and sim.vice["warchief"] != u.id)
+	var helpers := available_helpers(leader.id, leader.pos).filter(func(u): return sim.vice["steward"] != u.id and sim.vice["warchief"] != u.id)
 	helpers.sort_custom(func(a, b): return a.lv(skill) + a.lv("craft") * 0.5 > b.lv(skill) + b.lv("craft") * 0.5)
 	c.crew_ids = [leader.id]
 	for u in helpers.slice(0, bp["crew_size"] - 1): c.crew_ids.append(u.id)
@@ -1098,9 +1123,9 @@ func _run_war_step(c: E.Contract, step: Dictionary, key: String, dt: float) -> v
 			c.substate = tr("Marching home")
 			var home_all := true
 			for u in cr:
-				_ensure(u, key, func(): sim.assign_move(u, D.VILLAGE + Vector2(randf_range(-60, 60), randf_range(-40, 60))))
+				_ensure(u, key, func(): sim.assign_move(u, base_of(c.plan) + Vector2(randf_range(-60, 60), randf_range(-40, 60))))
 				u.act = "Marching home"
-				if u.pos.distance_to(D.VILLAGE) > 160: home_all = false
+				if u.pos.distance_to(base_of(c.plan)) > 160: home_all = false
 			step["done"] = step.get("done", 0.0) + dt
 			if home_all or step["done"] > 150: _next_step(c)
 
@@ -1411,7 +1436,7 @@ func _complete_war(c: E.Contract) -> void:
 		if not lead: sim.ranks.learned_under(u, ld, "combat")
 	_disband(c)
 	sim.ranks.deed(ld, "win_war")
-	sim.popup(D.VILLAGE + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
+	sim.popup(base_of(c.plan) + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
 	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [c.plan["plan_id"], cname, spoils], "contract")
 	sim.contract_finished.emit(c)
 

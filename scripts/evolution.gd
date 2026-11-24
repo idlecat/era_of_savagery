@@ -117,7 +117,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 	sim.inv.feat("wisdom", (tr("Discovered %s") if how == "invented" else tr("Learned %s")) % tr(t["name"]), inventor, {"desc": tr(t["desc"])})
 	var learners: Array = []
 	if how == "taught":
-		learners = sim.living().filter(func(o): return o.role != "contract" and D.home_side(o.pos))
+		learners = sim.living().filter(func(o): return o.role != "contract" and sim.at_settlement(o.pos))
 		if inventor and inventor not in learners: learners.append(inventor)
 	else:
 		learners = sim.living().filter(func(o): return inventor and o.pos.distance_to(inventor.pos) < 260)

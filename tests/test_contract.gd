@@ -26,10 +26,46 @@ func check(cond: bool, msg: String) -> void:
 		failures += 1
 		print("  FAIL ", msg)
 
+func test_lead_from_outpost() -> void:
+	print("\n== Task Contracts set out from any of our settlements ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var site: Vector2 = sim.contracts.next_site()
+	check(not D.home_side(site), "the first outpost lies across the river")
+	var ld = sim.unit_by_name("Panshi")
+	ld.pos = site + Vector2(20, 0)
+	check(not sim.at_settlement(ld.pos), "before it is founded, someone there is away from our settlements")
+	check(sim.contracts.available_helpers(-1, ld.pos).is_empty(), "and no one there can be drafted")
+	var c := E.Contract.new()
+	c.id = sim.uid(); c.kind = "settle"; c.status = "done"; c.site = site
+	sim.contracts.list.append(c)
+	var mate = sim.living().filter(func(u): return u != ld and u.role == "")[0]
+	mate.pos = site + Vector2(-20, 10)
+	check(sim.at_settlement(ld.pos) and sim.home_of(ld.pos) == site, "the outpost's land is one of ours")
+	var hs: Array = sim.contracts.available_helpers(ld.id, ld.pos)
+	check(hs == [mate], "the leader's crew comes from the outpost's land (%d)" % hs.size())
+	check(sim.contracts.available_helpers(ld.id).size() > 1, "anyone at a settlement is free to join some contract")
+	var terms := {"kind": "seek", "group": "food", "crew_size": 2}
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(ld, "Find something new", terms, true, "", {}, [], "seek")
+	var san: Dictionary = sim.contracts.sanitize(Persona.propose(ctx)["blueprint"], terms, ld)
+	check(san["ok"] and sim.contracts.base_of(san["blueprint"]) == site, "the plan sets out from the outpost")
+	var near: Array = sim.contracts.seek_places("food", site)
+	var dists: Array = near.map(func(pl): return pl["pos"].distance_to(site))
+	var sorted_d: Array = dists.duplicate()
+	sorted_d.sort()
+	check(not near.is_empty() and dists == sorted_d and ctx["env"]["places_you_could_search"][0]["paces_away"] == roundi(dists[0]), "places to search are reckoned from the outpost")
+	var rs: Dictionary = sim.contracts.sanitize({"tech": sim.evo.candidates()[0]}, {"kind": "research"}, ld)
+	check(rs["ok"] and D.same_side(sim.contracts.plan_site(rs["blueprint"]), site), "wisdom is sought by the outpost's own fire")
+	var junk: Dictionary = sim.contracts.sanitize({"base": [D.VILLAGE.x + 3333.0, 7.0], "tech": sim.evo.candidates()[0]}, {"kind": "research"}, ld)
+	check(sim.contracts.base_of(junk["blueprint"]) == site, "an LLM can't choose the base")
+	check(sim.contracts.base_of({"base": [1.0, 2.0]}) == D.VILLAGE and sim.contracts.base_of({"base": "x"}) == D.VILLAGE, "a base that isn't ours falls back to the village")
+	var k = sim.contracts.create(san["blueprint"], ld, "Find something new")
+	check(k.crew_ids.has(mate.id) and k.crew_ids.size() == 2, "the outpost's people set out together")
+
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():

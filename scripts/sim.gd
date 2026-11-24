@@ -1206,6 +1206,18 @@ func settlements() -> Array:
 		if c.kind == "settle" and c.status == "done": out.append(c.site)
 	return out
 
+## The settlement a person at `p` sets out from: the nearest of ours on the same land
+## (between the same rivers), or Vector2.INF when none is (they are away in the wild).
+func home_of(p: Vector2) -> Vector2:
+	var best := Vector2.INF
+	for q in settlements():
+		if D.same_side(p, q) and (best == Vector2.INF or q.distance_to(p) < best.distance_to(p)): best = q
+	return best
+
+## Whether `p` is on land where one of our settlements stands (where Task Contracts can set out from).
+func at_settlement(p: Vector2) -> bool:
+	return home_of(p) != Vector2.INF
+
 func beds_at(p: Vector2) -> int:
 	var n := 0
 	for s in structures:
