@@ -160,6 +160,17 @@ exposed as game-master operations, per `CLAUDE.md`.
   1000 people burns ~6,000 food. The autumn ×1.5 harvest, granaries + warehouses,
   the smokehouse's rot ×0.6 and trade caravans are not city decoration — they are
   how the city survives the season that shaped the tribe.
+  - **Storage must scale with it.** A season is 2 days (`events.json → seasons.days`),
+    so a year is 8 days and a 150-day campaign sees ~19 winters: a city needs a
+    `food_cap` of ~7,000. Today `food_cap()` adds a hardcoded `FOOD_STORE_GRANARY`
+    (100) per granary — 60+ granaries. Move it to data: a `store` key on any type in
+    `structures.json` (granary 100, warehouse 500, a smokehouse or cellar on a
+    longhouse adding some), summed by the cached `food_cap()`. ~10 warehouses then
+    hold a city's winter, and losing one to a fire is a real blow.
+  - With a winter every 8 days, the "pinch" is a heartbeat, not an event. That is
+    good for the rhythm (build up, hold, build up) but it means a *bad* winter
+    (long, early, blizzard) must be the escalation, not winter itself — an
+    `events.json` chance that a winter runs a third day, rising with era.
 - Let `fewer` take the **number shape `story` already has** for dilemmas
   (`{"per_pop": k}`, `story` line ~351): `"fewer": {"farm_plot": {"per_pop": 0.05}}` =
   fewer than one field per 20 mouths — 2 fields at pop 40 (as now), a ceiling of ~50
@@ -183,8 +194,12 @@ exposed as game-master operations, per `CLAUDE.md`.
 - `food_cap()`/`pop_cap()` become cached sums updated when a structure is built,
   upgraded or demolished (a `_cache…` var, so it isn't saved).
 
-Target: 1000 people fed by ~40 % farms, ~25 % docks and pens, ~35 % forage and
-trade, with winter still the pinch.
+Target mix for 1000 people (~2,300 a day, more in winter), made to agree with the
+numbers above: **~50 % worked fields** (25–35 plots), **~25 % docks and pens**,
+**~15 % tribute and trade** (vassals' and allies' tribute in food, caravans: this
+is what makes diplomacy feed a city), **≤ 10 % forage and hunt** (the Ford's bushes
+regrow ~200 a day in all; forage can't be more than a camp's living). Winter still
+the pinch.
 
 ### 3.2 Births as a rate, plus migration
 
@@ -200,6 +215,14 @@ trade, with winter still the pinch.
   Steward's *build pace* — wood and work for huts and longhouses — which couples
   population to the economy and makes "draw settlers" and "grow the village" real
   alternatives rather than birth-rate knobs.
+  - So the build pace has to be able to keep up: ~200 beds between day 50 and 90 is
+    ~25 longhouses in 40 days, plus fields and stores. One site at a time per
+    settlement every 15 s (`improve.every`, `max_sites: 1`) will be the next wall.
+    `max_sites` should grow with tier (1 camp, 2 village, 3 town, 4 city) and the
+    builders come from the same spare pool as the farmers — the labour market again.
+  - The bed gate makes births a cliff (full rate, then zero). Crowding should taper
+    it instead: rate × (1 − beds_used/beds)^k past ~80 % full, the same threshold the
+    sickness crowding already uses, so one number in data drives both.
 - **Migration** as the second growth path, tied to diplomacy and reputation:
   - vassals and allies send **families** (a new `rivals.json → people.join` key),
     one a day while there are empty beds;
@@ -245,6 +268,18 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 | town | **plague** (crowding spreads radius with density), **urban fire** hopping hut to hut, **raiders torching the fields** (worked fields live outside any wall — make_it_fun I2's "raiders go for what's outside first": `launch_raid`'s target choice plus the wildfire state on a structure), **blight** (the `crops` weather multiplier already runs in `hz.food_mult`; a blight is a data entry that zeroes farm yield for days), earthquake toppling big buildings, **winter fuel** (fires burn nothing today; a wood-per-second drain in `rules.json` is the one new upkeep — no menu, just the wood counter falling), **food rot** in big stores, thieves and feuds | new entries in `events.json`; `nat.pending`; `roads.gd` for fire spread; a `fuel` rule in `rules.json day/night` |
 | city | **rival coalitions** (clans ally against the big tribe), **civil strife** (a town with low morale rises: a crisis of `emergency.json`), **the sprawl** (homes and fields creep past the wall and the fords; distance already costs — walked hunger, walking time — so roads are the answer, not a new yield rule), a **great works** obligation (the temple wants the same spare hands the fields want: the labour market *is* the dilemma) | `rivals.json`, `life.json discontent` → `crisis.gd`, `legacy.json` |
 
+- **The rivals must grow too, or the table is fiction.** A clan capped at
+  `max_pop: 14` cannot send a raid "sized to our fighters" at 300 people. Three
+  data-driven ways, in order of preference:
+  1. `people.max_pop` becomes `{"base": 14, "per_our_pop": 0.08}`: a clan grows
+     toward ~8 % of us (≈ 80 at our 1000), regrowing at its own rate; the raid share
+     stays a fraction of *their* warriors, so a raid is still a decision of theirs.
+  2. **Coalitions** (city tier): clans with a shared grudge join raids, so the
+     threat grows by diplomacy, not by inflating one village.
+  3. **Newcomers**: a new clan (from `D.CLANS`) arrives at an empty site in a later
+     era — a "the people from beyond the hills" beat, with first contact again.
+  Vassals and allies grow the same way, and that is also what makes their tribute
+  (the 15 % above) and their families (§3.2 migration) scale.
 - The **director's cap** becomes a function of population (`director.json levels.*.cap_per_pop`)
   so big tribes still get quiet stretches.
 - **Spike deaths** are softened: the director holds a raid while a sickness wave or
@@ -259,7 +294,11 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
   over the hash.
 - Cache `living()`, `pop_cap()`, `food_cap()` per tick / on change.
 - A **perf test** (`tests/test_contract.gd → test_perf_1000`): seed a game, add
-  1000 idle people, assert < 25 ms/tick headless, so regressions show in CI.
+  1000 people, assert < 25 ms/tick headless, so regressions show in CI. Measure it
+  with people *working* (a seeded day with jobs, `life` on, as `test_smoke` plays),
+  not idle: the 37.5 ms in §1.2 is the floor, pathing and job scans are the rest.
+  Keep a 200-person variant as the fast CI check and run the 1000 one in
+  `tools/metrics.gd`.
 - Rendering: `world_view` already caches static items; units at 1000 are 1000
   sprite draws, fine. The HUD must stop looping `living()` per frame.
 
@@ -284,8 +323,8 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
    day 60; pop at the birth-timer ceiling (~90–110 — food alone can't beat Wall 2:
    from 28 at day 20, two births a day cap day 60 near 105 before deaths).
 2. Births per family lines + crowding + the bed governor (§3.2). Measure: pop at day
-   60 (target 150+), day 120 (target ~500). Settle open question 1 first — the birth
-   math, the HUD count and the perf budget all hang on what "a person" is.
+   60 (target 150+), day 120 (target ~500), beds built per day vs. births, share of
+   spare hands building vs. farming. (Open question 1 is settled: a person is a unit.)
 3. Tiers, names, settlement HUD, overpop gating (§3.3). Measure: no settlement with
    empty beds older than 5 days when a new outpost is sealed; the ghost-town count is 0.
 4. Spatial hash + LOD + perf test (§3.5). Measure: ms/tick at 1000 (target < 25).
@@ -329,6 +368,21 @@ a pinch, a crisis, growth.
    > 1000. If a finished city should *look* fuller than it simulates, a purely
    > visual ambient crowd (sprites near the fire and market in `world_view`, not
    > units) is the honest way to thicken it. Decide before step 2.
+   >
+   > **Claude:** Convinced, mainly by the rival symmetry and the second count threaded
+   > through every rule. **Decided: (a), 1000 units**, §3.5 is required work (step 4
+   > moves before step 5's challenges, as it already is), and the ambient crowd is
+   > out of scope until a city exists to look at. Remaining risk: with 1000
+   > named units the chronicle and LLM contexts must pick their cast (titled,
+   > bonded, remembered) instead of listing people; `folk.summary()` and
+   > `evo.world_ctx()` should cap and rank, not grow with pop.
+4. **Build throughput.** Is `max_sites` by tier (§3.2) enough, or do we need the
+   builders' work rate to rise with era (tools, oxen carrying wood) so a city isn't
+   all builders? Measure in step 2.
+5. **Winter cadence.** With 2-day seasons, ~19 winters on the way to a city. Does a
+   winter every 8 days feel like rhythm or like nagging at 4x? Should `seasons.days`
+   grow with era (a longer year for a bigger world) — careful, it moves every
+   seasonal number in the game.
 2. **Job priority vs contracts and the War Chief — settled, no fight.** Field
    staffing draws only from the spare pool (`spare_hand()`: idle or gathering, no
    office, awake — the pen's herder comes from the same pool), so it can never take a
