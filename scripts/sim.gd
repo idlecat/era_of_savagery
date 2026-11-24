@@ -1021,7 +1021,9 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		if approach(u, dp, 20, dt):
 			if u.carry_amt > 0: deposit(u, j, u.carry_amt)
 			u.carry_amt = 0
-			j["phase"] = "collect" # back to the same node (a carcass half butchered) while it has anything left
+			j["phase"] = "collect"
+			var kept := node_by_id(j["node_id"]) if j["node_id"] >= 0 else null # back to a half-butchered kill (rules.json gathering)
+			if kept == null or not kept.kind in RULES["gathering"]["return_to"]: j["node_id"] = -1
 		return
 	var n := node_by_id(j["node_id"]) if j["node_id"] >= 0 else null
 	if n == null or n.amount < 1:

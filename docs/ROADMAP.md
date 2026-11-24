@@ -120,15 +120,15 @@ step where they belong and two small items in front.
 
 ### 3.0 Before the city (small, now)
 
-- **Push** the local commits and **settle the canary** — it fired on the gatherer
-  change; see §4.
+- **Push** the local commits and **settle the canary**: done, see §4 (it was noise).
 - **Pick the G3 numbers** (the designer's call: decay is the lever on normal) and
   commit a baseline after it, so city step 1 is measured from a settled start.
 - **A first playtest**: one session at 2x on The Ford through era 2 (~day 20), noting
   pauses that annoyed, things people did that looked wrong, and what was unreadable.
   It costs an hour and answers make_it_fun's open playtest questions before the city
   work changes the pace under them.
-- **A naturalness report** in `tools/metrics.gd` (problem 6): per run, the share of
+- **A naturalness report** in `tools/metrics.gd` (problem 6; built, first numbers in
+  §4): per run, the share of
   walking that carried nothing, job changes per person-hour, people left standing in
   the open at night, people stuck (no progress for N s), nodes abandoned with food
   left. Bands like G1's. Cheap, and it guards every later step: worked fields, more
@@ -173,12 +173,17 @@ Two things carry through every step:
 - **Linux CI reproduces the macOS runs exactly**: the canary on CI (run 45476386129,
   efb140c) and a local macOS run at 87b34a5 printed the same per-seed numbers. The
   baseline is portable.
-- **The canary fired: 8 metrics moved** since the baseline (552f03d), all from one
-  commit: with c92075a (a gatherer goes back to the node they were working) reverted,
-  nothing moves. Gatherers now stay out at a far kill instead of picking the bushes by
-  home, so the steward's stores drop lower: min food 23% → 1%, near-miss 0% → 100%,
-  famine consequences 0% → 100%, ranks 2.5 → 4.5; the feaster's near-miss 100% → 50%
-  and killed 2.0 → 0.5. A natural-behaviour fix moved the food balance: problem 6 in
-  action. Two runs is a small sample; run 8 seeds with and without it, then either
-  accept it (`--write-baseline`) or make the gatherer weigh the walk home against a
-  low store.
+- **The canary fired: 8 metrics moved** since the baseline (552f03d), and with c92075a
+  (a gatherer goes back to the node they were working) reverted nothing moved, which
+  looked like that commit moving the food balance. **8 seeds say otherwise**: without
+  it, with it, and with the refined rule (only a half-butchered kill is gone back to,
+  `rules.json` `gathering`) the steward lands at near-miss 63/63/63%, min food
+  12/10/13%; the feaster 63/50/88%, 11/13/7%. All within noise. A 2-run, 8-day canary
+  flips on any change to the sim's random draws, so its warnings are a prompt to run
+  more seeds, not a verdict; its tolerances are set for that.
+- **First naturalness numbers** (4 seeds x 8 days, The Ford): 59–62% of working time
+  is spent walking (21–22% with empty hands), switching straight from one work to
+  another and standing stuck are rare (0.02–0.03 per work-hour, 0.05 per person-day),
+  nobody idles awake at night, and 0.25–1 kills a run are left with meat on them. The
+  walking share is the finding: hauling round trips eat most of a gatherer's day, which
+  is the walk that granaries by the fields, worked fields and roads should cut.

@@ -79,6 +79,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 ## rules.json
 
 - `survival`: hunger rates, when people eat and how much a meal costs and fills, starving damage, food storage and rot.
+- `gathering`: `return_to`, the kinds of node a gatherer goes back to after hauling a load (a half-butchered kill); for any other work they pick afresh.
 - `births`, `herds` (the aurochs pens), `burial`, `beds`.
 - `triggers`: the conditions (as in scenario scripts) for the overpopulation and Chosen One dilemmas.
 - `vice`: the Vice-Chieftains. Two offices (Steward, War Chief), one slot at first (Tribal Code or the Council of Elders opens the second; `sim.vice_slots()`). Appointing someone to a held office replaces the holder; `sim.dismiss(role)` frees it. `every` (seconds between their rounds), `steward_reach` (how far from home idle people are put to work), `warchief_range` (beasts this close to the village call the War Chief), `fighters` (how many they keep on the nearest one), `reach` and `min_hp` (who may be sent: close enough, healthy enough, not sick). `wants`: what the Steward has gathered whenever the store runs low, whatever the policy (except lore): `{"res", "below", "share", "when"}`, only if some can be gathered within `want_reach` of home.

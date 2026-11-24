@@ -23,6 +23,10 @@
   "store_granary": 100,
   "rot": 0.03
  },
+ "gathering": {
+  "_doc": "After hauling a load home, a gatherer goes back to the node they were working only if it is of a kind in `return_to` (a kill half butchered is not left to the crows); any other work is picked afresh from where they are, so the camp's gatherers spread over what is near home.",
+  "return_to": ["carcass"]
+ },
  "healing": {
   "_doc": "Getting well (sim.unit_needs). Wounds heal per second at `warm` near a fire (else `cold`) once fed above fed_above and unhurt for calm_secs; a yarrow poultice (herbs, within poultice_reach of the village, below poultice_below of full health) multiplies it by `poultice` for herb_secs. Willow-bark tea for the sick costs a herb every herb_secs. Fever hurts the sick by `fever` per second down to fever_floor of full health (to death when hungrier than fever_hungry or in winter). Cold hurts down to cold_floor unless it can kill; freezing_warn: the 'Freezing!' mark.",
   "warm": 0.7,

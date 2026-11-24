@@ -74,8 +74,8 @@ the numbers G3 measured but left for the designer to choose. The section notes b
   16–20.
 - Linux CI reproduces macOS runs exactly (same per-seed numbers, 2026-11-24). The canary's
   first CI run fired: 8 metrics moved after the baseline, mostly the steward's food
-  (near-miss and famine 0% → 100%), all from c92075a (gatherers go back to their node);
-  see `ROADMAP.md` §4.
+  (near-miss and famine 0% → 100%), but 8 seeds showed it was noise: a 2-run canary
+  warns on any change to the random draws (`ROADMAP.md` §4).
 - What comes next is in `ROADMAP.md`: most items left here fold into the steps of
   `city_proposal.md` (I5 is its tiers, I2's raid targeting and fire spread its town
   challenges, and its worked fields are the food-economy fix the bands above call for).

@@ -36,6 +36,17 @@ const BANDS := {"near_miss": [0.6, 0.9], "famine": [0.1, 0.25]}
 ## Share of outposts (settle contracts that ended) interrupted at least once: most should
 ## be quiet enough that an interrupt is news, some must be hit (make_it_fun G1).
 const OUTPOST_BAND := [0.4, 0.7]
+## Naturalness (ROADMAP §3.0): do people act like people? Sampled once a game second over
+## the grown-ups. Bands are [low, high]; a value outside is a finding to look at by watching.
+##   walk       share of working time (a work job) spent walking
+##   empty      share of working time spent walking with empty hands
+##   switches   changes from one kind of work straight to another, per person-hour of work
+##   stuck      times someone with work stood still, hands idle, for STUCK_SECS, per person-day
+##   night_up   share of the night grown-ups at home spend awake with nothing to do
+##   left_kills kills left with meat on them, nobody at them for a day, per run
+const NATURAL_BANDS := {"walk": [0.15, 0.6], "empty": [0.0, 0.4], "switches": [0.0, 1.5], "stuck": [0.0, 0.5], "night_up": [0.0, 0.1], "left_kills": [0.0, 0.5]}
+const WORK_JOBS := ["gather", "build", "tend", "art", "ritual", "experiment", "seek", "trade_trip"]
+const STUCK_SECS := 15.0
 
 var a := {}
 
@@ -119,6 +130,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	var rule_t := {}
 	var last_seal := -1e9
 	var dead_seen := {}
+	var nat := {"work": 0.0, "walk": 0.0, "empty": 0.0, "switches": 0, "stuck": 0, "night": 0.0, "night_up": 0.0, "person_days": 0.0, "u": {}, "kills": {}}
 	while sim.time < end_t and not sim.living().is_empty():
 		# the player's seat, played by the policy
 		if sim.pending_event != "":
@@ -150,6 +162,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		if sim.time >= next_sample:
 			next_sample = sim.time + 1.0
 			_sample(sim, r, dead_seen)
+			_natural(sim, nat)
 	r["days"] = snappedf(sim.time / D.DAY_LEN, 0.1)
 	r["alive"] = sim.living().size()
 	r["famine"] = r["starved"] > 0 or r["hungry_sick"] or r["left"] > 0 # (a sickness wave counts when it strikes a hungry camp)
@@ -187,6 +200,13 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		fcs.append({"events": c.said.keys().filter(func(k): return str(k).begins_with("ev_") and k != "ev_t").size(), "secs": float(c.said.get("clock", 0.0)), "kind": c.kind, "risk": c.forecast["risk"], "top": c.forecast["reasons"][0]["id"] if not c.forecast["reasons"].is_empty() else "",
 			"first": first, "named": first != "" and sim.contracts.foresaw(c, first), "scores": scores})
 	r["forecasts"] = fcs
+	var left := 0
+	for id in nat["kills"]:
+		var n = sim.node_by_id(id)
+		if n and n.kind == "carcass" and n.amount >= 1 and sim.time - float(nat["kills"][id]) > D.DAY_LEN: left += 1
+	var wh := maxf(1.0, nat["work"]) # person-seconds of work
+	r["natural"] = {"walk": nat["walk"] / wh, "empty": nat["empty"] / wh, "switches": nat["switches"] / maxf(0.01, nat["work"] / (D.DAY_LEN / 24.0)),
+		"stuck": nat["stuck"] / maxf(0.01, nat["person_days"]), "night_up": nat["night_up"] / maxf(1.0, nat["night"]), "left_kills": float(left)}
 	sim.dispose()
 	return r
 
@@ -326,6 +346,7 @@ func _report(rows: Array, pols: Array) -> void:
 		var d: float = absf(summ["hoarder"]["min_food"] - summ["feaster"]["min_food"]) + absf(summ["hoarder"]["famine"] - summ["feaster"]["famine"]) + absf(summ["hoarder"]["near_miss"] - summ["feaster"]["near_miss"])
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
 	_calibration(rows)
+	_naturalness(rows, pols)
 	if a.has("baseline"): _baseline(summ)
 	var allc: Array = []
 	for r in rows: allc.append_array(r["forecasts"])
@@ -440,3 +461,57 @@ func _mean(rs: Array, k: String) -> float:
 	var t := 0.0
 	for r in rs: t += float(r[k])
 	return t / maxf(1.0, rs.size())
+
+## One second of the naturalness sample (see NATURAL_BANDS).
+func _natural(sim, nat: Dictionary) -> void:
+	var night: bool = sim.is_day_part("night")
+	var homes: Array = sim.settlements()
+	for u in sim.living():
+		if u.role == "child": continue
+		nat["person_days"] += 1.0 / D.DAY_LEN
+		var st: Dictionary = nat["u"].get(u.id, {"pos": u.pos, "type": "", "still": 0.0, "flagged": false})
+		var jt: String = u.job.get("type", "")
+		var moved: float = u.pos.distance_to(st["pos"])
+		if jt in WORK_JOBS and not u.sleeping:
+			nat["work"] += 1.0
+			if moved > 3.0:
+				nat["walk"] += 1.0
+				if u.carry_amt == 0: nat["empty"] += 1.0
+			if st["type"] in WORK_JOBS and st["type"] != jt: nat["switches"] += 1
+			if moved < 2.0 and u.doing == "":
+				st["still"] += 1.0
+				if st["still"] >= STUCK_SECS and not st["flagged"]:
+					st["flagged"] = true
+					nat["stuck"] += 1
+			else:
+				st["still"] = 0.0
+				st["flagged"] = false
+		else:
+			st["still"] = 0.0
+			st["flagged"] = false
+		if night and u.role == "" and homes.any(func(p): return p.distance_to(u.pos) < 260.0):
+			nat["night"] += 1.0
+			if not u.sleeping and sim.is_idle(u): nat["night_up"] += 1.0
+		if jt != "": st["type"] = jt
+		st["pos"] = u.pos
+		nat["u"][u.id] = st
+	var claimed := {}
+	for u in sim.units:
+		if not u.dead and u.job.has("node_id"): claimed[u.job["node_id"]] = true
+	for n in sim.nodes_of("food"):
+		if n.kind == "carcass" and (claimed.has(n.id) or not nat["kills"].has(n.id)): nat["kills"][n.id] = sim.time
+
+## The naturalness report: per policy, the mean of each measure against its band.
+func _naturalness(rows: Array, pols: Array) -> void:
+	print("\nNaturalness (do people act like people? bands in NATURAL_BANDS):")
+	for pid in pols:
+		var rs: Array = rows.filter(func(r): return r["policy"] == pid and r.has("natural"))
+		if rs.is_empty(): continue
+		var parts: Array = []
+		for k in NATURAL_BANDS:
+			var v := 0.0
+			for r in rs: v += float(r["natural"][k])
+			v /= rs.size()
+			var b: Array = NATURAL_BANDS[k]
+			parts.append("%s %.2f%s" % [k, v, "" if v >= b[0] and v <= b[1] else (" LOW" if v < b[0] else " HIGH")])
+		print("  %-8s %s" % [pid, ", ".join(parts)])
