@@ -35,6 +35,7 @@ var map_tip: PanelContainer
 var map_tip_text: RichTextLabel
 var tip_t := 0.0
 var clans_text: RichTextLabel
+var challenge_text: RichTextLabel # the challenge under way (challenges.summary())
 var log_text: RichTextLabel
 var policy_opt: OptionButton
 var audio # audio.gd (set by main; null in tests)
@@ -591,6 +592,8 @@ func _build_right(root: Control) -> void:
 	routine.button_pressed = sim.steward_routine
 	routine.toggled.connect(func(b): sim.steward_routine = b)
 	v.add_child(routine)
+	challenge_text = _rich(0, true)
+	v.add_child(challenge_text)
 	v.add_child(_header("NEIGHBORING CLANS"))
 	clans_text = _rich(0, true)
 	v.add_child(clans_text)
@@ -1124,6 +1127,11 @@ func _refresh_right() -> void:
 	log_tabs.set_tab_title(0, tr("Chronicle")) # (both titles follow a change of language)
 	log_tabs.set_tab_title(1, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
 	clans_text.text = _clans_bbcode()
+	var chs: Dictionary = sim.challenges.summary()
+	challenge_text.visible = chs["active"] != ""
+	if chs["active"] != "":
+		var when: String = (tr("%s — %.1f days left") % [chs["title"], chs["days_left"]]) if chs["days_left"] >= 0.0 else (tr("%s — until %s") % [chs["title"], chs["until"]])
+		challenge_text.text = "[color=#ffd36b]%s[/color] %s\n[color=#b8a888]%s[/color]" % [tr("CHALLENGE"), when, chs["desc"]]
 	var met: Array = sim.rivals.clans.keys().filter(func(id): return sim.rivals.clans[id]["met"])
 	var sig := ",".join(met) + I.lang
 	if sig != clans_sig:
@@ -2483,7 +2491,7 @@ func _open_legacy() -> void:
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"], "challenge": ["Challenge", "#ffd36b"],
 	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)
@@ -2528,7 +2536,7 @@ func open_achievements() -> void:
 ## up and wait while any other dialog (an event, a negotiation) is open.
 const SETTINGS_CFG := "user://settings.cfg"
 const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
-	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "story": "☼", "tale": "❦", "hero": "★"}
+	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "challenge": "✪", "story": "☼", "tale": "❦", "hero": "★"}
 
 func _feat_pref() -> bool:
 	var cf := ConfigFile.new()

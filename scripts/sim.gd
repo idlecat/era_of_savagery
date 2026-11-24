@@ -25,6 +25,7 @@ const Reactions = preload("res://scripts/reactions.gd")
 const Hunt = preload("res://scripts/hunt.gd")
 const Arms = preload("res://scripts/arms.gd")
 const Life = preload("res://scripts/life.gd")
+const Challenges = preload("res://scripts/challenges.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
 signal contract_interrupted(contract)
@@ -99,6 +100,7 @@ var evo: Evolution
 var hz: Hazards
 var nat: Nature
 var folk: Folk
+var challenges: Challenges
 var ranks: Ranks # ranks earned by deeds: trials gate the levels past routine work (ranks.gd)
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
@@ -129,6 +131,7 @@ func _init() -> void:
 	hz = Hazards.new(self)
 	nat = Nature.new(self)
 	folk = Folk.new(self)
+	challenges = Challenges.new(self)
 	improve = Improve.new(self)
 	ranks = Ranks.new(self)
 	policy = Policy.new(self)
@@ -2038,6 +2041,7 @@ func tick(dt: float) -> void:
 	nat.update(dt)
 	react.update(dt)
 	folk.update(dt)
+	challenges.update(dt)
 	life.update(dt)
 	rivals.update(dt)
 	legacy.update(dt)
@@ -2524,6 +2528,9 @@ func check_events() -> void:
 	elif opening and not flags.has("first_day") and story.holds(RULES["triggers"]["first_day"]):
 		flags["first_day"] = true
 		_first_day()
+	elif challenges.offered != "" and not challenges.posed: # the council proposes a challenge
+		challenges.posed = true
+		_fire_event("challenge")
 	elif hz.pending != "": # the autumn decision
 		var he: String = hz.pending
 		hz.pending = ""
@@ -2593,6 +2600,7 @@ func event_def(id: String) -> Dictionary:
 	if legacy.owns_event(id): return legacy.event_def(id)
 	if nat.owns_event(id): return nat.event_def(id)
 	if folk.owns_event(id): return folk.event_def(id)
+	if challenges.owns_event(id): return challenges.event_def(id)
 	if life.owns_event(id): return life.event_def(id)
 	if cult.owns_event(id): return cult.event_def(id)
 	if story.owns_event(id): return story.event_def(id)
@@ -2663,6 +2671,10 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		var ft: String = folk.resolve(id, idx)
 		cult.festival() # a tale saved for feasts
 		return {"text": ft, "open_contract": false}
+	if challenges.owns_event(id):
+		var ch: String = challenges.resolve(id, idx)
+		add_log(ch, "story")
+		return {"text": ch, "open_contract": false}
 	if life.owns_event(id):
 		var lt: String = life.resolve(id, idx)
 		add_log(lt, "story")

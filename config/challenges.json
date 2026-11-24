@@ -1,0 +1,165 @@
+{
+ "_doc": "Challenges the council proposes (challenges.gd; make_it_fun F). From from_day, every offer_every_days when none is running or waiting, the first in list not yet met, failed or declined whose when holds (story conditions) is proposed as a dilemma (title, text: who speaks, say, desc, reward_text). Taken up, it is met when goal holds (story conditions, plus deaths_since / outposts_since: counted from when it was taken up) and fails when fail does; days or until (a season's name: when it next begins) is the time it has. hold: true means the goal must still hold when time is up (\"no one dies this winter\": nothing fails it until spring, then it is met). reward / penalty: story actions. A met challenge is an achievement (met_feat).",
+ "from_day": 2,
+ "offer_every_days": 2.5,
+ "title": "The Council Proposes",
+ "text": "%s rises at the council fire: \"%s\" %s If we do it: %s",
+ "accept": "We will do it",
+ "decline": "Not now",
+ "decline_desc": "The council lets it pass.",
+ "taken_log": "The tribe takes up a challenge: %s.",
+ "declined_log": "The council lets the challenge pass.",
+ "met_feat": "Met the challenge: %s",
+ "failed_log": "The challenge is lost: %s.",
+ "list": [
+  {
+   "id": "winter_no_deaths",
+   "title": "No one dies this winter",
+   "when": {
+    "season": "Autumn"
+   },
+   "say": "Let us swear that the cold takes no one this year.",
+   "desc": "From now until spring, no one of the tribe may die.",
+   "reward_text": "mood +15 and 20 lore.",
+   "fail": {
+    "deaths_since": 1
+   },
+   "until": "Spring",
+   "hold": true,
+   "reward": [
+    {
+     "mood": 15
+    },
+    {
+     "give": {
+      "lore": 20
+     }
+    }
+   ],
+   "penalty": [
+    {
+     "mood": -6
+    }
+   ]
+  },
+  {
+   "id": "befriend",
+   "title": "A friend among the clans",
+   "when": {
+    "met_any": true
+   },
+   "say": "We have neighbours. Let one of them call us friend before the new age comes.",
+   "desc": "Win the friendship of a clan (Friendly or better) before the second age.",
+   "reward_text": "mood +10 and 25 lore.",
+   "goal": {
+    "friend_any": true
+   },
+   "fail": {
+    "era": 2
+   },
+   "reward": [
+    {
+     "mood": 10
+    },
+    {
+     "give": {
+      "lore": 25
+     }
+    }
+   ],
+   "penalty": [
+    {
+     "mood": -4
+    }
+   ]
+  },
+  {
+   "id": "outpost",
+   "title": "A hearth across the river",
+   "when": {
+    "pop": 10,
+    "day": 3
+   },
+   "say": "Our people are many. Let us raise a second hearth on new land within four days.",
+   "desc": "Found an outpost (a settlement contract completed) within 4 days.",
+   "reward_text": "mood +12 and 30 wood.",
+   "goal": {
+    "outposts_since": 1
+   },
+   "days": 4,
+   "reward": [
+    {
+     "mood": 12
+    },
+    {
+     "give": {
+      "wood": 30
+     }
+    }
+   ],
+   "penalty": [
+    {
+     "mood": -5
+    }
+   ]
+  },
+  {
+   "id": "full_stores",
+   "title": "Full stores before the frost",
+   "when": {
+    "season": "Summer"
+   },
+   "say": "The land is generous now. Let us fill the stores before winter comes.",
+   "desc": "Fill the food stores to nine tenths before winter begins.",
+   "reward_text": "mood +8 and 15 lore.",
+   "goal": {
+    "food_frac": 0.9
+   },
+   "until": "Winter",
+   "reward": [
+    {
+     "mood": 8
+    },
+    {
+     "give": {
+      "lore": 15
+     }
+    }
+   ],
+   "penalty": [
+    {
+     "mood": -4
+    }
+   ]
+  },
+  {
+   "id": "temple",
+   "title": "A house for the spirits",
+   "when": {
+    "era": 2
+   },
+   "say": "The spirits have only a pole of wood. Let us raise them a temple before the next age.",
+   "desc": "Build a temple before the third age.",
+   "reward_text": "devotion +15 and mood +10.",
+   "goal": {
+    "built": "temple"
+   },
+   "fail": {
+    "era": 3
+   },
+   "reward": [
+    {
+     "devotion": 15
+    },
+    {
+     "mood": 10
+    }
+   ],
+   "penalty": [
+    {
+     "devotion": -5
+    }
+   ]
+  }
+ ]
+}

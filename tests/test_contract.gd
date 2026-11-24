@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -97,6 +97,7 @@ func _new_sim():
 	s.director.on = false # (nor pacing: hardship tests roll their own; test_director switches it on)
 	s.life.on = false # (nor everyday life: meals, idle acts, spirits, speech; test_life switches it on)
 	s.ranks.gates = false # (nor rank gates on upgrades, bronze, taming, war leaders; test_ranks switches them on)
+	s.challenges.on = false # (nor the council's challenges; test_challenges switches them on)
 	s.opening = false # (nor the opening's remembered find and first-day fever; test_opening switches it on)
 	s.new_game()
 	return s
@@ -373,7 +374,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons", "challenges"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2757,6 +2758,61 @@ func test_temple_and_longhouse() -> void:
 	check(sim.life.bond(a, b) > 0.0 and sim.life.bond(b, a) > 0.0, "two who sleep in the longhouse grow closer (%.1f)" % sim.life.bond(a, b))
 	check(sim.pop_cap() >= int(D.STRUCTURES["longhouse"]["cap"]), "it houses 8")
 
+func test_challenges() -> void:
+	print("\n== The council's challenges (make_it_fun F) ==")
+	var sim = _new_sim()
+	var CH = sim.challenges
+	CH.on = true
+	sim.hz.level = "normal"
+	var season_len: float = D.DAY_LEN * sim.hz.SEASON_DAYS
+	sim.time = season_len * 2 + 10.0 # autumn of year 1
+	CH.update(1.0)
+	check(CH.offered == "winter_no_deaths", "in autumn the council proposes: no one dies this winter (%s)" % CH.offered)
+	sim.check_events()
+	check(sim.pending_event == "challenge", "it is put to the chieftain")
+	var view: Dictionary = sim.event_def("challenge")
+	check(view["text"].contains(tr(CH.def("winter_no_deaths")["say"])) and view["options"].size() == 2, "the proposal says what and what for")
+	sim.resolve_event("challenge", 0)
+	check(CH.active.get("id", "") == "winter_no_deaths" and CH.summary()["active"] == "winter_no_deaths", "taken up, it is under way")
+	CH.update(1.0)
+	check(not CH.active.is_empty(), "it is not met at once: it must hold until spring")
+	sim.time = season_len * 4 + 10.0 # spring
+	var f0: int = sim.inv.feats.size()
+	var mood0: float = sim.folk.mood
+	CH.check_t = 0.0
+	CH.update(1.0)
+	check(CH.done.get("winter_no_deaths", "") == "met" and sim.inv.feats.size() == f0 + 1 and sim.folk.mood > mood0, "spring and no one died: met, an achievement and its reward")
+	# a challenge that fails
+	sim.time = season_len * 6 + 10.0 # autumn again
+	CH.done.erase("winter_no_deaths")
+	check(CH.offer("winter_no_deaths") and CH.accept("winter_no_deaths"), "a game master can offer and take one up")
+	sim.living()[2].dead = true
+	CH.check_t = 0.0
+	CH.update(1.0)
+	check(CH.done["winter_no_deaths"] == "failed" and CH.active.is_empty(), "a death fails it")
+	# goals: a friend among the clans, an outpost since it was taken up
+	sim.rivals.clans["heron"]["met"] = true
+	check(CH.offer("befriend") and CH.accept("befriend"), "befriend a clan")
+	sim.rivals.clans["heron"]["relation"] = 30.0
+	CH.check_t = 0.0
+	CH.update(1.0)
+	check(CH.done.get("befriend", "") == "met", "a friendly clan meets it")
+	check(CH.offer("outpost") and CH.accept("outpost"), "an outpost within 4 days")
+	check(CH.summary()["days_left"] > 3.9, "the HUD sees the days left (%.1f)" % CH.summary()["days_left"])
+	var k = sim.contracts.seal(sim.contracts.available_helpers()[0], "settle", "")["contract"]
+	CH.check_t = 0.0
+	CH.update(1.0)
+	check(not CH.done.has("outpost"), "a contract under way is not yet an outpost")
+	k.status = "done"
+	CH.check_t = 0.0
+	CH.update(1.0)
+	check(CH.done.get("outpost", "") == "met", "a finished outpost meets it")
+	# declining
+	check(CH.offer("temple"), "offered")
+	CH.resolve("challenge", 1)
+	check(CH.done["temple"] == "declined" and CH.offered == "" and CH.active.is_empty(), "the council lets it pass, and does not ask again")
+	check(not CH.offer("nonsense"), "an unknown challenge can't be offered")
+
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
 	var cs: Dictionary = preload("res://scripts/config.gd").load_cfg("events")["sickness"]
@@ -3484,7 +3540,7 @@ func test_spend() -> void:
 	var walk2 := func(f: Callable, v, where: String) -> void:
 		if v is Dictionary:
 			for k in v:
-				if k in ["do", "else_do", "on_start"] and v[k] is Array:
+				if k in ["do", "else_do", "on_start", "reward", "penalty"] and v[k] is Array:
 					for act in v[k]:
 						var bk: Array = Story.bad_keys(act, Story.ACTION_TYPES) if act is Dictionary else ["not an object"]
 						if not bk.is_empty(): malformed.append("%s.%s: %s" % [where, k, str(bk)])

@@ -324,6 +324,20 @@ those knobs, not new mechanics:
   `policy.council_ctx()`, tracked in the HUD, rewarded with mood/lore.
 - Each challenge is data: `{id, when (holds), track (a condition), reward}` — reuse
   `story.holds()` as the checker.
+- **Built:** `challenges.gd` (`sim.challenges`), `config/challenges.json`: five challenges
+  (no one dies this winter, a friend among the clans before the second age, an outpost
+  within 4 days, full stores before the frost, a temple before the third age). From day 2,
+  every 2.5 days with none running, the first whose `when` holds is put to the chieftain as
+  a dilemma (accept / not now). Goal and fail are `story.holds()` conditions (new
+  `friend_any`, `outposts`) plus measures counted from acceptance (`deaths_since`,
+  `outposts_since`), with `days` or `until` a season and `hold` (the goal must still stand
+  at the end). Met: `inv.feat("challenge")` and `reward` actions; failed: `penalty`. The HUD
+  shows the challenge under way; `offer()`, `accept()`, `summary()` for a game master.
+  Proposed offline (the speaker is the Steward or the best at lore); the Council's LLM
+  (`policy.council_ctx()`) does not propose them yet. Measured (3 runs x 14 days): the
+  steward meets the outpost and full-stores challenges, fails "no one dies this winter"
+  every time (contract and beast deaths count) and "befriend"; worth tuning once more seeds
+  are in.
 
 ## H. Ranks earned by deeds (attachment, accomplishment)
 

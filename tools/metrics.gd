@@ -55,7 +55,7 @@ func _initialize() -> void:
 			print("  %s seed %d: %s" % [pid, seed0 + i, _short(r)])
 	_report(rows, pols)
 	if a.has("out"):
-		var keys: Array = rows[0].keys().filter(func(k): return not k in ["forecasts", "causes"]) if not rows.is_empty() else []
+		var keys: Array = rows[0].keys().filter(func(k): return not k in ["forecasts", "causes", "challenges"]) if not rows.is_empty() else []
 		var csv := ",".join(keys) + "\n"
 		for r in rows: csv += ",".join(keys.map(func(k): return str(r[k]).replace(",", ";"))) + "\n"
 		var f := FileAccess.open(a["out"], FileAccess.WRITE)
@@ -153,6 +153,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	r["mood_end"] = roundi(sim.folk.mood)
 	var nem: String = sim.rivals.nemesis_id()
 	r["nemesis"] = nem
+	r["challenges"] = sim.challenges.done.duplicate()
 	r["feud_over"] = nem != "" and sim.rivals.clans[nem].get("feud_over", false)
 	r["nemesis_raids"] = 0
 	r["other_raids"] = 0
@@ -334,6 +335,8 @@ func _report(rows: Array, pols: Array) -> void:
 		for k in r["causes"]:
 			var key: String = k.get_slice(" (", 0)
 			causes[key] = causes.get(key, 0) + 1
+	print("\nChallenges (met / failed / declined, per run):")
+	for r in rows: print("  %s seed %d: %s" % [r["policy"], r["seed"], r["challenges"]])
 	print("\nRivals (nemesis, its raids / other clans' raids, feud over, chiefs succeeded):")
 	for r in rows: print("  %s seed %d: %-7s %d / %d  over %s  successions %d" % [r["policy"], r["seed"], r["nemesis"], r["nemesis_raids"], r["other_raids"], r["feud_over"], r["successions"]])
 	print("\nThe first winter (kind, autumn choice -> winter deaths, min food, empty-store hours):")

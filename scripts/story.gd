@@ -78,6 +78,8 @@ func holds(w: Dictionary) -> bool:
 	if w.has("day") and sim.day() < int(w["day"]): return false
 	if w.has("pop") and sim.living().size() < int(w["pop"]): return false
 	if w.has("oxen") and sim.oxen < int(w["oxen"]): return false
+	if w.has("friend_any") and bool(w["friend_any"]) != sim.rivals.clans.keys().any(func(id): return sim.rivals.clans[id]["met"] and sim.rivals.stance(id) in ["Friendly", "Trusted", "Allied", "Vassal"]): return false
+	if w.has("outposts") and sim.contracts.list.filter(func(k): return k.kind == "settle" and k.status == "done").size() < int(w["outposts"]): return false
 	if w.has("flag") and not sim.flags.has(w["flag"]): return false
 	if w.has("found") and not sim.landmarks.any(func(l): return l["id"] == w["found"] and l["found"]): return false
 	if w.has("met_any") and bool(w["met_any"]) != sim.rivals.clans.values().any(func(c): return c["met"]): return false
@@ -145,7 +147,7 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
-	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num"}
+	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
