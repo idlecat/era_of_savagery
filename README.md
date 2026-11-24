@@ -238,6 +238,7 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
 People drop their work when something happens around them, and go back to it afterwards:
 
 - **A beast or raider attacks someone:** up to three able grown-ups nearby run to fight it (the bold come from farther away); children, the hurt and the sick keep away.
+- **Hunting a saber-tooth:** a band sent against one (by the War Chief, by you, or by the alarm) doesn't trickle in one by one. It musters out of the beast's reach and charges together when all are there (sooner if the beast comes at them or is mauling someone), surrounds it so blows land from the flanks and hit harder, and the badly hurt step back while the others keep it busy. Good hunters become archers once the tribe has the Hunting Sling (or the Hunting Bow, invented after it): they keep their distance and shoot. Nobody takes one on alone unless they are a match for it: someone alone that a saber-tooth comes for runs to the others and calls for help, and one sent against it alone waits for help and backs off if none comes (`config/hunt.json`).
 - **Earthquake:** everyone runs out of the huts and away from buildings and crouches in the open until the shaking stops, then sees to anyone who was hurt.
 - **Hurt by lightning, a falling building or other forces of nature:** one or two neighbours come and dress the wound.
 - **Wildfire near the village:** grown-ups beat out the flames (a tree put out in time is saved); children and anyone close to the fire run away from it.

@@ -36,6 +36,12 @@
     "popup": "To %s's aid!"}
   ],
 
+  "hunt_help": [
+   {"do": "defend", "who": "helpers", "count": 3, "reach": 340, "bond_reach": 240,
+    "reach_by_trait": {"belligerent": 420, "lazy": 220}, "skip_attackers": ["hunter", "trader"],
+    "popup": "To %s's aid!"}
+  ],
+
   "flood_warning": [
    {"do": "flee", "who": "river", "reach": 240, "dist": 380, "skip_jobs": ["attack"], "resume": false}
   ],

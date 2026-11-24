@@ -506,6 +506,8 @@ const BASE_INVENTIONS := [
 		"desc": "Fishing yields 40% more.", "hint": "Needs a fishing ground, and a hunter's patience."},
 	{"id": "sling", "kind": "tool", "name": "Hunting Sling", "practice": {"hunt": 200.0, "quarry": 30.0}, "needs": {}, "effects": [{"stat": "atk", "add": 2}],
 		"desc": "Stones hurled from afar: +2 attack for everyone.", "hint": "Comes to hunters who also work stone."},
+	{"id": "bow", "kind": "tool", "name": "Hunting Bow", "practice": {"hunt": 450.0, "chop": 60.0}, "needs": {"inventions": ["sling"]}, "effects": [],
+		"desc": "A bent stave and a sinew string: good hunters shoot from farther and harder, out of a beast's reach.", "hint": "After the sling: many more hunts, and good wood to bend."},
 	{"id": "carrying_frame", "kind": "tool", "name": "Carrying Frame", "practice": {"chop": 300.0}, "needs": {}, "effects": [{"stat": "carry", "add": 3}],
 		"desc": "A frame of bent poles worn on the back: everyone carries 3 more.", "hint": "Comes from hauling a great deal of timber."},
 	{"id": "road_making", "kind": "tool", "name": "Road Making", "practice": {"build": 200.0, "explore": 60.0}, "needs": {"techs": ["tools"]}, "effects": [],

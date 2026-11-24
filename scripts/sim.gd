@@ -22,6 +22,7 @@ const Story = preload("res://scripts/story.gd")
 const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
 const Reactions = preload("res://scripts/reactions.gd")
+const Hunt = preload("res://scripts/hunt.gd")
 const Life = preload("res://scripts/life.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
 
@@ -107,6 +108,7 @@ var story: Story # the scenario's scripted events (none on a random map)
 var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var react: Reactions # how people respond to quakes, fires, the hurt... (reactions.gd)
+var hunt: Hunt # how a band fights a dangerous beast: muster, charge together, ring it (hunt.gd)
 var life: Life # meals, idle acts, bonds, spirits and weariness, speech (life.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
 var rivals: Rivals
@@ -136,6 +138,7 @@ func _init() -> void:
 	inv = Inventions.new(self)
 	cult = Culture.new(self)
 	react = Reactions.new(self)
+	hunt = Hunt.new(self)
 	life = Life.new(self)
 	rivals = Rivals.new(self)
 	legacy = Legacy.new(self)
@@ -725,7 +728,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			elif low and not u.has_trait("belligerent") and not u.job.get("flee", false):
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), tr("Flees!"), Color("#ff9b7a"))
-			elif not low and jt != "attack" and jt != "move":
+			elif not low and jt != "attack" and jt != "move" and not hunt.avoid(u, p): # (alone and no match for it: runs to the others)
 				set_aside(u)
 				assign_attack(u, p, u.job_key)
 
@@ -839,10 +842,15 @@ func update_unit(u: E.Unit, dt: float) -> void:
 					set_job(u, {})
 				return
 			u.act = "Fighting"
+			if hunt.holding(u, p, dt): return # mustering with the band, or fallen back hurt
 			u.doing = "fight"
-			if approach(u, p.pos, 22, dt) and u.cd <= 0:
+			var at := hunt.spot(u, p) # (a place in the ring round it)
+			approach(u, at, 22.0 if at == p.pos else 4.0, dt)
+			var close := u.pos.distance_to(p.pos) <= 24
+			u.face = p.pos if close else null
+			if close and u.cd <= 0:
 				u.cd = 1.0
-				var dmg := unit_atk(u) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def))
+				var dmg := unit_atk(u) * randf_range(0.8, 1.2) * (10.0 / (10.0 + p.def)) * hunt.dmg_mult(u, p)
 				var crit := randf() < 0.05 * u.lv("forage")
 				damage_pred(p, dmg * 1.8 if crit else dmg, u, crit)
 				gain_xp(u, "combat", 1.2)
@@ -1773,12 +1781,14 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			prey = u
 	if prey == null and guardian and not guardian.dead and guardian.pos.distance_to(p.pos) < 280:
 		prey = guardian
+	p.prey_id = prey.id if prey is E.Unit else -1
 	if prey:
 		if prey.pos.distance_to(p.pos) > 20:
 			p.path = [prey.pos]
 			step_move(p, dt, p.spd)
 		elif p.cd <= 0:
 			p.cd = 1.25
+			p.struck_t = time
 			if prey == guardian:
 				guardian.hp -= p.atk * 0.6
 			else:
@@ -1940,6 +1950,7 @@ func tick(dt: float) -> void:
 	_herd(dt)
 	_resettle(dt)
 	_finds_tick(dt)
+	hunt.update(dt)
 	for u in units: update_unit(u, dt)
 	fog_t -= dt
 	if fog_t <= 0:

@@ -6,6 +6,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 |---|---|---|
 | `config/events.json` | `hazards.gd`, `nature.gd` | seasons, weather, wolves, tiger raids, sickness, famine, lightning, wildfire, flood, Fire Mountain, earthquake, eclipse: when they happen, how strong they are, what the tribe is told; the kinds of winter (`winters`: their signs, their effects in winter, and the stats the tribe can prepare) |
 | `config/reactions.json` | `reactions.gd` (`sim.react`) | for each happening, what people do about it |
+| `config/hunt.json` | `hunt.gd` (`sim.hunt`) | how a band fights a dangerous beast: muster, charge together, ring it, fall back hurt |
 | `config/rivals.json` | `rivals.gd` | the rival clans: how our deeds change their feelings, stances, raids and demands, theft, trespass, their people's strength, traders, war spoils, and how a chief weighs a deal at a parley |
 | `config/rules.json` | `sim.gd`, `folk.gd` | everyday life: eating and hunger, skill levels and XP (`skills`: the curve, the cap, the mastery level, the Centurion Aura), food storage and rot, births, the aurochs pens, burials, beds, when the overpopulation and Chosen One dilemmas come up, and folk life (children, art and treasures, mood, trade values) |
 | `config/legacy.json` | `legacy.gd` | the endgames: each victory path's conditions (`count`: vassals, allies or techs, all of them; `built`: a structure), the event and saga texts, and the defeat |
@@ -89,6 +90,14 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 - `improvements`: what the village lays out by itself (`improve.gd`, `sim.improve`): `planner` (`steward`: only while a Steward is appointed; `anyone`), how often it looks (`every`), how many unfinished sites it may have (`max_sites`), the wood it keeps back (`wood_reserve`), how far from the village it builds (`reach`), and `list`: in priority order, `{"structure", "when": conditions, "near": a structure type to build beside, "reason"}`. When several are wanted, the Steward's LLM node chooses (`ask`, `ask_wait`, `ask_every`); offline, or with no answer, the first is built.
 - `folk`: `child_days`, `art_time`, `mood` (what lifts and lowers it, how fast it moves, the words for it), `art` (goods, decoration, masterpieces), `treasures` (names by kind of art), `trade` (what goods are worth, rates by stance, haggling).
 
+## hunt.json
+
+`kinds` maps a beast kind (`tiger`) to its tactics; kinds not listed are fought straight on. Everyone with an attack job on the same beast is one band (`sim.hunt.summary()` lists them). A band of at least `band` musters at a rally point `rally_dist` from the beast, on the side it comes from, and charges together once all are within `gather_r` of it, after `max_wait` seconds, after `wait_hurt` seconds once the beast has struck someone, or at once when the beast comes within `engaged_r` of the rally point or of one of them (or one is hit). In the fight each takes a place `ring_r` from the beast, spread evenly round it; every blow does `flank` more for each other fighter within `flank_r` (at most `flank_max`). A fighter below `fall_back_below` of their health steps back `fall_back_dist` while another keeps the fight up. Texts: `act` (mustering), `fall_act`, `popup` and `words` (shouted by the best fighter on the charge).
+
+`alone`: nobody faces such a beast alone unless they are a match for it (blow for blow they'd outlast it `solo_margin` times over: `sim.hunt.can_solo()`). Someone the beast goes for (within `notice_r`, checked every `notice_every` s) or strikes, with no grown-up within `alone_r` and nobody fighting it, runs to the nearest grown-up within `seek_r` (or home) and calls for help: the `help_event` reactions (`hunt_help` in reactions.json). A band smaller than `band` that isn't a match for it calls for help and waits (`act`); after `lone_wait` s without help, or when the beast comes at them, they back off (`out_popup`) or run to the others (`popup`). The belligerent stand their ground.
+
+`archers`: people with `skill` at `min_lv` or more shoot once the tribe has a weapon, the first of `weapons` whose `when` condition holds (the Hunting Sling, then the Hunting Bow invention). In a band they muster too, then stand off `range` x0.8 spread in an arc (`spread` radians), step back when the beast is within `keep`, and every `cd` s shoot for `mult` x their attack. `flight`: how long a missile is drawn; `xp` per shot.
+
 ## reactions.json
 
 `on` maps a happening to a list of responses. The rules send these happenings (`sim.react.trigger(event, ctx)`):
@@ -104,6 +113,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 | `wildfire` | every second while trees burn, for each person near a fire | danger, fire |
 | `freezing` | someone is out in killing cold, away from a fire | victim |
 | `beast_seen` | a scout sees a beast | victim, danger, attacker |
+| `hunt_help` | someone alone a dangerous beast comes for (or sent against it alone) calls for help (hunt.gd) | victim, attacker, at |
 | `panic` | the tribe panics (the `panic` action) | until |
 | `blizzard`, `storm`, `rain`, `drought`, `sickness`, `famine` | they start (no reactions by default) | at, victim |
 | `built` | a building of ours is finished | at |
