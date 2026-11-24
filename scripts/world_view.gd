@@ -1157,7 +1157,7 @@ func _draw_decor(d: Dictionary) -> void:
 		"fern": sk = "fern_%d" % (d.get("v", 0) % 2)
 		"reeds": sk = "reeds_%d" % (d.get("v", 0) % 2)
 		"rock": sk = "pebbles"
-	if sk != "" and _sprite(sk + _snowy(), p, s): return
+	if sk != "" and _sprite(sk + _snowy(), p, s, _tint(int(d["p"].x + d["p"].y))): return
 	if d["kind"] in ["fern", "reeds"]: return
 	match d["kind"]:
 		"rock":
@@ -1297,6 +1297,13 @@ func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
 	ci.draw_texture_rect(tex, Rect2(b - sp["anchor"] * k, tex.get_size() * k), false, mod)
 	return true
 
+## Every tree is itself: a touch of hue and brightness jitter keyed to its id,
+## so a wall of sprites doesn't read as the same tree stamped over and over.
+func _tint(id: int) -> Color:
+	var f1: float = float(id % 211) / 211.0
+	var f2: float = float((id * 7 + 13) % 97) / 97.0
+	return Color.from_hsv(fposmod(0.02 + f1 * 0.09, 1.0), 0.22 + 0.18 * f2, 0.86 + 0.2 * f1)
+
 func _draw_node(n) -> void:
 	var b := iso(n.pos)
 	if sim.nat.burning.has(n.id): # a burning tree, then flames
@@ -1313,12 +1320,12 @@ func _draw_node(n) -> void:
 			if art != null and art.has(tn): _ell(b + Vector2(12 * n.sz + _bend_dx(n.sz), 4 * n.sz), 18 * n.sz, 7 * n.sz, SHADOW)
 			var bend: Variant = _bend_matrix(b) # a gust leans the crown; the roots stay put
 			if bend != null: ci.draw_set_transform_matrix(bend)
-			if _sprite(tn, b, n.sz): return
+			if _sprite(tn, b, n.sz, _tint(n.id)): return
 			if bend != null: ci.draw_set_transform(-b)
 		"bush":
 			var bn := ("bush_full" if n.amount >= 5 else "bush_bare") + _snowy()
 			if art != null and art.has(bn): _ell(b + Vector2(4, 2), 13, 5, SHADOW)
-			if _sprite(bn, b): return
+			if _sprite(bn, b, 1.0, _tint(n.id)): return
 		"stump":
 			var sn := "stump" + _snowy()
 			if art != null and art.has(sn): _ell(b + Vector2(2, 1), 7, 3.5, SHADOW)
