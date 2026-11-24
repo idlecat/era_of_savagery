@@ -104,5 +104,55 @@
    "judged:press_on": ["It is only blood. We work on."],
    "unforeseen": ["This I did not see coming.", "No one could have read this."]
   }
+ },
+ "_events_doc": "Small happenings on a contract that the leader settles without pausing the game (contract_system._events / happen(); make_it_fun A2/A3). Every every_secs of working time (a range), with chance, one event whose when holds (kinds, progress [min, max], cond: story conditions) and that this contract has not had yet happens; weight makes it likelier. pair: rivals / friends needs two of the crew bonded that way (a, b). The leader picks an option, weighted by arch (their archetype; 1 if not listed), and its do runs as story actions. Texts may use vars plan, leader, one (one of the crew), a, b; actions may use leader_who, one_who, a_who, b_who, crew_who (people specs).",
+ "events": {
+  "every_secs": [30, 55],
+  "chance": 0.75,
+  "list": [
+   {"id": "wasps", "weight": 1.0, "when": {"kinds": ["settle", "seek"]},
+    "text": ["%s cuts into a wasp nest in the timber.", "one"],
+    "options": [
+     {"label": "Smoke them out first", "arch": {"cautious": 3, "mystic": 2, "lazy": 2}, "do": [{"morale": -3, "who": "$crew_who"}], "result": "The work waits while the smoke does its job. No one is stung."},
+     {"label": "Work through it", "arch": {"warrior": 3, "agrarian": 1}, "do": [{"hurt": 0.12, "who": "$one_who"}, {"xp": {"craft": 4}, "who": "$crew_who"}], "result": ["%s is stung badly, but the timber is cut.", "one"]}
+    ]},
+   {"id": "rations", "weight": 1.0, "when": {"progress": [0.2, 0.9]},
+    "text": "The dried meat the crew carried has gone bad.",
+    "options": [
+     {"label": "Send for more from the stores", "arch": {"agrarian": 3, "cautious": 2}, "do": [{"give": {"food": -8}}], "result": "Fresh food comes from the village: 8 from the stores."},
+     {"label": "Tighten belts until evening", "arch": {"warrior": 3, "lazy": 1}, "do": [{"morale": -6, "who": "$crew_who"}], "result": "The crew works hungry and says so."}
+    ]},
+   {"id": "tracks", "weight": 1.0, "when": {"kinds": ["settle", "seek"]},
+    "text": "Strange tracks circle the camp in the night.",
+    "options": [
+     {"label": "Follow them", "arch": {"warrior": 3, "mystic": 1}, "do": [{"xp": {"forage": 6}, "who": "$one_who"}, {"remember": "followed strange tracks from the camp on Day %d", "who": "$one_who", "impact": 3}], "result": ["%s follows them into the grass and comes back wiser about the land.", "one"]},
+     {"label": "Keep close to the fire", "arch": {"cautious": 3, "lazy": 2, "agrarian": 1}, "do": [{"morale": -2, "who": "$crew_who"}], "result": "No one sleeps far from the fire that night."}
+    ]},
+   {"id": "omen", "weight": 0.7,
+    "text": "A white raven settles on the work and watches.",
+    "options": [
+     {"label": "Leave it an offering", "arch": {"mystic": 4, "cautious": 1}, "do": [{"give": {"food": -3}}, {"devotion": 3}, {"morale": 4, "who": "$crew_who"}], "result": "A little food is left out. The raven eats, and the crew takes heart."},
+     {"label": "Shoo it away", "arch": {"warrior": 2, "lazy": 1, "agrarian": 1}, "do": [{"morale": -2, "who": "$crew_who"}], "result": "The raven flies off. Some of the crew mutter about bad luck."}
+    ]},
+   {"id": "spring", "weight": 0.8, "when": {"kinds": ["settle", "seek"]},
+    "text": "The crew finds a spring of clear, cold water.",
+    "options": [
+     {"label": "Rest a while beside it", "arch": {"lazy": 4, "agrarian": 2, "mystic": 1}, "do": [{"morale": 8, "who": "$crew_who"}], "result": "They drink, wash and rest. The work goes better after."},
+     {"label": "Mark it and work on", "arch": {"cautious": 2, "warrior": 2}, "do": [{"xp": {"forage": 3}, "who": "$crew_who"}], "result": "The spring is marked for later. The work does not stop."}
+    ]},
+   {"id": "quarrel", "weight": 2.5, "pair": "rivals",
+    "text": ["%s and %s come to blows over who does the heavy work.", "a", "b"],
+    "options": [
+     {"label": "Set them apart", "arch": {"cautious": 3, "lazy": 2}, "do": [{"morale": -3, "who": "$a_who"}, {"morale": -3, "who": "$b_who"}], "result": "They work at opposite ends of the camp and do not speak."},
+     {"label": "Let them fight it out", "arch": {"warrior": 4}, "do": [{"hurt": 0.08, "who": "$a_who"}, {"hurt": 0.08, "who": "$b_who"}, {"bond": 12, "who": "$a_who", "with": "$b_who"}], "result": "A short, ugly fight. After it, a grudging respect."},
+     {"label": "Make them carry the logs together", "arch": {"agrarian": 3, "mystic": 3}, "do": [{"bond": 8, "who": "$a_who", "with": "$b_who"}, {"morale": -2, "who": "$a_who"}, {"morale": -2, "who": "$b_who"}], "result": "They grumble under the same log all afternoon, and by evening they are laughing at it."}
+    ]},
+   {"id": "song", "weight": 1.5, "pair": "friends",
+    "text": ["%s and %s sing as they work, and the others join in.", "a", "b"],
+    "options": [
+     {"label": "Let them sing", "arch": {"lazy": 2, "mystic": 2, "agrarian": 2}, "do": [{"morale": 6, "who": "$crew_who"}, {"bond": 4, "who": "$a_who", "with": "$b_who"}], "result": "The work goes to the beat of the song."},
+     {"label": "Quiet: the beasts will hear", "arch": {"cautious": 3, "warrior": 1}, "do": [{"morale": -2, "who": "$crew_who"}], "result": "The singing stops. The work goes on in silence."}
+    ]}
+  ]
  }
 }

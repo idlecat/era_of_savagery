@@ -173,7 +173,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		var scores := {}
 		for x in c.forecast["reasons"]: scores[x["id"]] = x["score"]
 		var first: String = first_abort.get(c.id, "")
-		fcs.append({"kind": c.kind, "risk": c.forecast["risk"], "top": c.forecast["reasons"][0]["id"] if not c.forecast["reasons"].is_empty() else "",
+		fcs.append({"events": c.said.keys().filter(func(k): return str(k).begins_with("ev_") and k != "ev_t").size(), "secs": float(c.said.get("clock", 0.0)), "kind": c.kind, "risk": c.forecast["risk"], "top": c.forecast["reasons"][0]["id"] if not c.forecast["reasons"].is_empty() else "",
 			"first": first, "named": first != "" and sim.contracts.foresaw(c, first), "scores": scores})
 	r["forecasts"] = fcs
 	sim.dispose()
@@ -315,6 +315,15 @@ func _report(rows: Array, pols: Array) -> void:
 		var d: float = absf(summ["hoarder"]["min_food"] - summ["feaster"]["min_food"]) + absf(summ["hoarder"]["famine"] - summ["feaster"]["famine"]) + absf(summ["hoarder"]["near_miss"] - summ["feaster"]["near_miss"])
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
 	_calibration(rows)
+	var allc: Array = []
+	for r in rows: allc.append_array(r["forecasts"])
+	if not allc.is_empty():
+		var evn := 0.0
+		var secs := 0.0
+		for f in allc:
+			evn += f["events"]
+			secs += f["secs"]
+		print("\nContract events (A2/A3): %.1f per contract, one per %.0f s of working time" % [evn / allc.size(), secs / maxf(1.0, evn)])
 	var outs: Array = []
 	for r in rows: outs.append_array(r["forecasts"].filter(func(f): return f["kind"] == "settle"))
 	if not outs.is_empty():

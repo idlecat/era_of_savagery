@@ -112,12 +112,27 @@ Not every hiccup deserves pausing the player:
   the dilemma format is. They compose: an outcome may call `react.trigger()` (a snake
   bite → crew `aid`), so the crew visibly responds without A2 owning movement code.
 
+- **Built** (A2 with A3's events): `contract_log.json` `events` — wasps, spoiled rations,
+  strange tracks, a white raven, a spring, and the friction pair: a quarrel between two
+  rivals on the crew (`pair: rivals`) or a song between two friends (`pair: friends`).
+  Rolled in `contract_system._events()` every 30–55 s of working time (chance 0.75), once
+  each per contract; the leader picks by archetype weights per option (`arch`); outcomes
+  are `story.run()` actions (morale, hurt, give, xp, bond, devotion, remember) on new
+  people vars (`one_who`, `a_who`, `crew_who`: the new `ids:` people spec). Reported in the
+  contract log and the chronicle; nothing pauses. `contracts.happen(c, id)` is the game
+  master's verb. Not the dilemma format's `story.pose()` path (the leader decides, nobody
+  is asked, so a pose would have no one to answer it). Measured: 1.2 events per steward
+  contract (about one a minute of work), outposts still 50% interrupted.
+
 ### A3. Crew friction
 - Pairing rivals on a crew (`u.bonds < 0`) generates friction events (A2 pool), slower
   work (`work_mul` term), or a bonding arc if they survive a crisis together
   (`life.add_bond` already exists).
 - Culture/trait interactions (`devout` leader + `belligerent` helper) seed the event
   weights. Data: `config/life.json` or `contract_log.json` tables.
+- **State:** rivals nearby already slow work and friends speed it (`life.json` bonds
+  `work_bonus`), and fighting side by side builds bonds; the friction *events* landed with
+  A2 above. Trait-pair weights are not built.
 
 ## B. Winter as a planned boss fight (anticipation)
 
@@ -166,6 +181,9 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
   kills by cold alone (fires are close); that is fine while hunger and beasts do the work.
 
 ### B2. Winters differ
+- **Mostly built with B1** (the kinds, the director's pick with no easy repeats, the signs,
+  their effects on weather, cold, wolves, spoil, yields and herds, `signature` hardships).
+  The no-repeat rule weighs last winter only, not the last two years.
 - Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) as rows in
   `config/events.json`; **the director picks the kind when autumn begins** (see
   Decisions) and `hz` reads it to weight its winter weather rolls, cold and wolf

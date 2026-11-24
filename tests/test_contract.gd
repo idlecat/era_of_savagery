@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2655,6 +2655,51 @@ func test_opening() -> void:
 	sim.check_events()
 	check(sim.pending_event == "", "the fever is posed only once")
 	sim.dispose()
+
+func test_contract_events() -> void:
+	print("\n== Small happenings the leader settles (make_it_fun A2/A3) ==")
+	var sim = _new_sim()
+	var CS = sim.contracts
+	var u = CS.available_helpers()[0]
+	var c = CS.seal(u, "settle", "Found a settlement", {"crew_size": 4})["contract"]
+	c.status = "executing"
+	c.progress = 0.5
+	var food: float = sim.stock["food"]
+	var line: String = CS.happen(c, "rations")
+	check(line != "" and c.events[0].ends_with(line) and sim.log_lines.any(func(l): return l["text"].contains(line)), "an event happens and the leader's choice is told (%s)" % line)
+	check(sim.stock["food"] < food or CS.crew(c).any(func(o): return o.morale < 100.0), "and it costs something")
+	check(CS.happen(c, "rations") == "", "each event once per contract")
+	check(not sim.paused, "nothing pauses")
+	# friction: only between rivals on the crew
+	var cr: Array = CS.crew(c)
+	var quarrel: Dictionary = CS.LOG["events"]["list"].filter(func(e): return e["id"] == "quarrel")[0]
+	for a in cr:
+		for b in cr: if a != b: sim.life.set_bond(a, b, 0.0)
+	check(CS.event_vars(c, quarrel).is_empty(), "no rivals on the crew, no quarrel")
+	sim.life.set_bond(cr[0], cr[1], -50.0)
+	sim.life.set_bond(cr[1], cr[0], -50.0)
+	var v: Dictionary = CS.event_vars(c, quarrel)
+	check(not v.is_empty() and v["a"] in [tr(cr[0].name), tr(cr[1].name)], "two rivals on the crew can quarrel (%s, %s)" % [v.get("a", ""), v.get("b", "")])
+	check(CS.happen(c, "quarrel").contains(tr(cr[0].name)), "and the leader settles it")
+	check(sim.story.people("ids:%d,%d" % [cr[0].id, cr[1].id]).size() == 2, "the ids: people spec")
+	# the leader's temper weighs the choice
+	var wasps: Dictionary = CS.LOG["events"]["list"].filter(func(e): return e["id"] == "wasps")[0]
+	var through: String = sim.story.text(wasps["options"][1]["result"], {"one": "X"}).left(6)
+	var bold := 0
+	var ld = CS.leader(c)
+	ld.traits[0] = "belligerent"
+	for i in 40:
+		c.said.erase("ev_wasps")
+		if CS.happen(c, "wasps").contains(tr(wasps["options"][1]["label"])): bold += 1
+	check(bold >= 22, "a warrior leader mostly works through the wasps (%d of 40)" % bold)
+	# the roll
+	var had := func(): return c.said.keys().filter(func(k): return str(k).begins_with("ev_") and k != "ev_t").size()
+	var n: int = had.call()
+	for i in 30:
+		c.said["ev_t"] = 0.0
+		CS._events(c, 1.0)
+	check(had.call() > n, "events come on their own as the work goes on")
+	check(sim.check_invariants().is_empty(), "invariants hold")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

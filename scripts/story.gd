@@ -192,12 +192,18 @@ func text(v, vars: Dictionary = {}) -> String:
 	return tr(str(v))
 
 ## The people an action is for: "all" (grown-ups), "best:<skill>", "fighters:<n>" (the
-## n hardest hitters at home), "name:<name>", "id:<n>" (one person, a child too), or
+## n hardest hitters at home), "name:<name>", "id:<n>" (one person, a child too), "ids:<n,n..>", or
 ## "$<var>": the value of a var of the moment (e.g. a dilemma's "who").
 func people(who: String, vars: Dictionary = {}) -> Array:
 	if who.begins_with("$"):
 		who = str(vars.get(who.substr(1), ""))
 		if who == "": return [] # (an unknown var is nobody, never everyone)
+	if who.begins_with("ids:"): # (several people by id: "ids:3,7,9")
+		var many: Array = []
+		for s in who.substr(4).split(",", false):
+			var o = sim.unit_by_id(int(s))
+			if o != null and not o.dead: many.append(o)
+		return many
 	if who.begins_with("name:") or who.begins_with("id:"):
 		var one = sim.unit_by_name(who.substr(5)) if who.begins_with("name:") else sim.unit_by_id(int(who.substr(3)))
 		return [one] if one != null and not one.dead else []

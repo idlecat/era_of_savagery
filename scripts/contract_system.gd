@@ -5,6 +5,7 @@ extends RefCounted
 
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
+const Config = preload("res://scripts/config.gd")
 
 const SLOTS := [Vector2(-48, -42), Vector2(48, -42), Vector2(-48, 42), Vector2(48, 42), Vector2(0, -72),
 	Vector2(0, 72), Vector2(-78, 0), Vector2(78, 0), Vector2(-30, -20), Vector2(30, 20)]
@@ -857,6 +858,92 @@ func on_landmark(lm: Dictionary) -> void:
 		if is_running(c) and crew(c).any(func(u): return u.pos.distance_to(lm["pos"]) < 700.0):
 			field_say(c, "landmark", tr(lm["name"]), false, true)
 
+# ------------------------------------------------------------ small happenings the leader settles (make_it_fun A2/A3)
+## Now and then (contract_log.json "events": every_secs of working time, with chance) one
+## event whose conditions hold happens to an executing contract, once per contract each.
+## The leader picks an option by temperament (an option's "arch" weights, else 1), its
+## actions run through story.run(), and nothing pauses: the choice is reported in the
+## contract log and the chronicle.
+func _events(c: E.Contract, dt: float) -> void:
+	var EV: Dictionary = LOG["events"]
+	c.said["ev_t"] = float(c.said.get("ev_t", Config.rand_in(EV["every_secs"]))) - dt
+	if float(c.said["ev_t"]) > 0.0: return
+	c.said["ev_t"] = Config.rand_in(EV["every_secs"])
+	if randf() >= float(EV["chance"]): return
+	var pool: Array = []
+	var total := 0.0
+	for ev in EV["list"]:
+		if c.said.has("ev_" + str(ev["id"])) or event_vars(c, ev).is_empty(): continue
+		pool.append(ev)
+		total += float(ev.get("weight", 1.0))
+	var roll := randf() * total
+	for ev in pool:
+		roll -= float(ev.get("weight", 1.0))
+		if roll <= 0.0:
+			happen(c, str(ev["id"]))
+			return
+
+## The named values of an event for this contract, or {} if it can't happen now: its "when"
+## (kinds, progress [min, max], cond: story conditions) and "pair" ("rivals" / "friends": two
+## of the crew bonded that way, a and b). Vars: plan, leader, one (someone of the crew, not
+## the leader if possible), a, b, and *_who people specs for actions (crew_who: all of them).
+func event_vars(c: E.Contract, ev: Dictionary) -> Dictionary:
+	var w: Dictionary = ev.get("when", {}) if ev.get("when") is Dictionary else {}
+	if w.has("kinds") and not c.kind in w["kinds"]: return {}
+	if w.has("progress") and (c.progress < float(w["progress"][0]) or c.progress > float(w["progress"][1])): return {}
+	if w.has("cond") and not sim.story.holds(w["cond"]): return {}
+	var cr := crew(c)
+	var ld := leader(c)
+	if cr.is_empty() or ld == null: return {}
+	var others: Array = cr.filter(func(u): return u != ld)
+	var one: E.Unit = others.pick_random() if not others.is_empty() else ld
+	var v := {"plan": c.plan.get("plan_id", ""), "leader": tr(ld.name), "leader_who": "id:%d" % ld.id, "one": tr(one.name), "one_who": "id:%d" % one.id,
+		"crew_who": "ids:" + ",".join(cr.map(func(u): return str(u.id)))}
+	var pair := str(ev.get("pair", ""))
+	if pair != "":
+		var bc: Dictionary = sim.life.C["bonds"]
+		var found := false
+		for i in cr.size():
+			for j in range(i + 1, cr.size()):
+				var b: float = sim.life.bond(cr[i], cr[j])
+				if (pair == "rivals" and b <= float(bc["rival_at"])) or (pair == "friends" and b >= float(bc["friend_at"])):
+					v.merge({"a": tr(cr[i].name), "a_who": "id:%d" % cr[i].id, "b": tr(cr[j].name), "b_who": "id:%d" % cr[j].id})
+					found = true
+					break
+			if found: break
+		if not found: return {}
+	return v
+
+## An event happens to a contract now (a game master's verb too): the leader chooses, the
+## outcome runs. Returns the line written to the chronicle ("" if it can't happen).
+func happen(c: E.Contract, id: String) -> String:
+	if c == null or not is_running(c) or c.said.has("ev_" + id): return ""
+	var ev: Dictionary = {}
+	for e in LOG["events"]["list"]:
+		if str(e["id"]) == id: ev = e
+	var v := event_vars(c, ev) if not ev.is_empty() else {}
+	if v.is_empty(): return ""
+	c.said["ev_" + id] = true
+	var ld := leader(c)
+	var arch: String = sim.arch(ld)
+	var opts: Array = ev.get("options", [])
+	var total := 0.0
+	for o in opts: total += float(o.get("arch", {}).get(arch, 1.0))
+	var roll := randf() * total
+	var pick: Dictionary = opts[-1] if not opts.is_empty() else {}
+	for o in opts:
+		roll -= float(o.get("arch", {}).get(arch, 1.0))
+		if roll <= 0.0:
+			pick = o
+			break
+	if pick.is_empty(): return ""
+	sim.story.run(pick.get("do", []), c, v)
+	var what: String = sim.story.text(ev["text"], v)
+	var line: String = tr("%s %s decides: %s. %s") % [what, tr(ld.name), sim.story.text(pick["label"], v), sim.story.text(pick.get("result", ""), v)]
+	_clog(c, line)
+	sim.add_log("'%s': %s" % [c.plan.get("plan_id", ""), line], "contract", crew(c))
+	return line
+
 func crew(c: E.Contract, include_resting := false) -> Array:
 	var out: Array = []
 	for id in c.crew_ids + c.reinforcement_ids:
@@ -900,6 +987,7 @@ func update(dt: float) -> void:
 				_run_step(c, dt)
 				c.progress = _progress(c) # (a scenario may script an ambush at some progress: story.gd)
 				if c.status == "executing": _field_log(c, dt)
+				if c.status == "executing": _events(c, dt)
 			"defending":
 				c.flags["fight_t"] = sim.time # (the fight goes on: wounds in it are the leader's to judge)
 				_defend(c, dt)
