@@ -129,6 +129,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		if how == "invented":
 			sim.remember(inventor, tr("invented %s on Day %d") % [tr(t["name"]), sim.day()], 8)
 			sim.gain_xp(inventor, "lore", 12)
+			sim.ranks.deed(inventor, "invent")
 			sim.add_log(tr("Breakthrough! %s discovered %s: %s") % [tr(inventor.name), tr(t["name"]), tr(t["desc"])], "tech", [inventor])
 			sim.popup(inventor.pos + Vector2(0, -50), tr("Breakthrough: ") + tr(t["name"]), Color("#c8a8ff"), true)
 		else:
@@ -144,6 +145,7 @@ func breakthrough(id: String, inventor: E.Unit, how := "invented") -> void:
 		sim.add_log(tr("A new age dawns: the %s.") % tr(D.ERA_NAMES[e]), "story")
 		sim.inv.feat("era", tr("Entered the %s") % tr(D.ERA_NAMES[e]), null,
 			{"desc": tr("What the tribe has learned has carried it into a new age. New buildings, new wisdom and new choices lie ahead.")})
+		if inventor and how == "invented": sim.ranks.deed(inventor, "open_era")
 	# ideas that were waiting on this prerequisite
 	for o in D.TECHS:
 		if not sim.has_tech(o["id"]) and prereqs_met(o["id"]) and insight[o["id"]] >= o["cost"] - 0.01:

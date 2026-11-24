@@ -1,0 +1,36 @@
+{
+ "_doc": "Ranks earned by deeds (ranks.gd, docs/make_it_fun.md H). Routine XP (sim.gain_xp) raises a skill only up to routine_cap; past it each band of levels is a rank, in `bands` order: a rank holds the levels above the previous cap up to its own `cap_lv`, so the rank is read from the level (ranks.rank_of). When a skill's XP is full at the top of a band, its next rank's trial is open: the person needs the deeds in `trial` (any one of them, {deed: count}; counts come from the deed record u.deeds) to step into the next band, and the XP that was waiting carries them there. Deeds: slay_<beast kind> (wolf, tiger), slay_warrior, masterpiece, lead_build (led a frontier outpost to completion), invent (made a breakthrough), open_era (a breakthrough that opened a new age), repel_raid (in a defence that drove off a war band), win_war (led a war party home), seal_deal (sealed an agreement with a clan), seal_alliance (an alliance), taught_<skill> (someone who once worked under them earned their own first rank in that skill; who worked under whom is u.mentors, filled by contracts). Per skill and rank: title (what they are called), desc (the trial, as the sheet shows it). first_feat: the tribe's first of each rank is an achievement. log, popup, remember: texts of a rank-up (vars: who, title).",
+ "routine_cap": 4,
+ "bands": [
+  {"id": "proven", "cap_lv": 7},
+  {"id": "master", "cap_lv": 10}
+ ],
+ "skills": {
+  "forage": {
+   "proven": {"title": "Wolf-Hunter", "desc": "Bring down a wolf or a saber-tooth", "trial": {"slay_wolf": 1, "slay_tiger": 1}},
+   "master": {"title": "Master of the Hunt", "desc": "Bring down a saber-tooth tiger", "trial": {"slay_tiger": 1}}
+  },
+  "craft": {
+   "proven": {"title": "Builder", "desc": "Lead the building of an outpost, or make a masterpiece", "trial": {"lead_build": 1, "masterpiece": 1}},
+   "master": {"title": "Master Builder", "desc": "Teach: someone who worked under them proves themselves a Builder", "trial": {"taught_craft": 1}}
+  },
+  "combat": {
+   "proven": {"title": "Blooded Warrior", "desc": "Stand in a defence that drives off a war band", "trial": {"repel_raid": 1}},
+   "master": {"title": "War Leader", "desc": "Lead a war party home in victory", "trial": {"win_war": 1}}
+  },
+  "lore": {
+   "proven": {"title": "Seer", "desc": "Make a breakthrough", "trial": {"invent": 1}},
+   "master": {"title": "Keeper of Wisdom", "desc": "Make the breakthrough that opens a new age", "trial": {"open_era": 1}}
+  },
+  "trade": {
+   "proven": {"title": "Silver Tongue", "desc": "Seal an agreement with a clan", "trial": {"seal_deal": 1}},
+   "master": {"title": "Peacemaker", "desc": "Bring a clan into an alliance", "trial": {"seal_alliance": 1}}
+  }
+ },
+ "first_feat": true,
+ "log": "%s has proven themselves: now a %s!",
+ "popup": "RANK! %s",
+ "remember": "became a %s on Day %d",
+ "ready_log": "%s is ready for a trial: %s.",
+ "taught_log": "%s once learned under %s: the teacher's mark is on them."
+}

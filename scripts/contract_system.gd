@@ -1087,7 +1087,9 @@ func _complete(c: E.Contract) -> void:
 			sim.remember(u, (tr("led the founding of '%s' on the frontier on Day %d (%s)") if lead else tr("helped the founding of '%s' on the frontier on Day %d (%s)")) % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
 			sim.gain_xp(u, "craft", 10)
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
+			else: sim.ranks.learned_under(u, ld, "craft")
 			u.home = c.site
+	sim.ranks.deed(ld, "lead_build")
 	_disband(c)
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
 	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % settlement_label(c), ld,
@@ -1103,7 +1105,9 @@ func _complete_war(c: E.Contract) -> void:
 		var lead: bool = u == ld
 		sim.remember(u, (tr("led the war party against the %s on Day %d (%s)") if lead else tr("fought in the war party against the %s on Day %d (%s)")) % [cname, sim.day(), spoils], 9 if lead else 7)
 		sim.gain_xp(u, "combat", 15 if lead else 10)
+		if not lead: sim.ranks.learned_under(u, ld, "combat")
 	_disband(c)
+	sim.ranks.deed(ld, "win_war")
 	sim.popup(D.VILLAGE + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
 	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [c.plan["plan_id"], cname, spoils], "contract")
 	sim.contract_finished.emit(c)

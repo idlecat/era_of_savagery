@@ -56,7 +56,8 @@ class Unit:
 	var watch_id: int = -1 # the grown-up a child is watching
 	var ox: bool = false # leads one of the tribe's pack oxen while gathering (+50% load)
 	var kills: int = 0
-	var unlocked: Dictionary = {}
+	var deeds: Dictionary = {} # deed -> count: the record rank trials are checked against (ranks.gd)
+	var mentors: Dictionary = {} # skill -> ids of the leaders they worked under (ranks.learned_under)
 	var resume_job: Dictionary = {}
 	var resume_key: String = ""
 	var resume_t: float = 0.0

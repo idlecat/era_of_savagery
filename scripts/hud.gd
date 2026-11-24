@@ -870,7 +870,7 @@ func _build_ability_table() -> void:
 		for col in SORT_COLS:
 			var val: int = sim.unit_level(u) if col[0] == "lv" else u.lv(col[0])
 			var c := COL_ACCENT if col[0] == sort_key else Color("#d8ccb0")
-			if col[0] != "lv" and val >= sim.UNLOCK_LV: c = Color("#7ff0ff") # mastery unlocked
+			if col[0] != "lv" and sim.ranks.rank(u, col[0]) != "": c = Color("#ffd36b") if sim.ranks.rank(u, col[0]) == sim.ranks.rank_ids()[-1] else Color("#7ff0ff") # holds a rank
 			var l := _label(str(val), 15, c)
 			l.custom_minimum_size = Vector2(COL_W, 0)
 			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -975,8 +975,15 @@ func _refresh_left_content() -> void:
 		var sk: Dictionary = u.skills[k]
 		var need: float = sim.xp_need(sk["lv"])
 		var bars := int(10.0 * sk["xp"] / need) if sk["lv"] < sim.MAX_LV else 10
-		var unlock: String = (tr(" [color=#7ff0ff][%s][/color]") % tr(D.SKILL_UNLOCKS[k])) if sk["lv"] >= sim.UNLOCK_LV else ""
+		var rt: String = sim.ranks.title(u, k)
+		var unlock: String = (tr(" [color=#7ff0ff][%s][/color]") % tr(rt)) if rt != "" else ""
 		s += tr("%s  Lv.%d%s\n[bgcolor=#6fb04f]%s[/bgcolor][bgcolor=#3a3226]%s[/bgcolor] [color=#8a7a60]%d/%d xp[/color]\n") % [tr(D.SKILL_NAMES[k]), sk["lv"], unlock, " ".repeat(bars * 3), " ".repeat((10 - bars) * 3), sk["xp"], need]
+		var nr: String = sim.ranks.next_rank(u, k)
+		if nr != "" and sk["lv"] >= sim.ranks.cap(u, k) - 1:
+			var nd: Dictionary = sim.ranks.def(k, nr)
+			var pg: Dictionary = sim.ranks.trial_progress(u, k)
+			var col_t: String = "#ffd36b" if sim.ranks.trial_open(u, k) else "#8a7a60"
+			s += tr("[color=%s]Next rank: %s - %s (%d/%d)[/color]\n") % [col_t, tr(nd.get("title", nr)), tr(nd.get("desc", "")).to_lower(), pg["done"], pg["need"]]
 	s += tr("\n[color=#ffd36b]MEMORY ARCHIVE[/color] [color=#8a7a60](10 most impactful)[/color]\n")
 	var mem: Array = u.memory.duplicate()
 	mem.sort_custom(func(a, b): return a["day"] > b["day"])
@@ -2399,7 +2406,7 @@ func _open_legacy() -> void:
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "outpost": ["Outpost", "#b6f28a"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"],
 	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)
@@ -2444,7 +2451,7 @@ func open_achievements() -> void:
 ## up and wait while any other dialog (an event, a negotiation) is open.
 const SETTINGS_CFG := "user://settings.cfg"
 const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
-	"era": "☀", "masterpiece": "✿", "outpost": "⌂", "story": "☼", "tale": "❦", "hero": "★"}
+	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "story": "☼", "tale": "❦", "hero": "★"}
 
 func _feat_pref() -> bool:
 	var cf := ConfigFile.new()

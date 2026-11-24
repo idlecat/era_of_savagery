@@ -417,13 +417,6 @@ const SKILL_NAMES := {
 	"lore": "Shamanism & Lore",
 	"trade": "Trade & Barter",
 }
-const SKILL_UNLOCKS := {
-	"forage": "Beast Taming",
-	"craft": "Megalithic & Bronze Craft",
-	"combat": "Centurion Aura",
-	"lore": "Totem Miracles",
-	"trade": "Silver Tongue",
-}
 
 # Natural finds: foods, medicines and ores scattered over the map. Each kind is unknown (and
 # can't be gathered) until a villager who can recognise it comes near one.

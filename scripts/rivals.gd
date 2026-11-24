@@ -600,6 +600,8 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 	sim.remember(envoy, tr("sealed an agreement with the %s on Day %d: %s") % [tr(c["name"]), sim.day(), what], 7)
 	sim.gain_xp(envoy, "lore", 12)
 	sim.gain_xp(envoy, "trade", 6) # striking a bargain
+	sim.ranks.deed(envoy, "seal_deal")
+	if t["treaty"] == "alliance": sim.ranks.deed(envoy, "seal_alliance")
 	sim.alert(tr("Agreement with the %s: %s.") % [tr(c["name"]), what], c["pos"], "info")
 	return what
 

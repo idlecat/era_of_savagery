@@ -112,6 +112,7 @@ func end(outcome := "handed") -> void:
 	sim.add_log(sim.tr(str(C.get("end_log", "%s"))) % how, "danger")
 	var what: String = sim.tr(str(C.get("happened", {}).get(cur["kind"], "")))
 	for u in people():
+		if outcome == "won" and cur["kind"] == "warrior": sim.ranks.deed(u, "repel_raid") # (they held when the war band broke)
 		if C.has("remember"): sim.remember(u, sim.tr(str(C["remember"])) % [what, sim.day()], int(C.get("impact", 4)))
 		if u.job.get("crisis", false) or u.job.get("type", "") in ["shelter"]: sim.end_errand(u)
 	var done := cur.duplicate()

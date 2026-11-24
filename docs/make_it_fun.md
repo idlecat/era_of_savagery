@@ -228,6 +228,22 @@ those knobs, not new mechanics:
 
 ## H. Ranks earned by deeds (attachment, accomplishment)
 
+> **Status (first slice landed):** `config/ranks.json` + `ranks.gd` (`sim.ranks`). A rank
+> is a band of levels (Proven 5–7, Master 8–10), so it is read from the level and old
+> saves, heroes and culture-pack people starting above Lv 4 simply hold their rank.
+> Routine XP stops full at the top of a band; the trial's deed (`u.deeds`, recorded by
+> `ranks.deed()`) steps them in. Deeds done before the trial opens count. Trials as
+> built: kills are credited to the killer (not yet "lead a hunt"); the craft Proven trial
+> is "lead an outpost to completion, or a masterpiece" (no longhouse, which fixes the
+> loop with the upgrade gate); lore Proven is any breakthrough (heal near death not
+> yet); combat Proven is being in an emergency that ends with a war band driven off.
+> Craft and combat Masters teach through `u.mentors` (contract crews). The Centurion
+> Aura and the master trader read a rank; `D.SKILL_UNLOCKS` is gone; level-ups are a
+> small popup only; rank-ups log, remember, and the tribe's first of each is a feat.
+> `ranks.grant()` and `ranks.summary()` for a game master. **Not yet:** H3's other gates
+> (taming, ox cap, the craft gate, oral loss, War Chief, treaty days), H2's fire-side
+> initiation and sprite mark, trials set up through contracts with the A0 forecast.
+
 Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from
 `D.SKILL_UNLOCKS`), but reaching a level is neither an accomplishment nor a challenge:
 - **Time = level.** Of ~40 XP sources most are per-second trickles of ordinary work

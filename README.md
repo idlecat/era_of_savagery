@@ -69,7 +69,7 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 | Tier 2 Task Contract: LLM negotiation → JSON blueprint → deterministic executor → abort conditions → emergency awakening → resume | `contract_system.gd`, `llm_client.gd`, `hud.gd` |
 | Personality-driven proposals (Panshi cautious, Alie belligerent, Linghe mystic, …) | `persona_engine.gd` (offline) / prompts in `llm_client.gd` |
 | Blueprint sanitizing (clamps, whitelists, aliases, untrusted-JSON extraction) | `contract_system.gd::sanitize` |
-| XP in 4 specializations, Lv5 unlocks, floating +EXP, Memory Archive (top 10 by impact) fed back into prompts | `sim.gd` |
+| XP in 5 specializations; routine work stops at Lv4, past it ranks earned by deeds (Proven Lv5-7, Master Lv8-10: a trial such as slaying a wolf, sealing a treaty or teaching a pupil; `config/ranks.json`, `ranks.gd`), floating +EXP, Memory Archive (top 10 by impact) fed back into prompts | `sim.gd` |
 | Tribal Wisdom Tree (9 techs, 3 eras) with real stat effects | `data.gd`, `sim.gd::research` |
 | Events: Great Flood, Overpopulation (→ contract or raid), Birth of the Chosen One | `sim.gd::event_def/resolve_event` |
 | Tier 3 Vice-Chieftains: Steward (policy-driven auto-assign, lays out improvements), War Chief (needs Tribal Code) | `sim.gd::_update_vice`, `improve.gd` |
@@ -159,7 +159,7 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
 - **Trade trips:** "Trade with <clan>…" sends someone with 5–10 goods, 20 food, 20 wood, 15 stone or 5 herbs to that clan's village.
   - They come back with the clan's own produce. Goods are worth 6 food each, the clan pays 1.5× for what it wants, and friendlier clans pay more (×0.85 Wary up to ×1.3 for vassals).
   - Each trip improves relations and sometimes teaches a little of their wisdom. Hostile clans won't trade, and a clan that turns hostile mid-trip robs the trader.
-  - **Trade & Barter skill:** each trip gives the trader Trade & Barter XP (+12) and a little Combat & Leadership (+3); envoys who seal an agreement also gain some. Every Trade level gets +6% more in return, and a master (Lv5, *Silver Tongue*) another +10%. The trader picker lists the best traders first, with what each would bring home. When a clan caravan visits, the best trader at home bargains: the offers improve the same way and that person gains XP.
+  - **Trade & Barter skill:** each trip gives the trader Trade & Barter XP (+12) and a little Combat & Leadership (+3); envoys who seal an agreement also gain some. Every Trade level gets +6% more in return, and a Proven trader (*Silver Tongue*: sealed an agreement with a clan) another +10%. The trader picker lists the best traders first, with what each would bring home. When a clan caravan visits, the best trader at home bargains: the offers improve the same way and that person gains XP.
   - Visiting clan traders now also offer to buy 3 goods.
 
 ## Distance and settlements

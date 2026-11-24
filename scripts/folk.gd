@@ -228,6 +228,7 @@ func _masterpiece(u: E.Unit, kind: String) -> void:
 		{"desc": tr("A treasure of the tribe, made by %s. The whole tribe comes to see it, and its mood rises.") % tr(u.name)})
 	sim.alert(tr("%s has made a masterpiece: the %s! The whole tribe comes to see it.") % [tr(u.name), tr(what)], u.pos, "info", [u])
 	sim.life.praise(u, "masterpiece")
+	sim.ranks.deed(u, "masterpiece")
 	sim.react.trigger("masterpiece", {"at": u.pos})
 
 # ------------------------------------------------------------ festivals
@@ -287,12 +288,12 @@ func rate(id: String) -> float:
 	return float(F["trade"]["stance_rate"].get(sim.rivals.stance(id), F["trade"]["other_rate"]))
 
 ## How much better a deal this person strikes: +6% per Trade & Barter level, and the
-## Silver Tongue of a master (Lv5) adds another 10%.
+## Silver Tongue of a trader of rank `master_rank` (ranks.gd) adds another 10%.
 func haggle(u: E.Unit) -> float:
 	if u == null: return 1.0
 	var lv: int = u.lv("trade")
 	var ct: Dictionary = F["trade"]
-	return 1.0 + float(ct["haggle_per_lv"]) * lv + (float(ct["master"]) if lv >= int(ct["master_lv"]) else 0.0)
+	return 1.0 + float(ct["haggle_per_lv"]) * lv + (float(ct["master"]) if sim.ranks.has(u, "trade", ct["master_rank"]) else 0.0)
 
 ## What a clan would give for `amt` of `res`: {their resource: amount}.
 ## `trader`: who bargains for us (a skilled trader gets more, see haggle()).

@@ -11,6 +11,7 @@ const Legacy = preload("res://scripts/legacy.gd")
 const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
+const Ranks = preload("res://scripts/ranks.gd")
 const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
@@ -96,6 +97,7 @@ var evo: Evolution
 var hz: Hazards
 var nat: Nature
 var folk: Folk
+var ranks: Ranks # ranks earned by deeds: trials gate the levels past routine work (ranks.gd)
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
 var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
@@ -124,6 +126,7 @@ func _init() -> void:
 	nat = Nature.new(self)
 	folk = Folk.new(self)
 	improve = Improve.new(self)
+	ranks = Ranks.new(self)
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
 	director = Director.new(self)
@@ -532,7 +535,7 @@ func unit_def(u: E.Unit) -> float:
 	d += crisis.def_bonus(u) # (rallied together)
 	var aura: Dictionary = SKILL_RULES["aura"]
 	for o in units: # Centurion Aura
-		if not o.dead and o != u and o.lv("combat") >= int(aura["lv"]) and o.pos.distance_to(u.pos) < float(aura["radius"]):
+		if not o.dead and o != u and ranks.has(o, "combat", aura["rank"]) and o.pos.distance_to(u.pos) < float(aura["radius"]):
 			d *= float(aura["def_mult"])
 			break
 	return d
@@ -564,31 +567,30 @@ var WALK_HUNGER: float = float(RULES["survival"]["walk_hunger"])
 # ------------------------------------------------------------------ XP & memory
 ## Skill levels and XP (rules.json "skills").
 var SKILL_RULES: Dictionary = RULES["skills"]
-## The highest skill level, and the level at which a skill's mastery unlocks.
+## The highest skill level (the levels past routine work are ranks: ranks.gd).
 var MAX_LV: int = int(SKILL_RULES["max_lv"])
-var UNLOCK_LV: int = int(SKILL_RULES["unlock_lv"])
 
 ## The XP it takes to go from level `lv` to the next.
 func xp_need(lv: int) -> float: return float(SKILL_RULES["xp_base"]) + lv * float(SKILL_RULES["xp_per_lv"])
 
+## Routine XP: levels rise to the top of the person's rank band (ranks.cap) and then wait,
+## full, for the next rank's trial. Plain level-ups are quiet: a small popup, no log line.
 func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 	var s: Dictionary = u.skills[skill]
-	if s["lv"] >= MAX_LV or u.dead: return
+	var top := ranks.cap(u, skill)
+	if s["lv"] >= MAX_LV or u.dead or (s["lv"] >= top and s["xp"] >= xp_need(s["lv"])): return
 	var trads: Dictionary = SKILL_RULES["tradition_xp"]
 	for t in trads:
 		if trads[t].has(skill) and evo.has_trad(t): amt *= float(trads[t][skill])
 	s["xp"] += amt
 	u.xp_acc += amt
-	while s["lv"] < MAX_LV and s["xp"] >= xp_need(s["lv"]):
+	while s["lv"] < top and s["xp"] >= xp_need(s["lv"]):
 		s["xp"] -= xp_need(s["lv"])
 		s["lv"] += 1
-		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"), true)
-		add_log(tr("%s reached %s Lv.%d.") % [tr(u.name), tr(D.SKILL_NAMES[skill]), s["lv"]], "xp", [u])
-		life.praise(u, "level_up")
-		if s["lv"] == UNLOCK_LV and not u.unlocked.has(skill):
-			u.unlocked[skill] = true
-			remember(u, tr("mastered %s and unlocked [%s]") % [tr(D.SKILL_NAMES[skill]).to_lower(), tr(D.SKILL_UNLOCKS[skill])], 7)
-			add_log(tr("%s unlocked [%s]!") % [tr(u.name), tr(D.SKILL_UNLOCKS[skill])], "story", [u])
+		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"))
+	if s["lv"] >= top and s["lv"] < MAX_LV and s["xp"] >= xp_need(s["lv"]):
+		s["xp"] = xp_need(s["lv"]) # full: the next rank takes a trial
+		ranks.on_full(u, skill)
 
 ## Memory stream: keep the ~10 most impactful events.
 func remember(u: E.Unit, text: String, impact: int) -> void:
@@ -1702,6 +1704,7 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 		if u:
 			u.kills += 1
 			gain_xp(u, "combat", 18)
+			ranks.deed(u, "slay_" + ("warrior" if p.clan != "" else p.kind))
 			if p.clan != "": # a person, not a beast
 				remember(u, tr("struck down a %s on Day %d") % [tr(p.name), day()], 8)
 				add_log(tr("%s struck down a %s!") % [tr(u.name), tr(p.name)], "combat", [u])

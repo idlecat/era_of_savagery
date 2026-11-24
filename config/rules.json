@@ -45,13 +45,12 @@
   "flee_below": 0.22
  },
  "skills": {
-  "_doc": "Skill levels (sim.gain_xp): the XP a level takes is xp_base + xp_per_lv x the level; levels stop at max_lv; at unlock_lv a skill's mastery unlocks (D.SKILL_UNLOCKS). tradition_xp: XP multipliers per skill while the tribe keeps a tradition. aura: the Centurion Aura, from someone at combat aura.lv or more: people within radius get their DEF times def_mult.",
+  "_doc": "Skill levels (sim.gain_xp): the XP a level takes is xp_base + xp_per_lv x the level; levels stop at max_lv (past routine work they come in ranks earned by trials: config/ranks.json). tradition_xp: XP multipliers per skill while the tribe keeps a tradition. aura: the Centurion Aura, from someone holding combat rank aura.rank or higher: people within radius get their DEF times def_mult.",
   "xp_base": 25,
   "xp_per_lv": 20,
   "max_lv": 10,
-  "unlock_lv": 5,
   "tradition_xp": {"warrior_initiation": {"combat": 1.25}},
-  "aura": {"lv": 5, "radius": 110, "def_mult": 1.2}
+  "aura": {"rank": "proven", "radius": 110, "def_mult": 1.2}
  },
  "births": {
   "every": 45,
@@ -200,7 +199,7 @@
    },
    "other_rate": 0.85,
    "haggle_per_lv": 0.06,
-   "master_lv": 5,
+   "master_rank": "proven",
    "master": 0.1
   }
  },
