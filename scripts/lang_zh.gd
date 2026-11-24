@@ -2570,4 +2570,11 @@ const STRINGS := {
 	"The work goes to the beat of the song.": "干活跟着歌的节拍走。",
 	"Quiet: the beasts will hear": "安静：野兽会听见的",
 	"The singing stops. The work goes on in silence.": "歌声停了。活在沉默中继续。",
+	"Lookout Tower": "瞭望塔",
+	"Sees far over the land, and calls out war bands and wolf packs as soon as they come into sight. Built by a ford, it sees raiders long before they reach the village; alone out there, it is the first thing they find.": "能望得很远，一看见战团或狼群就会高声示警。建在浅滩旁，能在袭击者到达村子之前很久就发现他们；但它孤零零立在那里，也会是他们最先找上的东西。",
+	"The lookout tower sees a war band of the %s on the march!": "瞭望塔发现%s的战团正在行进！",
+	"The lookout tower sees a wolf pack on the prowl.": "瞭望塔发现一群狼在游荡。",
+	"Smokehouse": "熏房",
+	"Racks over a slow fire: stored food rots at 60% of the speed (one is enough). Worth the most if it stands before the winter.": "文火上架着熏架：储存的食物腐坏速度降为60%（一座就够了）。冬天到来之前建好最划算。",
+	"winter is coming, and the stores must keep.": "冬天要来了，存粮得放得住。",
 }

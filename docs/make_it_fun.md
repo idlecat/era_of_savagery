@@ -599,6 +599,17 @@ already the player's choice in a crisis) and the **Workshop** (teaching reads th
 contract crews, H1; "near the stone and wood shortens every job" is the walk-to
 factor, free). Seven candidates stand; Era 2 keeps the longhouse and the temple.
 
+- **First slice built: the two Era-1 candidates.** *Lookout Tower* (`structures.json`:
+  `sight` 560, `lookout`): reveals the land far round it (what it sees feeds the A0
+  forecast through the fog) and calls out a war band or a wolf pack the moment it comes
+  into sight (`sim._lookouts()`, once per band; `spots` texts). *Smokehouse* (`tech` fire,
+  `effects` spoil x0.6 through the new `sim.struct_mul()`: the effect-stat format on a
+  building, one per type counts): the Steward lays one out in autumn; it only pays if it
+  stands before the frost. Both have baked models (`art_baker` `_tower`, `_smokehouse`,
+  `ART_VERSION` 21) and hand-drawn fallbacks. Not yet: the tower feeding the forecast
+  directly (beyond the fog), the longhouse and temple upgrades, site factors (I2), the
+  village's name (I5).
+
 ### I5. The village grows a name
 - Camp → village → town by what's been built (a rule over `sim.structures`, config),
   each step an `inv.feat()` moment with a snapshot, and the clans' parley texts change

@@ -1521,7 +1521,7 @@ func _draw_ground_part(s) -> void:
 const SITE_SHAPES := {
 	"hut": ["round", 20], "large_hut": ["round", 26], "granary": ["round", 20], "smelter": ["round", 14],
 	"council_ring": ["round", 26], "totem_shrine": ["round", 14], "grand_altar": ["rect", 26],
-	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14],
+	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14], "lookout_tower": ["round", 14], "smokehouse": ["round", 18],
 }
 func _draw_site_stage(s, b: Vector2) -> bool:
 	if not SITE_SHAPES.has(s.type): return false
@@ -1555,13 +1555,14 @@ func _draw_structure(s) -> void:
 			var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
 			ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
 			return
-	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen"]:
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse"]:
 		if spr_shadow.call(s.type + _snowy(), float(sim.struct_r(s))):
 			if _sprite(s.type + _snowy(), b):
 				if s.decor > 0: _decor(s, b, 18.0)
 				match s.type:
 					"smelter": _smoke(b - Vector2(-4, 36), s.id)
 					"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
+					"smokehouse": _smoke(iso(s.pos + Vector2(-7, -2)) - Vector2(0, 24), s.id)
 			_era_dressing(s, b) # the tribe's growing pride shows at the great places
 			return
 	match s.type:
@@ -1639,6 +1640,20 @@ func _draw_structure(s) -> void:
 				var q := b + Vector2(cos(i * TAU / 6) * 12, sin(i * TAU / 6) * 6)
 				ci.draw_circle(q, 3, Color(0.6, 0.58, 0.52, a))
 			_totem(b, 44, 1.0, a)
+		"lookout_tower": # (hand-drawn fallback: raked poles, platform, hood)
+			_ell(b + Vector2(6, 2), 16, 6, SHADOW)
+			var tp := b - Vector2(0, 40)
+			for dx in [-9.0, -4.0, 4.0, 9.0]: ci.draw_line(b + Vector2(dx, 0), tp + Vector2(dx * 0.5, 0), Color(C_WOOD, a), 2.5)
+			ci.draw_line(tp + Vector2(-9, 0), tp + Vector2(9, 0), Color(C_WOOD.darkened(0.2), a), 4)
+			ci.draw_colored_polygon(PackedVector2Array([tp + Vector2(-11, -5), tp + Vector2(11, -5), tp + Vector2(0, -16)]), Color(0.7, 0.57, 0.33, a))
+		"smokehouse": # (hand-drawn fallback: a hide cone and a drying rack)
+			_ell(b + Vector2(4, 2), 20, 7, SHADOW)
+			var hb := b + Vector2(-8, 0)
+			ci.draw_colored_polygon(PackedVector2Array([hb + Vector2(-11, 0), hb + Vector2(11, 0), hb + Vector2(0, -20)]), Color(0.56, 0.42, 0.28, a))
+			for dx in [4.0, 16.0]: ci.draw_line(b + Vector2(dx, 0), b + Vector2(dx, -14), Color(C_WOOD, a), 2)
+			ci.draw_line(b + Vector2(4, -13), b + Vector2(16, -13), Color(C_WOOD, a), 2)
+			for i in 4: ci.draw_line(b + Vector2(6 + i * 3, -13), b + Vector2(6 + i * 3, -8), Color(0.54, 0.2, 0.15, a), 2)
+			if s.built: _smoke(hb - Vector2(0, 22), s.id)
 		"grand_altar":
 			_box(s.pos, 30, 30, 8, Color(0.62, 0.6, 0.56, a))
 			_box(s.pos, 20, 20, 16, Color(0.66, 0.64, 0.6, a))

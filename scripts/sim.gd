@@ -1961,7 +1961,7 @@ func tick(dt: float) -> void:
 	var target := maxf(1.0 if is_day_part("dark") else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
-	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult()
+	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
 	var cap := food_cap()
 	if stock["food"] > 30: stock["food"] -= (minf(stock["food"], cap) - 30) * spoil * dt
 	if stock["food"] > cap: # nowhere to keep it: it rots fast
@@ -2740,10 +2740,40 @@ func fog_update() -> void:
 	for u in units:
 		if not u.dead: reveal(u.pos, sight(u))
 	for s in structures:
-		if s.built and ours(s): reveal(s.pos, D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)
+		if s.built and ours(s): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)))
+	_lookouts()
 	if guardian and not guardian.dead: reveal(guardian.pos, 260)
 	for lm in landmarks:
 		if not lm["found"] and visible[_cell_idx(lm["pos"])] == 1: _discover(lm)
+
+## A building's effects (structures.json "effects", the effect-stat format): the product of
+## the "mul" on `stat` over each type of ours that stands (one of a type counts once).
+func struct_mul(stat: String) -> float:
+	var m := 1.0
+	var seen := {}
+	for s in structures:
+		if not s.built or seen.has(s.type) or not ours(s): continue
+		seen[s.type] = true
+		for e in D.STRUCTURES[s.type].get("effects", []):
+			if e is Dictionary and e.get("stat", "") == stat and e.has("mul"): m *= float(e["mul"])
+	return m
+
+## Lookout towers (structures.json "lookout") call out what comes into their sight: a war
+## band on the march (once per clan per band) or a wolf pack (once per pack), before anyone else
+## sees it. They mark the beasts and warriors spotted (p.spotted).
+func _lookouts() -> void:
+	for s in structures:
+		if not s.built or not ours(s) or not D.STRUCTURES[s.type].get("lookout", false): continue
+		var sd: Dictionary = D.STRUCTURES[s.type]
+		var r := float(sd.get("sight", D.SIGHT_STRUCT))
+		for p in predators:
+			if p.spotted or p.dead or p.fled or p.pos.distance_to(s.pos) > r: continue
+			var raid: bool = p.kind == "warrior" and p.raid
+			if not raid and p.kind != "wolf": continue
+			for o in predators: # the whole band or pack at once
+				if not o.dead and o.kind == p.kind and o.clan == p.clan and o.pos.distance_to(p.pos) < 200.0: o.spotted = true
+			var t: String = tr(sd["spots"]["raid"]) % tr(rivals.clans[p.clan]["name"]) if raid else tr(sd["spots"]["wolves"])
+			alert(t, p.pos, "danger")
 
 func _discover(lm: Dictionary) -> void:
 	lm["found"] = true

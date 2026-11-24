@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 20
+const ART_VERSION := 21
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -407,6 +407,8 @@ func _jobs() -> Array:
 		jobs.append({"key": "totem_shrine" + sfx, "size": 128, "lift": 22.0, "build": _shrine.bind(false, snowy)})
 		jobs.append({"key": "grand_altar" + sfx, "size": 192, "lift": 26.0, "build": _shrine.bind(true, snowy)})
 		jobs.append({"key": "weapon_rack" + sfx, "size": 96, "lift": 12.0, "build": _rack.bind(snowy)})
+		jobs.append({"key": "lookout_tower" + sfx, "size": 192, "lift": 34.0, "build": _tower.bind(snowy)})
+		jobs.append({"key": "smokehouse" + sfx, "size": 160, "lift": 10.0, "build": _smokehouse.bind(snowy)})
 		jobs.append({"key": "aurochs_pen" + sfx, "size": 192, "lift": 6.0, "build": _pen.bind(snowy)})
 		jobs.append({"key": "den" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(true, snowy)})
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
@@ -1183,6 +1185,64 @@ func _shrine(grand: bool, snowy: bool) -> Node3D:
 		loft(root, [[Vector3(side * span * 0.75, top + 1.2, 0), 0.7, 3.1], [Vector3(side * span * 1.02, top + 3.1, 0), 0.25, 0.9]], tip_m, Vector3(0, 0, 1), 6)
 	mi(root, sph(2.6, 10, 6), wood, Vector3(0, top + 1.2, 0.6))
 	loft(root, [[Vector3(0, top + 1.2, 2.4), 0.9, 0.9], [Vector3(0, top + 0.6, 4.6), 0.6, 0.7], [Vector3(0, top - 0.6, 5.2), 0.1, 0.1]], mat(paints[1], "fine"), Vector3.UP, 6)
+	return root
+
+## A lookout tower: four raked poles lashed with braces, a plank platform with a rail, a
+## thatched hood against the weather, a ladder and a red hide pennant.
+func _tower(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var wood := mat(Color("#7a5530"), "streak", 0.2, Vector3(1, 4, 1), 0.5, sn * 0.5)
+	var lash := mat(Color("#c8b48a"), "fine", 0.3)
+	var top := 34.0
+	for sx in [-1, 1]:
+		for sz in [-1, 1]:
+			segment(root, Vector3(sx * 9, 0, sz * 9), Vector3(sx * 5, top + 6, sz * 5), 0.9, wood)
+	for h in [10.0, 22.0]: # cross braces on two faces
+		var w: float = 9.0 - (h / top) * 4.0
+		segment(root, Vector3(-w, h, w), Vector3(w, h + 7, w), 0.45, wood)
+		segment(root, Vector3(w, h, -w), Vector3(w, h + 7, w), 0.45, wood)
+		mi(root, cyl(1.1, 1.1, 1.2, 6), lash, Vector3(-w, h, w))
+	mi(root, box(Vector3(14, 1.4, 14)), mat(Color("#8a6238"), "streak", 0.25, Vector3(4, 1, 1), 0.5, sn), Vector3(0, top, 0))
+	for sx in [-1, 1]: # the rail
+		mi(root, box(Vector3(0.6, 0.6, 13)), wood, Vector3(sx * 6.6, top + 4, 0))
+		mi(root, box(Vector3(13, 0.6, 0.6)), wood, Vector3(0, top + 4, sx * 6.6))
+	var thatch := mat(Color("#b39255"), "streak", 0.3, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0)
+	mi(root, cyl(0.5, 10.5, 8, 12), thatch, Vector3(0, top + 11, 0))
+	_fringe(root, top + 7.5, 10.2, 14, Color("#b39255"), snowy)
+	segment(root, Vector3(3, 0, 13), Vector3(2, top, 7), 0.45, wood) # ladder rails
+	segment(root, Vector3(-2, 0, 13), Vector3(-2.5, top, 7), 0.45, wood)
+	for i in 8: segment(root, Vector3(2.9 - i * 0.12, 3 + i * 4, 12.4 - i * 0.75), Vector3(-2.1 - i * 0.06, 3 + i * 4, 12.4 - i * 0.75), 0.3, wood)
+	segment(root, Vector3(5, top, -5), Vector3(5, top + 20, -5), 0.35, wood) # the pennant
+	mi(root, box(Vector3(0.3, 4, 7)), mat(Color("#b8402a"), "fine", 0.2), Vector3(5, top + 17, -1.5))
+	return root
+
+## A smokehouse: a hide-covered smoke hut with a smoke hole, and a drying rack of poles
+## hung with strips of meat and fish, beside a ringed fire pit.
+func _smokehouse(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var hide := mat(Color("#8f6c48"), "coarse", 0.1, Vector3(1, 3, 1), 0.5, sn)
+	mi(root, lumpy(cyl(2.0, 11, 18, 16, 5), 0.3, 91, 0.2), hide, Vector3(-7, 9, -2))
+	mi(root, cyl(2.2, 2.2, 1.2, 10), flat(Color("#2a1d12")), Vector3(-7, 18.4, -2)) # the smoke hole
+	mi(root, box(Vector3(4.5, 7, 1)), mat(Color("#2a1a0e"), "fine"), Vector3(-7, 3.6, 8.6)) # the door flap
+	var wood := mat(Color("#6e4b2a"), "streak", 0.2, Vector3(1, 4, 1), 0.5, sn * 0.5)
+	for x in [5.0, 17.0]: # two A-frames
+		segment(root, Vector3(x, 0, -6), Vector3(x, 14, 0), 0.6, wood)
+		segment(root, Vector3(x, 0, 6), Vector3(x, 14, 0), 0.6, wood)
+	segment(root, Vector3(4, 13, 0), Vector3(18, 13, 0), 0.5, wood)
+	segment(root, Vector3(4, 9, 0), Vector3(18, 9, 0), 0.45, wood)
+	var meat := mat(Color("#8a3426"), "coarse", 0.3, Vector3.ONE, 0.5)
+	var fish := mat(Color("#b9b2a0"), "fine", 0.3)
+	for i in 6:
+		var x := 6.0 + i * 2.2
+		mi(root, box(Vector3(1.0, 4.5, 0.6)), meat if i % 3 != 2 else fish, Vector3(x, 10.6 - (i % 2) * 0.6, 0.4), Vector3(0, 0, randf_range(-6, 6)))
+		if i % 2 == 0: mi(root, box(Vector3(1.0, 3.5, 0.6)), meat, Vector3(x + 1, 6.6, -0.4))
+	var stone := mat(Color("#7d776c"), "coarse", 0.25, Vector3.ONE, 0.5, sn)
+	for i in 7:
+		var a := i * TAU / 7
+		boulder(root, Vector3(11 + cos(a) * 4.5, 0.8, 9 + sin(a) * 3.5), 1.4, stone, 900 + i)
+	mi(root, cyl(3, 3, 0.4, 10), mat(Color("#2e2620"), "coarse", 0.3), Vector3(11, 0.3, 9))
 	return root
 
 func _rack(snowy: bool) -> Node3D:

@@ -93,6 +93,7 @@ class Unit:
 
 class Predator:
 	var id: int
+	var spotted: bool = false # a lookout tower has called it out
 	var name: String = "saber-toothed tiger"
 	var pos: Vector2
 	var hp: float = 70.0

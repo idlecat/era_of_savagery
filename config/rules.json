@@ -224,6 +224,16 @@
   "ask_every": 90,
   "list": [
    {
+    "structure": "smokehouse",
+    "when": {
+     "season": "Autumn",
+     "fewer": {
+      "smokehouse": 1
+     }
+    },
+    "reason": "winter is coming, and the stores must keep."
+   },
+   {
     "structure": "granary",
     "when": {
      "food_frac": 0.85,

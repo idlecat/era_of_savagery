@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2700,6 +2700,33 @@ func test_contract_events() -> void:
 		CS._events(c, 1.0)
 	check(had.call() > n, "events come on their own as the work goes on")
 	check(sim.check_invariants().is_empty(), "invariants hold")
+
+func test_lookout_and_smokehouse() -> void:
+	print("\n== The lookout tower and the smokehouse (make_it_fun I, first buildings) ==")
+	var sim = _new_sim()
+	check(D.STRUCTURES.has("lookout_tower") and D.STRUCTURES.has("smokehouse"), "both are building types")
+	# the smokehouse: one slows the rot, a second adds nothing
+	check(sim.struct_mul("spoil") == 1.0, "no smokehouse, no effect")
+	sim.add_structure("smokehouse", D.VILLAGE + Vector2(-160, 120), true)
+	check(is_equal_approx(sim.struct_mul("spoil"), 0.6), "a smokehouse: stored food rots at 60%")
+	sim.add_structure("smokehouse", D.VILLAGE + Vector2(-220, 160), true)
+	check(is_equal_approx(sim.struct_mul("spoil"), 0.6), "a second adds nothing")
+	# the tower: sees far and calls out a wolf pack
+	var far: Vector2 = D.VILLAGE + Vector2(0, 700)
+	sim.add_structure("lookout_tower", D.VILLAGE + Vector2(0, 260), true)
+	sim.fog_update()
+	check(sim.is_explored(far), "the tower reveals the land far around it")
+	var w = sim.spawn_predator(D.VILLAGE + Vector2(40, 650), D.VILLAGE)
+	sim.hz.make_wolf(w)
+	var n: int = sim.alerts.size()
+	sim.fog_update()
+	check(w.spotted and sim.alerts.size() > n, "a wolf pack in its sight is called out")
+	sim.fog_update()
+	check(sim.alerts.size() == n + 1, "once")
+	var h = sim.predators.filter(func(p): return p.kind == "hunter")[0]
+	h.pos = D.VILLAGE + Vector2(0, 600)
+	sim.fog_update()
+	check(not h.spotted, "peaceful hunters are not called out")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
