@@ -55,6 +55,13 @@ void fragment() {
 	col *= mix(1.0 - ground_ao, 1.0, smoothstep(0.0, 5.0, wpos.y));
 	float s = snow * smoothstep(0.35, 0.7, wnorm.y);
 	col = mix(col, snow_color, s);
+	// a light final grade: a touch more saturation, a gentle S-curve, and warm
+	// crowns over cool depths, so every model reads a little richer at map zoom
+	float lum = dot(col, vec3(0.299, 0.587, 0.114));
+	col = mix(vec3(lum), col, 1.12);
+	float sc = lum * lum * (3.0 - 2.0 * lum);
+	col = mix(col, col * (sc / max(lum, 1e-4)), 0.35);
+	col *= mix(vec3(0.98, 0.99, 1.04), vec3(1.05, 1.02, 0.96), smoothstep(0.0, 40.0, wpos.y));
 	ALBEDO = col;
 	ROUGHNESS = rough;
 }

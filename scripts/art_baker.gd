@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 18
+const ART_VERSION := 19
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
