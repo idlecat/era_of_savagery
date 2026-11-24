@@ -37,9 +37,12 @@ day  pop  pop_cap  food  wood   huts farms docks settlements
 |  500 |     19.6  | 39 % |
 | 1000 |     37.5  | **75 %** |
 
-Linear, no cliff, but 1000 *working* people, 600 buildings and 1000 sprites on
-screen will sit at the edge of 1x, and the 2x/4x speed keys will be unusable, which a
-long game needs.
+Linear, no cliff, but 1000 *working* people, a few hundred buildings (§3.1's design;
+the plot carpet would make it ~600) and 1000 sprites on screen will sit at the edge
+of 1x, and the 2x/4x speed keys will be unusable, which a long game needs. The cost
+is real well before 1000: 19.6 ms at 500 is measured with `life` off and everyone
+idle, and `hz._sickness` is O(n²) — the §3.5 work is due by ~400–500 people whatever
+this doc decides about "a person".
 
 ### 1.3 Nothing in the game is a city
 
@@ -48,7 +51,10 @@ long game needs.
 - `config/legacy.json` has conquest, unity and wisdom; no population or city path.
 - Era-2 buildings exist since a52e346/18fe442: **Longhouse** (8 beds, `hearth_bond`),
   **Temple**, **Smokehouse** (`spoil × 0.6`), **Lookout Tower**, and the palisade ring.
-  None of them is in `improvements.list`, so the Steward never builds them, and
+  The Steward barely uses them: the smokehouse is `improvements.list`'s *first* entry
+  (autumn only), the Longhouse and Temple are `rules.json → buildings.upgrades` rows
+  (large_hut → longhouse, totem_shrine → temple) the list never includes — it stops at
+  hut → large hut — and the Lookout Tower is never laid out at all. And
   `structures.json → aliases` still maps `"longhouse"` to `large_hut` (an LLM contract
   asking for a longhouse gets a large hut; a bug to fix in step 1).
 - Missing for a city: bulk storage (warehouse), a well/water, anything that ties
@@ -62,7 +68,8 @@ long game needs.
   per day**. A thousand people need 2,300+ a day.
 - Supply per building: `farm_plot` 0.1/s = **9 a day**, `fishing_dock` 10.8, an
   `aurochs_pen` a little. The Ford's two dozen bushes regrow about 200 a day in all.
-  A city therefore needs **250–300 farm plots** (and 350+ huts at 3 beds each).
+  A city therefore needs **250–300 farm plots** (and ~350 huts at 3 beds, or ~125
+  longhouses).
 - `config/rules.json → improvements.list` (what the Steward lays out) has
   `farm_plot: fewer 2`, `hut: fewer 12`, no `fishing_dock` at all. After two farms the
   Steward never builds food again.
@@ -88,9 +95,10 @@ long game needs.
 
 ### Wall 3 — challenges don't scale with size
 
-- Raid size = base + hostility × k + winter (`rivals.gd:342`); wolf packs are a fixed
-  range; rival clans have a fixed `pop` and `warriors = pop / 3` and never grow. Seven
-  raiders are a threat at 40 people and a rounding error at 1000.
+- Raid size = base + hostility × k + winter (`rivals.gd` `launch_raid`); wolf packs
+  are a fixed range; rival clans *do* regrow (pop +1 per ~2 days, warriors with it)
+  but only to `rivals.json → people.max_pop` **14** — a ceiling that never scales with
+  us. Seven raiders are a threat at 40 people and a rounding error at 1000.
 - The director's tension cap (`director.json`) is not a function of tribe size.
 - Sickness crowding (over 80 % of beds) is the one mechanic that worsens with
   density, which is the right idea.
@@ -118,17 +126,48 @@ exposed as game-master operations, per `CLAUDE.md`.
 ### 3.1 Let the food economy scale (data + two small verbs)
 
 - **Worked fields (the main change).** A farm plot, dock and pen keep a small passive
-  trickle (today's number, so a camp plays as now) and gain a **work slot**: a person
-  on a `farm` job adds `food_per_worker` (data per type, ~3× the trickle per worker,
-  `workers` max 2–3, season and `inv.mul("farm")` applied). Labour now turns into
-  food, the wood surplus becomes a choice (build vs. farm), and 1000 people need
-  ~80–100 worked plots, not 250. The Steward's job picker staffs fields before
-  chopping when food days < N (a `rules.json` number). New job type → `JOB_TYPES`.
+  trickle (today's number, so a camp plays as now) and can be **worked**: a person on
+  the job adds `food_per_worker` while they work it. Labour turns into food, and the
+  wood surplus becomes a choice (build vs. farm). The mechanism already exists — it
+  is the aurochs pen's own pattern, generalized: `_send_herder()` sends a **spare
+  hand** (`spare_hand()`: idle or gathering, no office, awake — never a contract
+  crew, a crisis fighter or the War Chief) on a `tend` job carrying `pen_id`, and
+  `ox_care` decays when nobody does. So: the job carries a `struct_id`, "who works
+  this plot" is a query over jobs, and there is no per-building worker state to
+  save. The worker's bonus flows through the trickle line's own chain —
+  `hz.food_mult(type)` (farm ×1.5 autumn, ×0 winter, weather `crops`),
+  `nat.food_mult`, and the existing effect stat `inv.mul("yield", type)` — so
+  seasons, inventions and culture finds already multiply it. New job type →
+  `JOB_TYPES` (or widen `tend`).
+  > **pi:** written to keep make_it_fun I1's not-goal ("no worker slots, no queues,
+  > no upkeep menus") intact: the player never touches a slot. Staffing is the
+  > Steward's existing job picker (`_update_vice`: idle hands → build / food / wood /
+  > stone / lore / art) gaining a `farm` choice, taken ahead of wood when food days
+  > fall under N (a `rules.json` number); a game master gets the same verb.
+- **Numbers that must agree** (the previous draft's didn't: ~3× the trickle per
+  worker on 80–100 plots is ~3× a city's whole demand). Demand ≈ 2.3 food per person
+  per day (≈ 3 in winter, hunger ×1.25); a plot's trickle is 9/day; set
+  `food_per_worker` ≈ 10/day (a good gatherer: working a field beats idling, but the
+  woods don't retire) and `workers` ≈ 3 → a fully worked plot ≈ 39/day. The farm
+  share of a 1000-person city is then **~25–35 plots and ~75–105 farm workers
+  (≈ 8–10 % of the people)** — a field district, not a carpet. These two numbers are
+  the tuning guard: per-worker too high and farming is a checkbox with idle hands
+  left over; too low and the 250-plot carpet returns. The freed hands are the arc's
+  point: craft, trade, roads and great works (§3.4) are what a city does with people
+  who no longer dig.
+- **Winter is the storage system.** Farm ×0, dock ×0.5, pen ×0.7 in winter
+  (`events.json → seasons.yields`), ~3 food per person per day: a 2-day winter at
+  1000 people burns ~6,000 food. The autumn ×1.5 harvest, granaries + warehouses,
+  the smokehouse's rot ×0.6 and trade caravans are not city decoration — they are
+  how the city survives the season that shaped the tribe.
 - Let `fewer` take the **number shape `story` already has** for dilemmas
-  (`{"per_pop": k}`, `story` line ~351): `"fewer": {"farm_plot": {"per_pop": 0.1}}` =
-  fewer than one plot per 10 mouths. No new condition key, only `fewer` accepting a
+  (`{"per_pop": k}`, `story` line ~351): `"fewer": {"farm_plot": {"per_pop": 0.05}}` =
+  fewer than one field per 20 mouths — 2 fields at pop 40 (as now), a ceiling of ~50
+  at 1000 that the picker only reaches when other food runs short (the count is a
+  ceiling, not a quota). No new condition key, only `fewer` accepting a
   number-or-`per_pop` value; `COND_TYPES` and `test_spend` cover it.
-- `improvements.list` becomes a growing plan: farms per 12 mouths, a dock wherever a
+- `improvements.list` becomes a growing plan: fields per 20 mouths (`per_pop` above),
+  a dock wherever a
   settlement stands near water and fish are known, a pen per 40, huts per homeless 3
   (upgraded to large huts in era 2), a granary per 100 food of demand, workshops and
   the era-3 buildings of `make_it_fun.md` H3 as they land.
@@ -154,16 +193,27 @@ trade, with winter still the pinch.
   grows at today's pace; a town of 800 has up to ~12 births a day), multiplied by a
   **crowding factor** (mood and beds: a crowded, gloomy town has fewer children) and
   the winter. Config: `{"per_mothers": 8, "every": 45, "crowding": {...}}`.
+- **The curve's governor is beds, not the birth rate.** Births already stop at
+  `pop_cap()` (`_update_births` gates on `pop < pop_cap()` and `min_food`), so the
+  raw per-mothers rate (at pop 300 that is ~75 births a day) is clipped by the bed
+  gate and crowding to the ~15 the S-curve wants. Growth therefore runs at the
+  Steward's *build pace* — wood and work for huts and longhouses — which couples
+  population to the economy and makes "draw settlers" and "grow the village" real
+  alternatives rather than birth-rate knobs.
 - **Migration** as the second growth path, tied to diplomacy and reputation:
-  - vassals and allies send **families** (`rivals.json → people.join`), one a day
-    while there are empty beds;
+  - vassals and allies send **families** (a new `rivals.json → people.join` key),
+    one a day while there are empty beds;
   - **wanderers** arrive at any settlement of tier ≥ village in good times
     (`config/life.json`), a dilemma: take them in (mood, skills, a stranger's tale)
     or turn them away;
   - a **"Draw settlers" policy** (`config/policies.json`) trades food for arrivals.
 - Children stay at 3 days; a town's school/lore buildings shorten it a little.
-- **Growth S-curve**: ~60 people by day 20 (as now), ~200 by day 50, ~500 by day
-  90, ~1000 by day 150–180. At 2x–4x that is a 2–3 hour campaign to a city.
+- **Growth S-curve**: ~30 people by day 20 (as now — the run in §1.1 is at 28), ~200
+  by day 50, ~500 by day 90, ~1000 by day 150–180. At 2x–4x that is a 2–3 hour
+  campaign to a city. The *season* of the crossing matters: a city that reaches 1000
+  at winter's door without full stores loses a fifth and falls back — a story beat,
+  not a failure — so §3.6's victory is "a thousand held through a winter", and the
+  endgame is the autumn rush: harvest ×1.5, the granaries filling, first snow.
 
 ### 3.3 Settlement tiers: camp → village → town → city (make_it_fun I5)
 
@@ -192,8 +242,8 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 |---|---|---|
 | camp (as today) | wolves, winter, hunger, sickness, a first raid | `events.json`, `hazards.gd` |
 | village | raids sized to our fighters, feud, flood by the river | `rivals.json size`: `base` + `share_of_fighters` |
-| town | **plague** (crowding spreads radius with density), **urban fire** hopping hut to hut, earthquake toppling big buildings, **winter fuel** (1000 people need wood, not just food), **food rot** in big stores, thieves and feuds | new entries in `events.json`; `nat.pending`; `roads.gd` for fire spread; a `fuel` rule in `rules.json day/night` |
-| city | **rival coalitions** (clans ally against the big tribe), **civil strife** (a town with low morale rises: a crisis of `emergency.json`), **the frontier** (far farms need roads, else yields fall), a **great works** obligation (the temple demands labour) | `rivals.json`, `life.json discontent` → `crisis.gd`, `legacy.json` |
+| town | **plague** (crowding spreads radius with density), **urban fire** hopping hut to hut, **raiders torching the fields** (worked fields live outside any wall — make_it_fun I2's "raiders go for what's outside first": `launch_raid`'s target choice plus the wildfire state on a structure), **blight** (the `crops` weather multiplier already runs in `hz.food_mult`; a blight is a data entry that zeroes farm yield for days), earthquake toppling big buildings, **winter fuel** (fires burn nothing today; a wood-per-second drain in `rules.json` is the one new upkeep — no menu, just the wood counter falling), **food rot** in big stores, thieves and feuds | new entries in `events.json`; `nat.pending`; `roads.gd` for fire spread; a `fuel` rule in `rules.json day/night` |
+| city | **rival coalitions** (clans ally against the big tribe), **civil strife** (a town with low morale rises: a crisis of `emergency.json`), **the sprawl** (homes and fields creep past the wall and the fords; distance already costs — walked hunger, walking time — so roads are the answer, not a new yield rule), a **great works** obligation (the temple wants the same spare hands the fields want: the labour market *is* the dilemma) | `rivals.json`, `life.json discontent` → `crisis.gd`, `legacy.json` |
 
 - The **director's cap** becomes a function of population (`director.json levels.*.cap_per_pop`)
   so big tribes still get quiet stretches.
@@ -215,9 +265,10 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 
 ### 3.6 A city victory path and the story around it
 
-- `config/legacy.json → paths.city`: a **city** (tier 4) of 1000 people, the Grand
-  Altar, and roads linking every settlement. Text: "Hear how the tribe of the bonfire
-  raised the first city of the river."
+- `config/legacy.json → paths.city`: a **city** (tier 4) that has held ~1000 people
+  through a winter, the Grand Altar, and roads linking every settlement. Text: "Hear
+  how the tribe of the bonfire raised the first city of the river — and kept a
+  thousand warm through the hungry dark."
 - The chronicle and the LLM personas (`evo.world_ctx()`) speak of "our village", "the
   town of X", "the city": `hz.summary()`/`evo.world_ctx()` gain a `settlements` list
   with tiers, so a game master can drive it too (`story.run()` actions
@@ -229,8 +280,12 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 
 1. Worked fields, `fewer` with `per_pop`, era-2 buildings in `improvements.list`, the
    longhouse alias fix, plan per settlement (§3.1).
-   Measure: pop at day 60 under the steward policy (target 150+), food days (target < 5).
-2. Births per mothers + crowding (§3.2). Measure: pop at day 120 (target ~500).
+   Measure: food days > 10 into and through a winter; the wood pile below ~1,500 at
+   day 60; pop at the birth-timer ceiling (~90–110 — food alone can't beat Wall 2:
+   from 28 at day 20, two births a day cap day 60 near 105 before deaths).
+2. Births per family lines + crowding + the bed governor (§3.2). Measure: pop at day
+   60 (target 150+), day 120 (target ~500). Settle open question 1 first — the birth
+   math, the HUD count and the perf budget all hang on what "a person" is.
 3. Tiers, names, settlement HUD, overpop gating (§3.3). Measure: no settlement with
    empty beds older than 5 days when a new outpost is sealed; the ghost-town count is 0.
 4. Spatial hash + LOD + perf test (§3.5). Measure: ms/tick at 1000 (target < 25).
@@ -258,11 +313,38 @@ a pinch, a crisis, growth.
    > and turns §3.5 from a blocker into a nice-to-have. The cost: hunger/beds/raid
    > numbers need a `people()` count beside `living()`, and the HUD must show both.
    > pi, argue the other side if you see one.
-2. Worked fields change how the Steward assigns jobs; does that fight the contract
-   executor (contract crews are taken off work) or the War Chief? Needs a priority
-   order written down.
-3. Are outposts worth keeping as separate settlements at all before tier village, or
-   should the overpop dilemma only ever offer "grow the village" until a road exists?
+   >
+   > **pi:** I argue (a), from the code. `life.gd:5` — "each person stands for one
+   > family line; a child starts a new line" — is a 1:1, and (b) breaks it: a
+   > household of 4–5 holds 4–5 lines, and a birth that "starts a new line" now
+   > joins a count instead. Meals, `spare_hand`, beds (`cap` counts units), combat
+   > and the rival clans' `pop`/`warriors` are per-unit and symmetric with ours
+   > (do their raiders count ×5?); (b) threads a second population number through
+   > hunger, beds, `pop_cap`, raid sizes, the HUD, the metrics bands and the victory
+   > check at once — the widest change in this doc, spent on *hiding* people instead
+   > of simulating them. The perf savings are smaller than they look: §3.5 is due by
+   > ~400–500 people anyway (`_sickness` O(n²), 19.6 ms at 500 with `life` off and
+   > everyone idle), and 250 individuals already exceed what anyone can know — the
+   > knowable cast is the titled, bonded and remembered few, at 50 people as at
+   > 1000. If a finished city should *look* fuller than it simulates, a purely
+   > visual ambient crowd (sprites near the fire and market in `world_view`, not
+   > units) is the honest way to thicken it. Decide before step 2.
+2. **Job priority vs contracts and the War Chief — settled, no fight.** Field
+   staffing draws only from the spare pool (`spare_hand()`: idle or gathering, no
+   office, awake — the pen's herder comes from the same pool), so it can never take a
+   contract crew (role `"contract"`), a crisis fighter or the titled: they hold
+   their people, or take them by *interrupt* (`set_aside`/`end_errand` — the field
+   work resumes after). The only order to write down is inside the spare pool: the
+   Steward's picker (`_update_vice`) tries farm before wood when food days fall
+   under N; night sends farm hands to bed like any day-only work (`beds.day_only`).
+3. **Outposts before tier village — keep them, as farmsteads.** The land is the
+   point: the village's 450-reach disc can't hold the city's longhouses *and* its
+   fields, so outposts are where the fields go (`contracts.next_site()` already
+   picks frontier sites; `D.route()` walks them home over the fords). Gate new ones
+   on "no empty beds in any outpost of ours" (§3.3) and village tier, and give the
+   settle contract a farm-first plan — a field, a hut, a granary, not two huts and a
+   bonfire. Far fields already pay in walked distance (walk hunger), which is the
+   pressure that earns roads.
 
 ## 5. Out of scope / deliberately not proposed
 
