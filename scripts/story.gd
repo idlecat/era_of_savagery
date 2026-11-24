@@ -220,7 +220,7 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 				pending.append(a["event"])
 		if a.has("log"):
 			var t: String = text(a["log"], vars)
-			if a.get("arg", "") == "plan" and c: t = t % c.plan["plan_id"]
+			if a.get("arg", "") == "plan" and c: t = t % sim.contracts.title(c.plan)
 			sim.add_log(t, a.get("kind", "story"))
 		if a.has("alert"):
 			sim.alert(text(a["alert"], vars), _at(a.get("at", "village"), c, vars), a.get("level", "warn"))

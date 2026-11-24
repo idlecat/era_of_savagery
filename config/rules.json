@@ -321,5 +321,14 @@
    "max": 300,
    "step": 10
   }
+ },
+ "contracts": {
+  "_doc": "Task Contracts. titles: the name players read for a contract of each kind (plan_id is an internal id the leader picks, never shown); %s is the leader (settle), the wisdom sought (research), the enemy clan (war) or what is sought (seek). Read by contracts.title().",
+  "titles": {
+   "settle": "%s's Outpost",
+   "research": "Seeking %s",
+   "war": "War on the %s",
+   "seek": "Search for %s"
+  }
  }
 }

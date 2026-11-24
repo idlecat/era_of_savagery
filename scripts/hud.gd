@@ -827,7 +827,7 @@ func _marks_tip(u) -> String:
 	if tr(u.title) != "": lines.append(tr("★ Vice-Chieftain: %s") % tr(u.title))
 	if u.role == "contract":
 		var c = sim.contracts.by_id(u.contract_id)
-		lines.append(tr("⚑ On the Task Contract '%s'") % c.plan["plan_id"] if c else tr("⚑ On a Task Contract"))
+		lines.append(tr("⚑ On the Task Contract '%s'") % sim.contracts.title(c.plan) if c else tr("⚑ On a Task Contract"))
 	elif u.job.get("type", "") == "explore": lines.append(tr("◎ Scouting the unknown"))
 	return "\n" + "\n".join(lines) if not lines.is_empty() else ""
 
@@ -850,7 +850,7 @@ func _group_title(key: String, units: Array) -> String:
 	var c = sim.contracts.by_id(int(key.substr(1)))
 	if c == null: return key
 	var ld = sim.unit_by_id(c.leader_id)
-	return tr("⚑ %s · %s %d%% (%d)") % [c.plan["plan_id"], tr(c.status), roundi(c.progress * 100), units.size()]
+	return tr("⚑ %s · %s %d%% (%d)") % [sim.contracts.title(c.plan), tr(c.status), roundi(c.progress * 100), units.size()]
 
 func _refresh_left_content() -> void:
 	var bsel = _selected_building()
@@ -978,7 +978,7 @@ func _refresh_right() -> void:
 			var cu = sim.unit_by_id(id)
 			if cu and not who.any(func(w): return w["id"] == id): who.append({"id": id, "name": tr(cu.name)})
 		var ld_link: String = ("[url=u%d][color=#ffe6a8]%s[/color][/url]" % [ld.id, tr(ld.name)]) if ld else "?"
-		s += tr("[color=%s]■[/color] [b]%s[/b] — %s\n  %s · [color=%s]%s %d%%[/color] · step %d/%d\n") % [col, c.plan["plan_id"], ld_link, c.substate if c.status == "executing" else "", col, tr(c.status), roundi(c.progress * 100), mini(c.step_idx + 1, c.steps.size()), c.steps.size()]
+		s += tr("[color=%s]■[/color] [b]%s[/b] — %s\n  %s · [color=%s]%s %d%%[/color] · step %d/%d\n") % [col, sim.contracts.title(c.plan), ld_link, c.substate if c.status == "executing" else "", col, tr(c.status), roundi(c.progress * 100), mini(c.step_idx + 1, c.steps.size()), c.steps.size()]
 		var crew_links: Array = who.filter(func(w): return w["id"] != c.leader_id).map(func(w): return "[url=u%d][color=#ffe6a8]%s[/color][/url]" % [w["id"], w["name"]] + (" †" if sim.unit_by_id(w["id"]).dead else ""))
 		if not crew_links.is_empty(): s += "  " + tr("Crew: %s") % ", ".join(crew_links) + "\n"
 		s += tr("  [color=#8a9aa8]LLM calls: 1 negotiation + %d awakenings[/color]\n") % c.interruptions
@@ -1519,15 +1519,15 @@ func _neg_sync_terms(bp: Dictionary) -> void:
 func _neg_show_bp(san: Dictionary) -> void:
 	neg["san"] = san
 	var bp: Dictionary = san["blueprint"]
-	var s := tr("[color=#ffd36b]%s[/color] · crew %d · houses %d (target %d) · wood ≈ %d\n") % [bp["plan_id"], bp["crew_size"], sim.contracts.housing(bp), bp["capacity_target"], sim.contracts.wood_needed(bp)]
+	var s := tr("[color=#ffd36b]%s[/color] · crew %d · houses %d (target %d) · wood ≈ %d\n") % [sim.contracts.title(bp), bp["crew_size"], sim.contracts.housing(bp), bp["capacity_target"], sim.contracts.wood_needed(bp)]
 	if bp.get("kind", "settle") == "war":
 		var rc: Dictionary = sim.rivals.clans[bp["target"]]
-		s = tr("[color=#ffd36b]%s[/color] · against [color=#ff9b7a]%s[/color] (%s) · crew %d\n[color=#b8a888]Goal: %s[/color]\n") % [bp["plan_id"], tr(rc["name"]), tr(sim.rivals.stance(bp["target"])), bp["crew_size"], tr(sim.contracts.WAR_OBJECTIVE_TEXT[bp["objective"]])]
+		s = tr("[color=#ffd36b]%s[/color] · against [color=#ff9b7a]%s[/color] (%s) · crew %d\n[color=#b8a888]Goal: %s[/color]\n") % [sim.contracts.title(bp), tr(rc["name"]), tr(sim.rivals.stance(bp["target"])), bp["crew_size"], tr(sim.contracts.WAR_OBJECTIVE_TEXT[bp["objective"]])]
 	elif bp.get("kind", "settle") == "seek":
-		s = tr("[color=#ffd36b]%s[/color] · looking for [color=#b6f28a]%s[/color] in %s · %d day%s · crew %d\n") % [bp["plan_id"], tr(sim.contracts.SEEK_WORDS[bp["group"]]), bp.get("place_name", ""), bp["days"], I.plural_s() if bp["days"] > 1 else "", bp["crew_size"]]
+		s = tr("[color=#ffd36b]%s[/color] · looking for [color=#b6f28a]%s[/color] in %s · %d day%s · crew %d\n") % [sim.contracts.title(bp), tr(sim.contracts.SEEK_WORDS[bp["group"]]), bp.get("place_name", ""), bp["days"], I.plural_s() if bp["days"] > 1 else "", bp["crew_size"]]
 	elif bp.get("kind", "settle") == "research":
 		var td: Dictionary = sim.evo.tech_def(bp["tech"])
-		s = tr("[color=#ffd36b]%s[/color] · seeking [color=#c8a8ff]%s[/color] (%d%% understood) · crew %d\n[color=#b8a888]%s[/color]\n") % [bp["plan_id"], tr(td["name"]), roundi(sim.evo.insight_frac(bp["tech"]) * 100), bp["crew_size"], tr(td["desc"])]
+		s = tr("[color=#ffd36b]%s[/color] · seeking [color=#c8a8ff]%s[/color] (%d%% understood) · crew %d\n[color=#b8a888]%s[/color]\n") % [sim.contracts.title(bp), tr(td["name"]), roundi(sim.evo.insight_frac(bp["tech"]) * 100), bp["crew_size"], tr(td["desc"])]
 	var i := 1
 	for st in bp["steps"]:
 		s += tr(" %d. %s\n") % [i, sim.contracts.step_text(st)]
@@ -1561,7 +1561,7 @@ func _neg_confirm() -> void:
 func _on_interrupt(c) -> void:
 	var ld = sim.unit_by_id(c.leader_id)
 	var sm: Dictionary = sim.contracts.summary(c)
-	var v := _open_modal(tr("⚠ EMERGENCY AWAKENING · %s") % c.plan["plan_id"], 900, true)
+	var v := _open_modal(tr("⚠ EMERGENCY AWAKENING · %s") % sim.contracts.title(c.plan), 900, true)
 	var token := modal_token
 	world.focus_on(c.site)
 	var info := _rich(0, true)
@@ -1599,10 +1599,10 @@ func _on_interrupt(c) -> void:
 func _toast_contract_done(c) -> void:
 	if NOTICES.get("contract_done", "notice") != "dialog": # (a banner: click it to look at the site)
 		var ld0 = sim.unit_by_id(c.leader_id)
-		_on_alert({"level": "info", "text": tr("Task Contract complete: '%s' (%s)") % [c.plan["plan_id"], tr(ld0.name) if ld0 else ""], "pos": c.site})
+		_on_alert({"level": "info", "text": tr("Task Contract complete: '%s' (%s)") % [sim.contracts.title(c.plan), tr(ld0.name) if ld0 else ""], "pos": c.site})
 		return
 	if modal: return
-	var v := _open_modal(tr("Task Contract Complete · %s") % c.plan["plan_id"], 700)
+	var v := _open_modal(tr("Task Contract Complete · %s") % sim.contracts.title(c.plan), 700)
 	var ld = sim.unit_by_id(c.leader_id)
 	var r := _rich(0, true)
 	var who: String = tr(ld.name) if ld else tr("The tribe")
