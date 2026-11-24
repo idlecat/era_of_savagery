@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2159,6 +2159,15 @@ func test_ranks() -> void:
 	p.skills["craft"]["xp"] = 0.0
 	R.deed(p, "masterpiece")
 	check(R.rank(p, "craft") == "proven", "at the top of the band the deed alone is the door: no more XP needed")
+	var q = sim.living().filter(func(o): return o != u and o != p and o.lv("craft") < 4)[0]
+	q.skills["craft"]["lv"] = int(cfg["routine_cap"])
+	var gr = sim.add_structure("granary", D.VILLAGE + Vector2(-220, 160), false)
+	sim.complete_structure(gr, q)
+	check(R.rank(q, "craft") == "proven", "raising the tribe's first granary is a Builder's trial too")
+	var r2 = sim.living().filter(func(o): return o != u and o != p and o != q and o.lv("craft") < 4)[0]
+	r2.skills["craft"]["lv"] = int(cfg["routine_cap"])
+	sim.complete_structure(sim.add_structure("granary", D.VILLAGE + Vector2(220, 200), false), r2)
+	check(R.rank(r2, "craft") == "", "only the first one counts")
 	check(R.summary()["ready"].any(func(e): return e["who"] == u.name and e["skill"] == "forage"), "the summary lists who is ready for a trial")
 	R.deed(u, "slay_warrior")
 	check(u.lv("forage") == int(cfg["routine_cap"]), "a deed of another trial doesn't count")
@@ -2176,8 +2185,8 @@ func test_ranks() -> void:
 	check(R.rank(v, "trade") == "proven", "the deed done earlier counts once the XP is there")
 	check(sim.folk.haggle(v) > 1.0 + float(sim.RULES["folk"]["trade"]["haggle_per_lv"]) * v.lv("trade"), "a Proven trader gets the master trader's prices")
 	# teaching: a crew member's first craft rank is the leader's Master trial
-	var m = sim.living().filter(func(o): return o != u and o != v)[0]
-	var app = sim.living().filter(func(o): return o != u and o != v and o != m)[0]
+	var m = sim.living().filter(func(o): return o != u and o != v and R.rank(o, "craft") == "")[0]
+	var app = sim.living().filter(func(o): return o != u and o != v and o != m and R.rank(o, "craft") == "")[0]
 	check(R.grant(m.id, "craft") and R.rank(m, "craft") == "proven", "a game master can grant the next rank")
 	for i in 400: sim.gain_xp(m, "craft", 50.0)
 	R.learned_under(app, m, "craft")
@@ -2268,6 +2277,50 @@ func test_seal() -> void:
 	var x = sim.contracts.available_helpers().filter(func(o): return o.lv("combat") < 5)[0]
 	var r3: Dictionary = sim.contracts.seal(x, "war", "Raid", {"kind": "war", "target": sim.rivals.clans.keys()[0], "objective": "loot"})
 	check(not r3["ok"] and r3["notes"][0] == sim.ranks.block("lead_war", x), "only a Blooded Warrior may lead a war party (%s)" % [r3["notes"]])
+
+func test_hungry_sickness() -> void:
+	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
+	var cs: Dictionary = preload("res://scripts/config.gd").load_cfg("events")["sickness"]
+	var sim = _new_sim()
+	sim.hz.level = "normal"
+	sim.stock["food"] = 50.0
+	sim.hz._sickness(1.0)
+	check(sim.hz.hungry_t == 0.0, "fed: the hunger clock stays at zero")
+	sim.stock["food"] = 0.0
+	sim.hz._sickness(30.0)
+	check(sim.hz.hungry_t >= 30.0, "empty stores: the hunger clock runs")
+	var h0: float = sim.hz.hungry_t
+	sim.stock["food"] = 50.0
+	sim.hz._sickness(10.0)
+	check(sim.hz.hungry_t < h0 and sim.hz.hungry_t > 0.0, "fed again, it eases back slowly (%.1f -> %.1f)" % [h0, sim.hz.hungry_t])
+	# long hunger: the director can't hold it back, and the hungriest falls ill first
+	sim.time = 100.0 # (nobody falls ill at the very start: immunity runs to time 0)
+	sim.director.on = true
+	sim.director.tension = 999.0
+	sim.stock["food"] = 0.0
+	var weakest = sim.living()[3]
+	for o in sim.living(): o.hunger = 60.0
+	weakest.hunger = 2.0
+	sim.hz.hungry_t = (float(cs["hungry_force_hours"]) + 2.0) * D.DAY_LEN / 24.0
+	var tries := 0
+	while weakest.sick <= 0 and tries < 60:
+		sim.hz.sick_roll = 0.0
+		sim.hz.spread_t = 99.0
+		sim.hz._sickness(0.01)
+		tries += 1
+	check(weakest.sick > 0, "after %s hours of hunger the fever strikes the hungriest, director or not (%d rolls)" % [cs["hungry_force_hours"], tries])
+	check(sim.living().filter(func(o): return o.sick > 0).size() == 1, "one falls ill at a time")
+	# a fed camp under a full director: held back
+	var fed = _new_sim()
+	fed.hz.level = "normal"
+	fed.director.on = true
+	fed.director.tension = 999.0
+	fed.stock["food"] = 200.0
+	fed.time = 100.0
+	for i in 60:
+		fed.hz.sick_roll = 0.0
+		fed.hz._sickness(0.01)
+	check(fed.living().all(func(o): return o.sick <= 0), "a fed camp's sickness still waits for the director")
 
 func test_policies() -> void:
 	print("\n== The Council's policies (config/policies.json) ==")

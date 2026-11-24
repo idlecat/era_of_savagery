@@ -1028,6 +1028,8 @@ func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	popup(s.pos + Vector2(0, -30), tr("%s complete!") % name, Color("#b6f28a"), true)
 	add_log(tr("%s completed%s.") % [name, (tr(" by %s's crew") % tr(u.name)) if u else ""], "build", [u] if u else [])
 	if ours(s): react.trigger("built", {"at": s.pos})
+	if u and ours(s) and s.type in ranks.C.get("first_builds", []) and structures.filter(func(o): return o.built and o.type == s.type and ours(o)).size() == 1:
+		ranks.deed(u, "raise_first") # (raised the tribe's first of its kind)
 	if s.type == "grand_altar": summon_guardian(s)
 
 # ------------------------------------------------------------------ natural finds

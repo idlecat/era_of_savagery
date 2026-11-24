@@ -597,6 +597,17 @@ play (that is the measurable form of "decisions matter"):
      granary or council ring", built with them leading) would fix it.
   4. Pacing: ~3 pauses per game day (one per ~30 s at 1x), and the longest quiet
      stretch is 1.3–2.4 days (2–3.5 min at 1x). Era 2 always arrives on day 4–5.
+  **After the first fixes** (same runs): findings 1 and 3 addressed. Sickness now grows
+  with how long the camp has gone hungry (`events.json` sickness `hungry_*`: risk climbs
+  per hungry hour, the hungriest fall ill first, it spreads faster among the hungry, and
+  after 6 hungry hours the director can't hold it back; the hunger clock eases back
+  slowly once fed, since stores bounce between empty and a few berries). The craft
+  Proven trial gained "raise the tribe's first granary or council ring". Result:
+  famine consequences steward 25%, feaster 25% (in band), hoarder 0% (good play
+  escapes, as intended); skill sensitivity 0.29 → 0.54; the hoarder's craft gate opens
+  in 75% of runs (day 6–10). Still open: near-misses at 100% for steward and feaster
+  (band 60–90%), still no starvation deaths, and feaster ≈ steward on famine at 4 seeds
+  (run more seeds before tuning further).
   5. Found while building it: requiring full XP at Lv 4 on top of the deed kept the
      craft gate shut in every run (the leader moves to the outpost and stops building);
      the trial now opens on reaching Lv 4 and the deed is the door.

@@ -38,6 +38,7 @@ var last_night := false
 var raid_t := 0.0
 var sick_roll := 30.0
 var spread_t := 0.0
+var hungry_t := 0.0 # how long the camp has gone hungry, in seconds (easing back while fed; sickness grows with it)
 var famine_t := 0.0
 var season_seen := -1
 
@@ -267,19 +268,27 @@ func _raids(dt: float) -> void:
 # ------------------------------------------------------------ sickness
 func _sickness(dt: float) -> void:
 	var cs: Dictionary = C["sickness"]
+	var hungry: bool = sim.stock["food"] < sim.living().size()
+	hungry_t = hungry_t + dt if hungry else maxf(0.0, hungry_t - dt * float(cs.get("hungry_ease", 1.0))) # (a few berries don't undo days of hunger)
 	sick_roll -= dt
 	if sick_roll <= 0:
 		sick_roll = float(cs["roll_every"])
 		var alive: Array = sim.living()
 		var crowd: float = maxf(0.0, float(alive.size()) / maxf(1.0, sim.pop_cap()) - 0.8)
-		var risk: float = float(cs["base"]) + (float(cs["winter"]) if winter() else 0.0) + (float(cs["hungry"]) if sim.stock["food"] < alive.size() else 0.0) \
-			+ crowd * float(cs["crowding"]) + sim.nat.sick_risk()
+		var hours := hungry_hours()
+		var risk: float = float(cs["base"]) + (float(cs["winter"]) if winter() else 0.0) + crowd * float(cs["crowding"]) + sim.nat.sick_risk() \
+			+ ((float(cs["hungry"]) + minf(float(cs.get("hungry_max", 0.0)), hours * float(cs.get("hungry_per_hour", 0.0)))) if hungry else 0.0)
 		if randf() < risk * mult():
 			var cands: Array = alive.filter(func(u): return u.sick <= 0 and sim.time > u.immune_t and u.role != "contract")
-			if not cands.is_empty() and sim.director.take("sickness"):
+			var forced: bool = hungry and hours >= float(cs.get("hungry_force_hours", 1e9))
+			if not cands.is_empty() and (forced or sim.director.take("sickness")):
+				if forced: sim.director.note("sickness")
 				var p0 = cands.pick_random()
+				if hungry: # the fever finds the weakest first
+					cands.sort_custom(func(x, y): return x.hunger < y.hunger)
+					p0 = cands[0]
 				p0.sick = 1.0
-				sim.alert(tr(cs["alert"]) % tr(p0.name), p0.pos, "warn", [p0])
+				sim.alert(tr(cs["hungry_alert"] if hungry and cs.has("hungry_alert") else cs["alert"]) % tr(p0.name), p0.pos, "warn", [p0])
 				sim.react.trigger("sickness", {"victim": p0, "at": p0.pos})
 	spread_t -= dt
 	if spread_t > 0: return
@@ -289,9 +298,13 @@ func _sickness(dt: float) -> void:
 		if u.sick <= 0: continue
 		for o in alive2:
 			if o == u or o.sick > 0 or sim.time < o.immune_t: continue
-			if o.pos.distance_to(u.pos) < float(cs["spread_radius"]) and randf() < float(cs["spread_chance"]) * mult():
+			var weak: float = float(cs.get("hungry_spread", 1.0)) if o.hunger < float(cs["recover"]["hungry_below"]) else 1.0
+			if o.pos.distance_to(u.pos) < float(cs["spread_radius"]) and randf() < float(cs["spread_chance"]) * weak * mult():
 				o.sick = 1.0
 				sim.popup(o.pos + Vector2(0, -30), tr(cs["popup"]), Color("#a8e07a"))
+
+## Game hours the stores have held less than a meal each (sickness grows with it).
+func hungry_hours() -> float: return hungry_t / (D.DAY_LEN / 24.0)
 
 ## Recovery per second for a sick person (sickness runs from 1 down to 0).
 func heal_rate(u: E.Unit, warm: bool) -> float:

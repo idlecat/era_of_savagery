@@ -2219,7 +2219,7 @@ const STRINGS := {
 	"Master of the Hunt": "狩猎宗师",
 	"Bring down a saber-tooth tiger": "猎杀一头剑齿虎",
 	"Builder": "匠人",
-	"Lead the building of an outpost, or make a masterpiece": "带领建成一座前哨，或做出一件杰作",
+	"Lead the building of an outpost, raise the tribe's first granary or council ring, or make a masterpiece": "带领建成一座前哨、建起部落的第一座粮仓或议事圈，或做出一件杰作",
 	"Teach: someone who worked under them proves themselves a Builder": "传艺：曾在其手下做工的人自己成为匠人",
 	"Blooded Warrior": "浴血战士",
 	"Stand in a defence that drives off a war band": "在击退敌方战团的守卫战中坚守到底",
@@ -2264,4 +2264,5 @@ const STRINGS := {
 	"By the fire the whole tribe gathers to name %s a %s.": "全族聚集在火堆旁，授予%s“%s”之名。",
 	"I will not shame this name.": "我不会辱没这个名号。",
 	"No one free to lead it": "没有人能空出来带队",
+	"%s has fallen ill: hunger has weakened the camp, and the fever finds the weakest first.": "%s病倒了：饥饿削弱了营地，热病先找上最虚弱的人。",
 }

@@ -54,7 +54,10 @@
  },
 
  "sickness": {
+  "_doc": "Every roll_every s a chance someone falls ill: base, + winter, + crowding over 80% of the housing, + hungry while the stores hold less than a meal each, growing by hungry_per_hour for every game hour they have been that low (up to hungry_max); fed again, that count eases back hungry_ease times as fast as it grew. A hungry camp's sickness strikes the hungriest first, spreads hungry_spread times as easily to someone hungrier than recover.hungry_below, and after hungry_force_hours of hunger the director can no longer hold it back (the tribe brought it on itself); hungry_alert then names it.",
   "roll_every": 45, "base": 0.03, "winter": 0.10, "hungry": 0.08, "crowding": 0.4,
+  "hungry_per_hour": 0.04, "hungry_max": 0.5, "hungry_spread": 2.0, "hungry_force_hours": 6, "hungry_ease": 0.5,
+  "hungry_alert": "%s has fallen ill: hunger has weakened the camp, and the fever finds the weakest first.",
   "spread_every": 2, "spread_radius": 70, "spread_chance": 0.035,
   "recover": {"_doc": "A sickness lasts 'time' seconds, sped up or slowed by each factor.",
    "time": 70, "warm": 1.5, "shrine": 1.4, "shrines": ["totem_shrine", "grand_altar"], "shrine_radius": 160,

@@ -1,6 +1,7 @@
 {
- "_doc": "Ranks earned by deeds (ranks.gd, docs/make_it_fun.md H). Routine XP (sim.gain_xp) raises a skill only up to routine_cap; past it each band of levels is a rank, in `bands` order: a rank holds the levels above the previous cap up to its own `cap_lv`, so the rank is read from the level (ranks.rank_of). When a skill reaches the top of a band, its next rank's trial is open: one of the deeds in `trial` ({deed: count}, any one of them; counts come from the deed record u.deeds, done before or after) steps them into the next band. Routine XP past the top of a band waits (the bar stays full). Deeds: slay_<beast kind> (wolf, tiger), slay_warrior, masterpiece, lead_build (led a frontier outpost to completion), invent (made a breakthrough), open_era (a breakthrough that opened a new age), repel_raid (in a defence that drove off a war band), win_war (led a war party home), seal_deal (sealed an agreement with a clan), seal_alliance (an alliance), taught_<skill> (someone who once worked under them earned their own first rank in that skill; who worked under whom is u.mentors, filled by contracts). Per skill and rank: title (what they are called), desc (the trial, as the sheet shows it). first_feat: the tribe's first of each rank is an achievement. log, popup, remember: texts of a rank-up (vars: who, title).",
+ "_doc": "Ranks earned by deeds (ranks.gd, docs/make_it_fun.md H). Routine XP (sim.gain_xp) raises a skill only up to routine_cap; past it each band of levels is a rank, in `bands` order: a rank holds the levels above the previous cap up to its own `cap_lv`, so the rank is read from the level (ranks.rank_of). When a skill reaches the top of a band, its next rank's trial is open: one of the deeds in `trial` ({deed: count}, any one of them; counts come from the deed record u.deeds, done before or after) steps them into the next band. Routine XP past the top of a band waits (the bar stays full). Deeds: slay_<beast kind> (wolf, tiger), slay_warrior, masterpiece, lead_build (led a frontier outpost to completion), raise_first (finished the tribe's first building of a type in `first_builds`), invent (made a breakthrough), open_era (a breakthrough that opened a new age), repel_raid (in a defence that drove off a war band), win_war (led a war party home), seal_deal (sealed an agreement with a clan), seal_alliance (an alliance), taught_<skill> (someone who once worked under them earned their own first rank in that skill; who worked under whom is u.mentors, filled by contracts). Per skill and rank: title (what they are called), desc (the trial, as the sheet shows it). first_feat: the tribe's first of each rank is an achievement. log, popup, remember: texts of a rank-up (vars: who, title).",
  "routine_cap": 4,
+ "first_builds": ["granary", "council_ring"],
  "bands": [
   {"id": "proven", "cap_lv": 7},
   {"id": "master", "cap_lv": 10}
@@ -11,7 +12,7 @@
    "master": {"title": "Master of the Hunt", "desc": "Bring down a saber-tooth tiger", "trial": {"slay_tiger": 1}}
   },
   "craft": {
-   "proven": {"title": "Builder", "desc": "Lead the building of an outpost, or make a masterpiece", "trial": {"lead_build": 1, "masterpiece": 1}},
+   "proven": {"title": "Builder", "desc": "Lead the building of an outpost, raise the tribe's first granary or council ring, or make a masterpiece", "trial": {"lead_build": 1, "raise_first": 1, "masterpiece": 1}},
    "master": {"title": "Master Builder", "desc": "Teach: someone who worked under them proves themselves a Builder", "trial": {"taught_craft": 1}}
   },
   "combat": {
