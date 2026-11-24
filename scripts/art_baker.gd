@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 17
+const ART_VERSION := 18
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -98,7 +98,7 @@ func _setup() -> void:
 	env.background_mode = Environment.BG_CLEAR_COLOR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.62, 0.68, 0.8)
-	env.ambient_light_energy = 0.55
+	env.ambient_light_energy = 0.46 # (a little darker: the lights do the modelling)
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 1.05
 	env.ssao_enabled = true
@@ -122,6 +122,15 @@ func _setup() -> void:
 	travel.y = -0.62 # (a lowish sun: long shadows across the ground)
 	sun.transform = Transform3D(Basis.looking_at(travel.normalized(), Vector3.UP), Vector3.ZERO)
 	vp.add_child(sun)
+	# a cool fill from the other side: lifts the shadowed face so sprites stay
+	# readable at map zoom without flattening the sun's modelling
+	var fill := DirectionalLight3D.new()
+	fill.light_energy = 0.35
+	fill.light_color = Color(0.72, 0.8, 1.0)
+	fill.shadow_enabled = false
+	var ftravel := (-travel.normalized() * 0.6 + Vector3(0, -0.35, 0))
+	fill.transform = Transform3D(Basis.looking_at(ftravel.normalized(), Vector3.UP), Vector3.ZERO)
+	vp.add_child(fill)
 	catcher = MeshInstance3D.new()
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(500, 500)
