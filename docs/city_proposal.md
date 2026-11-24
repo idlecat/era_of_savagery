@@ -1,7 +1,8 @@
 # Proposal: From Tribe to Ancient City (1000 people)
 
-Status: proposal, not implemented. Written after a code and data audit plus headless
-measurement runs (March 2026). The goal: a player can develop the settlement into one
+Status: proposal, not implemented; the next plan (`ROADMAP.md` §3 sets its order with
+the open make_it_fun items folded in). Written after a code and data audit plus headless
+measurement runs (2026-11-24). The goal: a player can develop the settlement into one
 or more thriving ancient cities of about a thousand people, with challenges that grow
 with the city and a good pace on the way. Code references were checked at 5e53363;
 main has since gained the era-3 **Stone Wall** and **Trading Post** (0956e11) and

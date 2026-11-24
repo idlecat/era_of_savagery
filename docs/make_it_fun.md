@@ -72,7 +72,13 @@ the numbers G3 measured but left for the designer to choose. The section notes b
   canary baseline (`--write-baseline`).
 - Most measurements used 4–8 seeds; the food bands and the winter-choice table want
   16–20.
-- Whether Linux CI reproduces the macOS canary baseline: the first CI run will tell.
+- Linux CI reproduces macOS runs exactly (same per-seed numbers, 2026-11-24). The canary's
+  first CI run fired: 8 metrics moved after the baseline, mostly the steward's food
+  (near-miss and famine 0% → 100%), all from c92075a (gatherers go back to their node);
+  see `ROADMAP.md` §4.
+- What comes next is in `ROADMAP.md`: most items left here fold into the steps of
+  `city_proposal.md` (I5 is its tiers, I2's raid targeting and fire spread its town
+  challenges, and its worked fields are the food-economy fix the bands above call for).
 - Playtest judgments (Open questions): the words of the winter signs, whether the
   site factors read without a tutorial.
 

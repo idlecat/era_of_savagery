@@ -41,6 +41,10 @@ Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates
 - **Chronicle:** names of our people are links. Click one to select that person and centre the view on them (for the dead, the view goes to where they lie).
 - **Keys:** Space pauses, 1/2/3 set the speed, T opens the Wisdom Tree, C assigns a Task Contract, Esc cancels. F11 (or Cmd+Ctrl+F, or Alt+Enter) toggles fullscreen.
 
+## Design docs
+
+[docs/ROADMAP.md](docs/ROADMAP.md) reviews where the game stands and sets what comes next; [docs/make_it_fun.md](docs/make_it_fun.md) is the fun plan and the record of what landed; [docs/city_proposal.md](docs/city_proposal.md) is the next big plan (from a tribe to cities of a thousand); [docs/CONFIG.md](docs/CONFIG.md) and [docs/CULTURES.md](docs/CULTURES.md) describe the data formats.
+
 ## LLM setup (DeepSeek / GLM)
 
 The game runs out of the box with the **offline persona engine** (no API needed). To use a cloud LLM:
@@ -87,12 +91,16 @@ Like Age of Empires II, objects are modelled in 3D and rendered to sprites. On f
 - textured materials (`shaders/bake.gdshader`): triplanar noise for bark, thatch, hide and stone, plus snow on upward-facing surfaces.
 
 About 500 sprites take a few seconds to bake and are cached in `user://art_cache_v<N>`. Bump `ART_VERSION` after changing a model.
-- **Baked so far:** trees (pine and broadleaf, each with a snowy version), bushes, stumps, rocks; homes for all three eras in two sizes; palisade posts; bonfire, granary, smelter, council ring, totem shrine, Grand Altar, weapon rack, aurochs pen; cave, den, standing stones and Eagle Peak landmarks.
+- **Baked so far:** trees (pine and broadleaf, each with a snowy version), bushes, stumps, rocks; homes for all three eras in two sizes; palisade posts; bonfire, granary, smelter, council ring, totem shrine, Grand Altar, weapon rack, aurochs pen; Lookout Tower, Smokehouse, Longhouse, Temple, Stone Wall (blocks and towers) and Trading Post; cave, den, standing stones and Eagle Peak landmarks.
 - **Animated in 8 directions:** villagers (idle, walk, work; clothing tinted per person) and animals (deer, tiger, wolf).
 - **Terrain:** drawn by `shaders/terrain.gdshader` (grass detail, sand grain, rippling water, shoreline foam).
 - **Fallback:** anything not yet baked falls back to the old drawn art, which is also used when running headless.
 - **Also baked:** construction stages (staked plan, materials, frame, walls with a scaffold); animation sets (gather, build, spear attack, ritual and death for villagers; pounce and death for beasts; stone or bronze tools); ground cover and rock outcrops; seasonal crop fields, the dock, Hot Spring, bones, flint and Yinglong.
 - **Lighting:** a time-of-day tint (golden dusk, blue night, pink dawn), additive fire and torch glow, and a soft vignette.
+- **Colour grade:** every bake gets a light final grade in `bake.gdshader` (saturation, a filmic S-curve, warm crowns over cool depths); on screen `shaders/grade.gdshader` eases saturation and contrast with the season, the weather and the night, and the sky tint layers season and weather moods over the time of day. Baked sprites cast a soft contact shadow; trees vary a little in hue.
+- **Weather and water:** wind bends tree crowns and rain, puddles come with the rain and dry after, storm flashes stutter; the river gets bank foam and low-sun glints.
+- **The village grows prouder:** banner poles round the council fire from the second age, pennants and carved posts in the third; each weapon is baked with its own attack (overhead club and axe blows, a whirled sling, a drawn bow).
+- **Feel:** eased panning and zoom, a camera that glides to alerts and sways uneasily in a crisis, a rotating selection ring and hover rings on what can be clicked, pulsing contract sites that need a decision, softer panels with animated dialogs, icon speech bubbles at map zoom, and achievement pictures shot like a film still (letterbox, a slow push out).
 
 ## The Council (`policy.gd`)
 
