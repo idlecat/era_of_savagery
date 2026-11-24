@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2727,6 +2727,35 @@ func test_lookout_and_smokehouse() -> void:
 	h.pos = D.VILLAGE + Vector2(0, 600)
 	sim.fog_update()
 	check(not h.spotted, "peaceful hunters are not called out")
+
+func test_temple_and_longhouse() -> void:
+	print("\n== Era-2 upgrades: shrine -> temple -> altar, large hut -> longhouse (make_it_fun I) ==")
+	var sim = _new_sim()
+	sim.stock["wood"] = 500.0
+	sim.stock["stone"] = 100.0
+	var shrine = sim.add_structure("totem_shrine", D.VILLAGE + Vector2(-150, 140), true)
+	var ups: Array = sim.upgrades_for(shrine)
+	check(ups.size() == 1 and ups[0]["to"] == "temple" and ups[0]["why"] == tr("Requires the %s") % tr(D.ERA_NAMES[2]), "a shrine becomes a temple, once the second age has come (%s)" % str(ups))
+	check(sim.struct_block("temple") != "" and sim.can_place("temple", D.VILLAGE + Vector2(300, 300)) != "", "no temple before the second age")
+	sim.evo.era = 2
+	check(sim.struct_block("temple") == "" and sim.upgrade(shrine.id, "temple") == "", "in the second age the upgrade starts")
+	shrine.reno = false
+	shrine.type = "temple"
+	check(sim.upgrades_for(shrine)[0]["to"] == "grand_altar", "and a temple becomes the grand altar")
+	var p: Vector2 = shrine.pos + Vector2(40, 0)
+	check(sim.ritual_mult(p) == 2.0 and sim.ritual_mult(D.VILLAGE + Vector2(900, 900)) == 1.0, "rituals by the temple give twice the lore")
+	# the longhouse: those who sleep under one roof grow closer
+	var lh = sim.add_structure("longhouse", D.VILLAGE + Vector2(160, -160), true)
+	var a = sim.living()[0]
+	var b = sim.living()[1]
+	sim.life.set_bond(a, b, 0.0)
+	sim.life.set_bond(b, a, 0.0)
+	for u in [a, b]:
+		u.sleeping = true
+		u.bed_id = lh.id
+	for i in 100: sim._hearths(0.1)
+	check(sim.life.bond(a, b) > 0.0 and sim.life.bond(b, a) > 0.0, "two who sleep in the longhouse grow closer (%.1f)" % sim.life.bond(a, b))
+	check(sim.pop_cap() >= int(D.STRUCTURES["longhouse"]["cap"]), "it houses 8")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

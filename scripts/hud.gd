@@ -1076,11 +1076,9 @@ func _cap(s: String) -> String:
 func _refresh_right() -> void:
 	for k in build_btns:
 		var sd: Dictionary = D.STRUCTURES[k]
-		var locked: bool = sd.has("tech") and not sim.has_tech(sd["tech"])
 		var short := _shortfall(sd["wood"], sd.get("stone", 0))
-		var why := ""
-		if locked: why = tr("Requires %s") % tr(sim.evo.tech_def(sd["tech"])["name"])
-		elif short != "": why = tr("Short of %s") % short
+		var why: String = sim.struct_block(k)
+		if why == "" and short != "": why = tr("Short of %s") % short
 		var bb: Button = build_btns[k]
 		bb.text = "%s\n%s" % [tr(sd["name"]), why if why != "" else _cost_long(sd)]
 		bb.disabled = why != ""

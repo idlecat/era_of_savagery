@@ -72,7 +72,7 @@ func wanted() -> Array:
 		var st: String = r.get("structure", "")
 		if not D.STRUCTURES.has(st) or not st in D.VILLAGE_BUILDS: continue
 		var sd: Dictionary = D.STRUCTURES[st]
-		if sd.has("tech") and not sim.has_tech(sd["tech"]): continue
+		if sim.struct_block(st) != "": continue
 		if sim.stock["wood"] < sd["wood"] + reserve or sim.stock["stone"] < sd.get("stone", 0): continue
 		if sim.structures.any(func(s): return not s.built and s.type == st and sim.ours(s)): continue # one at a time
 		if not sim.story.holds(r.get("when", {})): continue

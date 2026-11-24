@@ -607,8 +607,15 @@ factor, free). Seven candidates stand; Era 2 keeps the longhouse and the temple.
   building, one per type counts): the Steward lays one out in autumn; it only pays if it
   stands before the frost. Both have baked models (`art_baker` `_tower`, `_smokehouse`,
   `ART_VERSION` 21) and hand-drawn fallbacks. Not yet: the tower feeding the forecast
-  directly (beyond the fog), the longhouse and temple upgrades, site factors (I2), the
-  village's name (I5).
+  directly (beyond the fog), site factors (I2), the village's name (I5).
+- **Second slice: the Era-2 upgrades.** *Longhouse* (large hut → longhouse, houses 8,
+  `hearth_bond`: those asleep under its roof grow closer, `sim._hearths()`) and *Temple*
+  (totem shrine → temple → grand altar: the religious line now grows up through the ages;
+  more lore, `ritual_mult` 2.0). New building keys: `era` (the age a type needs, checked
+  with `tech` by the one `sim.struct_block()` that placement, upgrades, the build menu and
+  the Steward now share) and `ritual_mult` (replaces the shrine/altar list in the ritual
+  rule). Baked models `_longhall`, `_temple` (`ART_VERSION` bumped). The temple's part in
+  rank initiations and festivals is not built.
 
 ### I5. The village grows a name
 - Camp → village → town by what's been built (a rule over `sim.structures`, config),

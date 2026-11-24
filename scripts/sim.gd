@@ -202,6 +202,7 @@ func new_game() -> void:
 
 # ------------------------------------------------------------ the opening (make_it_fun D1/D2)
 var opening := true # the opening's remembered find and first-day fever (tests switch it off)
+var hearth_t := 0.0 # (longhouse bonds, every 2 s)
 var rumoured := {} # find id -> who remembers it: known of, not yet found (discovery.json "remembered")
 
 ## D1: an elder remembers a find from long ago (discovery.json "remembered": the first of
@@ -952,7 +953,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			if approach(u, j["at"], 6, dt):
 				u.act = "Performing ritual"
 				u.doing = "ritual"
-				var boost := 1.5 if (struct_near("totem_shrine", u.pos, 140) or struct_near("grand_altar", u.pos, 140)) else 1.0
+				var boost := ritual_mult(u.pos)
 				if evo.has_trad("ancestor_rites"): boost *= 1.3
 				stock["lore"] += dt * 0.22 * (1.0 + 0.2 * u.lv("lore")) * boost
 				devotion = minf(100.0, devotion + dt * 0.07 * (1.0 + 0.1 * u.lv("lore")) * (1.3 if evo.has_trad("ancestor_rites") else 1.0) * inv.mul("devotion"))
@@ -1956,6 +1957,7 @@ func tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	story.tick(dt)
+	_hearths(dt)
 	cult.update(dt)
 	inv.update(dt)
 	var target := maxf(1.0 if is_day_part("dark") else 0.0, nat.darkness())
@@ -2267,7 +2269,7 @@ func _update_vice(dt: float) -> void:
 func can_place(type: String, p: Vector2, size := 0.0) -> String:
 	var sd: Dictionary = D.STRUCTURES[type]
 	var cost := place_cost(type, size)
-	if sd.has("tech") and not has_tech(sd["tech"]): return "Requires tech"
+	if struct_block(type) != "": return struct_block(type)
 	if stock["wood"] < cost["wood"]: return "Not enough wood"
 	if stock["stone"] < cost["stone"]: return "Not enough stone"
 	if D.river_dist(p) < D.RIVER_HALF + 15: return "Too close to the river"
@@ -2364,7 +2366,7 @@ func upgrades_for(s: E.Structure) -> Array:
 		var w := maxi(int(BLD.get("min_wood", 0)), ceili((b["wood"] - a["wood"]) * k))
 		var st := maxi(0, ceili((b.get("stone", 0) - a.get("stone", 0)) * k))
 		var why := ""
-		if b.has("tech") and not has_tech(b["tech"]): why = tr("Requires %s") % tr(evo.tech_def(b["tech"])["name"])
+		if struct_block(to) != "": why = struct_block(to)
 		elif not s.built or s.reno: why = tr("Busy")
 		elif ranks.block("fine_craft") != "": why = ranks.block("fine_craft")
 		elif stock["wood"] < w or stock["stone"] < st: why = tr("Needs %d wood and %d stone") % [w, st] if st > 0 else tr("Needs %d wood") % w
@@ -2745,6 +2747,37 @@ func fog_update() -> void:
 	if guardian and not guardian.dead: reveal(guardian.pos, 260)
 	for lm in landmarks:
 		if not lm["found"] and visible[_cell_idx(lm["pos"])] == 1: _discover(lm)
+
+## Why the tribe can't have a building type yet ("" = it can): the tech it needs
+## (structures.json "tech") or the age ("era"). Translated.
+func struct_block(type: String) -> String:
+	var sd: Dictionary = D.STRUCTURES.get(type, {})
+	if sd.is_empty(): return tr("No such building")
+	if sd.has("tech") and not has_tech(sd["tech"]): return tr("Requires %s") % tr(evo.tech_def(sd["tech"])["name"])
+	if evo.era < int(sd.get("era", 1)): return tr("Requires the %s") % tr(D.ERA_NAMES.get(int(sd["era"]), ""))
+	return ""
+
+## How much more lore a ritual at `p` gives: the highest "ritual_mult" of our buildings
+## within 140 (shrine, temple, altar), else 1.
+func ritual_mult(p: Vector2) -> float:
+	var m := 1.0
+	for s in structures:
+		if s.built and ours(s) and s.pos.distance_to(p) < 140.0: m = maxf(m, float(D.STRUCTURES[s.type].get("ritual_mult", 1.0)))
+	return m
+
+## Longhouses (structures.json "hearth_bond"): those asleep under one roof grow closer.
+func _hearths(dt: float) -> void:
+	hearth_t -= dt
+	if hearth_t > 0.0: return
+	hearth_t = 2.0
+	for s in structures:
+		var hb := float(D.STRUCTURES[s.type].get("hearth_bond", 0.0))
+		if hb <= 0.0 or not s.built or not ours(s): continue
+		var sleepers: Array = units.filter(func(u): return not u.dead and u.sleeping and u.bed_id == s.id)
+		for i in sleepers.size():
+			for j in range(i + 1, sleepers.size()):
+				life.add_bond(sleepers[i], sleepers[j], hb * 2.0)
+				life.add_bond(sleepers[j], sleepers[i], hb * 2.0)
 
 ## A building's effects (structures.json "effects", the effect-stat format): the product of
 ## the "mul" on `stat` over each type of ours that stands (one of a type counts once).

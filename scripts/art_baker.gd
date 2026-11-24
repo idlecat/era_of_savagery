@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 22
+const ART_VERSION := 23
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -413,6 +413,8 @@ func _jobs() -> Array:
 		jobs.append({"key": "weapon_rack" + sfx, "size": 96, "lift": 12.0, "build": _rack.bind(snowy)})
 		jobs.append({"key": "lookout_tower" + sfx, "size": 192, "lift": 34.0, "build": _tower.bind(snowy)})
 		jobs.append({"key": "smokehouse" + sfx, "size": 160, "lift": 10.0, "build": _smokehouse.bind(snowy)})
+		jobs.append({"key": "longhouse" + sfx, "size": 288, "lift": 16.0, "build": _longhall.bind(snowy)})
+		jobs.append({"key": "temple" + sfx, "size": 192, "lift": 22.0, "build": _temple.bind(snowy)})
 		jobs.append({"key": "aurochs_pen" + sfx, "size": 192, "lift": 6.0, "build": _pen.bind(snowy)})
 		jobs.append({"key": "den" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(true, snowy)})
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
@@ -1253,6 +1255,42 @@ func _smokehouse(snowy: bool) -> Node3D:
 		var a := i * TAU / 7
 		boulder(root, Vector3(11 + cos(a) * 4.5, 0.8, 9 + sin(a) * 3.5), 1.4, stone, 900 + i)
 	mi(root, cyl(3, 3, 0.4, 10), mat(Color("#2e2620"), "coarse", 0.3), Vector3(11, 0.3, 9))
+	return root
+
+## The Longhouse building (an upgrade of the large hut): the era-3 longhouse home, stretched
+## into a long hall.
+func _longhall(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var lh := _longhouse(true, snowy)
+	lh.scale = Vector3(1.3, 1.0, 1.05)
+	root.add_child(lh)
+	return root
+
+## A temple: a round clay hall on a ring of stones, painted with ochre bands, under a tall
+## thatched cone with a feathered spire, and a small totem by its door.
+func _temple(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var stone := mat(Color("#8f8b82"), "coarse", 0.2, Vector3.ONE, 0.6, sn)
+	for i in 14:
+		var a := i * TAU / 14
+		boulder(root, Vector3(cos(a) * 17, 1.2, sin(a) * 17), 2.4, stone, 980 + i, 0.7, i * 30)
+	mi(root, cyl(16.5, 17, 1.6, 20), mat(Color("#9a7a58"), "coarse", 0.2, Vector3.ONE, 0.5), Vector3(0, 0.8, 0))
+	var clay := mat(Color("#c79a6a"), "coarse", 0.14, Vector3.ONE, 0.5)
+	mi(root, lumpy(cyl(13, 13.5, 13, 20, 3), 0.25, 990, 0.2), clay, Vector3(0, 8, 0))
+	for y in [5.0, 11.0]: mi(root, cyl(13.3, 13.3, 1.1, 20), mat(Color("#a8432c") if y < 8.0 else Color("#e0aa36"), "fine", 0.3), Vector3(0, y, 0))
+	mi(root, box(Vector3(6, 9, 1.2)), mat(Color("#2a1a0e"), "fine"), Vector3(0, 6, 13.2))
+	var thatch := mat(Color("#a9884a"), "streak", 0.3, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0)
+	mi(root, lumpy(cyl(0.8, 17, 24, 20, 5), 0.3, 991, 0.18), thatch, Vector3(0, 26.5, 0))
+	_fringe(root, 15.2, 16.6, 26, Color("#a9884a"), snowy)
+	var wood := mat(Color("#5e3d22"), "streak", 0.2, Vector3(1, 4, 1))
+	segment(root, Vector3(0, 37, 0), Vector3(0, 47, 0), 0.5, wood)
+	for i in 3:
+		mi(root, box(Vector3(0.4, 4.0, 1.4)), mat([Color("#b03a2b"), Color("#f0ece0"), Color("#2e7a9b")][i], "fine"), Vector3(0, 44.5 - i * 1.5, 0.8), Vector3(0, i * 60, 25))
+	var t := _shrine(false, snowy)
+	t.scale = Vector3.ONE * 0.5
+	t.position = Vector3(-12, 0, 16)
+	root.add_child(t)
 	return root
 
 func _rack(snowy: bool) -> Node3D:

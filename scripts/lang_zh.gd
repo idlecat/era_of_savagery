@@ -2577,4 +2577,9 @@ const STRINGS := {
 	"Smokehouse": "熏房",
 	"Racks over a slow fire: stored food rots at 60% of the speed (one is enough). Worth the most if it stands before the winter.": "文火上架着熏架：储存的食物腐坏速度降为60%（一座就够了）。冬天到来之前建好最划算。",
 	"winter is coming, and the stores must keep.": "冬天要来了，存粮得放得住。",
+	"Requires the %s": "需要进入%s",
+	"Longhouse": "长屋",
+	"A long hall under one roof: houses 8, and those who sleep in it grow closer night by night. A big thing to lose to a flood or a fire.": "一个屋顶下的长厅：可住8人，睡在里面的人一夜比一夜亲近。要是毁于洪水或大火，损失可不小。",
+	"Temple": "神庙",
+	"A house for the spirits on a clay floor: more lore, rituals near it give twice the lore, and the sick nearby heal faster. The village gathers round it.": "建在夯土地面上的神灵之屋：产出更多学识，附近的仪式学识翻倍，附近的病人好得更快。村子围着它聚拢。",
 }

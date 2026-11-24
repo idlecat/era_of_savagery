@@ -60,7 +60,7 @@
   "hungry_alert": "%s has fallen ill: hunger has weakened the camp, and the fever finds the weakest first.",
   "spread_every": 2, "spread_radius": 70, "spread_chance": 0.035,
   "recover": {"_doc": "A sickness lasts 'time' seconds, sped up or slowed by each factor.",
-   "time": 70, "warm": 1.5, "shrine": 1.4, "shrines": ["totem_shrine", "grand_altar"], "shrine_radius": 160,
+   "time": 70, "warm": 1.5, "shrine": 1.4, "shrines": ["totem_shrine", "temple", "grand_altar"], "shrine_radius": 160,
    "healer_lore": 3, "healer_radius": 140, "healer": 1.5, "spring": 1.3, "herbs": 2.5, "hungry_below": 20, "hungry": 0.5},
   "alert": "%s has fallen ill with a coughing fever. Keep the sick warm - it spreads.", "popup": "Sick!"
  },

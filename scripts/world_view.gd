@@ -1509,7 +1509,7 @@ func _draw_ground_part(s) -> void:
 			for i in 9:
 				ci.draw_circle(p + Vector2.from_angle(i * TAU / 9) * 12, 3.5, Color(0.55, 0.55, 0.5, a))
 			ci.draw_circle(p, 8, Color(0.15, 0.1, 0.06, 0.8 * a))
-		"grand_altar", "totem_shrine":
+		"grand_altar", "totem_shrine", "temple":
 			ci.draw_circle(p, D.STRUCTURES[s.type]["r"] + 10, Color(0.55, 0.5, 0.4, 0.35 * a))
 		"burial_ground":
 			ci.draw_circle(p, 44, Color(0.36, 0.33, 0.24, 0.3))
@@ -1521,7 +1521,7 @@ func _draw_ground_part(s) -> void:
 const SITE_SHAPES := {
 	"hut": ["round", 20], "large_hut": ["round", 26], "granary": ["round", 20], "smelter": ["round", 14],
 	"council_ring": ["round", 26], "totem_shrine": ["round", 14], "grand_altar": ["rect", 26],
-	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14], "lookout_tower": ["round", 14], "smokehouse": ["round", 18],
+	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14], "lookout_tower": ["round", 14], "smokehouse": ["round", 18], "longhouse": ["rect", 30], "temple": ["round", 18],
 }
 func _draw_site_stage(s, b: Vector2) -> bool:
 	if not SITE_SHAPES.has(s.type): return false
@@ -1555,7 +1555,7 @@ func _draw_structure(s) -> void:
 			var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
 			ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
 			return
-	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse"]:
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse", "longhouse", "temple"]:
 		if spr_shadow.call(s.type + _snowy(), float(sim.struct_r(s))):
 			if _sprite(s.type + _snowy(), b):
 				if s.decor > 0: _decor(s, b, 18.0)
@@ -1640,6 +1640,12 @@ func _draw_structure(s) -> void:
 				var q := b + Vector2(cos(i * TAU / 6) * 12, sin(i * TAU / 6) * 6)
 				ci.draw_circle(q, 3, Color(0.6, 0.58, 0.52, a))
 			_totem(b, 44, 1.0, a)
+		"longhouse": # (hand-drawn fallback)
+			_longhouse(s.pos, 34.0)
+			if s.built and sim.has_tech("fire"): _smoke(b - Vector2(0, 40), s.id)
+		"temple": # (hand-drawn fallback: a clay round hall under a tall cone, a totem by the door)
+			_round_house(b, 17, 12, 30, Color("#c79a6a"), Color("#a9884a"), frac, s.built)
+			_totem(b + Vector2(-14, 8), 26, 0.6, a)
 		"lookout_tower": # (hand-drawn fallback: raked poles, platform, hood)
 			_ell(b + Vector2(6, 2), 16, 6, SHADOW)
 			var tp := b - Vector2(0, 40)
@@ -1844,7 +1850,7 @@ func _era_dressing(s, b: Vector2) -> void:
 				for i in 2:
 					var ang := TAU * i / 2.0 + 1.2
 					_pennant(b + Vector2(cos(ang) * 18, sin(ang) * 9), 26, s.id + i)
-		"totem_shrine", "grand_altar":
+		"totem_shrine", "grand_altar", "temple":
 			if era >= 3: _pennant(b + Vector2(-26, 6), 46, s.id)
 
 ## A tall pole with a fluttering pennant: the cloth leans with the wind.
@@ -2904,7 +2910,7 @@ func _sync_items() -> void:
 			seen[key] = true
 			var anim: bool = st.type in ["bonfire", "fishing_dock", "aurochs_pen", "smelter", "council_ring"] or not st.built or st.reno \
 				or (st.type in ["hut", "large_hut"] and sim.has_tech("fire")) \
-				or (st.type in ["totem_shrine", "grand_altar"] and sim.evo.era >= 3) # (era pennants flutter)
+				or (st.type in ["totem_shrine", "temple", "grand_altar"] and sim.evo.era >= 3) # (era pennants flutter)
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
