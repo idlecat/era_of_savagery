@@ -6,6 +6,8 @@
 ##     [--policies=steward,hoarder,feaster] [--level=normal] [--map=the_ford|standard...] [--dt=0.1] [--out=/path.csv]
 ##     [--choose=autumn:2,festival:0] (these dilemmas take that option, whatever the policy says)
 ##     [--winter=white|wolf|lean|mild] (the first winter is that kind: hz.set_winter, as a game master would)
+##     [--cap=N] [--decay=N] (G3: the director's tension cap / decay for this run's level, on a copy
+##     of director.json: nothing on disk changes)
 ##     [--baseline=res://tests/balance_baseline.json [--write-baseline]] (G2, the balance canary: compare each
 ##     policy's summary with the baseline and warn where a metric moved past its tolerance, or write it anew)
 ##
@@ -81,6 +83,12 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	seed(sd)
 	var sim = Sim.new()
 	sim.hz.level = a.get("level", "normal")
+	if a.has("cap") or a.has("decay"): # (G3: try the director's numbers without touching the config)
+		var dc: Dictionary = sim.director.C.duplicate(true)
+		var lv: Dictionary = dc["levels"][sim.hz.level]
+		if a.has("cap"): lv["cap"] = float(a["cap"])
+		if a.has("decay"): lv["decay"] = float(a["decay"])
+		sim.director.C = dc
 	sim.new_game()
 	if pol.get("steward", true):
 		var best = null
@@ -291,7 +299,7 @@ func _short(r: Dictionary) -> String:
 		r["alive"], r["deaths"], r["starved"], r["killed"], r["other_deaths"], r["left"], r["hungry_hours"], r["sick_wave"], roundi(r["min_food_frac"] * 100), r["near_miss"], r["famine"], r["sealed"], r["interrupts"], r["pauses_per_hour"], r["max_gap_days"], r["era2_day"], r["ranks"], r["craft_gate_day"]]
 
 func _report(rows: Array, pols: Array) -> void:
-	print("\n== G1 metrics (%s days, %s) ==" % [a.get("days", "12"), a.get("map", "the_ford")])
+	print("\n== G1 metrics (%s days, %s, %s%s) ==" % [a.get("days", "12"), a.get("map", "the_ford"), a.get("level", "normal"), (", director cap %s decay %s" % [a.get("cap", "-"), a.get("decay", "-")]) if a.has("cap") or a.has("decay") else ""])
 	print("policy    runs  near-miss  famine  deaths  starved  killed  left  empty-h  min-food  sealed  intr  pause/h  max-gap  era2  ranks  craft-gate")
 	var summ := {}
 	for pid in pols:

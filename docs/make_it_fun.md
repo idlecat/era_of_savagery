@@ -792,6 +792,28 @@ play (that is the measurable form of "decisions matter"):
   baseline exactly; the first CI run will show it (small float drift stays inside the
   tolerances).
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
+  **Measured, not tuned** (`tools/metrics.gd --cap=N --decay=N`: overrides on a copy of
+  `director.json`; 8 seeds x 12 days, steward / feaster, The Ford):
+
+  | normal level | deaths | killed | famine | interrupts | pauses/h |
+  |---|---|---|---|---|---|
+  | cap 2.0 | 4.4 / 4.0 | 0.9 / 0.6 | 0% / 0% | 2.5 / 2.4 | 0.15 |
+  | cap 3.0 (now) | 4.0 / 3.1 | 1.5 / 0.9 | 13% / 13% | 2.5 / 2.1 | 0.15 |
+  | cap 4.5 | 4.0 / 3.9 | 1.5 / 0.4 | 0% / 13% | 2.4 / 2.5 | 0.16 |
+  | decay 0.4 | 3.4 / 1.1 | 0.4 / 0.1 | 13% / 0% | 1.6 / 1.8 | 0.15 |
+  | decay 1.6 (now) | as cap 3.0 | | | | |
+  | decay 4.0 | 5.5 / 3.2 | 1.4 / 0.4 | 13% / 25% | 3.2 / 2.9 | 0.16 |
+  | harsh, cap 5 (now) | 9.1 / 5.1 | 2.8 / 1.1 | 63% / 38% | 2.5 / 2.5 | 0.15 |
+  | harsh, cap 7 | 9.5 / 5.5 | 2.4 / 1.4 | 50% / 38% | 2.8 / 2.4 | 0.15 |
+
+  Findings: on normal the **cap barely binds** (2.0 to 4.5 changes little); **decay is the
+  lever** (slower easing holds more back: fewer deaths and contract interrupts, the
+  feaster's deaths 3.1 → 1.1 at decay 0.4; faster easing the reverse). **Harsh is set by
+  its multipliers, not its cap** (5 vs 7 the same): it is a much harder game (famine
+  38–63%, the first starvation deaths). **Pauses per hour don't move** with either knob
+  (~0.15): the pause rhythm comes from dilemmas and contracts, not hardships. Near-misses
+  stay 75–100% everywhere: the food floor is not the director's to fix. Choosing the
+  numbers is the designer's call (how harsh normal should be); none are changed yet.
 
 Why these bands: ~100% near-misses with ~0 starvation deaths (the first draft) describes
 a floor that always triggers and never bites. Scarcity should be *felt* in most runs,
