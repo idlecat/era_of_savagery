@@ -369,7 +369,7 @@ func _sickness(dt: float) -> void:
 	if sick_roll <= 0:
 		sick_roll = float(cs["roll_every"])
 		var alive: Array = sim.living()
-		var crowd: float = maxf(0.0, float(alive.size()) / maxf(1.0, sim.pop_cap()) - 0.8)
+		var crowd: float = maxf(0.0, float(alive.size()) / maxf(1.0, sim.pop_cap()) - float(sim.RULES["beds"]["crowd_at"])) # (one crowding threshold with births)
 		var hours := hungry_hours()
 		var risk: float = float(cs["base"]) + (float(cs["winter"]) if winter() else 0.0) + crowd * float(cs["crowding"]) + sim.nat.sick_risk() \
 			+ ((float(cs["hungry"]) + minf(float(cs.get("hungry_max", 0.0)), hours * float(cs.get("hungry_per_hour", 0.0)))) if hungry else 0.0)

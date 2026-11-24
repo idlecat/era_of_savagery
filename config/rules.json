@@ -56,10 +56,25 @@
   "aura": {"rank": "proven", "radius": 110, "def_mult": 1.2}
  },
  "births": {
+  "_doc": "Births (sim._update_births, sim.birth_rate()): one child per `every` seconds for every `per_lines` grown family lines (never slower than one per `every`), while there are beds free and the stores hold `min_food` (a count: a number or {base, per_pop}); each costs `cost` food and lifts the mood by `mood`. Past beds.crowd_at of the beds the rate tapers to nothing at full (beds.crowd_k), in winter it is `winter` times, and with the tribe's mood under `low_mood` it is `low_mood_mult` times.",
   "every": 45,
-  "min_food": 30,
+  "per_lines": 16,
+  "min_food": {"base": 30, "per_pop": 0.5},
   "cost": 15,
-  "mood": 5
+  "mood": 5,
+  "winter": 0.5,
+  "low_mood": 35,
+  "low_mood_mult": 0.6
+ },
+ "migration": {
+  "_doc": "Families who come to live with the tribe (folk.add_family, the story action newcomers). Each day a family may move to us from an ally or a vassal (clan_chance) while we have free_beds and the clan keeps more than clan_keeps people. Wanderers: on a morning, with at least min_pop people, the mood at mood or better and free_beds beds free, with chance `chance`, count [min, max] wanderers ask to stay (dilemma 'wanderers'). Newcomers have skills up to skill_max and lift the mood by `mood`; at most most_at_once in one go.",
+  "clan_chance": 0.35,
+  "clan_keeps": 6,
+  "free_beds": 1,
+  "skill_max": 2,
+  "mood": 1,
+  "most_at_once": 6,
+  "wanderers": {"min_pop": 18, "mood": 50, "free_beds": 2, "chance": 0.3, "count": [2, 4]}
  },
  "herds": {
   "per_pen": 2,
@@ -75,8 +90,10 @@
   "dig": 5
  },
  "beds": {
-  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings).",
+  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings). crowd_at: past this share of the beds taken the camp is crowded (sickness spreads more, births taper by crowd_k).",
   "far": 700,
+  "crowd_at": 0.8,
+  "crowd_k": 2,
   "day_only": ["renovate", "field"]
  },
  "vice": {
@@ -257,28 +274,28 @@
     "upgrade": "large_hut",
     "structure": "longhouse",
     "when": {
-     "homeless": 1,
+     "beds_free_below": {"base": 2, "per_pop": 0.08},
      "era": 2
     },
-    "reason": "people sleep in the open: a large hut can become a longhouse."
+    "reason": "the beds are nearly all taken: a large hut can become a longhouse."
    },
    {
     "upgrade": "hut",
     "structure": "large_hut",
     "when": {
-     "homeless": 1
+     "beds_free_below": {"base": 2, "per_pop": 0.08}
     },
-    "reason": "people sleep in the open: a hut can be made bigger."
+    "reason": "the beds are nearly all taken: a hut can be made bigger."
    },
    {
     "structure": "hut",
     "when": {
-     "homeless": 1,
+     "beds_free_below": {"base": 2, "per_pop": 0.08},
      "fewer": {
       "hut": {"base": 8, "per_pop": 0.25}
      }
     },
-    "reason": "people sleep in the open: there are not enough beds."
+    "reason": "the beds are nearly all taken: the tribe needs room to grow."
    },
    {
     "structure": "bonfire",

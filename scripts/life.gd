@@ -36,6 +36,8 @@ var on := true
 var pending := "" # "discontent": a family wants to leave (sim._check_events asks the chieftain)
 var pending_who := -1
 var asked_day := -99
+var wander_day := -1 # the last day wanderers were looked for
+var wanderers := 0 # how many are at the edge of the camp, asking to stay
 var extra_lines := {} # situation -> [texts] (add_lines: a game master's)
 var _t := 0.0
 
@@ -128,6 +130,18 @@ func update(dt: float) -> void:
 		_needs_talk(u)
 	_bond_tick(alive, step)
 	_watch_passers(alive)
+	_wanderers(alive)
+
+## Once a day, in the morning: wanderers may come to a thriving camp with beds to spare
+## (rules.json migration `wanderers`); the chieftain decides (dilemma 'wanderers').
+func _wanderers(alive: Array) -> void:
+	if sim.day() == wander_day or not sim.is_day_part("morning") or pending != "": return
+	wander_day = sim.day()
+	var w: Dictionary = sim.RULES["migration"]["wanderers"]
+	if alive.size() < int(w["min_pop"]) or sim.folk.mood < float(w["mood"]) or sim.pop_cap() - alive.size() < int(w["free_beds"]): return
+	if randf() >= float(w["chance"]): return
+	wanderers = clampi(randi_range(int(w["count"][0]), int(w["count"][1])), 1, sim.pop_cap() - alive.size())
+	pending = "wanderers"
 
 func _fatigue(u: E.Unit, step: float) -> void:
 	var f: Dictionary = C["fatigue"]
@@ -669,18 +683,19 @@ func add_lines(situation: String, lines: Array) -> Array:
 	return []
 
 # ------------------------------------------------------------ a family leaves
-func owns_event(id: String) -> bool: return id == "discontent"
+func owns_event(id: String) -> bool: return id == "discontent" or id == "wanderers"
 
 func _event_vars() -> Dictionary:
 	var u: E.Unit = sim.unit_by_id(pending_who)
-	return {"person": tr(u.name) if u else "", "who": "id:%d" % pending_who}
+	return {"person": tr(u.name) if u else "", "who": "id:%d" % pending_who, "count": wanderers, "half": maxi(1, wanderers / 2)}
 
-func event_def(_id: String) -> Dictionary:
-	return sim.story.dilemma_view(sim.DILEMMAS["discontent"], _event_vars())
+func event_def(id: String) -> Dictionary:
+	return sim.story.dilemma_view(sim.DILEMMAS[id], _event_vars())
 
-func resolve(_id: String, idx: int) -> String:
-	var r: Dictionary = sim.story.dilemma_choose(sim.DILEMMAS["discontent"], idx, _event_vars())
+func resolve(id: String, idx: int) -> String:
+	var r: Dictionary = sim.story.dilemma_choose(sim.DILEMMAS[id], idx, _event_vars())
 	pending_who = -1
+	wanderers = 0
 	return r["text"]
 
 ## A family walks away from the tribe (the "depart" action). Their friends and kin grieve a little.

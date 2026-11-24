@@ -100,6 +100,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("mood") and sim.folk.mood < float(w["mood"]): return false
 	if w.has("food_frac") and sim.stock["food"] < sim.food_cap() * float(w["food_frac"]): return false
 	if w.has("homeless") and sim.living().size() - sim.pop_cap() < int(w["homeless"]): return false
+	if w.has("beds_free_below") and sim.pop_cap() - sim.living().size() >= count(w["beds_free_below"]): return false # (fewer beds to spare than this: build ahead of the births)
 	if w.has("wood") and sim.stock["wood"] < float(w["wood"]): return false
 	if w.has("fewer"): # fewer than n of a structure of ours, building sites included (n: a number or {base, per_pop})
 		for st in w["fewer"]:
@@ -147,10 +148,10 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str", "newcomers": "any", "from": "str"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
-	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "counts", "deaths": "num", "culture": "nums",
+	"mood": "num", "food_frac": "num", "homeless": "num", "beds_free_below": "any", "wood": "num", "fewer": "counts", "deaths": "num", "culture": "nums",
 	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "pop_below": "num", "career": "str"}
 
 static func _num_ok(v) -> bool:
@@ -321,6 +322,9 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 		if a.has("chosen"): vars.merge(sim.birth_chosen(int(a["chosen"])), true)
 		if a.has("festival"): sim.folk.hold(a["festival"], vars)
 		if a.has("births"): sim.birth_timer += float(a["births"])
+		if a.has("newcomers"): # (families come to live with us: a number or a var)
+			var nn := _num(a["newcomers"], vars)
+			if not is_nan(nn): sim.folk.add_family(int(nn), str(a.get("from", "")))
 		if a.has("guests"): vars["guests_line"] = sim.folk.invite(float(a["guests"]))
 		_clan_actions(a, vars)
 		if a.has("feat"): sim.inv.feat("story", tr(a["feat"]))

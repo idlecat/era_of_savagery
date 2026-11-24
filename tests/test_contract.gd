@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4079,6 +4079,69 @@ func test_shifts() -> void:
 	check(ended and hauled, "past the stint they haul the load home and come back idle (hauled %s)" % str(hauled))
 	sim.dispose()
 
+func test_growth() -> void:
+	print("\n== Growth: births by family lines, newcomers (city_proposal step 2) ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var hut_spots := 0
+	for i in 12:
+		var h = sim.add_structure("hut", sim.dry_spot(D.VILLAGE + Vector2(-260 + (i % 4) * 60, 200 + int(i / 4) * 60)))
+		sim.complete_structure(h, null)
+	sim.stock["food"] = 400.0
+	var cb: Dictionary = sim.RULES["births"]
+	var base := 1.0 / float(cb["every"])
+	var r0: float = sim.birth_rate()
+	check(r0 > 0.0 and r0 <= base * 1.01, "a small band is born at the base pace (%.4f/s)" % r0)
+	var nn: Array = sim.folk.add_family(6)
+	check(nn.size() == 6 and nn.all(func(u): return u.role == "" and not u.dead and u.epithet == "Newcomer"), "folk.add_family brings grown families")
+	sim.folk.add_family(20)
+	var grown: int = sim.living().filter(func(u): return u.role != "child").size()
+	var fill: float = float(sim.living().size()) / sim.pop_cap()
+	var expect: float = maxf(1.0, float(grown) / float(cb["per_lines"])) * base * sim.crowd_taper(fill)
+	check(absf(sim.birth_rate() - expect) < 1e-6 and grown > int(cb["per_lines"]), "more family lines, more births (%d lines: %.4f/s)" % [grown, sim.birth_rate()])
+	check(sim.crowd_taper(0.5) == 1.0 and sim.crowd_taper(0.9) < 0.5 and sim.crowd_taper(1.0) == 0.0, "births taper as the beds fill (%.2f at 90%%)" % sim.crowd_taper(0.9))
+	check(sim.folk.summary().has("births_per_day"), "folk.summary() tells a game master the birth rate")
+	var n0: int = sim.living().size()
+	sim.story.run([{"newcomers": 2}], null)
+	sim.story.run([{"newcomers": "lots"}, {"newcomers": -3}], null)
+	check(sim.living().size() == n0 + 2, "the newcomers story action, junk ignored")
+	# a vassal clan sends a family while we have beds to spare
+	var cid: String = sim.rivals.clans.keys()[0]
+	var cl: Dictionary = sim.rivals.clans[cid]
+	cl["vassal"] = 3
+	cl["pop"] = 12
+	var got := false
+	for k in 40:
+		var before: int = sim.living().size()
+		sim.folk._clan_families()
+		if sim.living().size() > before:
+			got = true
+			break
+	check(got and int(cl["pop"]) == 11, "a vassal clan's family moves to us (their people %d)" % int(cl["pop"]))
+	# wanderers come to a thriving camp and ask to stay
+	sim.life.on = true
+	sim.folk.mood = 80.0
+	sim.time = D.DAY_LEN * 3 + D.DAY_LEN * 0.15
+	var asked := false
+	for d in 60:
+		sim.life.wander_day = -1
+		sim.time = D.DAY_LEN * (3 + d) + D.DAY_LEN * 0.15
+		if not sim.is_day_part("morning"): continue
+		sim.life._wanderers(sim.living())
+		if sim.life.pending == "wanderers":
+			asked = true
+			break
+	check(asked and sim.life.wanderers >= 1, "wanderers ask to stay (%d)" % sim.life.wanderers)
+	if asked:
+		sim.life.pending = ""
+		var w: int = sim.life.wanderers
+		var n1: int = sim.living().size()
+		var view: Dictionary = sim.event_def("wanderers")
+		sim.resolve_event("wanderers", 0)
+		check(view.get("options", []).size() == 3 and sim.living().size() == n1 + w, "welcomed, they join (%d)" % w)
+	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
 func test_weapons() -> void:
 	print("\n== Weapons: invented, a knack for each, mastery that rises with use ==")
 	var sim = _new_sim()
@@ -4314,7 +4377,9 @@ func test_band_hunt() -> void:
 	check(shot and kept and archer.pos.distance_to(t4.pos) <= float(sim.hunt.weapon(archer)["range"]), "the archer shoots from afar, out of its reach (%d away)" % roundi(archer.pos.distance_to(t4.pos)))
 	check(sim.hunt.summary()[0]["archers"].has(archer.id), "archers show in hunt.summary()")
 	sim.inv.discover("bow", archer)
-	check(sim.hunt.weapon(archer).get("id", "") == "bow", "with the bow they shoot with that")
+	archer.knack["bow"] = archer.knack["sling"] # (knacks are hashed from the person: make the two equal, so the weapons' own ratings decide)
+	archer.arms["bow"] = archer.arms["sling"].duplicate()
+	check(sim.hunt.weapon(archer).get("id", "") == "bow", "with the bow (equally apt) they shoot with that")
 	sim.dispose()
 
 func test_spare_hands() -> void:

@@ -865,5 +865,16 @@
     "result": ["The family of %s gathers its things and walks away from the tribe.", "person"]
    }
   ]
+ },
+ "wanderers": {
+  "_doc": "Wanderers ask to stay (life.gd _wanderers, rules.json migration wanderers). Vars: count (how many), half (half of them). A routine matter: with a Steward, it is the Steward's to decide.",
+  "title": "Wanderers at the Fire",
+  "text": ["%d wanderers have come out of the wild, drawn by the smoke of a camp that eats well. They ask to stay.", "count"],
+  "options": [
+   {"label": "Welcome them all", "desc": "More hands, and more mouths.", "do": [{"newcomers": "count"}, {"mood": 2}], "result": ["%d newcomers find a place by our fire.", "count"]},
+   {"label": "Take in the strongest", "desc": "Only those who can work hard from the first day.", "do": [{"newcomers": "half"}], "result": ["%d of them stay; the others walk on.", "half"]},
+   {"label": "Send them on", "desc": "Our fire is for our own.", "do": [{"mood": -1}], "result": "The wanderers walk on into the wild."}
+  ],
+  "routine": {"prefer": [0, 1]}
  }
 }

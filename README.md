@@ -155,7 +155,8 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
   - They do no work, take no orders and are never picked for a crew. They play around the camp: chasing each other round the fire, playing at hunters with stick spears, or watching a grown-up at work, which slowly teaches them that skill.
   - They're drawn smaller, eat less, sleep in the huts, and run from danger instead of fighting.
   - Then they **come of age** before the whole tribe: a chronicle line, a memory, and +1 Combat with the warrior-initiation tradition. The roster lists them under **CHILDREN**.
-  - Births now come every 45 s while there is room and food.
+  - Births come while there are beds free and food in the stores: one every 45 s for a small band, faster as the tribe has more grown family lines (one more for every 16), fewer as the beds fill past four in five, half as many in winter and fewer in gloom. So growth follows the beds: the Steward builds huts, large huts and (in the second age) longhouses before the beds run out (`config/rules.json` births, beds).
+  - **Newcomers:** families of a clan allied to us or our vassal may move to us while we have beds to spare, and wanderers come out of the wild to a camp that eats well and is in good heart, asking to stay (a routine matter for the Steward, or your decision). They are grown family lines, new to the tribe's ways (`config/rules.json` migration).
 - **Mood** (top bar) runs from 0 to 100, and work speed is 0.9× at 0 and 1.1× at 100.
   - It drifts toward a target: about 55, plus painted homes (up to +15), treasures (up to +15) and a recent festival (+15); minus hunger, sickness, recent deaths and panic.
   - Births, comings of age, art, trade and festivals also lift it directly. Under 25 the people grumble.

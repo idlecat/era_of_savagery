@@ -31,6 +31,7 @@ var sorrow := 0.0 # recent deaths weigh on the tribe
 var glow_until := -1.0 # after a festival
 var mood_t := 0.0
 var grumble_day := 0
+var migrate_day := -1 # the last day a clan family was looked for
 var treasures: Array = [] # [{name, maker, day}]
 var season_seen := -1
 var pending := ""
@@ -86,6 +87,9 @@ func update(dt: float) -> void:
 			sim.add_log(tr(m["grumble"]), "story")
 		for u in sim.living():
 			if u.role == "child" and sim.time - u.born_t >= CHILD_DAYS * D.DAY_LEN: come_of_age(u)
+		if sim.day() != migrate_day and sim.is_day_part("morning"):
+			migrate_day = sim.day()
+			_clan_families()
 	if festivals:
 		var si: int = int(sim.time / D.DAY_LEN) / sim.hz.SEASON_DAYS
 		if si != season_seen:
@@ -106,6 +110,46 @@ func make_child(nm: String, parent: E.Unit) -> E.Unit:
 	u.hunger = 90.0
 	sim.life.on_birth(u) # (a new family line, kin to its parent's)
 	return u
+
+## A family comes to live with the tribe (newcomers: from a clan, wanderers, a game
+## master): a grown family line, new to our ways. `from` a clan id ("" = wanderers).
+## The game master's operation `folk.add_family(n, from)`; returns the newcomers.
+func add_family(n: int = 1, from: String = "") -> Array:
+	var out: Array = []
+	var mg: Dictionary = sim.RULES["migration"]
+	var clan: Dictionary = sim.rivals.clans.get(from, {})
+	for i in clampi(n, 0, int(mg["most_at_once"])):
+		var at: Vector2 = sim.dry_spot(D.VILLAGE + Vector2.from_angle(randf() * TAU) * 220.0)
+		var skills := {}
+		for k in D.SKILLS: skills[k] = randi_range(0, int(mg["skill_max"]))
+		var u: E.Unit = sim.make_unit({"name": sim.new_name(), "epithet": "Newcomer", "traits": [sim.evo.birth_trait()],
+			"color": Color(D.BIRTH_COLORS.pick_random()), "hp": randi_range(40, 52), "atk": randi_range(3, 6), "def": 2, "spd": randf_range(0.9, 1.05),
+			"skills": skills}, at)
+		sim.units.append(u)
+		sim.evo.on_birth(u) # (taught the tribe's ways at the fire)
+		sim.life.on_birth(u)
+		sim.remember(u, (tr("came from the %s to live with the tribe on Day %d") % [tr(clan["name"]), sim.day()]) if not clan.is_empty() else (tr("came to the tribe as a wanderer on Day %d") % sim.day()), 6)
+		if not clan.is_empty(): clan["pop"] = maxi(0, int(clan["pop"]) - 1)
+		lift(float(mg["mood"]))
+		sim.popup(at + Vector2(0, -30), tr("%s joins the tribe!") % tr(u.name), Color("#ffd36b"))
+		out.append(u)
+	if not out.is_empty():
+		var names := ", ".join(out.map(func(u): return tr(u.name)))
+		if not clan.is_empty(): sim.add_log(tr("A family of the %s comes to live among us: %s.") % [tr(clan["name"]), names], "story", out)
+		else: sim.add_log(tr("Wanderers settle by our fire: %s.") % names, "story", out)
+	return out
+
+## Each day a family may move to us from a clan bound to us (an ally or a vassal) while we
+## have beds to spare (rules.json migration).
+func _clan_families() -> void:
+	var mg: Dictionary = sim.RULES["migration"]
+	if sim.pop_cap() - sim.living().size() < int(mg["free_beds"]): return
+	for id in sim.rivals.clans:
+		var c: Dictionary = sim.rivals.clans[id]
+		if not (sim.rivals.has_treaty(id, "alliance") or int(c["vassal"]) > 0) or int(c["pop"]) <= int(mg["clan_keeps"]): continue
+		if randf() < float(mg["clan_chance"]):
+			add_family(1, id)
+			return
 
 func days_to_grow(u: E.Unit) -> int:
 	return maxi(0, ceili((CHILD_DAYS * D.DAY_LEN - (sim.time - u.born_t)) / D.DAY_LEN))
@@ -366,5 +410,5 @@ func do_trade(u: E.Unit, j: Dictionary, dt: float) -> void:
 
 ## For the LLM prompts and the saga.
 func summary() -> Dictionary:
-	return {"mood": "%s (%d)" % [mood_word(), roundi(mood)], "children": sim.living().filter(func(u): return u.role == "child").size(),
+	return {"mood": "%s (%d)" % [mood_word(), roundi(mood)], "children": sim.living().filter(func(u): return u.role == "child").size(), "births_per_day": snappedf(sim.birth_rate() * D.DAY_LEN, 0.1),
 		"treasures": treasures.map(func(t): return tr(t["name"]) + " (" + tr(t["maker"]) + ")")}

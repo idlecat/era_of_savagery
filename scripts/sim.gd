@@ -2181,21 +2181,48 @@ func tick(dt: float) -> void:
 	check_events()
 
 ## Every name already given in this game (the living and the dead).
+## A name for someone new to the tribe (a newborn, a newcomer): the culture's names first,
+## then names built from parts.
+func new_name() -> String:
+	var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
+	return free.pick_random() if not free.is_empty() else Names.pick(_names_taken())
+
 func _names_taken() -> Dictionary:
 	var out := {}
 	for u in units: out[u.name] = true
 	return out
 
-func _update_births(dt: float) -> void:
-	var pop := living().size()
+## Births a second now (rules.json births): one per `every` s for each `per_lines` grown
+## family lines, tapering as the beds fill past beds.crowd_at, slower in winter and in
+## gloom. 0 when there is no bed or food for a child.
+func birth_rate() -> float:
 	var cb: Dictionary = RULES["births"]
-	if pop < pop_cap() and stock["food"] >= float(cb["min_food"]):
-		birth_timer += dt
+	var alive := living()
+	var cap := pop_cap()
+	if alive.size() >= cap or stock["food"] < story.count(cb["min_food"]): return 0.0
+	var grown := alive.filter(func(u): return u.role != "child").size()
+	var r: float = maxf(1.0, float(grown) / float(cb["per_lines"])) / float(cb["every"])
+	r *= crowd_taper(float(alive.size()) / maxf(1.0, cap))
+	if hz.winter(): r *= float(cb["winter"])
+	if folk.mood < float(cb["low_mood"]): r *= float(cb["low_mood_mult"])
+	return r
+
+## Past rules.json beds.crowd_at of the beds taken, how much of the usual birth rate is
+## left (1 below it, 0 at full, falling as (room left / room at crowd_at)^crowd_k).
+func crowd_taper(fill: float) -> float:
+	var at := float(RULES["beds"]["crowd_at"])
+	if fill <= at: return 1.0
+	return pow(clampf((1.0 - fill) / maxf(0.01, 1.0 - at), 0.0, 1.0), float(RULES["beds"]["crowd_k"]))
+
+func _update_births(dt: float) -> void:
+	var cb: Dictionary = RULES["births"]
+	var rate := birth_rate()
+	if rate > 0.0:
+		birth_timer += dt * rate * float(cb["every"]) # (in seconds of the base pace: a story's "births" adds those)
 		if birth_timer > float(cb["every"]):
 			birth_timer = 0
 			stock["food"] -= float(cb["cost"])
-			var free: Array = D.BIRTH_NAMES.filter(func(n): return unit_by_name(n) == null)
-			var nm: String = free.pick_random() if not free.is_empty() else Names.pick(_names_taken()) # (the culture's names first, then names built from parts)
+			var nm := new_name()
 			var parents: Array = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
 			var u: E.Unit = folk.make_child(nm, parents.pick_random() if not parents.is_empty() else null)
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)
