@@ -139,6 +139,11 @@ func winter_mod(stat: String) -> float:
 	if not winter(): return 1.0
 	return float(winter_def().get(stat, 1.0)) * float(winter_prep.get(stat, 1.0))
 
+## Is `kind` (a director weight kind: blizzard, wolves...) this winter's own hardship
+## (winters.kinds "signature")? The director lets it past its cap (director.allow).
+func signature(kind: String) -> bool:
+	return winter() and kind in winter_def().get("signature", [])
+
 ## The "prepare" action: what the tribe does now for the coming winter, {stat: mult} with the
 ## stats of winters "prepare_stats" (clamped to 0.1..3; repeated, they multiply). Cleared in spring.
 func prepare(mods: Dictionary) -> void:
@@ -313,7 +318,7 @@ func _wolves() -> void:
 func spawn_wolf_pack() -> void:
 	var cw: Dictionary = C["wolves"]
 	var size := randi_range(int(cw["pack"][0]), int(cw["pack"][1])) + (int(cw["harsh_extra"]) if level == "harsh" else 0) \
-		+ (1 if winter() and randf() < float(cw["winter_extra_chance"]) else 0)
+		+ (1 if winter() and randf() < float(cw["winter_extra_chance"]) else 0) + (int(winter_def().get("pack_extra", 0)) if winter() else 0)
 	var c := Vector2.ZERO
 	var near: float = float(cw["spawn_dist"][0])
 	for k in 40: # somewhere on the tribe's side of the water, away from the village

@@ -65,6 +65,7 @@ func mood_target() -> float:
 	t -= minf(float(m["sick_max"]), float(m["sick"]) * alive.filter(func(u): return u.sick > 0).size())
 	t -= sorrow
 	if sim.nat.panicking(): t -= float(m["panic"])
+	if sim.hz.winter(): t -= float(m.get("winter", 0.0)) # (the long dark)
 	return clampf(t, 0.0, 100.0)
 
 func on_death() -> void:

@@ -53,6 +53,7 @@ func mercy() -> bool: return distress or sim.time < mercy_until
 ## the tribe is in distress: then the mercy cap holds.
 func allow(kind: String) -> bool:
 	if not active() or weight(kind) <= 0.0: return true
+	if sim.hz.signature(kind) and not mercy(): return true # (the director chose this winter: its own hardship comes, unless the tribe is broken)
 	if tension + weight(kind) <= cap() or (tension <= 0.0 and not mercy()): return true
 	held.append({"kind": kind, "t": sim.time})
 	if held.size() > 20: held.pop_front()

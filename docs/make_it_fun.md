@@ -150,6 +150,20 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
   which G1 doesn't score yet), and **winter rarely kills by cold or hunger**: winter deaths
   were all beasts and contracts, and the wolf winter took at most one. Next: more seeds, a
   mood/morale measure, and a wolf winter with teeth before B2's variety is tuned.
+- **Winter given teeth** (`--winter=<kind>` forces the first winter; the report now shows
+  winter mood, packs, blizzards, director holds, cold damage): the cause was the director.
+  It held 8–11 hardships every winter, so a white winter had **0 blizzards** and a wolf
+  winter 0–1 packs: the chosen kind was erased by pacing, exactly the theater the
+  decision above rules out. Now a kind's `signature` hardships (white: blizzard, wolf:
+  wolves) pass the director's cap unless the tribe is in distress; every white winter has
+  its blizzard and wolf winters their packs (one wolf bigger). The firewood option also
+  fences the camp (`prepare` wolves x0.5): the bet against white *and* wolf winters. The
+  feast's glow now lasts through winter, against a new winter gloom (`rules.json` mood
+  `winter` 12): winter mood ~73 after a feast against ~63 after any other choice.
+  Paired runs (8 seeds, same winter per seed): white winters cost 2 lives after a feast,
+  0–1 after smoke or firewood; the lean winter 6 after a feast, 0 after smoke or
+  firewood. Still one or two seeds per kind: suggestive, not settled. Winter still rarely
+  kills by cold alone (fires are close); that is fine while hunger and beasts do the work.
 
 ### B2. Winters differ
 - Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) as rows in

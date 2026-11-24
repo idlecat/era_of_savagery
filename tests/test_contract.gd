@@ -2440,6 +2440,15 @@ func test_autumn_decision() -> void:
 	hz._season_news()
 	check(is_equal_approx(hz.winter_mod("spoil"), 1.3 * 0.4), "in winter: lean (x1.3) and smoked (x0.4) stores rot at x%.2f" % hz.winter_mod("spoil"))
 	check(hz.winter_mod("food") < 1.0 and sim.log_lines.any(func(l): return l["text"] == tr(hz.winter_def()["arrive"])), "a lean winter yields less, and the tribe hears what kind has come")
+	hz.set_winter("white")
+	sim.director.on = true
+	sim.director.tension = 999.0
+	check(sim.director.allow("blizzard") and not sim.director.allow("wolves"), "a white winter's blizzards pass the director's cap; other hardships don't")
+	sim.director.distress = true
+	check(not sim.director.allow("blizzard"), "unless the tribe is in distress")
+	sim.director.distress = false
+	sim.director.on = false
+	hz.set_winter("lean")
 	hz.prepare({"cold": 0.5, "nonsense": 9, "spoil": "x"})
 	check(not hz.winter_prep.has("nonsense") and hz.winter_mod("cold") == 0.5, "prepare takes only the known stats")
 	sim.time = season_len * 4 + 1.0

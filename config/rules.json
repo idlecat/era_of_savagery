@@ -119,6 +119,7 @@
    "sick": 4,
    "sick_max": 12,
    "panic": 20,
+   "winter": 12,
    "step": 0.4,
    "work_base": 0.9,
    "work_per": 0.002,

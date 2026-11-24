@@ -5,6 +5,7 @@
 ## $GODOT --headless --path . --script res://tools/metrics.gd -- [--runs=4] [--days=12] [--seed=1]
 ##     [--policies=steward,hoarder,feaster] [--level=normal] [--map=the_ford|standard...] [--dt=0.1] [--out=/path.csv]
 ##     [--choose=autumn:2,festival:0] (these dilemmas take that option, whatever the policy says)
+##     [--winter=white|wolf|lean|mild] (the first winter is that kind: hz.set_winter, as a game master would)
 ##
 ## A policy is a game-master script, tests/policies/<id>.json, using only the operations a
 ## game master has (so the harness is also a smoke test of that surface):
@@ -88,7 +89,8 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		"near_miss": false, "sick_wave": false, "hungry_sick": false, "famine": false, "hungry_hours": 0.0, "min_food_frac": 1.0,
 		"dilemmas": 0, "feats": 0, "interrupts": 0, "crises": 0, "sealed": 0, "seal_refused": 0,
 		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1, "causes": [],
-		"winter_kind": "", "autumn_pick": "", "winter_deaths": 0, "winter_min_food": 1.0, "winter_hungry_h": 0.0}
+		"winter_kind": "", "autumn_pick": "", "winter_deaths": 0, "winter_min_food": 1.0, "winter_hungry_h": 0.0,
+		"winter_mood": 0.0, "winter_n": 0, "winter_packs": 0, "winter_blizzards": 0, "winter_held": 0, "winter_cold_hp": 0.0, "winter_bitten": 0, "mood_end": 0.0}
 	var meaningful: Array = [0.0] # game times of meaningful events
 	sim.feat_added.connect(func(_f): r["feats"] += 1; meaningful.append(sim.time))
 	var first_abort := {}
@@ -116,6 +118,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 			last_pending = sim.pending_event
 			var pick := _pick(sim, sim.pending_event, str(pol.get("dilemmas", "first")))
 			if sim.pending_event == "autumn" and r["autumn_pick"] == "": r["autumn_pick"] = str(sim.event_def("autumn")["options"][pick]["label"])
+			if sim.pending_event == "autumn" and a.has("winter"): sim.hz.set_winter(str(a["winter"]))
 			sim.resolve_event(sim.pending_event, pick)
 		else: last_pending = ""
 		for c in sim.contracts.list:
@@ -147,6 +150,11 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	meaningful.sort()
 	for i in range(1, meaningful.size()): r["max_gap_days"] = maxf(r["max_gap_days"], snappedf((meaningful[i] - meaningful[i - 1]) / D.DAY_LEN, 0.1))
 	r["min_food_frac"] = snappedf(r["min_food_frac"], 0.01)
+	r["mood_end"] = roundi(sim.folk.mood)
+	r["winter_mood"] = roundi(r["winter_mood"] / maxf(1, r["winter_n"]))
+	r["winter_cold_hp"] = roundi(r["winter_cold_hp"])
+	for k in r.keys():
+		if str(k).begins_with("_"): r.erase(k)
 	var fcs: Array = []
 	for c in sim.contracts.list:
 		if c.forecast.is_empty() or (sim.contracts.is_running(c) and not first_abort.has(c.id)): continue # (still under way, no verdict yet)
@@ -163,6 +171,19 @@ func _sample(sim, r: Dictionary, dead_seen: Dictionary) -> void:
 	var frac: float = sim.stock["food"] / maxf(1.0, float(sim.food_cap()))
 	if sim.hz.winter() and sim.hz.year() == 1:
 		r["winter_kind"] = sim.hz.winter_kind
+		r["winter_mood"] += sim.folk.mood
+		r["winter_n"] += 1
+		for p in sim.predators:
+			if p.kind == "wolf" and not r.has("_w%d" % p.id): # (a new wolf: count packs by their first member)
+				r["_w%d" % p.id] = true
+				if not r.has("_pack%d" % int(sim.time / 20.0)): r["winter_packs"] += 1
+				r["_pack%d" % int(sim.time / 20.0)] = true
+		if sim.hz.weather == "blizzard" and not r.get("_bz", false): r["winter_blizzards"] += 1
+		r["_bz"] = sim.hz.weather == "blizzard"
+		r["winter_held"] = sim.director.held.filter(func(h): return sim.hz.season_idx() == 3 and sim.time - h["t"] < D.DAY_LEN * sim.hz.SEASON_DAYS).size()
+		for u in sim.living():
+			r["winter_cold_hp"] += sim.hz.cold_rate(u, sim.near_warmth(u))
+			if u.last_hit_t > sim.time - 1.0: r["winter_bitten"] += 1
 		r["winter_min_food"] = minf(r["winter_min_food"], frac)
 		if frac < 0.02: r["winter_hungry_h"] += 1.0 / (D.DAY_LEN / 24.0)
 		for u in sim.units:
@@ -294,7 +315,7 @@ func _report(rows: Array, pols: Array) -> void:
 			causes[key] = causes.get(key, 0) + 1
 	print("\nThe first winter (kind, autumn choice -> winter deaths, min food, empty-store hours):")
 	for r in rows:
-		if r["winter_kind"] != "": print("  %s seed %d: %-6s %-38s -> deaths %d, min food %d%%, empty %.0fh" % [r["policy"], r["seed"], r["winter_kind"], r["autumn_pick"], r["winter_deaths"], roundi(r["winter_min_food"] * 100), r["winter_hungry_h"]])
+		if r["winter_kind"] != "": print("  %s seed %d: %-6s %-38s -> deaths %d, min food %d%%, empty %.0fh, mood %d, packs %d, blizzards %d, held %d, cold hp %d, bitten %d" % [r["policy"], r["seed"], r["winter_kind"], r["autumn_pick"], r["winter_deaths"], roundi(r["winter_min_food"] * 100), r["winter_hungry_h"], r["winter_mood"], r["winter_packs"], r["winter_blizzards"], r["winter_held"], r["winter_cold_hp"], r["winter_bitten"]])
 	print("\nWhat interrupted contracts (all runs):")
 	var ks: Array = causes.keys()
 	ks.sort_custom(func(x, y): return causes[x] > causes[y])
