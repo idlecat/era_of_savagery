@@ -5,6 +5,77 @@ codebase's rules: tuning and texts in `config/*.json` (with zh), no new one-off 
 an offline path through `persona_engine.gd` for everything (a game master / LLM is an
 enhancement, never a requirement), and each item names the systems and configs it touches.
 
+## Status (2026-11-24)
+
+Every row of the order of work has landed except B3 (conditional, not needed yet) and
+the numbers G3 measured but left for the designer to choose. The section notes below
+("**Built:**", "**Not built:**", "Measured") give the detail; this is the summary.
+
+### Done
+
+| Item | What landed | Commit |
+|---|---|---|
+| G1 | metric runs under game-master policies (steward, hoarder, feaster), `contracts.seal()`, bands, forecast calibration, interrupt causes, winter, rivals, challenge and event reports | b816bce and later |
+| G1 fixes | sickness hits hungry camps; a stay-at-home craft trial | 4840ae4 |
+| H1–H3 | ranks earned by deeds, gates as data, the naming rite and feathers | 6ab4aa0, fe7dbfe, 7a67754 |
+| A0/A1 | the odds before sealing (calibrated), the leader's field log with callbacks | d621267 |
+| A tuning | outposts interrupted 94% → 50% (Ford ambush once, floods only near the river, the leader judges a wound in an ordered fight) | df9b972 |
+| B1 (+ most of B2) | the autumn council, winter kinds picked by the director, signs; winters with teeth (signature hardships pass the cap) | 327e5cc, 8a28aaa |
+| C1 | dated ledger of what passed between the clans, quoted by chiefs; chiefs reign, die and are succeeded | ed23007 |
+| C2 | the nemesis: one hostile clan with a face, stages by era, an ending | 0a3a3b8 |
+| D1/D2 | a remembered find (rumoured until found) and a first-day fever; overpop moved to day 3 | 48983c8 |
+| A2/A3 | small contract events settled by the leader in character; quarrels and songs between crew | 91c95e6 |
+| I (Era 1) | Lookout Tower, Smokehouse; building `effects` | 18fe442 |
+| I (Era 2) | Longhouse, Temple (shrine → temple → altar); `era`, `ritual_mult`, one `struct_block()` | a52e346 |
+| F | the council's challenges | b8c7766 |
+| E1/E2 | the last stand (hold, or join a friendly clan: the merged ending); heritage remembered by the next game | 5e53363 |
+| I (Era 3) | Stone Wall, Trading Post; the grand altar needs a Master Builder | 0956e11 |
+| G2 | balance canary in CI against `tests/balance_baseline.json` (warns, never fails) | 552f03d |
+| G3 | director cap and decay measured (`--cap`, `--decay`); nothing changed | 5158eae |
+
+### Left
+
+**Not built (designed):**
+- **I2, site factors:** the one river-band width shared by ghost, spring and Great
+  Flood; raids targeting what's outside the wall first and a bloodied band turning home;
+  fire spreading between packed buildings; the ghost's site words; `sim.site_value()`;
+  the Steward scoring sites; the G1 check that random placement does worse.
+- **I3, timing:** a best season per building, a food reserve beside `wood_reserve`.
+- **I5, the village grows a name** (camp → village → town, with a feat, and the clans
+  speak of it).
+- **Dilemma spacing** (Decisions): `min_gap` between posed dilemmas and `urgent` flags.
+- **Director `bored()`** and the reactive successor nemesis (only if G1 shows the late
+  game dragging).
+- **B3, the frozen river** (only if winters prove lacking).
+
+**Partial (gaps noted in the sections):**
+- A0: the lookout tower helps the forecast only through what it reveals.
+- A3: trait-pair weights for friction events.
+- B2: the no-repeat rule looks back one winter, not two years.
+- C2: no escalation on the peaceful setting.
+- E1: no "flee to new land" (it would move the village itself). The merged ending is
+  its own config entry (`legacy.json` `merged`), not a `kind` field on the paths.
+- F: challenges are proposed by the built-in rules; the Council's LLM does not propose
+  them yet.
+- H: trials set up through contracts with the forecast; a mercy if the last Proven
+  crafter dies.
+- I: the temple's part in rank initiations and festivals; stone wall blocks all face
+  one way.
+
+**Tuning and measurement (open):**
+- Food near-misses stay at 75–100% for every policy (band 60–90%), and normal games see
+  no starvation deaths; the director can't fix this, the food economy must.
+- The nemesis is quiet: 0–1 raids in 20 days under the steward.
+- "No one dies this winter" failed in every steward and feaster run.
+- G3's numbers are the designer's call: decay is the lever on normal (0.8–1.0 softer,
+  ~2.5 harder); harsh is set by its multipliers, not its cap. Any change needs a new
+  canary baseline (`--write-baseline`).
+- Most measurements used 4–8 seeds; the food bands and the winter-choice table want
+  16–20.
+- Whether Linux CI reproduces the macOS canary baseline: the first CI run will tell.
+- Playtest judgments (Open questions): the words of the winter signs, whether the
+  site factors read without a tutorial.
+
 ## What the game's fun is
 
 Three stacked sources — every item below feeds at least one:
@@ -792,6 +863,28 @@ play (that is the measurable form of "decisions matter"):
   baseline exactly; the first CI run will show it (small float drift stays inside the
   tolerances).
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
+  **Measured, not tuned** (`tools/metrics.gd --cap=N --decay=N`: overrides on a copy of
+  `director.json`; 8 seeds x 12 days, steward / feaster, The Ford):
+
+  | normal level | deaths | killed | famine | interrupts | pauses/h |
+  |---|---|---|---|---|---|
+  | cap 2.0 | 4.4 / 4.0 | 0.9 / 0.6 | 0% / 0% | 2.5 / 2.4 | 0.15 |
+  | cap 3.0 (now) | 4.0 / 3.1 | 1.5 / 0.9 | 13% / 13% | 2.5 / 2.1 | 0.15 |
+  | cap 4.5 | 4.0 / 3.9 | 1.5 / 0.4 | 0% / 13% | 2.4 / 2.5 | 0.16 |
+  | decay 0.4 | 3.4 / 1.1 | 0.4 / 0.1 | 13% / 0% | 1.6 / 1.8 | 0.15 |
+  | decay 1.6 (now) | as cap 3.0 | | | | |
+  | decay 4.0 | 5.5 / 3.2 | 1.4 / 0.4 | 13% / 25% | 3.2 / 2.9 | 0.16 |
+  | harsh, cap 5 (now) | 9.1 / 5.1 | 2.8 / 1.1 | 63% / 38% | 2.5 / 2.5 | 0.15 |
+  | harsh, cap 7 | 9.5 / 5.5 | 2.4 / 1.4 | 50% / 38% | 2.8 / 2.4 | 0.15 |
+
+  Findings: on normal the **cap barely binds** (2.0 to 4.5 changes little); **decay is the
+  lever** (slower easing holds more back: fewer deaths and contract interrupts, the
+  feaster's deaths 3.1 → 1.1 at decay 0.4; faster easing the reverse). **Harsh is set by
+  its multipliers, not its cap** (5 vs 7 the same): it is a much harder game (famine
+  38–63%, the first starvation deaths). **Pauses per hour don't move** with either knob
+  (~0.15): the pause rhythm comes from dilemmas and contracts, not hardships. Near-misses
+  stay 75–100% everywhere: the food floor is not the director's to fix. Choosing the
+  numbers is the designer's call (how harsh normal should be); none are changed yet.
 
 Why these bands: ~100% near-misses with ~0 starvation deaths (the first draft) describes
 a floor that always triggers and never bites. Scarcity should be *felt* in most runs,
@@ -801,23 +894,23 @@ distance is the tuning work); only a band *no policy can reach* gets revised.
 
 ## Order of work
 
-| # | Item | Size | Feeds |
-|---|------|------|-------|
-| 0 | G1 skeleton: baseline metrics + steward policy | small | everything (inputs) |
-| 1 | A0 forecast + A1 leader's field log | small | anticipation |
-| 2 | B1 autumn decision | medium | anticipation |
-| 3 | C1 rival chief as a character | medium | attachment |
-| 4 | C2 nemesis clan | small–medium | attachment, anticipation |
-| 5 | D1/D2 opening minutes | small | decision |
-| 6 | B2 varied winters | small–medium | anticipation |
-| 7 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment |
-| 8 | H ranks with trials (after A0: trials lean on the forecast) | medium | attachment, accomplishment |
-| 9 | I structures to config, then Era-1/2 buildings and upgrades | medium | builder |
-| 10 | F player-set challenges | small–medium | attachment, replay |
-| 11 | E1 last stand, E2 heritage | medium | all |
-| 12 | I Era-3 buildings (walls/towers, trading post, temple → grand altar line) | medium | builder, C2, H |
-| 13 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) |
-| 14 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration |
+| # | Item | Size | Feeds | Status |
+|---|------|------|-------|--------|
+| 0 | G1 skeleton: baseline metrics + steward policy | small | everything (inputs) | done |
+| 1 | A0 forecast + A1 leader's field log | small | anticipation | done |
+| 2 | B1 autumn decision | medium | anticipation | done |
+| 3 | C1 rival chief as a character | medium | attachment | done |
+| 4 | C2 nemesis clan | small–medium | attachment, anticipation | done (no peaceful escalation) |
+| 5 | D1/D2 opening minutes | small | decision | done |
+| 6 | B2 varied winters | small–medium | anticipation | mostly done with B1 |
+| 7 | A2/A3 leader-judged events, crew friction | medium | anticipation, attachment | done (trait pairs not built) |
+| 8 | H ranks with trials (after A0: trials lean on the forecast) | medium | attachment, accomplishment | done |
+| 9 | I structures to config, then Era-1/2 buildings and upgrades | medium | builder | done (I2, I3, I5 not built) |
+| 10 | F player-set challenges | small–medium | attachment, replay | done (offline proposals only) |
+| 11 | E1 last stand, E2 heritage | medium | all | done (no "flee") |
+| 12 | I Era-3 buildings (walls/towers, trading post, temple → grand altar line) | medium | builder, C2, H | done |
+| 13 | G1 full harness (hoarder/feaster, calibration) + G2 CI + G3 tuning | medium | everything (tuning) | done; G3 measured, numbers not chosen |
+| 14 | B3 frozen river — only if G1 shows winters lacking | large | anticipation, exploration | not built (conditional) |
 
 Row 0 lands before anything that adds a pause: the pause ceiling, the near-miss bands
 and the forecast-calibration floor are all *inputs* measured against the steward
