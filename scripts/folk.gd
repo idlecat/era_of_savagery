@@ -90,7 +90,7 @@ func update(dt: float) -> void:
 		if si != season_seen:
 			var first := season_seen < 0
 			season_seen = si
-			if not first and _festival_def().has(str(sim.hz.season_idx())): pending = "festival"
+			if not first and _festival_def().has(str(sim.hz.season_idx())) and not (sim.hz.season_idx() == sim.hz.AUTUMN and sim.hz.poses_autumn()): pending = "festival" # (in autumn the feast is one of the autumn decision's options)
 
 # ------------------------------------------------------------ children
 ## A newborn: a child of the tribe who plays until they come of age.

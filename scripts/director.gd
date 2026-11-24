@@ -98,6 +98,31 @@ func _mercy() -> void:
 			return
 
 ## For a game master (and the pacing tool): the director's state.
+## The coming winter's kind (config/events.json winters.kinds), picked when autumn begins
+## from the year's state: each kind's weight, times "repeat" if it was last winter's, the
+## "mercy" multipliers while the tribe is in distress, and the "rich" ones when the stores
+## are at least rich_food_at full (a tribe that can afford a hard winter gets one more often).
+## Numbers in director.json "winter".
+func pick_winter() -> String:
+	var W: Dictionary = C["winter"]
+	var kinds: Dictionary = sim.hz.winters()["kinds"]
+	var last: String = sim.hz.winter_log[-1]["kind"] if not sim.hz.winter_log.is_empty() else ""
+	var rich: bool = sim.stock["food"] >= sim.food_cap() * float(W["rich_food_at"])
+	var total := 0.0
+	var ws := {}
+	for k in kinds:
+		var w: float = float(kinds[k].get("weight", 1.0))
+		if k == last: w *= float(W["repeat"])
+		if mercy(): w *= float(W["mercy"].get(k, 1.0))
+		elif rich: w *= float(W["rich"].get(k, 1.0))
+		ws[k] = w
+		total += w
+	var roll := randf() * total
+	for k in ws:
+		roll -= ws[k]
+		if roll <= 0.0: return k
+	return kinds.keys()[0]
+
 func summary() -> Dictionary:
 	return {"active": active(), "tension": snappedf(tension, 0.01), "cap": cap(), "distress": distress,
 		"mercy": sim.time < mercy_until, "held_lately": held.slice(-5).map(func(h): return h["kind"])}

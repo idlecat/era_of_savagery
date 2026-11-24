@@ -4,6 +4,7 @@
 ##
 ## $GODOT --headless --path . --script res://tools/metrics.gd -- [--runs=4] [--days=12] [--seed=1]
 ##     [--policies=steward,hoarder,feaster] [--level=normal] [--map=the_ford|standard...] [--dt=0.1] [--out=/path.csv]
+##     [--choose=autumn:2,festival:0] (these dilemmas take that option, whatever the policy says)
 ##
 ## A policy is a game-master script, tests/policies/<id>.json, using only the operations a
 ## game master has (so the harness is also a smoke test of that surface):
@@ -86,7 +87,8 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	var r := {"policy": pol["id"], "seed": sd, "days": 0, "alive": 0, "deaths": 0, "deaths_d20": 0, "starved": 0, "killed": 0, "other_deaths": 0, "left": 0,
 		"near_miss": false, "sick_wave": false, "hungry_sick": false, "famine": false, "hungry_hours": 0.0, "min_food_frac": 1.0,
 		"dilemmas": 0, "feats": 0, "interrupts": 0, "crises": 0, "sealed": 0, "seal_refused": 0,
-		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1, "causes": []}
+		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1, "causes": [],
+		"winter_kind": "", "autumn_pick": "", "winter_deaths": 0, "winter_min_food": 1.0, "winter_hungry_h": 0.0}
 	var meaningful: Array = [0.0] # game times of meaningful events
 	sim.feat_added.connect(func(_f): r["feats"] += 1; meaningful.append(sim.time))
 	var first_abort := {}
@@ -112,7 +114,9 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 				r["dilemmas"] += 1
 				meaningful.append(sim.time)
 			last_pending = sim.pending_event
-			sim.resolve_event(sim.pending_event, _pick(sim, sim.pending_event, str(pol.get("dilemmas", "first"))))
+			var pick := _pick(sim, sim.pending_event, str(pol.get("dilemmas", "first")))
+			if sim.pending_event == "autumn" and r["autumn_pick"] == "": r["autumn_pick"] = str(sim.event_def("autumn")["options"][pick]["label"])
+			sim.resolve_event(sim.pending_event, pick)
 		else: last_pending = ""
 		for c in sim.contracts.list:
 			if c.status == "interrupted":
@@ -157,6 +161,12 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 
 func _sample(sim, r: Dictionary, dead_seen: Dictionary) -> void:
 	var frac: float = sim.stock["food"] / maxf(1.0, float(sim.food_cap()))
+	if sim.hz.winter() and sim.hz.year() == 1:
+		r["winter_kind"] = sim.hz.winter_kind
+		r["winter_min_food"] = minf(r["winter_min_food"], frac)
+		if frac < 0.02: r["winter_hungry_h"] += 1.0 / (D.DAY_LEN / 24.0)
+		for u in sim.units:
+			if u.dead and not u.gone and not dead_seen.has(u.id): r["winter_deaths"] += 1
 	if sim.day() > 1: r["min_food_frac"] = minf(r["min_food_frac"], frac)
 	if frac < 0.15 and sim.day() > 1: r["near_miss"] = true
 	if frac < 0.02 and sim.day() > 1: r["hungry_hours"] += 1.0 / (D.DAY_LEN / 24.0) # (game hours with empty stores)
@@ -194,9 +204,13 @@ func _cause(sim, c) -> String:
 	elif c.abort_reason == "natural_disaster": what = str(sim.flags.get("disaster", "flood")) if sim.flags.get("disaster_t", -1.0) >= sim.flags.get("flood_active", -1.0) else "flood"
 	return "%s %s %s (%d%%, n%d)" % [c.kind, c.abort_reason, what, roundi(c.progress * 100), c.interruptions]
 
-## The option a policy takes: the first or last one that can be chosen.
+## The option a policy takes: the first or last one that can be chosen (or the one
+## --choose names for this dilemma, if it can be chosen).
 func _pick(sim, id: String, how: String) -> int:
 	var opts: Array = sim.event_def(id).get("options", [])
+	for kv in str(a.get("choose", "")).split(",", false):
+		var p: PackedStringArray = kv.split(":")
+		if p.size() == 2 and p[0] == id and int(p[1]) < opts.size() and opts[int(p[1])].get("enabled", true): return int(p[1])
 	var ok: Array = []
 	for i in opts.size():
 		if opts[i].get("enabled", true): ok.append(i)
@@ -278,6 +292,9 @@ func _report(rows: Array, pols: Array) -> void:
 		for k in r["causes"]:
 			var key: String = k.get_slice(" (", 0)
 			causes[key] = causes.get(key, 0) + 1
+	print("\nThe first winter (kind, autumn choice -> winter deaths, min food, empty-store hours):")
+	for r in rows:
+		if r["winter_kind"] != "": print("  %s seed %d: %-6s %-38s -> deaths %d, min food %d%%, empty %.0fh" % [r["policy"], r["seed"], r["winter_kind"], r["autumn_pick"], r["winter_deaths"], roundi(r["winter_min_food"] * 100), r["winter_hungry_h"]])
 	print("\nWhat interrupted contracts (all runs):")
 	var ks: Array = causes.keys()
 	ks.sort_custom(func(x, y): return causes[x] > causes[y])

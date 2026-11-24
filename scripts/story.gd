@@ -17,7 +17,8 @@
 ##         {"remember": text, "who": "all"|"best:<skill>"} ("%d" in it is the day), {"feat": text},
 ##         {"xp": {skill: n}, "who"}, {"panic": seconds} (the people hide: reactions "panic"),
 ##         {"weather": kind} (config/events.json weather.kinds), {"react": event, "at"} (sim.react),
-##         {"tale": tale id} (told now), {"join": person id} (a culture's people arrive)
+##         {"tale": tale id} (told now), {"join": person id} (a culture's people arrive),
+##         {"prepare": {stat: mult}} (for the coming winter: hz.prepare), {"slaughter": n} (oxen, 0 = all)
 ## The culture system (culture.gd) runs its events and tales through holds() and run() too.
 ##
 ## Dilemmas share one data format, run by dilemma_view()/dilemma_choose() for culture
@@ -74,6 +75,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("time") and sim.time < float(w["time"]): return false
 	if w.has("day") and sim.day() < int(w["day"]): return false
 	if w.has("pop") and sim.living().size() < int(w["pop"]): return false
+	if w.has("oxen") and sim.oxen < int(w["oxen"]): return false
 	if w.has("flag") and not sim.flags.has(w["flag"]): return false
 	if w.has("found") and not sim.landmarks.any(func(l): return l["id"] == w["found"] and l["found"]): return false
 	if w.has("met_any") and bool(w["met_any"]) != sim.rivals.clans.values().any(func(c): return c["met"]): return false
@@ -124,7 +126,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -137,11 +139,11 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
-	"after": "str", "told": "str", "joined": "str", "happened": "str"}
+	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
@@ -237,6 +239,8 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 					sim.spawn_predator(p, base)
 		if a.has("give"):
 			if a["give"] is Dictionary: sim.give(a["give"])
+		if a.has("prepare"): sim.hz.prepare(a["prepare"])
+		if a.has("slaughter"): sim.slaughter(int(a["slaughter"]))
 		if a.has("reveal"):
 			sim.reveal(_at(a["reveal"], c, vars), float(a.get("r", 400.0)))
 		if a.has("flag"):

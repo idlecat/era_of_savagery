@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2407,6 +2407,70 @@ func test_outpost_interrupts() -> void:
 	c.abort_cooldowns.clear()
 	c.resting_ids.erase(ld.id)
 	check(CS._check_aborts(c) and c.abort_reason == "leader_wounded", "a wound out of the blue still wakes the chieftain")
+
+func test_autumn_decision() -> void:
+	print("\n== The autumn decision and the kinds of winter (make_it_fun B1/B2) ==")
+	var sim = _new_sim()
+	var hz = sim.hz
+	hz.level = "normal"
+	var season_len: float = D.DAY_LEN * hz.SEASON_DAYS
+	sim.time = season_len * 2 + 1.0 # autumn of year 1
+	hz.season_seen = 1
+	hz._season_news()
+	check(hz.winter_kind in hz.winters()["kinds"] and hz.winter_signs.size() == int(hz.winters()["signs_read"]) and hz.pending == "autumn", "autumn: the director picks the winter (%s) and the elders read %d signs" % [hz.winter_kind, hz.winter_signs.size()])
+	check(not hz.summary().has("winter_kind") and not str(hz.summary()).contains(hz.winter_kind + "\""), "the kind stays hidden from the players' and leaders' view")
+	sim.oxen = 0
+	sim.check_events()
+	check(sim.pending_event == "autumn", "the autumn council is posed")
+	var view: Dictionary = sim.event_def("autumn")
+	check(view["text"].contains(tr(hz.winter_signs[0]["text"])), "it quotes the signs")
+	var labels: Array = view["options"].map(func(o): return o["label"])
+	var si: int = labels.find(tr("Slaughter the oxen"))
+	check(si >= 0 and not view["options"][si].get("enabled", true), "no oxen, no slaughter")
+	sim.oxen = 2
+	view = sim.event_def("autumn")
+	check(view["options"][si].get("enabled", true), "with oxen, the slaughter can be chosen")
+	sim.stock["wood"] = 60.0
+	var smoke: int = labels.find(tr("Smoke and store the meat"))
+	sim.resolve_event("autumn", smoke)
+	check(is_equal_approx(float(hz.winter_prep.get("spoil", 1.0)), 0.4) and sim.stock["wood"] <= 40.0, "smoking the meat costs wood and readies the stores")
+	# winter: the kind and the preparation work together
+	check(hz.set_winter("lean") and not hz.set_winter("nonsense"), "a game master can set the coming winter")
+	sim.time = season_len * 3 + 1.0
+	hz._season_news()
+	check(is_equal_approx(hz.winter_mod("spoil"), 1.3 * 0.4), "in winter: lean (x1.3) and smoked (x0.4) stores rot at x%.2f" % hz.winter_mod("spoil"))
+	check(hz.winter_mod("food") < 1.0 and sim.log_lines.any(func(l): return l["text"] == tr(hz.winter_def()["arrive"])), "a lean winter yields less, and the tribe hears what kind has come")
+	hz.prepare({"cold": 0.5, "nonsense": 9, "spoil": "x"})
+	check(not hz.winter_prep.has("nonsense") and hz.winter_mod("cold") == 0.5, "prepare takes only the known stats")
+	sim.time = season_len * 4 + 1.0
+	hz._season_news()
+	check(hz.winter_kind == "" and hz.winter_prep.is_empty() and hz.winter_log[-1]["kind"] == "lean", "spring: the winter goes into the record")
+	# slaughter
+	sim.oxen = 2
+	var f0: float = sim.stock["food"]
+	check(sim.slaughter(0) == 2 and sim.oxen == 0 and sim.stock["food"] > f0, "slaughter: the oxen become meat")
+	# the director's pick: no easy repeats, mercy in distress
+	var counts := {}
+	for i in 400:
+		var k: String = sim.director.pick_winter()
+		counts[k] = counts.get(k, 0) + 1
+	check(counts.get("lean", 0) < counts.get("mild", 0), "last winter's kind rarely comes twice (%s)" % counts)
+	sim.director.distress = true
+	counts = {}
+	for i in 400:
+		var k: String = sim.director.pick_winter()
+		counts[k] = counts.get(k, 0) + 1
+	check(counts.get("mild", 0) > counts.get("white", 0) * 2, "a tribe in distress gets a mild winter more often (%s)" % counts)
+	sim.director.distress = false
+	# the signs: mostly true
+	hz.set_winter("wolf")
+	var right := 0
+	var n := 0
+	for i in 200:
+		for s in hz._read_signs():
+			n += 1
+			if s["kind"] == "wolf": right += 1
+	check(absf(float(right) / n - float(hz.winters()["sign_truth"])) < 0.08, "the signs are right about %d%% of the time" % roundi(100.0 * right / n))
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

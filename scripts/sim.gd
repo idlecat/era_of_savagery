@@ -2098,6 +2098,8 @@ func check_invariants() -> Array:
 		elif is_nan(float(stock[k])) or float(stock[k]) < -0.01: bad.append("stock %s is %s" % [k, str(stock[k])])
 	for r in D.RESOURCES:
 		if not stock.has(r): bad.append("stock lacks %s" % r)
+	if hz.winter_kind != "" and not hz.winters()["kinds"].has(hz.winter_kind): bad.append("unknown winter kind '%s'" % hz.winter_kind)
+	if oxen < 0: bad.append("oxen %d" % oxen)
 	var ids := {}
 	for u in units:
 		if ids.has(u.id): bad.append("two units share id %d" % u.id)
@@ -2435,6 +2437,10 @@ func check_events() -> void:
 		_fire_event(ne)
 	elif not rivals.pending.is_empty():
 		_fire_event(rivals.pending.pop_front())
+	elif hz.pending != "": # the autumn decision
+		var he: String = hz.pending
+		hz.pending = ""
+		_fire_event(he)
 	elif life.pending != "": # a family in despair wants to leave
 		var le: String = life.pending
 		life.pending = ""
@@ -2513,6 +2519,7 @@ var DILEMMAS: Dictionary = preload("res://scripts/config.gd").load_cfg("dilemmas
 ## The named values a built-in dilemma's texts use.
 func _dilemma_vars(id: String) -> Dictionary:
 	var v := {}
+	if id == "autumn": v.merge(hz.autumn_vars())
 	if id in ["era2", "era3"]:
 		v["era"] = tr(D.ERA_NAMES[evo.era])
 		var voices: Array = []
@@ -2525,6 +2532,16 @@ func _dilemma_vars(id: String) -> Dictionary:
 			if voices.size() >= 3: break
 		v["voices"] = "  ".join(voices)
 	return v
+
+## Slaughter n oxen of the herd (n <= 0: all of them) for their meat (rules.json herds
+## "meat" each): the "slaughter" action. Returns how many.
+func slaughter(n: int) -> int:
+	var k := oxen if n <= 0 else mini(n, oxen)
+	if k <= 0: return 0
+	oxen -= k
+	give({"food": k * float(RULES["herds"].get("meat", 30))})
+	add_log(tr("%d oxen are slaughtered; the meat is hung to dry.") % k, "build")
+	return k
 
 ## A Chosen One of bloodline i (D.CHOSEN) is born: the "chosen" action.
 func birth_chosen(i: int) -> Dictionary:

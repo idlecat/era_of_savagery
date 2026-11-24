@@ -138,5 +138,27 @@
     "else_do": [{"panic": 25}, {"devotion": -5}, {"remember": "hid in terror when the sun was devoured on Day %d", "who": "all", "impact": 5}],
     "else_result": "%s has no answer. Panic! The people drop their work and hide in their huts until the light returns."}
   ]
+ },
+
+ "winters": {
+  "_doc": "The kinds of winter (hazards.gd, make_it_fun B1/B2). When autumn begins the director picks the coming kind (director.json winter); it stays hidden, and the autumn dilemma (dilemmas.json autumn) quotes signs_read signs, each true to the kind with chance sign_truth, else a sign of another kind. In winter the kind's effects multiply: weather {kind: chance mult}, cold (cold damage), wolves (pack chance), spoil (stored food rot), food (yields of farms, docks and pens), herds_leave (share of deer that migrate, x0.5). The tribe's preparation (the prepare action, stats in prepare_stats) multiplies the same stats. name and arrive are said when the winter comes.",
+  "on": true,
+  "signs_read": 2,
+  "sign_truth": 0.75,
+  "prepare_stats": ["cold", "spoil", "food", "wolves"],
+  "kinds": {
+   "white": {"name": "A Hard White Winter", "weight": 1.0, "weather": {"blizzard": 2.0}, "cold": 1.25,
+    "arrive": "The snow comes early and deep, and the blizzards follow one on another.",
+    "signs": ["The geese flew south early, and low.", "The beavers have built their lodges high.", "The deer grew their winter coats before the leaves fell."]},
+   "wolf": {"name": "A Wolf Winter", "weight": 1.0, "wolves": 2.2,
+    "arrive": "The packs come down from the hills. Every night the wolves are closer.",
+    "signs": ["Wolves were heard howling in daylight.", "The deer keep close together, even at noon.", "Gnawed bones were found by the river."]},
+   "lean": {"name": "A Lean Winter", "weight": 1.0, "food": 0.6, "spoil": 1.3, "herds_leave": 1.6,
+    "arrive": "The herds are gone, the river is sullen, and the stores are all the tribe has.",
+    "signs": ["The acorns are few and small this year.", "The squirrels have hidden little.", "The herds are thin and restless."]},
+   "mild": {"name": "A Mild Winter", "weight": 1.0, "weather": {"blizzard": 0.4}, "cold": 0.7, "wolves": 0.7, "food": 1.2,
+    "arrive": "The winter comes gently: grey skies, a little snow, and quiet nights.",
+    "signs": ["The bees are still busy at the last flowers.", "The geese linger on the river.", "The mornings are warm and wet."]}
+  }
  }
 }

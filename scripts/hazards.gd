@@ -41,6 +41,12 @@ var spread_t := 0.0
 var hungry_t := 0.0 # how long the camp has gone hungry, in seconds (easing back while fed; sickness grows with it)
 var famine_t := 0.0
 var season_seen := -1
+const AUTUMN := 2
+var winter_kind := ""      # the coming (or present) winter's kind, chosen by the director when autumn begins
+var winter_signs: Array = [] # [{text, kind}] the signs the elders read in autumn
+var winter_prep := {}      # what the tribe did to meet it ("prepare" action): {stat: mult}
+var winter_log: Array = [] # past winters: [{year, kind, signs_true, prep}]
+var pending := ""          # a dilemma to pose ("autumn")
 
 func _init(s) -> void:
 	sim = s
@@ -84,10 +90,10 @@ func food_mult(type: String) -> float:
 	var y: Dictionary = C["seasons"]["yields"]
 	if y.has(type): m = float(y[type][season_idx()])
 	if wk().has("crops") and not (type in wk().get("crops_spare", [])): m *= float(wk()["crops"])
-	return m
+	return m * winter_mod("food")
 
 func spoil_mult() -> float:
-	return float(C["seasons"]["spoil"][season_idx()]) if on() else 1.0
+	return float(C["seasons"]["spoil"][season_idx()]) * winter_mod("spoil") if on() else 1.0
 
 func hunger_mult() -> float:
 	return float(C["seasons"]["hunger"][season_idx()])
@@ -110,11 +116,90 @@ func cold_rate(u: E.Unit, warm: bool) -> float:
 	if winter():
 		r += float(cc["winter_hide"] if hide else cc["winter"]) * (1.0 if night else float(cc["winter_day"]))
 	r += float(WEATHER.get(weather, {}).get("cold_hide" if hide else "cold", 0.0))
-	return r * (mult() if on() else 1.0) * sim.inv.cold_mult()
+	return r * (mult() if on() else 1.0) * sim.inv.cold_mult() * winter_mod("cold")
 
 ## Outside winter and blizzards the cold only weakens (never below 35% HP).
 func cold_can_kill() -> bool:
 	return winter() or WEATHER.get(weather, {}).get("deadly_cold", false)
+
+# ------------------------------------------------------------ the winter to come (make_it_fun B1/B2)
+## The kinds of winter, their signs and effects: config/events.json "winters". When autumn
+## begins the director picks the kind (director.pick_winter); it stays hidden until winter
+## comes, and the autumn dilemma ("autumn" in dilemmas.json) quotes signs of it.
+func winters() -> Dictionary: return C["winters"]
+
+## Does the autumn decision run (challenges on and "on" in the config)?
+func poses_autumn() -> bool: return on() and bool(winters().get("on", true))
+
+func winter_def() -> Dictionary: return winters()["kinds"].get(winter_kind, {})
+
+## A winter effect now ("cold", "spoil", "food", "wolves", "herds_leave"): the kind's times
+## what the tribe did to meet it (winter_prep); 1 outside winter.
+func winter_mod(stat: String) -> float:
+	if not winter(): return 1.0
+	return float(winter_def().get(stat, 1.0)) * float(winter_prep.get(stat, 1.0))
+
+## The "prepare" action: what the tribe does now for the coming winter, {stat: mult} with the
+## stats of winters "prepare_stats" (clamped to 0.1..3; repeated, they multiply). Cleared in spring.
+func prepare(mods: Dictionary) -> void:
+	for k in mods:
+		if not str(k) in winters()["prepare_stats"] or not (mods[k] is float or mods[k] is int): continue
+		winter_prep[str(k)] = clampf(float(winter_prep.get(str(k), 1.0)) * clampf(float(mods[k]), 0.1, 3.0), 0.05, 5.0)
+
+## A game master sets the coming winter's kind (false for an unknown kind).
+func set_winter(kind: String) -> bool:
+	if not winters()["kinds"].has(kind): return false
+	winter_kind = kind
+	return true
+
+func _autumn_begins() -> void:
+	if not poses_autumn(): return
+	winter_prep = {}
+	winter_kind = sim.director.pick_winter()
+	winter_signs = _read_signs()
+	pending = "autumn"
+
+## The signs the elders read: winters "signs_read" of them, each a true sign of the coming
+## kind with chance "sign_truth", else a sign of another kind (the bet stays a bet).
+func _read_signs() -> Array:
+	var W: Dictionary = winters()
+	var kinds: Array = W["kinds"].keys()
+	var out: Array = []
+	var used := {}
+	for i in int(W["signs_read"]):
+		var k: String = winter_kind
+		if randf() >= float(W["sign_truth"]) and kinds.size() > 1: k = kinds.filter(func(o): return o != winter_kind).pick_random()
+		var pool: Array = W["kinds"][k]["signs"].filter(func(s): return not used.has(s))
+		if pool.is_empty(): continue
+		var s: String = pool.pick_random()
+		used[s] = true
+		out.append({"text": s, "kind": k})
+	return out
+
+func _winter_begins() -> void:
+	var wd := winter_def()
+	if wd.is_empty(): return
+	sim.add_log(tr(wd["arrive"]), "danger")
+	sim.alert(tr(wd["name"]) + ": " + tr(wd["arrive"]), Vector2.ZERO, "warn")
+
+func _winter_ends() -> void:
+	if winter_kind != "":
+		winter_log.append({"year": year() - 1, "kind": winter_kind, "signs_true": winter_signs.filter(func(s): return s["kind"] == winter_kind).size(), "prep": winter_prep.duplicate()})
+	winter_kind = ""
+	winter_prep = {}
+	winter_signs = []
+
+## The named values of the autumn dilemma: the signs, the oxen, the meat they would give,
+## the feast's cost.
+func autumn_vars() -> Dictionary:
+	var meat := int(sim.RULES["herds"].get("meat", 30))
+	return {"signs": " ".join(winter_signs.map(func(s): return tr(s["text"]))), "oxen": sim.oxen, "ox_meat": sim.oxen * meat,
+		"feast_cost": sim.living().size() * 2, "festival": tr("Harvest Festival")}
+
+## The coming winter for a game master (the kind is the director's secret from the players
+## and the leaders: neither summary() nor the forecast shows it).
+func winter_summary() -> Dictionary:
+	return {"kind": winter_kind, "signs": winter_signs.duplicate(true), "prep": winter_prep.duplicate(), "past": winter_log.duplicate(true)}
 
 # ------------------------------------------------------------ tick
 func update(dt: float) -> void:
@@ -139,8 +224,12 @@ func _season_news() -> void:
 	var news: Dictionary = C["seasons"]["news"][season_idx()]
 	sim.alert(tr(news["alert"]), Vector2.ZERO, news.get("level", "info"))
 	match season_idx():
-		0: _herds_return()
+		0:
+			_herds_return()
+			_winter_ends()
+		2: _autumn_begins()
 		3:
+			_winter_begins()
 			_herds_leave()
 			for u in sim.living(): sim.remember(u, tr("faced the winter of Year %d") % year(), 3)
 
@@ -148,7 +237,7 @@ func _season_news() -> void:
 func _herds_leave() -> void:
 	var deer: Array = sim.nodes.filter(func(n): return n.kind == "deer")
 	deer.shuffle()
-	for n in deer.slice(0, deer.size() / 2): sim.nodes.erase(n)
+	for n in deer.slice(0, roundi(deer.size() * clampf(0.5 * winter_mod("herds_leave"), 0.0, 1.0))): sim.nodes.erase(n)
 
 func _herds_return() -> void:
 	var want: Dictionary = sim.herd_sizes(26.0 * D.area_k())
@@ -174,7 +263,8 @@ func _weather(dt: float) -> void:
 	weather_roll = Config.rand_in(C["weather"]["roll_every"])
 	for w in WEATHER:
 		var kind: Dictionary = WEATHER[w]
-		if randf() < float(kind["chance"][season_idx()]) * mult() * float(D.LAND.get("weather", {}).get(w, 1.0)): # (the land: a steppe is drier)
+		var wm: float = float(winter_def().get("weather", {}).get(w, 1.0)) if winter() else 1.0 # (the kind of winter)
+		if randf() < float(kind["chance"][season_idx()]) * mult() * wm * float(D.LAND.get("weather", {}).get(w, 1.0)): # (the land: a steppe is drier)
 			if not sim.director.allow(w): return # (the director: not now, the tribe needs a breath)
 			if kind.has("warn_ahead"): # announced before it arrives
 				incoming = w
@@ -213,7 +303,7 @@ func _wolves() -> void:
 	var night: bool = sim.night_amt > 0.5
 	var cw: Dictionary = C["wolves"]
 	if night and not last_night:
-		var chance: float = float(cw["chance_by_season"][season_idx()]) * mult()
+		var chance: float = float(cw["chance_by_season"][season_idx()]) * mult() * winter_mod("wolves")
 		if sim.day() >= int(cw["from_day"]) and randf() < chance and sim.director.take("wolves"): spawn_wolf_pack()
 	if not night and last_night and cw.get("leave_at_dawn", true): # dawn: wolves slink away (except in winter)
 		for p in sim.predators:

@@ -153,7 +153,8 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
   - **Carving figurines** and **stringing beads** make **goods**, a trade stock.
   - **Painting the huts** decorates a building up to three levels (zigzags, then handprints, then strings of beads), in red once ochre is known.
   - Rarely a piece becomes a named **treasure** (an Owl Figurine, a Red Hand Wall…). Treasures lift mood for good, appear in Wisdom & Culture, and are told in the saga.
-- **Festivals:** at the start of spring (Festival of Renewal), autumn (Harvest Festival) and winter (Long Night Fire) the chieftain chooses:
+- **The autumn council:** when autumn begins, the elders read two signs of the coming winter ("The geese flew south early, and low.") and the chieftain decides how to meet it: hold the Harvest Feast (a bet on a mild winter), smoke and store the meat (stored food keeps far longer: a bet on a lean winter), cut firewood and seal the huts (the cold bites less: a bet on a hard white winter), slaughter the oxen for meat, or send the hunters out before the snow. The kind of winter (hard white, wolf, lean or mild) is already decided when the signs are read: the director picks it from the year (no easy repeats, gentler for a tribe in distress, harder for a well-stocked one). The signs are right about three times in four, and the tribe learns which winter it was when the snow comes. Numbers and signs: `config/events.json` `winters`; the council: `config/dilemmas.json` `autumn`.
+- **Festivals:** at the start of spring (Festival of Renewal) and winter (Long Night Fire) the chieftain chooses (with Challenges off, the Harvest Festival in autumn too):
   - **a great festival** (2 food a head; mood +25 and +15 for 2 days, devotion +8, more communal, births come sooner, friendly clans join in for +4 relations);
   - **a small gathering** (1 food a head);
   - **none** (mood −10).

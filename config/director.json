@@ -12,6 +12,10 @@
   "clan_raid": 1.5, "demand": 0.5,
   "crisis": 0.5, "death": 1.5
  },
+ "_winter_doc": "pick_winter(): the coming winter's kind when autumn begins (events.json winters). Each kind's weight, times repeat if it was last winter's; while the tribe is in distress (mercy) times mercy[kind], else when the stores are at least rich_food_at full times rich[kind].",
+ "winter": {"repeat": 0.3, "rich_food_at": 0.6,
+  "mercy": {"mild": 3.0, "white": 0.5, "lean": 0.5},
+  "rich": {"white": 1.5, "lean": 1.5, "wolf": 1.3}},
  "same_secs": 30,
  "retry": 30,
  "distress": {"food_per_head": 0.5, "deaths": 2, "death_days": 2, "mood": 20, "check_every": 5},

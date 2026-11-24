@@ -342,6 +342,35 @@
    }
   ]
  },
+ "autumn": {
+  "_doc": "The autumn decision (make_it_fun B1): posed when autumn begins (hazards._autumn_begins), after the director has picked the coming winter's kind; the text quotes the elders' signs of it (var signs). Each option is a bet on a kind: the feast on a mild one, smoking meat on a lean one, firewood on a white one, the hunt and the slaughter on food. Vars: signs, oxen, ox_meat, feast_cost, festival.",
+  "title": "The Autumn Council",
+  "text": ["The leaves are turning. At the fire the elders read the signs of the winter to come: %s What will the tribe do before the cold?", "signs"],
+  "options": [
+   {"label": "Hold the Harvest Feast", "desc": ["Eat well and dance while the berries last. Costs %d food. (Mood +25, devotion +5; friendly clans come.) A bet on a gentle winter.", "feast_cost"],
+    "cost": {"food": {"per_pop": 2}}, "cost_note": false,
+    "do": [{"festival": {"length": 30, "glow_days": 2}}, {"mood": 25}, {"devotion": 5}, {"guests": 4},
+     {"remember": ["feasted at the %s on Day %d", "festival", "day"], "impact": 5}],
+    "result": "Drums and fire until dusk: the tribe feasts before the cold.", "result_add": ["guests_line"]},
+   {"label": "Smoke and store the meat", "desc": "Build smoking racks and dry everything the stores hold. Costs 20 wood. (This winter stored food keeps far longer.) A bet on a lean winter.",
+    "cost": {"wood": 20},
+    "do": [{"prepare": {"spoil": 0.4}}, {"mood": -3}],
+    "result": "Smoke hangs over the camp for days. The meat is dried and hung in the rafters."},
+   {"label": "Cut firewood and seal the huts", "desc": "Stack wood high and pack the walls with moss and hide. Costs 30 wood. (This winter the cold bites much less.) A bet on a hard white winter.",
+    "cost": {"wood": 30},
+    "do": [{"prepare": {"cold": 0.6}}, {"mood": -3}],
+    "result": "Woodpiles rise beside every hut, and the cracks in the walls are stuffed with moss."},
+   {"label": "Slaughter the oxen", "when": {"oxen": 1}, "desc": ["Kill the %d oxen now for %d food, rather than feed them through the winter. The pens will stand empty.", "oxen", "ox_meat"],
+    "do": [{"slaughter": 0}, {"mood": -5}],
+    "result": "The oxen are slaughtered and their meat hung to dry. The pens are quiet."},
+   {"label": "Send the hunters out before the snow", "desc": "The best hunters go after the last fat game of the year. If they are lucky, 50 food; if not, they come back hurt.",
+    "chance": {"skill": "forage", "base": 0.3, "per_lv": 0.08, "min": 0.25, "max": 0.85},
+    "do": [{"give": {"food": 50}}, {"xp": {"forage": 15}, "who": "fighters:3"}, {"remember": "brought home the last great hunt of the autumn on Day %d", "who": "fighters:3", "impact": 5}],
+    "result": ["%s come home heavy with meat: 50 food for the winter.", "fighters"],
+    "else_do": [{"hurt": 0.3, "who": "fighters:3"}],
+    "else_result": ["The game is gone. %s come home cold, hurt and empty-handed.", "fighters"]}
+  ]
+ },
  "festival": {
   "title": [
    "%s",

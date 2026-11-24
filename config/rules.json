@@ -62,6 +62,7 @@
   "per_pen": 2,
   "eat": 0.03,
   "winter_eat": 1.5,
+  "meat": 30,
   "milk": 0.025,
   "care_days": 1.5,
   "tend_time": 6

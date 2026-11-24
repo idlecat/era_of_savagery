@@ -131,6 +131,26 @@ One big dilemma when autumn begins (a `story.holds()` trigger on season + day, c
 - The `director` controls how bad the winter gets — it picks the winter *kind* when
   autumn begins (see Decisions) — so the bet is real, not theater.
 
+- **Built** (with the part of B2 it needs): `director.pick_winter()` picks the kind when
+  autumn begins (`director.json` `winter`: no easy repeats, mild more often in distress,
+  harsher for a well-stocked tribe); `hz` reads it in winter (`events.json` `winters`:
+  blizzard chance, cold, wolves, spoil, yields, herds leaving). The council is
+  `dilemmas.json` `autumn` and replaces the autumn Harvest Festival while challenges are on:
+  feast (mild), smoke the meat (`prepare` spoil x0.4: lean), firewood (`prepare` cold x0.6:
+  white), slaughter the oxen (`slaughter`), the last hunt (a skill chance). Two signs are
+  quoted, each true with chance 0.75; the kind is named when winter comes and kept in
+  `hz.winter_log` (`hz.winter_summary()` for a game master; hidden from `hz.summary()` and
+  the forecast). The hunting party is a skill-chance option, not a contract: a contract
+  would outlive the dilemma and needs a leader picked, which the council doesn't do.
+- **First measurement** (`tools/metrics.gd --choose=autumn:N`, steward, 4 seeds × 10 days;
+  the same seed gets the same winter whatever is chosen, so the choices pair up): in the
+  lean winter (seed 3) the lowest stores were feast 33%, hunt 21%, firewood 62%,
+  **smoke 79%**, and the feast's winter cost 6 lives against 0 for smoke and firewood. The
+  bets are real, but two gaps: **the feast never paid** in these measures (its gain is mood,
+  which G1 doesn't score yet), and **winter rarely kills by cold or hunger**: winter deaths
+  were all beasts and contracts, and the wolf winter took at most one. Next: more seeds, a
+  mood/morale measure, and a wolf winter with teeth before B2's variety is tuned.
+
 ### B2. Winters differ
 - Per-year winter *kinds* (blizzard winter, wolf winter, quiet eerie winter) as rows in
   `config/events.json`; **the director picks the kind when autumn begins** (see
