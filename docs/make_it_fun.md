@@ -623,9 +623,18 @@ play (that is the measurable form of "decisions matter"):
   matches what happened (enemy_attack 50% forecast / 49% first abort, natural_disaster
   30 / 31, leader_wounded 10 / 6); the top-forecast reason was the actual abort in 61% of
   interrupted contracts (floor 60%; 81% before tuning, when the numbers were off by 2–3x
-  but beasts ranked lower). New finding: **outpost contracts are interrupted in 94% of
-  runs** (research 25%): every outpost pauses at least once, so an interrupt is not yet a
-  surprise. Worth tuning against before the A2 events add more.
+  but beasts ranked lower). New finding: **outpost contracts were interrupted in 94% of
+  runs** (research 25%): every outpost paused at least once, so an interrupt was no
+  surprise. The harness's cause list showed why: The Ford's scripted ambush fired on
+  *every* outpost at 45% (meant as the first one's set-piece), every flood stopped every
+  contract on the map wherever it worked, and each tiger fight paused twice (the attack,
+  then the leader's wound from the same fight). **Tuned:** the ambush is the first
+  outpost's only; a flood stops a contract only while some of its crew are within
+  `contract_reach` of a river; a wound taken in a fight the chieftain already ordered is
+  the leader's call by temperament (`contract_log.json` `judged`, no pause, said aloud).
+  Result: outposts interrupted 94% → **50%** (new band 40–70%), interrupts per run
+  steward 6.8 → 2.8, feaster 8.8 → 2.5, contract deaths down. Forecast re-tuned against
+  it: risk 0–30% → 9% interrupted, 30–60% → 50%, 60–100% → 71%; top reason 68%.
   5. Found while building it: requiring full XP at Lv 4 on top of the deed kept the
      craft gate shut in every run (the leader moves to the outpost and stops building);
      the trial now opens on reaching Lv 4 and the deed is the door.

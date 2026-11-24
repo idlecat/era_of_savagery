@@ -2357,4 +2357,8 @@ const STRINGS := {
 	"Too many of us are down. I feared this.": "我们倒下的人太多了。我就怕这个。",
 	"This I did not see coming.": "这我可没料到。",
 	"No one could have read this.": "谁也料不到这个。",
+	"%s decides: %s": "%s决定：%s",
+	"I am hurt. I will rest by the fire; the others carry on.": "我受伤了。我去火边歇着，其他人接着干。",
+	"I am hurt. Carry on without me; I will be back when I can stand.": "我受伤了。你们先干，等我能站起来就回来。",
+	"It is only blood. We work on.": "不过流点血。接着干。",
 }

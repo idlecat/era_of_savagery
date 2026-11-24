@@ -77,7 +77,7 @@ If a cloud call fails or returns invalid JSON, the game falls back to the offlin
 
 The top bar's **LLM calls** counter shows that a sealed contract runs with zero calls until an abort condition fires.
 
-**The odds and the field log.** Before you seal, the leader reads the odds aloud from what the tribe knows: beasts and warriors seen near the way, a found den, hostile clans, unexplored land, the season's blizzards and floods, their own wounds, and for a war, the enemy's warriors against yours (*"No one has seen that land. Anything may wait there. One time in three, trouble finds us."*). Only what the tribe has seen counts, so scouting gives better odds. The number comes from the plan's own abort conditions and is the same for every leader; their temperament only colours the words. The LLM leader is given the same numbers. During the work the leader keeps a field log in the contracts panel and now and then says it aloud: milestones, the first building raised, nightfall, weather, someone hurt or growing in skill, a landmark found, and callbacks to the forecast ("No sign of the beasts yet." / "They found us, as I feared."). Lines are in `config/contract_log.json`.
+**The odds and the field log.** Before you seal, the leader reads the odds aloud from what the tribe knows: beasts and warriors seen near the way, a found den, hostile clans, unexplored land, the season's blizzards and floods, their own wounds, and for a war, the enemy's warriors against yours (*"No one has seen that land. Anything may wait there. One time in three, trouble finds us."*). Only what the tribe has seen counts, so scouting gives better odds. The number comes from the plan's own abort conditions and is the same for every leader; their temperament only colours the words. The LLM leader is given the same numbers. During the work the leader keeps a field log in the contracts panel and now and then says it aloud: milestones, the first building raised, nightfall, weather, someone hurt or growing in skill, a landmark found, and callbacks to the forecast ("No sign of the beasts yet." / "They found us, as I feared."). Lines are in `config/contract_log.json`. A wound the leader takes in a fight you already ordered doesn't pause the game again: the leader decides by temperament whether to rest or press on, and says so.
 
 ## Graphics pipeline (pre-rendered 3D sprites)
 
@@ -229,7 +229,7 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
 - **Earthquakes:** every 10–16 days, a building or two collapse, and people beside them are hurt. A rockslide bares a new stone outcrop.
 - **Effects on the rest of the game:**
   - Any of these near the village wakes a sleeping camp.
-  - Floods, eruptions, earthquakes and nearby wildfires count as natural disasters for Task Contracts (abort `natural_disaster`), and the leader's emergency speech names the disaster.
+  - Floods, eruptions, earthquakes and nearby wildfires count as natural disasters for Task Contracts (abort `natural_disaster`), and the leader's emergency speech names the disaster. A flood only stops a contract while some of its crew work within reach of a river (events.json flood `contract_reach`).
   - The top bar shows what is happening, e.g. *River in flood · Ashfall*, and LLM prompts receive it as `omens`.
 
 ## How people react

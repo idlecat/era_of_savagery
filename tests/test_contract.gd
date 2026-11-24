@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2370,6 +2370,43 @@ func test_field_log() -> void:
 	check(not CS.foresaw(c, "enemy_attack") and CS.foresaw(c, "natural_disaster"), "foresaw() is about the reasons the leader named")
 	c.forecast = cut
 	check(CS.field_say(null, "chatter") == "" and CS.field_say(c, "no_such_trigger") == "", "unknown triggers and no contract say nothing")
+
+func test_outpost_interrupts() -> void:
+	print("\n== Fewer needless outpost pauses ==")
+	var sim = _new_sim()
+	var CS = sim.contracts
+	var u = CS.available_helpers()[0]
+	var c = CS.seal(u, "settle", "Found a settlement")["contract"]
+	c.status = "executing"
+	c.plan["abort_conditions"] = ["natural_disaster", "hp_below_50%", "enemy_attack"]
+	var reach: float = float(sim.nat.C["flood"]["contract_reach"])
+	for m in CS.crew(c): m.pos = c.site + Vector2(0, 0)
+	var far: bool = D.river_dist(c.site) >= reach
+	sim.time += 1.0
+	sim.flags["flood_active"] = sim.time
+	check(not far or not CS._check_aborts(c), "a flood doesn't stop a crew far from the river (%.0f from it)" % D.river_dist(c.site))
+	var bank: Vector2 = D.nearest_river_point(c.site)
+	for m in CS.crew(c): m.pos = bank + (c.site - bank).normalized() * (reach * 0.5)
+	check(CS._check_aborts(c) and c.abort_reason == "natural_disaster", "but stops one working on the bank")
+	CS.resolve(c, "shelter")
+	c.status = "executing"
+	sim.time += float(sim.nat.C["flood"]["length"]) + 1.0
+	check(not CS.flood_reaches(c), "and only while the flood lasts")
+	# a wound in a fight the chieftain ordered: the leader decides, no pause
+	for m in CS.crew(c): m.pos = c.site
+	c.abort_reason = "enemy_attack"
+	CS.resolve(c, "hold")
+	c.status = "executing"
+	var ld = CS.leader(c)
+	ld.hp = ld.max_hp * 0.3
+	var n: int = c.interruptions
+	var paused: bool = CS._check_aborts(c)
+	var eff: String = CS.LOG["judged"]["leader_wounded"]["by_arch"][sim.arch(ld)]
+	check(not paused and c.interruptions == n and c.events.any(func(e): return e.contains(CS.effect_text(eff))), "a wound in the ordered fight is the leader's call (%s), no pause" % eff)
+	c.flags["fight_t"] = -1e9
+	c.abort_cooldowns.clear()
+	c.resting_ids.erase(ld.id)
+	check(CS._check_aborts(c) and c.abort_reason == "leader_wounded", "a wound out of the blue still wakes the chieftain")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")

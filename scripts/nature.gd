@@ -316,8 +316,7 @@ func _flood_strike() -> void:
 	sim.cult.on_event("spring_flood")
 	flood_left = float(cf["length"])
 	sim.flood_fx = maxf(sim.flood_fx, 0.5)
-	sim.flags["flood_active"] = sim.time
-	_disaster("flood", river_near_home(), -1.0)
+	sim.flags["flood_active"] = sim.time # (contracts with crew in the river's reach stop: contracts._check_aborts)
 	var hurt := 0
 	for u in sim.living():
 		if D.river_dist(u.pos) < float(cf["hit_radius"]):

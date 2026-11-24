@@ -27,6 +27,9 @@ const Cultures = preload("res://scripts/cultures.gd")
 
 ## The target bands: [low, high] share of runs (or a value), docs/make_it_fun.md G1.
 const BANDS := {"near_miss": [0.6, 0.9], "famine": [0.1, 0.25]}
+## Share of outposts (settle contracts that ended) interrupted at least once: most should
+## be quiet enough that an interrupt is news, some must be hit (make_it_fun G1).
+const OUTPOST_BAND := [0.4, 0.7]
 
 var a := {}
 
@@ -50,7 +53,7 @@ func _initialize() -> void:
 			print("  %s seed %d: %s" % [pid, seed0 + i, _short(r)])
 	_report(rows, pols)
 	if a.has("out"):
-		var keys: Array = rows[0].keys().filter(func(k): return k != "forecasts") if not rows.is_empty() else []
+		var keys: Array = rows[0].keys().filter(func(k): return not k in ["forecasts", "causes"]) if not rows.is_empty() else []
 		var csv := ",".join(keys) + "\n"
 		for r in rows: csv += ",".join(keys.map(func(k): return str(r[k]).replace(",", ";"))) + "\n"
 		var f := FileAccess.open(a["out"], FileAccess.WRITE)
@@ -83,14 +86,15 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	var r := {"policy": pol["id"], "seed": sd, "days": 0, "alive": 0, "deaths": 0, "deaths_d20": 0, "starved": 0, "killed": 0, "other_deaths": 0, "left": 0,
 		"near_miss": false, "sick_wave": false, "hungry_sick": false, "famine": false, "hungry_hours": 0.0, "min_food_frac": 1.0,
 		"dilemmas": 0, "feats": 0, "interrupts": 0, "crises": 0, "sealed": 0, "seal_refused": 0,
-		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1}
+		"pauses_per_hour": 0.0, "max_gap_days": 0.0, "era2_day": -1, "ranks": 0, "first_rank_day": -1, "craft_gate_day": -1, "causes": []}
 	var meaningful: Array = [0.0] # game times of meaningful events
 	sim.feat_added.connect(func(_f): r["feats"] += 1; meaningful.append(sim.time))
 	var first_abort := {}
 	sim.contract_interrupted.connect(func(c):
 		r["interrupts"] += 1
 		meaningful.append(sim.time)
-		if not first_abort.has(c.id): first_abort[c.id] = c.abort_reason)
+		if not first_abort.has(c.id): first_abort[c.id] = c.abort_reason
+		r["causes"].append(_cause(sim, c)))
 	sim.crisis_started.connect(func(_c): r["crises"] += 1; meaningful.append(sim.time))
 	var days := int(a.get("days", "12"))
 	var dt := float(a.get("dt", "0.1"))
@@ -179,6 +183,17 @@ func _sample(sim, r: Dictionary, dead_seen: Dictionary) -> void:
 	if held > 0 and r["first_rank_day"] < 0: r["first_rank_day"] = sim.day()
 	if r["craft_gate_day"] < 0 and sim.ranks.tribe_has("fine_craft"): r["craft_gate_day"] = sim.day()
 
+## What interrupted a contract, for the report: its kind, the abort reason and, for an
+## attack, what was there (the nearest attacker's kind within the abort radius, or "hit").
+func _cause(sim, c) -> String:
+	var what := ""
+	if c.abort_reason == "enemy_attack":
+		var near: Array = sim.active_predators_near(c.site, 260)
+		near.sort_custom(func(x, y): return x.pos.distance_to(c.site) < y.pos.distance_to(c.site))
+		what = (near[0].kind + (":guard" if near[0].guard else "")) if not near.is_empty() else "hit away from the site"
+	elif c.abort_reason == "natural_disaster": what = str(sim.flags.get("disaster", "flood")) if sim.flags.get("disaster_t", -1.0) >= sim.flags.get("flood_active", -1.0) else "flood"
+	return "%s %s %s (%d%%, n%d)" % [c.kind, c.abort_reason, what, roundi(c.progress * 100), c.interruptions]
+
 ## The option a policy takes: the first or last one that can be chosen.
 func _pick(sim, id: String, how: String) -> int:
 	var opts: Array = sim.event_def(id).get("options", [])
@@ -253,6 +268,20 @@ func _report(rows: Array, pols: Array) -> void:
 		var d: float = absf(summ["hoarder"]["min_food"] - summ["feaster"]["min_food"]) + absf(summ["hoarder"]["famine"] - summ["feaster"]["famine"]) + absf(summ["hoarder"]["near_miss"] - summ["feaster"]["near_miss"])
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
 	_calibration(rows)
+	var outs: Array = []
+	for r in rows: outs.append_array(r["forecasts"].filter(func(f): return f["kind"] == "settle"))
+	if not outs.is_empty():
+		var sh := outs.filter(func(f): return f["first"] != "").size() / float(outs.size())
+		print("\nOutposts interrupted at least once: %d%% of %d (band %d-%d%%) %s" % [roundi(sh * 100), outs.size(), OUTPOST_BAND[0] * 100, OUTPOST_BAND[1] * 100, "in band" if sh >= OUTPOST_BAND[0] and sh <= OUTPOST_BAND[1] else ("BELOW" if sh < OUTPOST_BAND[0] else "ABOVE")])
+	var causes := {}
+	for r in rows:
+		for k in r["causes"]:
+			var key: String = k.get_slice(" (", 0)
+			causes[key] = causes.get(key, 0) + 1
+	print("\nWhat interrupted contracts (all runs):")
+	var ks: Array = causes.keys()
+	ks.sort_custom(func(x, y): return causes[x] > causes[y])
+	for k in ks: print("  %3d  %s" % [causes[k], k])
 
 ## Forecast calibration (A0): of the contracts that were interrupted, how often the
 ## top-forecast reason was the first abort (the G1 floor: ~60%), and whether the risk read

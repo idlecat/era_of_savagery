@@ -27,7 +27,7 @@ const CLANS := {"ochre": Vector2(3180, 1300) + SHIFT, "heron": Vector2(360, 2180
 ## Scripted events (see story.gd for what a trigger can test and do).
 const SCRIPT := [
 	{"when": {"time": 275.0}, "do": [{"event": "flood"}]}, # the Great Flood warning, Day 4
-	{"when": {"contract": "settle", "progress": 0.45}, "each": true, "toggle": "scripted_ambush",
+	{"when": {"contract": "settle", "progress": 0.45}, "toggle": "scripted_ambush", # (the first outpost's set-piece only: on every one, every outpost paused)
 		"do": [{"spawn": "tiger", "at": "site", "offsets": [Vector2(380, -260), Vector2(400, 240)]},
 			{"log": "Something moves in the tall grass near '%s'...", "kind": "danger", "arg": "plan"}]},
 ]

@@ -4,11 +4,11 @@
   "days": {"settle": 1.2, "research": 0.6, "seek": 1.0, "war": 0.8},
   "default_aborts": {"settle": ["enemy_attack", "hp_below_40%", "natural_disaster"], "research": ["enemy_attack", "hp_below_40%"], "seek": ["enemy_attack", "hp_below_35%"], "war": ["heavy_losses", "hp_below_30%"]},
   "enemy_attack": {
-   "base": {"settle": 0.8, "research": 0.15, "seek": 0.5, "war": 0.4},
+   "base": {"settle": 0.42, "research": 0.15, "seek": 0.35, "war": 0.4},
    "beast": 0.12, "warrior": 0.08, "den": 0.15, "den_r": 1600, "hostile": 0.1, "unknown": 0.1,
    "near_r": 700, "route_r": 400, "dist_ref": 2000, "dist_mult": [0.7, 1.4], "max": 0.9
   },
-  "natural_disaster": {"rolls_per_day": 2.0, "flood_mult": 1.0, "incoming": 0.6, "max": 0.9},
+  "natural_disaster": {"rolls_per_day": 2.0, "flood_mult": 0.3, "incoming": 0.6, "max": 0.9},
   "leader_wounded": {"wound": 0.15, "ref_pct": 35, "per_combat_lv": 0.06, "hurt_margin": 0.15, "hurt": 0.4, "max": 0.85},
   "heavy_losses": {"base": 0.25, "per_defender": 0.1, "per_strength": 0.08, "bronze": 0.7, "max": 0.85},
   "mercy_mult": 0.6,
@@ -54,12 +54,16 @@
    "match": {"text": "We are about as many as their warriors: %d to our %d."}
   }
  },
+ "_judged_doc": "Troubles the leader decides in the field without pausing the game (the chieftain already ordered the fight): a reason in `judged` within `secs` of a fight the chieftain answered (or of the defence it led to) is resolved with the effect for the leader's archetype, and the leader says the judged:<effect> line.",
+ "judged": {
+  "leader_wounded": {"secs": 45, "by_arch": {"warrior": "press_on", "cautious": "rest", "mystic": "rest", "agrarian": "rest", "lazy": "rest"}}
+ },
  "log": {
   "arch_chance": 0.6,
   "bubble_chance": 0.5,
   "chatter_secs": 30,
   "near_miss_hp": 0.5,
-  "chronicle": ["first_built", "foreseen", "unforeseen"],
+  "chronicle": ["first_built", "foreseen", "unforeseen", "judged"],
   "talk": {
    "progress_25": ["A quarter of the work is done.", "We are getting there."],
    "progress_25:warrior": ["A quarter done. Faster!"],
@@ -95,6 +99,9 @@
    "foreseen:natural_disaster": ["The weather turned, as I feared."],
    "foreseen:leader_wounded": ["I said I might be hurt. I am."],
    "foreseen:heavy_losses": ["Too many of us are down. I feared this."],
+   "judged:rest": ["I am hurt. I will rest by the fire; the others carry on."],
+   "judged:rest:agrarian": ["I am hurt. Carry on without me; I will be back when I can stand."],
+   "judged:press_on": ["It is only blood. We work on."],
    "unforeseen": ["This I did not see coming.", "No one could have read this."]
   }
  }

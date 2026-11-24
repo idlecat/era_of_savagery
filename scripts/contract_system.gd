@@ -673,7 +673,7 @@ func _fc_disaster(cf: Dictionary, days: float, plan: Dictionary, mult: float) ->
 		safe *= pow(1.0 - minf(ch, 0.99), rolls)
 		worst = "blizzard" if w == "blizzard" else "weather"
 	var fl: Dictionary = sim.nat.C["flood"]
-	if si == int(fl["season"]):
+	if si == int(fl["season"]) and D.river_dist(plan_site(plan)) < float(fl["contract_reach"]) + 650.0: # (the crew roam ~650 round the site)
 		safe *= pow(1.0 - minf(float(fl["chance"]) * mult * float(cf["flood_mult"]), 0.99), maxf(1.0, days))
 		if worst == "": worst = "flood"
 	var p := 1.0 - safe
@@ -873,7 +873,9 @@ func update(dt: float) -> void:
 				_run_step(c, dt)
 				c.progress = _progress(c) # (a scenario may script an ambush at some progress: story.gd)
 				if c.status == "executing": _field_log(c, dt)
-			"defending": _defend(c, dt)
+			"defending":
+				c.flags["fight_t"] = sim.time # (the fight goes on: wounds in it are the leader's to judge)
+				_defend(c, dt)
 			"sheltering":
 				for u in crew(c): _ensure(u, "c%d_shelter" % c.id, func(): sim.assign_move(u, c.site + Vector2(randf_range(-30, 30), randf_range(-30, 30))))
 				if c.state_t > 8: _set_status(c, "executing")
@@ -1182,7 +1184,7 @@ func _check_aborts(c: E.Contract) -> bool:
 			var total: int = c.crew_ids.size() + c.reinforcement_ids.size()
 			if total >= 2 and crew(c).size() * 2 <= total: reason = "heavy_losses" # half the party dead or limping home
 		elif cond == "natural_disaster":
-			if sim.flags.get("flood_active", -1.0) >= c.t or sim.flags.get("disaster_t", -1.0) >= c.t: reason = "natural_disaster"
+			if flood_reaches(c) or sim.flags.get("disaster_t", -1.0) >= c.t: reason = "natural_disaster"
 		elif cond.begins_with("hp_below_"):
 			var pct := float(cond.trim_prefix("hp_below_").trim_suffix("%")) / 100.0
 			var ld := leader(c)
@@ -1190,6 +1192,14 @@ func _check_aborts(c: E.Contract) -> bool:
 		if reason != "" and c.abort_cooldowns.get(reason, -1.0) > sim.time: reason = ""
 		if reason != "": break
 	if reason == "": return false
+	var jd: Dictionary = LOG["judged"].get(reason, {})
+	if not jd.is_empty() and sim.time - float(c.flags.get("fight_t", -1e9)) < float(jd["secs"]):
+		var eff: String = jd["by_arch"].get(sim.arch(leader(c)), "")
+		c.abort_reason = reason
+		if eff in allowed_effects(c): # (in a fight the chieftain already ordered, the leader decides this one)
+			resolve(c, eff, "", true)
+			field_say(c, "judged:" + eff, "", false, true)
+			return false
 	c.abort_reason = reason
 	c.interruptions += 1
 	_set_status(c, "interrupted")
@@ -1200,6 +1210,14 @@ func _check_aborts(c: E.Contract) -> bool:
 	sim.paused = true
 	sim.contract_interrupted.emit(c)
 	return true
+
+## Is a flood under way (events.json flood "length" since it struck) with some of the crew
+## within its reach of a river ("contract_reach")? Only they have to stop for it.
+func flood_reaches(c: E.Contract) -> bool:
+	var fl: float = sim.flags.get("flood_active", -1.0)
+	var cf: Dictionary = sim.nat.C["flood"]
+	if fl < c.t or sim.time - fl > float(cf["length"]): return false
+	return crew(c).any(func(u): return D.river_dist(u.pos) < float(cf["contract_reach"]))
 
 ## What a chieftain's answer to an emergency does, for the player and the LLM (translated).
 func effect_text(effect: String) -> String:
@@ -1254,10 +1272,13 @@ func _threat_text(site: Vector2) -> String:
 	return ", ".join(parts) if not parts.is_empty() else tr("none visible")
 
 # ------------------------------------------------------------ resolution
-func resolve(c: E.Contract, effect: String, label := "") -> void:
+## `by_leader`: the leader decided it in the field (contract_log.json "judged"), not the chieftain.
+func resolve(c: E.Contract, effect: String, label := "", by_leader := false) -> void:
 	if effect not in allowed_effects(c): effect = allowed_effects(c)[0]
 	var ld := leader(c)
-	_clog(c, tr("Chieftain's decision: %s") % (label if label != "" else effect_text(effect)))
+	if by_leader: _clog(c, tr("%s decides: %s") % [tr(ld.name), effect_text(effect)])
+	else: _clog(c, tr("Chieftain's decision: %s") % (label if label != "" else effect_text(effect)))
+	if c.abort_reason == "enemy_attack" and effect != "retreat": c.flags["fight_t"] = sim.time
 	c.abort_cooldowns[c.abort_reason] = sim.time + 5.0
 	match effect:
 		"hold":

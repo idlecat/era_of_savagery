@@ -95,7 +95,7 @@
 
  "flood": {
   "season": 0, "chance": 0.45, "warn_ahead": 15, "length": 45, "extra_width": 110,
-  "hit_radius": 130, "hit_damage": 0.2, "building_radius": 170, "crop_radius": 160,
+  "hit_radius": 130, "hit_damage": 0.2, "contract_reach": 220, "building_radius": 170, "crop_radius": 160,
   "drown_rate": 3, "silt_days": 2, "silt": 1.4, "silt_radius": 500,
   "warn": "The river is rising! Get away from the banks.",
   "alert": "The river floods its banks!%s%s",
