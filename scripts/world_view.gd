@@ -860,6 +860,16 @@ func draw_overlay() -> void:
 			if p.hp < p.max_hp - 0.5: _bar(iso(p.pos) + Vector2(0, 6), 24, p.hp / p.max_hp, cc.lightened(0.2))
 		else:
 			_bar(iso(p.pos) + Vector2(0, 8), 32, p.hp / p.max_hp, Color("#ff9b3a"))
+	for s in sim.hunt.shots: # arrows and sling stones in flight (hunt.gd)
+		if not sim.is_visible(s["to"]): continue
+		var k: float = s["t"] / s["life"]
+		var a: Vector2 = iso(s["from"]) + Vector2(0, -22)
+		var b: Vector2 = iso(s["to"]) + Vector2(0, -12)
+		var lift := (a.distance_to(b) * 0.25)
+		var at := a.lerp(b, k) - Vector2(0, sin(PI * k) * lift)
+		var ahead := a.lerp(b, minf(1.0, k + 0.08)) - Vector2(0, sin(PI * minf(1.0, k + 0.08)) * lift)
+		if s["weapon"] == "bow": ci.draw_line(at - (ahead - at).normalized() * 9.0, at, Color("#f3e2c0"), 1.5)
+		else: ci.draw_circle(at, 2.2, Color("#9a9184"))
 	for p in sim.popups:
 		if not sim.is_explored(p["pos"]): continue
 		var a: float = 1.0 - pow(p["t"] / p["life"], 2)

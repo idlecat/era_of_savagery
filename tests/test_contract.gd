@@ -3426,12 +3426,82 @@ func test_band_hunt() -> void:
 	tiger.hp = 1.0
 	for k in 40: sim.tick(0.05)
 	check(tiger.dead and not sim.hunt.bands.has(tiger.id), "the beast falls and the band breaks up")
-	# a lone hunter doesn't wait for anyone
+	sim.dispose()
+	# alone: a match for it goes straight in; anyone else calls for help and won't go in alone
+	sim = _new_sim()
+	sim.predators.clear()
 	var t2 = sim.spawn_predator(at)
 	t2.spd = 0.0
-	sim.assign_attack(band[0], t2)
+	var champ = sim.living().filter(func(u): return u.role == "")[0]
+	champ.atk = 200.0
+	champ.pos = sim.dry_spot(at + Vector2(-200, 0))
+	check(sim.hunt.can_solo(champ, t2), "a champion is a match for a saber-tooth")
+	sim.assign_attack(champ, t2)
 	sim.tick(0.05)
-	check(sim.hunt.bands.has(t2.id) and sim.hunt.bands[t2.id]["go"] and sim.hunt.spot(band[0], t2) == t2.pos, "one alone goes straight at it")
+	check(sim.hunt.bands[t2.id]["go"] and sim.hunt.spot(champ, t2) == t2.pos, "a match for it goes straight in alone")
+	sim.dispose()
+	sim = _new_sim()
+	sim.predators.clear()
+	t2 = sim.spawn_predator(at)
+	t2.spd = 0.0
+	var lone = sim.living().filter(func(u): return u.role == "")[0]
+	lone.pos = sim.dry_spot(at + Vector2(-200, 0))
+	check(not sim.hunt.can_solo(lone, t2), "an ordinary villager is no match for one")
+	sim.assign_attack(lone, t2)
+	sim.tick(0.05)
+	check(sim.hunt.bands[t2.id]["called"], "sent alone, they call for help")
+	var went_alone := false
+	var outcome := false
+	for k in 300:
+		sim.tick(0.05)
+		var on_it: int = sim.living().filter(func(u): return u.job.get("type", "") == "attack" and u.job.get("target_id", -1) == t2.id).size()
+		if on_it <= 1 and lone.pos.distance_to(t2.pos) < 50.0: went_alone = true
+		if on_it >= 2 or lone.job.get("type", "") != "attack":
+			outcome = true
+			break
+	check(not went_alone and outcome, "they don't go in alone: help comes, or they back off")
+	sim.dispose()
+	# someone alone the beast comes for runs to the others
+	sim = _new_sim()
+	sim.predators.clear()
+	var t3 = sim.spawn_predator(at)
+	var prey = sim.living().filter(func(u): return u.role == "")[0]
+	for u in sim.living():
+		if u != prey and u.pos.distance_to(at) < 300.0: u.pos = sim.dry_spot(D.VILLAGE)
+	prey.pos = sim.dry_spot(at + Vector2(-110, 0))
+	sim.assign_move(prey, prey.pos + Vector2(0, 30))
+	for k in 30: sim.tick(0.05)
+	check(t3.prey_id == prey.id and prey.job.get("flee", false) and prey.job["to"].distance_to(at) > prey.pos.distance_to(at) - 40.0,
+		"alone with a saber-tooth coming for them, they run to the others")
+	sim.dispose()
+	# archers: good hunters shoot from afar once the tribe has a sling (farther with a bow)
+	sim = _new_sim()
+	sim.predators.clear()
+	var t4 = sim.spawn_predator(at)
+	t4.spd = 0.0
+	t4.hp = 100000.0
+	t4.max_hp = 100000.0
+	var crew: Array = sim.living().filter(func(u): return u.role == "").slice(0, 3)
+	var archer = crew[2]
+	check(sim.hunt.weapon(archer).is_empty(), "no weapon, no archers")
+	archer.skills["forage"]["lv"] = 5
+	sim.inv.discover("sling", archer)
+	check(sim.hunt.weapon(archer).get("id", "") == "sling" and sim.hunt.weapon(crew[0]).is_empty() == (crew[0].lv("forage") < 3), "a good hunter with a sling is an archer, others aren't")
+	for i in crew.size():
+		crew[i].pos = sim.dry_spot(at + Vector2(-380 + i * 40, -40 + i * 40))
+		crew[i].max_hp = 1000.0
+		crew[i].hp = 1000.0
+		sim.assign_attack(crew[i], t4)
+	var shot := false
+	var kept := true
+	for k in 500:
+		sim.tick(0.05)
+		if not sim.hunt.shots.is_empty(): shot = true
+		if sim.hunt.bands.has(t4.id) and sim.hunt.bands[t4.id]["go"] and shot and archer.pos.distance_to(t4.pos) < float(sim.hunt.weapon(archer)["keep"]) - 5.0: kept = false
+	check(shot and kept and archer.pos.distance_to(t4.pos) <= float(sim.hunt.weapon(archer)["range"]), "the archer shoots from afar, out of its reach (%d away)" % roundi(archer.pos.distance_to(t4.pos)))
+	check(sim.hunt.summary()[0]["archers"].has(archer.id), "archers show in hunt.summary()")
+	sim.inv.discover("bow", archer)
+	check(sim.hunt.weapon(archer).get("id", "") == "bow", "with the bow they shoot with that")
 	sim.dispose()
 
 func test_spare_hands() -> void:

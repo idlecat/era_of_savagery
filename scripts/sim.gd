@@ -728,7 +728,7 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			elif low and not u.has_trait("belligerent") and not u.job.get("flee", false):
 				assign_flee(u)
 				popup(u.pos + Vector2(0, -26), tr("Flees!"), Color("#ff9b7a"))
-			elif not low and jt != "attack" and jt != "move":
+			elif not low and jt != "attack" and jt != "move" and not hunt.avoid(u, p): # (alone and no match for it: runs to the others)
 				set_aside(u)
 				assign_attack(u, p, u.job_key)
 
@@ -1781,6 +1781,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 			prey = u
 	if prey == null and guardian and not guardian.dead and guardian.pos.distance_to(p.pos) < 280:
 		prey = guardian
+	p.prey_id = prey.id if prey is E.Unit else -1
 	if prey:
 		if prey.pos.distance_to(p.pos) > 20:
 			p.path = [prey.pos]

@@ -1,5 +1,30 @@
 {
- "_doc": "How a band fights a dangerous beast (hunt.gd, sim.hunt). Everyone with an attack job on the same beast is one band. For the kinds listed in `kinds`, the band first musters at a rally point rally_dist from the beast, on the side the people come from, and charges together once all of them are within gather_r of it - or after max_wait seconds, or wait_hurt seconds once the beast has struck someone, or at once if the beast comes within engaged_r of the rally point or of anyone in the band, or someone in it is hit. A band smaller than `band` does not wait. In the fight they take places round the beast ring_r from it, spread evenly, so it is struck from every side: each blow does `flank` more for every other fighter within flank_r of the beast (at most flank_max). A fighter below fall_back_below of their health steps back fall_back_dist out of the fight while at least one other keeps it up. act/fall_act/popup/words: the texts (words: what the one who calls the charge shouts).",
+ "_doc": "How a band fights a dangerous beast (hunt.gd, sim.hunt). Everyone with an attack job on the same beast is one band. For the kinds listed in `kinds`, the band first musters at a rally point rally_dist from the beast, on the side the people come from, and charges together once all of them are within gather_r of it - or after max_wait seconds, or wait_hurt seconds once the beast has struck someone, or at once if the beast comes within engaged_r of the rally point or of anyone in the band, or someone in it is hit. A band smaller than `band` does not muster: see `alone`. In the fight they take places round the beast ring_r from it, spread evenly, so it is struck from every side: each blow does `flank` more for every other fighter within flank_r of the beast (at most flank_max). A fighter below fall_back_below of their health steps back fall_back_dist out of the fight while at least one other keeps it up. act/fall_act/popup/words: the texts (words: what the one who calls the charge shouts).",
+ "alone": {
+  "_doc": "Nobody faces such a beast alone unless they are a match for it: blow for blow they would outlast it solo_margin times over (can_solo). Every notice_every seconds, someone a beast is going for within notice_r, with no other grown-up within alone_r and nobody fighting it, runs to the nearest grown-up within seek_r (or home) and calls for help (the help_event reactions, config/reactions.json); so does someone it strikes while alone (self-defence). One sent against it alone calls for help and waits (act) at the rally point; after lone_wait seconds without help, or when the beast comes at them, they back off (out_popup) or run to the others (popup).",
+  "solo_margin": 1.5,
+  "alone_r": 90,
+  "notice_every": 0.5,
+  "notice_r": 240,
+  "seek_r": 700,
+  "lone_wait": 8,
+  "help_event": "hunt_help",
+  "act": "Waiting for help",
+  "popup": "Runs to the others!",
+  "out_popup": "Won't face it alone!"
+ },
+ "archers": {
+  "_doc": "Archers: people with `skill` at min_lv or more fight from afar once the tribe has a weapon - the first of `weapons` whose `when` holds (conditions as in scenario scripts). In a band they muster with the others, then stand off range x0.8 from the beast spread in an arc (spread radians either side of the band's side), step back when it comes within `keep`, and every `cd` seconds shoot for mult x their attack (no flanking bonus). flight: seconds a missile is drawn in the air. xp: combat XP a shot (half that in the skill).",
+  "skill": "forage",
+  "min_lv": 3,
+  "spread": 0.7,
+  "flight": 0.35,
+  "xp": 0.8,
+  "weapons": [
+   {"id": "bow", "when": {"invention": "bow"}, "range": 150, "keep": 85, "mult": 0.9, "cd": 1.3, "act": "Shooting arrows"},
+   {"id": "sling", "when": {"invention": "sling"}, "range": 105, "keep": 70, "mult": 0.6, "cd": 1.5, "act": "Slinging stones"}
+  ]
+ },
  "kinds": {
   "tiger": {
    "band": 2,

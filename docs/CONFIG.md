@@ -94,6 +94,10 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 
 `kinds` maps a beast kind (`tiger`) to its tactics; kinds not listed are fought straight on. Everyone with an attack job on the same beast is one band (`sim.hunt.summary()` lists them). A band of at least `band` musters at a rally point `rally_dist` from the beast, on the side it comes from, and charges together once all are within `gather_r` of it, after `max_wait` seconds, after `wait_hurt` seconds once the beast has struck someone, or at once when the beast comes within `engaged_r` of the rally point or of one of them (or one is hit). In the fight each takes a place `ring_r` from the beast, spread evenly round it; every blow does `flank` more for each other fighter within `flank_r` (at most `flank_max`). A fighter below `fall_back_below` of their health steps back `fall_back_dist` while another keeps the fight up. Texts: `act` (mustering), `fall_act`, `popup` and `words` (shouted by the best fighter on the charge).
 
+`alone`: nobody faces such a beast alone unless they are a match for it (blow for blow they'd outlast it `solo_margin` times over: `sim.hunt.can_solo()`). Someone the beast goes for (within `notice_r`, checked every `notice_every` s) or strikes, with no grown-up within `alone_r` and nobody fighting it, runs to the nearest grown-up within `seek_r` (or home) and calls for help: the `help_event` reactions (`hunt_help` in reactions.json). A band smaller than `band` that isn't a match for it calls for help and waits (`act`); after `lone_wait` s without help, or when the beast comes at them, they back off (`out_popup`) or run to the others (`popup`). The belligerent stand their ground.
+
+`archers`: people with `skill` at `min_lv` or more shoot once the tribe has a weapon, the first of `weapons` whose `when` condition holds (the Hunting Sling, then the Hunting Bow invention). In a band they muster too, then stand off `range` x0.8 spread in an arc (`spread` radians), step back when the beast is within `keep`, and every `cd` s shoot for `mult` x their attack. `flight`: how long a missile is drawn; `xp` per shot.
+
 ## reactions.json
 
 `on` maps a happening to a list of responses. The rules send these happenings (`sim.react.trigger(event, ctx)`):
@@ -109,6 +113,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 | `wildfire` | every second while trees burn, for each person near a fire | danger, fire |
 | `freezing` | someone is out in killing cold, away from a fire | victim |
 | `beast_seen` | a scout sees a beast | victim, danger, attacker |
+| `hunt_help` | someone alone a dangerous beast comes for (or sent against it alone) calls for help (hunt.gd) | victim, attacker, at |
 | `panic` | the tribe panics (the `panic` action) | until |
 | `blizzard`, `storm`, `rain`, `drought`, `sickness`, `famine` | they start (no reactions by default) | at, victim |
 | `built` | a building of ours is finished | at |
