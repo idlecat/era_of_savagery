@@ -1516,7 +1516,8 @@ func _draw_structure(s) -> void:
 				match s.type:
 					"smelter": _smoke(b - Vector2(-4, 36), s.id)
 					"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
-				return
+			_era_dressing(s, b) # the tribe's growing pride shows at the great places
+			return
 	match s.type:
 		"burial_ground": _burial_ground(s, b)
 		"hut", "large_hut":
@@ -1562,6 +1563,7 @@ func _draw_structure(s) -> void:
 			_flame(b - Vector2(0, 3), 9 * fl, 26 * fl, Color("#e2541b"))
 			_flame(b - Vector2(-1, 4), 6 * fl2, 18 * fl2, Color("#f8a531"))
 			_flame(b - Vector2(0, 5), 3 * fl, 10 * fl, Color("#fff1a0"))
+			_era_dressing(s, b)
 			for i in 3:
 				var k := fmod(t * 0.9 + i * 0.33, 1.0)
 				ci.draw_circle(b + Vector2(sin(t * 3 + i) * 4, -30 - 30 * k), 2.5 + 3 * k, Color(0.5, 0.5, 0.5, 0.3 * (1 - k)))
@@ -1765,6 +1767,33 @@ func _totem(b: Vector2, h: float, s: float, a: float) -> void:
 	var wy := b.y - h + 6
 	ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x - 4 * s, wy), Vector2(b.x - 18 * s, wy - 8 * s), Vector2(b.x - 15 * s, wy + 2 * s)]), Color(Color("#e6b33a"), a))
 	ci.draw_colored_polygon(PackedVector2Array([Vector2(b.x + 4 * s, wy), Vector2(b.x + 18 * s, wy - 8 * s), Vector2(b.x + 15 * s, wy + 2 * s)]), Color(Color("#d4a02e"), a))
+
+## As eras pass, the great places get dressed: banner poles by the council fire,
+## pennants at the shrine and altar, carved posts around the bonfire.
+func _era_dressing(s, b: Vector2) -> void:
+	var era: int = sim.evo.era
+	if era < 2 or not s.built: return
+	match s.type:
+		"council_ring":
+			for i in 3:
+				var ang := TAU * i / 3.0 + 0.5
+				_pennant(b + Vector2(cos(ang) * 40, sin(ang) * 20), 40 + i * 4, s.id + i)
+		"bonfire":
+			if era >= 3:
+				for i in 2:
+					var ang := TAU * i / 2.0 + 1.2
+					_pennant(b + Vector2(cos(ang) * 18, sin(ang) * 9), 26, s.id + i)
+		"totem_shrine", "grand_altar":
+			if era >= 3: _pennant(b + Vector2(-26, 6), 46, s.id)
+
+## A tall pole with a fluttering pennant: the cloth leans with the wind.
+func _pennant(b: Vector2, h: float, seed_id: int) -> void:
+	_ell(b + Vector2(1, 0), 5, 2, SHADOW)
+	ci.draw_line(b, b - Vector2(0, h), Color("#6b4524"), 2.5)
+	ci.draw_circle(b - Vector2(0, h), 2, Color("#e8c25a"))
+	var sway: float = sin(t * 2.2 + seed_id) * 3.0 - wind_k() * 8.0
+	var tip := b - Vector2(0, h - 8)
+	ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(14 + sway, -3), tip + Vector2(12 + sway, 5)]), Color("#c0392b"))
 
 func _draw_structure_overlay(s) -> void:
 	if s.type == "burial_ground":
