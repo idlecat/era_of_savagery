@@ -319,6 +319,7 @@ func _process(delta: float) -> void:
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
 	night.color = _sky_tint()
 	_grade_step(delta)
+	_wet_step(delta)
 	_zoom_step(delta)
 	_update_hover()
 	_sync_lights()
@@ -735,6 +736,7 @@ func draw_ground_fx() -> void:
 			ci.draw_arc(ghost_m, r, 0, TAU, 48, Color(col, 0.7), 2)
 	if sim.flood_fx > 0:
 		ci.draw_rect(Rect2(0, 0, D.W, D.H), Color(0.2, 0.4, 0.75, sim.flood_fx * 0.4))
+	_draw_puddles()
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 ## Fire glow: additive warm halos, stronger at night (bonfires, council fire, smelter, torches).
@@ -863,17 +865,81 @@ func _draw_season_ground() -> void:
 	if hz.dry(): ci.draw_rect(world, Color(0.85, 0.7, 0.35, 0.2))
 
 ## Rain, snow and blizzards are drawn over the visible screen area only.
+## How hard the wind blows right now (0..1): a slow gust pattern, much stronger
+## in rain, storms and blizzards. Calm air stays below the bend threshold so
+## tree items keep their cached draw in fine weather.
+func wind_k() -> float:
+	var w := 0.15
+	if sim.hz.on():
+		w = {"rain": 0.45, "storm": 0.9, "blizzard": 1.0}.get(sim.hz.weather, 0.2)
+	return w * (0.75 + 0.25 * sin(t * 0.9) * sin(t * 0.53 + 1.7))
+
+const WIND_BEND := 0.28 # how far a full-gale crown leans, as a shear factor
+
+func _bend_matrix(b: Vector2): # null when the air is calm
+	var k := wind_k()
+	if k < 0.3: return null
+	return Transform2D(Vector2(1, 0), Vector2(-WIND_BEND * k, 1), -b)
+
+func _bend_dx(sz: float) -> float:
+	var k := wind_k()
+	return 0.0 if k < 0.3 else WIND_BEND * k * 45.0 * sz
+
+## Rain lays the ground wet; it dries slowly after. Puddles gather where the
+## land is flat and away from the village fire.
+var wet := 0.0
+var _cache_puddles: Array = []
+
+func _wet_step(delta: float) -> void:
+	var raining: bool = sim.hz.on() and sim.hz.weather in ["rain", "storm"]
+	wet = clampf(wet + delta * (0.09 if raining else -0.025), 0.0, 1.0)
+
+func _puddles() -> Array:
+	if _cache_puddles.is_empty():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7 # the same puddles every game, like the land itself
+		var step := 120.0
+		for gx in range(0, int(D.W / step)):
+			for gy in range(0, int(D.H / step)):
+				var p := Vector2(gx * step, gy * step) + Vector2(rng.randf_range(20, step - 20), rng.randf_range(20, step - 20))
+				if D.is_water(p) or p.distance_to(D.VILLAGE) < 260.0: continue
+				if D.river_dist(p) < 220.0: continue # the banks stay muddy, not puddled
+				_cache_puddles.append(p)
+	return _cache_puddles
+
+func _draw_puddles() -> void:
+	if wet < 0.08: return
+	var a := (wet - 0.08) / 0.92
+	for p in _puddles():
+		if not _in_view(p): continue
+		var s := iso(p)
+		ci.draw_set_transform(s, 0.0, Vector2(1.0, 0.5))
+		ci.draw_circle(Vector2.ZERO, 9.0 + fmod(p.x * 0.13 + p.y * 0.07, 6.0), Color(0.25, 0.35, 0.5, 0.28 * a))
+		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+## A thunderstorm's flash stutters: two hard pulses, then a fading afterglow.
+func _storm_flash() -> float:
+	var k := fposmod(t, 7.3)
+	if k > 0.55: return 0.0
+	if k < 0.08: return 1.0
+	if k < 0.16: return 0.12
+	if k < 0.34: return 0.55
+	return 0.1
+
 func _draw_weather() -> void:
 	var hz = sim.hz
 	if not hz.on(): return
 	var w: String = hz.weather
 	var snowing: bool = w == "blizzard" or (hz.winter() and w == "clear")
 	if w in ["rain", "storm"]:
+		var slant := 3.0 + 10.0 * wind_k() # the rain leans with the gusts
 		for i in 220:
 			var x := view.position.x + fmod(i * 137.71 + t * 60.0, view.size.x)
 			var y := view.position.y + fmod(i * 91.37 + t * 620.0, view.size.y)
-			ci.draw_line(Vector2(x, y), Vector2(x - 4, y + 16), Color(0.75, 0.85, 1.0, 0.35), 1.2)
-		if w == "storm" and fmod(t, 7.3) < 0.12: ci.draw_rect(view, Color(1, 1, 0.9, 0.35))
+			ci.draw_line(Vector2(x, y), Vector2(x - slant, y + 16), Color(0.75, 0.85, 1.0, 0.35), 1.2)
+		if w == "storm":
+			var fl: float = _storm_flash()
+			if fl > 0.0: ci.draw_rect(view, Color(1, 1, 0.9, 0.35 * fl))
 	if snowing:
 		var n := 420 if w == "blizzard" else 140
 		var drift := 260.0 if w == "blizzard" else 25.0
@@ -1244,8 +1310,11 @@ func _draw_node(n) -> void:
 	match n.kind:
 		"tree": # a baked sprite has no shadow of its own; the hand-drawn fallback casts one
 			var tn := ("pine_%d" if n.id % 3 == 2 else "leaf_%d") % (n.id % 4) + _snowy()
-			if art != null and art.has(tn): _ell(b + Vector2(12 * n.sz, 4 * n.sz), 18 * n.sz, 7 * n.sz, SHADOW)
+			if art != null and art.has(tn): _ell(b + Vector2(12 * n.sz + _bend_dx(n.sz), 4 * n.sz), 18 * n.sz, 7 * n.sz, SHADOW)
+			var bend: Variant = _bend_matrix(b) # a gust leans the crown; the roots stay put
+			if bend != null: ci.draw_set_transform_matrix(bend)
 			if _sprite(tn, b, n.sz): return
+			if bend != null: ci.draw_set_transform(-b)
 		"bush":
 			var bn := ("bush_full" if n.amount >= 5 else "bush_bare") + _snowy()
 			if art != null and art.has(bn): _ell(b + Vector2(4, 2), 13, 5, SHADOW)
@@ -1264,7 +1333,10 @@ func _draw_node(n) -> void:
 			if _sprite("rock_%d" % (n.id % 3) + _snowy(), b, bk): return
 	match n.kind:
 		"tree":
+			var bend2: Variant = _bend_matrix(b)
+			if bend2 != null: ci.draw_set_transform_matrix(bend2)
 			_draw_tree_shape(n, b)
+			if bend2 != null: ci.draw_set_transform(-b)
 		_ when D.FINDS.has(n.kind): # the natural finds, the culture's own among them
 			_draw_find(n, b)
 		"boulder":
@@ -2646,7 +2718,8 @@ func _sync_items() -> void:
 		var it := _item(key, 0, n, iso(n.pos), anim)
 		if it.dynamic != anim: it.dynamic = anim
 		it.visible = sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)
-		_touch(it, n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0))
+		_touch(it, n.kind.length() * 1000 + int(n.amount / 5) + (100000 if sim.hz.snow > 0.5 else 0)
+			+ (1000000 * int(round(wind_k() * 6.0)) if wind_k() >= 0.3 else 0)) # gusts re-bend the crowns
 	for lm in sim.landmarks:
 		var key: String = "lm_" + lm["id"]
 		seen[key] = true
