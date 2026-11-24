@@ -1,0 +1,12 @@
+{
+ "id": "feaster",
+ "desc": "Lives for today: takes every festival and generous choice (first option), feasts whenever the stores are half full (food out, mood up), spares the herds, and keeps sending outposts out.",
+ "steward": true,
+ "dilemmas": "first",
+ "emergency": "first",
+ "contracts": {"every_days": 2, "kinds": ["settle", "seek"], "directive": "Grow the tribe"},
+ "rules": [
+  {"once": true, "set": {"hunt": "spare"}},
+  {"when": {"food_frac": 0.5}, "every_days": 1, "do": [{"give": {"food": -25}}, {"mood": 8}, {"log": "The tribe feasts while the stores are full."}]}
+ ]
+}

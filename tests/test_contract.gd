@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2153,7 +2153,12 @@ func test_ranks() -> void:
 	check(R.min_lv("proven") == int(cfg["routine_cap"]) + 1 and R.rank_of(int(cfg["routine_cap"])) == "" and R.rank_of(R.min_lv("master")) == "master", "ranks are bands of levels above the routine cap")
 	var u = sim.living().filter(func(o): return o.lv("forage") < 4)[0]
 	for i in 200: sim.gain_xp(u, "forage", 50.0)
-	check(u.lv("forage") == int(cfg["routine_cap"]) and R.trial_open(u, "forage"), "routine work alone stops at Lv.%d, XP full, trial open (Lv.%d)" % [int(cfg["routine_cap"]), u.lv("forage")])
+	check(u.lv("forage") == int(cfg["routine_cap"]) and R.trial_open(u, "forage"), "routine work alone stops at Lv.%d, trial open (Lv.%d)" % [int(cfg["routine_cap"]), u.lv("forage")])
+	var p = sim.living().filter(func(o): return o != u and o.lv("craft") < 4)[0]
+	p.skills["craft"]["lv"] = int(cfg["routine_cap"])
+	p.skills["craft"]["xp"] = 0.0
+	R.deed(p, "masterpiece")
+	check(R.rank(p, "craft") == "proven", "at the top of the band the deed alone is the door: no more XP needed")
 	check(R.summary()["ready"].any(func(e): return e["who"] == u.name and e["skill"] == "forage"), "the summary lists who is ready for a trial")
 	R.deed(u, "slay_warrior")
 	check(u.lv("forage") == int(cfg["routine_cap"]), "a deed of another trial doesn't count")
@@ -2244,6 +2249,25 @@ func test_ranks() -> void:
 	check(n.ranks.rites.is_empty() and n.folk.festival_on(), "at dusk the tribe dances the rite by the fire")
 	check(hero.morale > 40.0 and hero.epithet == n.ranks.def("trade", "proven")["title"], "the named one is lifted and takes the title as an epithet")
 	check(n.ranks.marks(hero).size() == 1 and not n.ranks.marks(hero)[0]["master"], "a Proven trader wears one feather")
+
+func test_seal() -> void:
+	print("\n== Sealing a contract in one operation (contracts.seal) ==")
+	var sim = _new_sim()
+	var u = sim.contracts.available_helpers()[0]
+	var r: Dictionary = sim.contracts.seal(u, "settle", "Found a new settlement")
+	check(r["ok"] and r["contract"] != null and r["contract"].leader_id == u.id, "with no reply the offline persona plans it, and it is sealed (%s)" % [r["notes"]])
+	check(not sim.contracts.seal(u, "settle")["ok"], "someone already on a contract can't lead another")
+	var v = sim.contracts.available_helpers()[0]
+	check(not sim.contracts.seal(v, "juggling")["ok"] and not sim.contracts.seal(null, "settle")["ok"], "unknown kinds and nobody are refused")
+	var w = sim.contracts.available_helpers()[0]
+	var plan: Dictionary = sim.contracts.sanitize(preload("res://scripts/persona_engine.gd").propose(sim.contracts.negotiation_ctx(w, "", {}, false, "", {}, [], "research"))["blueprint"], {}, w)["blueprint"]
+	var r2: Dictionary = sim.contracts.seal(w, "research", "Seek wisdom", {}, plan)
+	check(r2["ok"] and r2["contract"].kind == "research", "a plan given as the reply (an LLM's or a game master's) is sanitized and sealed")
+	for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
+	sim.ranks.gates = true
+	var x = sim.contracts.available_helpers().filter(func(o): return o.lv("combat") < 5)[0]
+	var r3: Dictionary = sim.contracts.seal(x, "war", "Raid", {"kind": "war", "target": sim.rivals.clans.keys()[0], "objective": "loot"})
+	check(not r3["ok"] and r3["notes"][0] == sim.ranks.block("lead_war", x), "only a Blooded Warrior may lead a war party (%s)" % [r3["notes"]])
 
 func test_policies() -> void:
 	print("\n== The Council's policies (config/policies.json) ==")

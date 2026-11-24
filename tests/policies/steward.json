@@ -1,0 +1,9 @@
+{
+ "id": "steward",
+ "desc": "The baseline: no player choices beyond the built-in defaults. A Steward runs the economy and decides routine matters; other dilemmas take their first option, emergencies their first allowed effect; every 3 days a settlement or research contract is sealed with the offline persona's plan.",
+ "steward": true,
+ "dilemmas": "first",
+ "emergency": "first",
+ "contracts": {"every_days": 3, "kinds": ["settle", "research"], "directive": "Do what the tribe needs"},
+ "rules": []
+}

@@ -573,6 +573,33 @@ play (that is the measurable form of "decisions matter"):
   sanitizes that. Not a separate `seal_offline`: the HUD awaits the LLM, then calls the
   same `seal()` with the reply, so there is one path through `sanitize()` and the
   offline fallback is the default rather than a fork. The steward policy calls it bare.
+- **G1 skeleton built** (`tools/metrics.gd`, policies in `tests/policies/`, contracts
+  sealed with the new `contracts.seal()`). **First baseline** (The Ford, 4 seeds × 12
+  days, normal hardships; a game day is 90 s at 1x):
+
+  | policy | near-miss | famine | deaths | starved | killed | empty-store hours | contracts | interrupts | pauses/h | max gap | era 2 | craft gate open |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | steward | 100% | 0% | 2.5 | 0 | 1.2 | 11 | 4.0 | 7.8 | 0.13 | 1.5 d | 100% (d4–5) | 100% (d2) |
+  | hoarder | 75% | 0% | 0.2 | 0 | 0 | 0 | 3.0 | 0.2 | 0.09 | 2.4 d | 100% | 0% |
+  | feaster | 100% | 0% | 4.8 | 0 | 2.8 | 12 | 5.2 | 9.5 | 0.13 | 1.3 d | 100% | 75% |
+
+  Findings, to tune against (none tuned yet):
+  1. **The food floor never bites.** Stores run empty in almost every steward/feaster
+     run (up to 28 game hours empty) and nobody starves, sickens from hunger or leaves:
+     famine consequences 0% for every policy (band 10–25%). Exactly the "always
+     triggers, never bites" floor this section warns about. Skill sensitivity shows in
+     deaths and empty hours, but not in consequences.
+  2. **Deaths come from contracts, not hunger:** feasters seal more contracts and lose
+     more people to beasts and raids on the way.
+  3. **The hoarder never opens the craft gate** in 12 days: its trials are "lead an
+     outpost" or "a masterpiece", and a tribe that sends no outposts has neither. A
+     second craft trial that a stay-at-home tribe can do (the brainstorm's "the first
+     granary or council ring", built with them leading) would fix it.
+  4. Pacing: ~3 pauses per game day (one per ~30 s at 1x), and the longest quiet
+     stretch is 1.3–2.4 days (2–3.5 min at 1x). Era 2 always arrives on day 4–5.
+  5. Found while building it: requiring full XP at Lv 4 on top of the deed kept the
+     craft gate shut in every run (the leader moves to the outpost and stops building);
+     the trial now opens on reaching Lv 4 and the deed is the door.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
 - **G3.** Tune the director's per-level caps against these curves, not by feel.

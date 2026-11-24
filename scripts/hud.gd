@@ -1672,7 +1672,11 @@ func _neg_objection(heard: bool) -> void:
 func _neg_confirm() -> void:
 	if neg["bp"].is_empty() or neg["busy"]: return
 	var leader = neg["leader"]
-	var c = sim.contracts.create(neg["bp"], leader, neg["directive"].text)
+	var sealed: Dictionary = sim.contracts.seal(leader, neg.get("kind", "settle"), neg["directive"].text, _neg_terms(), neg["bp"])
+	if not sealed["ok"]:
+		neg["status"].text = " ".join(sealed["notes"])
+		return
+	var c = sealed["contract"]
 	if not neg["objection"].is_empty() and neg["ob_answer"] != "heard": sim.policy.answer(leader, neg["objection"], false, c) # (unanswered: the ways stand)
 	_close_modal()
 	sim.paused = false

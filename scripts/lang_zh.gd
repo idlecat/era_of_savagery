@@ -2263,4 +2263,5 @@ const STRINGS := {
 	"Naming Rite": "命名礼",
 	"By the fire the whole tribe gathers to name %s a %s.": "全族聚集在火堆旁，授予%s“%s”之名。",
 	"I will not shame this name.": "我不会辱没这个名号。",
+	"No one free to lead it": "没有人能空出来带队",
 }

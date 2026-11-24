@@ -517,6 +517,24 @@ func housing(bp: Dictionary) -> int:
 	return c
 
 # ------------------------------------------------------------ creation
+## Seal a contract in one operation (the HUD, a game master and the metric harness all use
+## it): `reply` is the plan from the leader's LLM node or a game master; with none, the
+## offline persona proposes one. Either way it goes through sanitize(). `terms` are the
+## chieftain's terms (crew_size, capacity_target, focus / target, objective / tech / group).
+## Returns {ok, contract, notes}.
+func seal(leader: E.Unit, kind := "settle", directive := "", terms := {}, reply: Variant = null) -> Dictionary:
+	if leader == null or leader.dead or leader.role != "" or not kind in ["settle", "research", "war", "seek"]:
+		return {"ok": false, "contract": null, "notes": [tr("No one free to lead it")]}
+	if kind == "war" and not sim.ranks.may(leader, "lead_war"):
+		return {"ok": false, "contract": null, "notes": [sim.ranks.block("lead_war", leader)]}
+	var raw: Variant = reply
+	if not raw is Dictionary or raw.is_empty():
+		var ctx := negotiation_ctx(leader, directive, terms, not terms.is_empty(), "", {}, [], kind)
+		raw = preload("res://scripts/persona_engine.gd").propose(ctx).get("blueprint", {})
+	var san := sanitize(raw, terms, leader)
+	if not san["ok"]: return {"ok": false, "contract": null, "notes": san["notes"]}
+	return {"ok": true, "contract": create(san["blueprint"], leader, directive), "notes": san["notes"]}
+
 func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	var c := E.Contract.new()
 	c.id = sim.uid()

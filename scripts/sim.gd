@@ -584,13 +584,14 @@ func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 		if trads[t].has(skill) and evo.has_trad(t): amt *= float(trads[t][skill])
 	s["xp"] += amt
 	u.xp_acc += amt
+	var reached := false
 	while s["lv"] < top and s["xp"] >= xp_need(s["lv"]):
 		s["xp"] -= xp_need(s["lv"])
 		s["lv"] += 1
+		reached = s["lv"] >= top
 		popup(u.pos + Vector2(0, -34), tr("LEVEL UP! %s Lv.%d") % [tr(D.SKILL_NAMES[skill]).split(" ")[0], s["lv"]], Color("#7ff0ff"))
-	if s["lv"] >= top and s["lv"] < MAX_LV and s["xp"] >= xp_need(s["lv"]):
-		s["xp"] = xp_need(s["lv"]) # full: the next rank takes a trial
-		ranks.on_full(u, skill)
+	if s["lv"] >= top and s["lv"] < MAX_LV: s["xp"] = minf(s["xp"], xp_need(s["lv"])) # (it fills, and waits for the trial)
+	if reached and s["lv"] < MAX_LV: ranks.on_full(u, skill)
 
 ## Memory stream: keep the ~10 most impactful events.
 func remember(u: E.Unit, text: String, impact: int) -> void:

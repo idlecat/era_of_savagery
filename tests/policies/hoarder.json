@@ -1,0 +1,12 @@
+{
+ "id": "hoarder",
+ "desc": "Saves everything: declines festivals and costly choices (last option), builds granaries as soon as the stores fill, hunts hard and never feasts. Contracts only for research and searches (no outposts to feed).",
+ "steward": true,
+ "dilemmas": "last",
+ "emergency": "last",
+ "contracts": {"every_days": 4, "kinds": ["research", "seek"], "directive": "Bring back what keeps us fed"},
+ "rules": [
+  {"once": true, "set": {"hunt": "all"}},
+  {"when": {"food_frac": 0.6, "fewer": {"granary": 3}}, "every_days": 2, "order": "granary"}
+ ]
+}

@@ -5,7 +5,8 @@
 ## (Proven Lv 5-7, Master Lv 8-10 by default), so a person's rank is read from the level and
 ## needs no state of its own. Crossing into a band takes a trial: a deed from the person's
 ## deed record (`u.deeds`, counters filled through deed()). gain_xp() stops at the top of a
-## band; the trial is checked whenever the XP is full there or a new deed is done.
+## band; from there the trial is open (the deed is the door, not more XP), checked when
+## they get there and whenever a new deed is done.
 extends RefCounted
 
 const D = preload("res://scripts/data.gd")
@@ -69,8 +70,7 @@ func title(u: E.Unit, skill: String) -> String: return str(def(skill, rank(u, sk
 
 ## The trial is open: XP is full at the top of the band and a next rank exists.
 func trial_open(u: E.Unit, skill: String) -> bool:
-	var s: Dictionary = u.skills[skill]
-	return next_rank(u, skill) != "" and s["lv"] >= cap(u, skill) and s["xp"] >= sim.xp_need(s["lv"]) - 0.001
+	return next_rank(u, skill) != "" and u.lv(skill) >= cap(u, skill)
 
 ## How far u is toward the next rank's trial: the closest of its deeds (any one will do).
 func trial_progress(u: E.Unit, skill: String) -> Dictionary:
@@ -98,7 +98,7 @@ func check(u: E.Unit, skill: String) -> bool:
 	_rank_up(u, skill)
 	return true
 
-## Called by gain_xp when a skill's XP fills at the top of a band.
+## Called by gain_xp when a skill reaches the top of its band: the trial is open.
 func on_full(u: E.Unit, skill: String) -> void:
 	if check(u, skill) or u.role == "child": return
 	var nd := def(skill, next_rank(u, skill))
