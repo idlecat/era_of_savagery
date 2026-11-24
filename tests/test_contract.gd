@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -97,6 +97,7 @@ func _new_sim():
 	s.director.on = false # (nor pacing: hardship tests roll their own; test_director switches it on)
 	s.life.on = false # (nor everyday life: meals, idle acts, spirits, speech; test_life switches it on)
 	s.ranks.gates = false # (nor rank gates on upgrades, bronze, taming, war leaders; test_ranks switches them on)
+	s.opening = false # (nor the opening's remembered find and first-day fever; test_opening switches it on)
 	s.new_game()
 	return s
 
@@ -2613,6 +2614,48 @@ func test_nemesis() -> void:
 	sim2.rivals._pick_nemesis()
 	check(sim2.rivals.nemesis_id() == "tusk", "by day 6 the worst clan met becomes the nemesis")
 
+func test_opening() -> void:
+	print("\n== The opening: a remembered find and a first-day fever (make_it_fun D1/D2) ==")
+	var sim = Sim.new()
+	sim.hz.level = "off"
+	sim.folk.festivals = false
+	sim.crisis.on = false
+	sim.director.on = false
+	sim.life.on = false
+	sim.ranks.gates = false
+	sim.new_game()
+	check(not sim.rumoured.is_empty(), "an elder remembers a find (%s)" % [sim.rumoured.keys()])
+	var id: String = sim.rumoured.keys()[0]
+	check(sim.log_lines.any(func(l): return l["text"].contains(tr(D.FINDS[id]["name"]))), "the chronicle says so")
+	var u = sim.living().filter(func(o): return o.role == "")[0]
+	var base: float = sim.find_chance(u, id) / float(sim.DISC["remembered"]["chance_mult"])
+	check(is_equal_approx(sim.find_chance(u, id), base * float(sim.DISC["remembered"]["chance_mult"])), "a rumoured find is noticed more easily")
+	var ctx: Dictionary = sim.contracts.negotiation_ctx(u, "", {}, false, "", {}, [], "seek")
+	check(ctx["seek_group"] == D.FINDS[id]["group"], "a search goes for the remembered find's kind (%s)" % ctx["seek_group"])
+	var bp: Dictionary = preload("res://scripts/persona_engine.gd").propose(ctx)["blueprint"]
+	var pl: Array = ctx["env"]["places_you_could_search"]
+	var want: String = sim.rumoured_place(ctx["seek_group"])
+	check(not pl.any(func(p): return p["kind"] == want) or pl[int(bp["place"])]["kind"] == want, "and the leader searches where the elders say it grows (%s)" % want)
+	# the first day's fever
+	var t := 0.0
+	while sim.pending_event != "first_day" and t < 90.0:
+		if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0) # (other dilemmas of the day)
+		sim.paused = false
+		sim.tick(0.1)
+		t += 0.1
+	check(sim.pending_event == "first_day", "on the first day someone falls ill and the tribe must decide (at %.0fs)" % t)
+	var sick = sim.unit_by_id(int(sim.flags["first_day_sick"]))
+	check(sick.sick > 0 and sick.id != int(sim.rumoured.get(id, -1)), "the sick one is not the elder")
+	var view: Dictionary = sim.event_def("first_day")
+	check(view["text"].contains(tr(sick.name)) and view["text"].contains(tr(D.FINDS[id]["name"])), "the dilemma names the sick one and the remedy")
+	var r: Dictionary = sim.resolve_event("first_day", 0)
+	check(r.get("open_seek", false), "searching for the remedy opens a search contract")
+	sim.discover_find(id, u, u.pos)
+	check(sim.rumoured.is_empty(), "once found, it is no longer a rumour")
+	sim.check_events()
+	check(sim.pending_event == "", "the fever is posed only once")
+	sim.dispose()
+
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
 	var cs: Dictionary = preload("res://scripts/config.gd").load_cfg("events")["sickness"]
@@ -3586,6 +3629,96 @@ func test_find_data() -> void:
 
 ## A band against a saber-tooth: it musters out of reach, charges together, rings the
 ## beast (flank blows hit harder) and lets its badly hurt fall back (config/hunt.json).
+func test_weapons() -> void:
+	print("\n== Weapons: invented, a knack for each, mastery that rises with use ==")
+	var sim = _new_sim()
+	sim.predators.clear()
+	var folk: Array = sim.living().filter(func(u): return u.role == "")
+	var u = folk[0]
+	check(sim.arms.open_ids() == ["club"], "at first the tribe has only clubs")
+	check(folk.all(func(o): return sim.arms.wielded(o)["id"] == "club" and sim.arms.lv(o, "club") == o.lv("combat")), "everyone carries a club, as good with it as they are at fighting")
+	var ks: Array = []
+	for o in folk:
+		for w in sim.arms.weapons(): ks.append(sim.arms.knack(o, w["id"]))
+	check(ks.all(func(k): return k >= 0.4 and k <= 2.2) and ks.max() - ks.min() > 0.3, "people have different knacks (%.2f..%.2f)" % [ks.min(), ks.max()])
+	var twin = sim.make_unit({"name": u.name, "traits": u.traits, "hp": 50, "atk": 5, "def": 2, "spd": 1.0, "skills": {}}, D.VILLAGE)
+	twin.id = u.id
+	twin.knack.clear()
+	sim.arms.init_unit(twin)
+	check(twin.knack == u.knack, "a knack is the person's own, not the game's dice")
+	var atk0: float = sim.unit_atk(u)
+	sim.inv.discover("spear", u)
+	check(sim.arms.open("spear") and sim.arms.can_use(u, "spear"), "the spear invention opens the spear")
+	sim.arms.set_wield(u, "spear")
+	check(sim.arms.wielded(u)["id"] == "spear" and sim.arms.reach(u) > 24.0 and sim.unit_atk(u) > atk0, "a spear strikes farther and harder than a club (%.1f > %.1f)" % [sim.unit_atk(u), atk0])
+	check(not sim.arms.set_wield(u, "laser") and u.wield == "spear" and sim.arms.set_wield(u, ""), "an unknown weapon is refused; \"\" is their own choice")
+	u.skills["forage"]["lv"] = 0
+	sim.inv.discover("sling", u)
+	sim.arms.set_wield(u, "sling")
+	check(sim.arms.wielded(u)["id"] != "sling" and sim.arms.ranged(u).is_empty(), "told to carry a sling they can't aim, they keep a weapon they can use")
+	sim.arms.set_wield(u, "spear")
+	# mastery: practice, the knack, the levels, the first master
+	var a = folk[1]
+	var b = folk[2]
+	a.knack["spear"] = 1.7
+	b.knack["spear"] = 0.6
+	sim.arms.practice(a, "spear", 40.0)
+	sim.arms.practice(b, "spear", 40.0)
+	check(sim.arms.lv(a, "spear") > sim.arms.lv(b, "spear"), "the gifted learn a weapon faster (Lv.%d vs Lv.%d)" % [sim.arms.lv(a, "spear"), sim.arms.lv(b, "spear")])
+	var lv_a: int = sim.arms.lv(a, "spear")
+	sim.arms.set_wield(a, "spear")
+	var atk_a: float = sim.arms.atk_mult(a)
+	var cd_a: float = sim.arms.cd(a)
+	sim.arms.practice(a, "spear", 60.0)
+	check(sim.arms.lv(a, "spear") > lv_a and sim.arms.atk_mult(a) > atk_a and sim.arms.cd(a) < cd_a, "a higher mastery hits harder and quicker")
+	var feats: int = sim.inv.feats.size()
+	sim.arms.practice(a, "spear", 5000.0)
+	check(sim.arms.lv(a, "spear") == int(sim.arms.C["mastery"]["max_lv"]) and sim.arms.mastered.has("spear") and sim.inv.feats.size() == feats + 1, "a master of the spear: the tribe's first is an achievement")
+	sim.arms.practice(b, "spear", 5000.0)
+	check(sim.inv.feats.size() == feats + 1, "the second master is no new achievement")
+	sim.arms.practice(a, "nope", 5.0)
+	sim.arms.practice(a, "spear", NAN)
+	# blows practise the weapon carried
+	var at: Vector2 = sim.dry_spot(D.VILLAGE + Vector2(260, 160))
+	var wolf = sim.spawn_predator(at)
+	wolf.kind = "wolf"
+	wolf.name = "wolf"
+	wolf.spd = 0.0
+	wolf.atk = 0.0
+	wolf.hp = 100000.0
+	wolf.max_hp = 100000.0
+	var c = folk[3]
+	sim.arms.set_wield(c, "spear")
+	var xp0: float = float(c.arms["spear"]["xp"]) + 100.0 * sim.arms.lv(c, "spear")
+	c.pos = sim.dry_spot(at + Vector2(-20, 0))
+	sim.assign_attack(c, wolf)
+	for k in 100:
+		wolf.fleeing = false # (wolves slink off at dawn: this one stays to be fought)
+		sim.tick(0.05)
+	check(float(c.arms["spear"]["xp"]) + 100.0 * sim.arms.lv(c, "spear") > xp0, "fighting with a spear trains the spear")
+	# ranged at any foe, not just a band's beast
+	var d = folk[4]
+	d.skills["forage"]["lv"] = 5
+	sim.inv.discover("bow", d)
+	sim.arms.set_wield(d, "bow")
+	d.pos = sim.dry_spot(at + Vector2(-260, 0))
+	sim.assign_attack(d, wolf)
+	sim.hunt.shots.clear()
+	var shot := false
+	var closest := 1e9
+	for k in 200:
+		wolf.fleeing = false
+		sim.tick(0.05)
+		closest = minf(closest, d.pos.distance_to(wolf.pos))
+		if sim.hunt.shots.any(func(sh): return sh["weapon"] == "bow"): shot = true
+	check(shot and closest > 24.0 and sim.arms.lv(d, "bow") + float(d.arms["bow"]["xp"]) > 0.0, "an archer shoots a wolf from afar (closest %d)" % roundi(closest))
+	# a game master: story actions and the summary
+	sim.story.run([{"wield": "club", "who": "name:" + b.name}, {"arms_xp": {"bow": 30.0, "nope": 4.0}, "who": "name:" + b.name}, {"wield": 7}], null)
+	check(b.wield == "club" and float(b.arms["bow"]["xp"]) + sim.arms.lv(b, "bow") > 0.0, "story actions tell people what to carry and train them")
+	var sm: Dictionary = sim.arms.summary()
+	check(sm["weapons"].has("bow") and sm["people"].size() == folk.size() and sm["people"][0]["weapons"].has("spear") and sm["mastered"].has("spear"), "arms.summary() for a game master")
+	sim.dispose()
+
 func test_band_hunt() -> void:
 	print("\n== A band hunts a saber-tooth ==")
 	var sim = _new_sim()

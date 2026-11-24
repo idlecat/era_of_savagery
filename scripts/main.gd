@@ -316,6 +316,16 @@ func _debug_shot(args: Dictionary) -> void:
 			if args.has("research"):
 				world.select_only(sim.unit_by_name(args["research"]))
 				hud.open_negotiation(sim.unit_by_name(args["research"]), "research")
+		"opening": # debug: the first day's fever (make_it_fun D2), its dilemma open
+			hud._close_modal()
+			for i in int(90.0 / STEP):
+				if sim.pending_event == "first_day": break
+				if sim.pending_event != "":
+					sim.resolve_event(sim.pending_event, 0)
+					hud._close_modal()
+				sim.paused = false
+				sim.tick(STEP)
+			if sim.pending_event == "first_day": hud._on_event("first_day")
 		"winter": # debug: a hard winter night
 			hud._close_modal()
 			sim.fog_enabled = false

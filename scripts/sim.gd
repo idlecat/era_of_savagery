@@ -198,6 +198,52 @@ func new_game() -> void:
 	add_log(tr("Beyond the firelight the land is unknown. Send a scout (X) to explore it."), "story")
 	_fog_init()
 	fog_update()
+	if opening: remember_find()
+
+# ------------------------------------------------------------ the opening (make_it_fun D1/D2)
+var opening := true # the opening's remembered find and first-day fever (tests switch it off)
+var rumoured := {} # find id -> who remembers it: known of, not yet found (discovery.json "remembered")
+
+## D1: an elder remembers a find from long ago (discovery.json "remembered": the first of
+## "prefer" that grows on this map). It is rumoured: noticed chance_mult times as easily, and
+## a search for its group goes where it grows. A game master may call it with an id.
+func remember_find(id := "") -> String:
+	var R: Dictionary = DISC.get("remembered", {})
+	if id == "":
+		for f in R.get("prefer", []):
+			if D.FINDS.has(f) and not knows_find(f) and nodes.any(func(n): return n.kind == f):
+				id = f
+				break
+	if id == "" or not D.FINDS.has(id) or knows_find(id): return ""
+	var elder := best_unit("lore", false)
+	rumoured[id] = elder.id if elder else -1
+	var fd: Dictionary = D.FINDS[id]
+	add_log(tr(R["log"]) % [tr(elder.name) if elder else tr("The elders"), tr(fd["name"]), tr(fd["desc"]), tr(R["grows"].get(fd.get("where", ""), "nearby"))], "story", [elder] if elder else [])
+	return id
+
+## The remembered find's group ("" if none is rumoured).
+func rumoured_group() -> String:
+	for id in rumoured: return str(D.FINDS[id].get("group", ""))
+	return ""
+
+## The kind of seek place (contracts.seek_places) where a rumoured find of this group grows ("" if none).
+func rumoured_place(group: String) -> String:
+	for id in rumoured:
+		if str(D.FINDS[id].get("group", "")) == group:
+			var w := str(D.FINDS[id].get("where", ""))
+			return str(DISC["remembered"]["place"].get(w, w))
+	return ""
+
+## D2: on the first day someone falls ill with a fever (not the elder, nor a leader), and the
+## "first_day" dilemma asks what to do; the elder's remembered remedy is one answer.
+func _first_day() -> void:
+	var elder_id: int = rumoured.values()[0] if not rumoured.is_empty() else -1
+	var cands: Array = living().filter(func(u): return u.role == "" and u.id != elder_id and u.title == "")
+	if cands.is_empty(): return
+	var u: E.Unit = cands[cands.size() / 2]
+	u.sick = 1.0
+	flags["first_day_sick"] = u.id
+	_fire_event("first_day")
 
 ## The first morning's work: as the scenario says, or one mystic at the fire, two
 ## foragers after food and someone on wood.
@@ -1172,11 +1218,12 @@ func find_chance(u: E.Unit, id: String) -> float:
 	if seek != "": k = "seek" if seek == str(D.FINDS[id].get("group", "")) or seek == "any" else "explore" # (looking for something else: still keen-eyed)
 	elif jt in ["explore", "gather", "build"]: k = jt
 	p *= float(act.get(k, act.get("default", 1.0)))
-	return p * float(DISC.get("finds", {}).get(id, 1.0))
+	return p * float(DISC.get("finds", {}).get(id, 1.0)) * (float(DISC["remembered"]["chance_mult"]) if rumoured.has(id) else 1.0)
 
 func discover_find(id: String, u: E.Unit, at: Vector2) -> void:
 	if knows_find(id): return
 	known_finds[id] = day()
+	rumoured.erase(id)
 	if u and u.role == "contract": # a search quest's crew keeps a tally of what it found
 		var sc = contracts.by_id(u.contract_id)
 		if sc and sc.kind == "seek": sc.flags["found"] = sc.flags.get("found", []) + [id]
@@ -2472,6 +2519,9 @@ func check_events() -> void:
 		_fire_event(ne)
 	elif not rivals.pending.is_empty():
 		_fire_event(rivals.pending.pop_front())
+	elif opening and not flags.has("first_day") and story.holds(RULES["triggers"]["first_day"]):
+		flags["first_day"] = true
+		_first_day()
 	elif hz.pending != "": # the autumn decision
 		var he: String = hz.pending
 		hz.pending = ""
@@ -2555,6 +2605,14 @@ var DILEMMAS: Dictionary = preload("res://scripts/config.gd").load_cfg("dilemmas
 func _dilemma_vars(id: String) -> Dictionary:
 	var v := {}
 	if id == "autumn": v.merge(hz.autumn_vars())
+	if id == "first_day":
+		var sick := unit_by_id(int(flags.get("first_day_sick", -1)))
+		var herb: String = rumoured.keys()[0] if not rumoured.is_empty() else ""
+		var elder := unit_by_id(int(rumoured.get(herb, -1)))
+		v["sick"] = tr(sick.name) if sick else tr("Someone")
+		v["sick_who"] = "id:%d" % sick.id if sick else ""
+		v["herb"] = tr(D.FINDS[herb]["name"]) if herb != "" else tr("healing plants")
+		v["elder"] = tr(elder.name) if elder else tr("The elders")
 	if id in ["era2", "era3"]:
 		v["era"] = tr(D.ERA_NAMES[evo.era])
 		var voices: Array = []
@@ -2623,6 +2681,7 @@ func resolve_event(id: String, idx: int) -> Dictionary:
 		var r: Dictionary = story.dilemma_choose(DILEMMAS[id], idx, _dilemma_vars(id))
 		out["text"] = r["text"]
 		out["open_contract"] = r["vars"].get("open", "") == "contract"
+		out["open_seek"] = r["vars"].get("open", "") == "seek"
 	add_log(out["text"], "story")
 	return out
 

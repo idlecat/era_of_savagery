@@ -81,5 +81,13 @@
   "secs_per_day": 45,
   "crew_max": 4,
   "places": 4
+ },
+ "remembered": {
+  "_doc": "The opening (make_it_fun D1): an elder (the best at lore) remembers a find from long ago, the first of prefer that grows on this map. Until found it is rumoured: noticed chance_mult times as easily, a search quest goes for its group unless the chieftain says otherwise, and the leader searches where it grows (place: a find's where as a kind of search place, when they differ). log: elder, find, its description, grows (where it grows, by the find's where).",
+  "prefer": ["willow", "yarrow", "mushroom", "tubers"],
+  "chance_mult": 3.0,
+  "log": "%s remembers something from long ago: %s. %s No one has seen any here yet, but it grows %s.",
+  "grows": {"riverbank": "on the riverbanks", "meadow": "in open meadows", "forest": "on the forest floor", "forest_edge": "at the edge of the woods", "river": "in the river shallows"},
+  "place": {"forest_edge": "forest", "river": "riverbank"}
  }
 }

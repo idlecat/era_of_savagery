@@ -1828,6 +1828,13 @@ func _event_choose(id: String, idx: int) -> void:
 		for u in cands.slice(0, 5):
 			var trs: String = tr(D.TRAITS[u.traits[0]]["name"])
 			v.add_child(_button(tr("%s \"%s\" — %s, Lv%d") % [tr(u.name), tr(u.epithet), trs, sim.unit_level(u)], func(): open_negotiation(u)))
+	if r.get("open_seek", false):
+		v.add_child(_label("Choose who leads the search:", 15, COL_DIM))
+		var seekers: Array = sim.contracts.available_helpers()
+		seekers.sort_custom(func(a, b): return a.lv("lore") + a.lv("forage") > b.lv("lore") + b.lv("forage"))
+		for u in seekers.slice(0, 5):
+			var who = u
+			v.add_child(_button(tr("%s \"%s\" — Lore %d, Foraging %d") % [tr(u.name), tr(u.epithet), u.lv("lore"), u.lv("forage")], func(): open_negotiation(who, "seek")))
 	if r.get("open_war", "") != "":
 		var foe: String = r["open_war"]
 		v.add_child(_label("Choose who leads the war party:", 15, COL_DIM))

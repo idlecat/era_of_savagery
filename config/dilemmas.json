@@ -342,6 +342,23 @@
    }
   ]
  },
+ "first_day": {
+  "_doc": "The first day's fever (make_it_fun D2): posed once by rules.json triggers.first_day when the game starts with its opening (sim.opening); someone falls ill first. One pause that teaches a tradeoff, and the elder's remembered remedy (D1) is one answer. Vars: sick, sick_who, herb, elder.",
+  "title": "Fever on the First Day",
+  "text": ["%s is burning with fever and cannot rise from the furs. %s says that long ago the cure was %s.", "sick", "elder", "herb"],
+  "options": [
+   {"label": "Search for the remedy", "desc": ["Send a few out to look for %s. (A search contract: they may find more than the cure, but they are away from the work.)", "herb"],
+    "do": [{"open": "seek"}],
+    "result": ["The tribe will search for %s.", "herb"]},
+   {"label": "Rest and broth by the fire", "desc": ["Keep %s warm and well fed while the fever runs its course. (Costs 10 food; spirits rise.)", "sick"],
+    "cost": {"food": 10}, "cost_note": false,
+    "do": [{"morale": 20, "who": "$sick_who"}, {"mood": 3}],
+    "result": ["%s sleeps by the fire, wrapped in furs, with a bowl of broth beside them.", "sick"]},
+   {"label": "Every hand is needed", "desc": "No one can be spared from the work. (The sick rest alone; the tribe grumbles.)",
+    "do": [{"mood": -4}],
+    "result": "The work goes on. Now and then someone looks over at the sick one in the furs."}
+  ]
+ },
  "autumn": {
   "_doc": "The autumn decision (make_it_fun B1): posed when autumn begins (hazards._autumn_begins), after the director has picked the coming winter's kind; the text quotes the elders' signs of it (var signs). Each option is a bet on a kind: the feast on a mild one, smoking meat on a lean one, firewood and stakes on a white or a wolf one, the hunt and the slaughter on food. Vars: signs, oxen, ox_meat, feast_cost, festival.",
   "title": "The Autumn Council",

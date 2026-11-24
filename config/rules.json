@@ -99,7 +99,11 @@
  "triggers": {
   "_doc": "When the built-in dilemmas come up (conditions as in scenario scripts).",
   "overpop": {
-   "pop": 12
+   "pop": 12,
+   "day": 3
+  },
+  "first_day": {
+   "time": 50
   },
   "chosen": {
    "devotion": 100

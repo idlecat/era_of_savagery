@@ -436,6 +436,12 @@ static func propose_seek(ctx: Dictionary) -> Dictionary:
 		"mystic":
 			for p in places:
 				if not p.get("seen_before", true): pick = p["index"]
+	var told: String = str(env.get("the_elders_remember", {}).get("grows_in", ""))
+	if told != "": # where the elders say it grows
+		for p in places:
+			if p.get("kind", "") == told:
+				pick = p["index"]
+				break
 	if _any(msg, ["far", "farther", "远"]): pick = places.size() - 1
 	if _any(msg, ["near", "close", "近"]): pick = 0
 	var dr: Array = env.get("days_you_may_search", [1, 3])

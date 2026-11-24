@@ -165,6 +165,7 @@ func negotiation_ctx(u: E.Unit, directive: String, terms: Dictionary, terms_set:
 	var top := ""
 	if not u.memory.is_empty(): top = tr(u.memory[0]["text"]) # memory is kept sorted by impact
 	var seek_group := str(terms.get("group", ""))
+	if kind == "seek" and not seek_group in SEEK_GROUPS and sim.rumoured_group() != "": seek_group = sim.rumoured_group() # (the remedy the elder remembers)
 	if kind == "seek" and not seek_group in SEEK_GROUPS: # (left to the leader: what their temperament seeks)
 		seek_group = preload("res://scripts/persona_engine.gd").SEEK_TASTE.get(sim.arch(u), "food")
 	return {
@@ -282,7 +283,8 @@ func seek_env(group: String, home: Vector2 = D.VILLAGE) -> Dictionary:
 	var known: Array = sim.known_finds.keys().filter(func(id): return D.FINDS[id].get("group", "") == group).map(func(id): return tr(D.FINDS[id]["name"]))
 	return {
 		"looking_for": tr(SEEK_WORDS.get(group, "new foods")) if group != "" else tr("whatever is new: foods, healing plants, stones"),
-		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "paces_away": roundi(pl["pos"].distance_to(home)), "seen_before": sim.is_explored(pl["pos"])}),
+		"places_you_could_search": places.map(func(pl): return {"index": places.find(pl), "place": pl["name"], "kind": pl["kind"], "paces_away": roundi(pl["pos"].distance_to(home)), "seen_before": sim.is_explored(pl["pos"])}),
+		"the_elders_remember": {"grows_in": sim.rumoured_place(group), "what": sim.rumoured.keys().filter(func(id): return D.FINDS[id]["group"] == group).map(func(id): return tr(D.FINDS[id]["name"]))} if sim.rumoured_place(group) != "" else {},
 		"already_known_to_the_tribe": known,
 		"days_you_may_search": _seek_cfg().get("days", [1, 3]),
 		"population": sim.living().size(), "season_and_weather": sim.hz.summary(),

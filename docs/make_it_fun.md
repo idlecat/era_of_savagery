@@ -267,6 +267,20 @@ those knobs, not new mechanics:
   on the sick child, or save it), and the last scripted pause of its day. D1 isn't a
   pause at all — a seek contract is the signature mechanic running free, which is
   exactly the point of putting it in minute one.
+- **Built.** D1: `sim.remember_find()` at the start (`discovery.json` `remembered`: the
+  elder best at lore remembers the first of willow, yarrow, mushroom, tubers that grows on
+  the map, and where it grows). It is *rumoured* (`sim.rumoured`): noticed 3x as easily,
+  a search quest goes for its group unless the chieftain says otherwise, and the offline
+  leader searches the kind of place it grows in (the LLM leader sees `the_elders_remember`).
+  Search quests were already open from minute one. D2: the `first_day` dilemma
+  (`rules.json` triggers `first_day`: 50 s in): someone who is not the elder falls ill, and
+  the elder names the old cure. Search for it (opens a search contract: the HUD's
+  `open_seek`), rest and broth (10 food, morale), or keep working (mood). On The Ford the
+  remembered find is Willow Bark, which breaks fevers. Found while building it: the
+  overpopulation dilemma fired at 45 s in every game (the tribe counts 12 with its
+  children), a second day-1 pause with an absurd text ("game is thinning"); it now waits
+  for day 3 (`triggers.overpop.day`), so the fever is the day's one teaching pause.
+  `--demo=opening` screenshots it.
 
 ## E. Failure is a story (all three)
 
