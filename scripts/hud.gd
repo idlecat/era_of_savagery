@@ -376,6 +376,7 @@ func _build_top(root: Control) -> void:
 	lang_btn = _button(I.LANGS["en" if I.is_zh() else "zh"], _toggle_lang, "Language / 语言")
 	h.add_child(lang_btn)
 	h.add_child(_button("?", _show_intro))
+	h.add_child(_button("Quit", open_quit, "Leave the game"))
 
 func _build_left(root: Control) -> void:
 	var p := PanelContainer.new()
@@ -2143,6 +2144,25 @@ func open_saves() -> void:
 		cf.save(SETTINGS_CFG))
 	v.add_child(auto)
 	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+
+## Ask before leaving: quick save and quit, quit without saving, or stay.
+func open_quit() -> void:
+	if game == null: return
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var v := _open_modal("QUIT", 560)
+	var block: String = game.save_block()
+	v.add_child(_label(tr("Leave the game? Anything since the last save is lost unless you save now (into the quick save)."), 15, COL_TEXT))
+	if block != "": v.add_child(_label(block, 14, Color("#ffb07a")))
+	var hb := HBoxContainer.new()
+	v.add_child(hb)
+	var sq := _button("Save and quit", func():
+		var err: String = game.quit_game(true)
+		if err != "": toast(tr(err)))
+	sq.disabled = block != ""
+	hb.add_child(sq)
+	hb.add_child(_button("Quit without saving", func(): game.quit_game(false)))
+	hb.add_child(_button("Cancel", func(): _close_modal(); sim.paused = was_paused))
 
 func _open_sound() -> void:
 	if audio == null: return

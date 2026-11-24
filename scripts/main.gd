@@ -209,6 +209,15 @@ func load_from(slot: String) -> String:
 	get_tree().reload_current_scene()
 	return ""
 
+## Leave the game. With save_first it is quick-saved first and stays open if that fails
+## (returns why; "" = quitting).
+func quit_game(save_first := false) -> String:
+	if save_first:
+		var err := save_to(str(SAVE_CFG.get("quick_slot", "quicksave")))
+		if err != "": return err
+	get_tree().quit()
+	return ""
+
 func autosave_on() -> bool:
 	var cf := ConfigFile.new()
 	if cf.load("user://settings.cfg") == OK: return bool(cf.get_value("save", "autosave", true))
