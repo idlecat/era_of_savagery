@@ -2574,6 +2574,17 @@ func _show_feat() -> void:
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	pic.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stack.add_child(pic)
+	# a slow push-in on the picture: the moment settles into memory like a film shot
+	pic.pivot_offset = Vector2(320, 150)
+	pic.scale = Vector2(1.1, 1.1)
+	create_tween().tween_property(pic, "scale", Vector2.ONE, 5.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	for bar_y in [0.0, 300.0 - 30.0]: # letterbox bars, like a still from a saga
+		var bar := ColorRect.new()
+		bar.color = Color(0.05, 0.03, 0.02, 0.9)
+		bar.position = Vector2(0, bar_y)
+		bar.size = Vector2(640, 30)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stack.add_child(bar)
 	var vig := TextureRect.new() # a soft vignette and a band for the caption
 	var g := Gradient.new()
 	g.set_color(0, Color(0, 0, 0, 0))
