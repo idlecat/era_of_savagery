@@ -2638,4 +2638,9 @@ const STRINGS := {
 	"The elders tell of the people of %s, who once made every clan bend the knee.": "长老们讲起%s的族人，他们曾让每个部落俯首称臣。",
 	"The elders tell of the people of %s, who once brought the clans to one fire.": "长老们讲起%s的族人，他们曾让诸部落围坐在同一堆火旁。",
 	"The elders tell of the people of %s, who once knew all that could be known.": "长老们讲起%s的族人，他们曾通晓一切可知之事。",
+	"Stone Wall": "石墙",
+	"A ring of fitted stones with towers: people inside it get +6 DEF, and fire can't burn it. It holds against the great war bands, if it stands in time; how much it encloses is the choice.": "一圈砌合的石头，带有塔楼：墙内的人防御+6，火也烧不了它。只要及时建好，它能挡住大规模的战团；围进多大的地方，由你决定。",
+	"Trading Post": "贸易站",
+	"Racks, a shelter and a place to lay out goods: the clans' traders come half again as often and pay a quarter more. Best by the road or the ford they come by.": "货架、遮棚和摆放货物的地方：各部落的商人来得多一半，出价高四分之一。最好建在他们经过的路边或浅滩旁。",
+	"The Grand Altar can be raised": "可以建造大祭坛",
 }

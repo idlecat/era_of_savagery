@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 23
+const ART_VERSION := 24
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -415,6 +415,9 @@ func _jobs() -> Array:
 		jobs.append({"key": "smokehouse" + sfx, "size": 160, "lift": 10.0, "build": _smokehouse.bind(snowy)})
 		jobs.append({"key": "longhouse" + sfx, "size": 288, "lift": 16.0, "build": _longhall.bind(snowy)})
 		jobs.append({"key": "temple" + sfx, "size": 192, "lift": 22.0, "build": _temple.bind(snowy)})
+		jobs.append({"key": "wall_stone" + sfx, "size": 64, "lift": 8.0, "build": _wall_stone.bind(snowy)})
+		jobs.append({"key": "wall_tower" + sfx, "size": 96, "lift": 18.0, "build": _wall_tower.bind(snowy)})
+		jobs.append({"key": "trading_post" + sfx, "size": 160, "lift": 12.0, "build": _trading_post.bind(snowy)})
 		jobs.append({"key": "aurochs_pen" + sfx, "size": 192, "lift": 6.0, "build": _pen.bind(snowy)})
 		jobs.append({"key": "den" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(true, snowy)})
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
@@ -1291,6 +1294,54 @@ func _temple(snowy: bool) -> Node3D:
 	t.scale = Vector3.ONE * 0.5
 	t.position = Vector3(-12, 0, 16)
 	root.add_child(t)
+	return root
+
+## One block of a stone wall: fitted stones in courses, a coping of flat stones.
+func _wall_stone(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var s1 := mat(Color("#8f8b82"), "coarse", 0.2, Vector3.ONE, 0.6, sn * 0.4)
+	var s2 := mat(Color("#7a766e"), "coarse", 0.2, Vector3.ONE, 0.6, sn * 0.4)
+	for course in 3:
+		for i in 3:
+			var x := -6.0 + i * 6.0 + (3.0 if course % 2 == 1 else 0.0) - 1.5
+			mi(root, lumpy(box(Vector3(5.6, 4.2, 6)), 0.35, 1100 + course * 7 + i, 0.3, true), s1 if (i + course) % 2 == 0 else s2, Vector3(x, 2.1 + course * 4.2, 0))
+	mi(root, box(Vector3(17, 1.6, 7.4)), mat(Color("#9a968c"), "coarse", 0.2, Vector3.ONE, 0.55, sn), Vector3(0, 13.4, 0))
+	return root
+
+## A tower in a stone wall: a round stone drum with a wooden fighting platform and a
+## thatched hood.
+func _wall_tower(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var st := mat(Color("#8a867d"), "coarse", 0.2, Vector3.ONE, 0.6, sn * 0.4)
+	mi(root, lumpy(cyl(8, 9, 24, 14, 4), 0.4, 1200, 0.25), st, Vector3(0, 12, 0))
+	for i in 8: # crenellations
+		var a := i * TAU / 8
+		mi(root, box(Vector3(3, 3.5, 3)), st, Vector3(cos(a) * 7.6, 25.6, sin(a) * 7.6), Vector3(0, -rad_to_deg(a), 0))
+	mi(root, box(Vector3(2.5, 4, 0.8)), mat(Color("#1e140a"), "fine"), Vector3(0, 16, 8.6))
+	var thatch := mat(Color("#a9884a"), "streak", 0.3, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0)
+	mi(root, cyl(0.5, 9.5, 9, 12), thatch, Vector3(0, 32, 0))
+	_fringe(root, 27.8, 9.2, 14, Color("#a9884a"), snowy)
+	return root
+
+## A trading post: a hide awning on poles over a plank counter laid with goods, bundles,
+## pots and a rack of furs.
+func _trading_post(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var wood := mat(Color("#7a5530"), "streak", 0.2, Vector3(1, 4, 1), 0.5, sn * 0.5)
+	for x in [-14.0, 14.0]:
+		for z in [-8.0, 8.0]: segment(root, Vector3(x, 0, z), Vector3(x, 20 + (z * 0.25), z), 0.8, wood)
+	var awning := mat(Color("#b8573a"), "coarse", 0.12, Vector3(1, 3, 1), 0.5, sn)
+	mi(root, box(Vector3(32, 1.0, 20)), awning, Vector3(0, 21, 0), Vector3(-10, 0, 0))
+	for i in 5: mi(root, box(Vector3(6, 0.4, 0.3)), mat(Color("#e6c27a"), "fine"), Vector3(-13 + i * 6.5, 21.2, 10.4), Vector3(-10, 0, 0)) # a painted hem
+	mi(root, box(Vector3(26, 1.2, 6)), mat(Color("#8a6238"), "streak", 0.25, Vector3(4, 1, 1), 0.5), Vector3(0, 7, 5)) # the counter
+	for x in [-11.0, 11.0]: mi(root, box(Vector3(1.4, 7, 1.4)), wood, Vector3(x, 3.5, 5))
+	for i in 4: _pot(root, Vector3(-9 + i * 5.5, 7.6, 5.5), 0.55)
+	var fur := mat(Color("#9a7a54"), "coarse", 0.3, Vector3.ONE, 0.5)
+	for i in 3: mi(root, lumpy(sph(3.2, 10, 6), 0.4, 1300 + i, 0.5), fur, Vector3(-16 + i * 3, 2.4, -4 + i * 2), Vector3.ZERO, Vector3(1.3, 0.7, 1))
+	mi(root, lumpy(box(Vector3(6, 5, 5)), 0.3, 1310, 0.3), mat(Color("#c4a26a"), "coarse", 0.3), Vector3(16, 2.5, -3)) # a bundle
 	return root
 
 func _rack(snowy: bool) -> Node3D:

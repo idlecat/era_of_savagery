@@ -643,6 +643,16 @@ factor, free). Seven candidates stand; Era 2 keeps the longhouse and the temple.
   the Steward now share) and `ritual_mult` (replaces the shrine/altar list in the ritual
   rule). Baked models `_longhall`, `_temple` (`ART_VERSION` bumped). The temple's part in
   rank initiations and festivals is not built.
+- **Third slice: the Era-3 buildings.** *Stone Wall* (palisade → stone wall, third age:
+  +6 DEF inside, only quakes knock it down; drawn as stone blocks with a tower every 8th,
+  `stakes`/`tower_every`; the ring code and its drawing now key on `ring`, not on the
+  palisade's id; an upgrade of a ring costs by its size). *Trading Post* (third age;
+  `effects` `trade_every` x0.65 and `trade_rate` x1.25, read by `rivals._traders` and
+  `trader_arrived`). The grand altar now needs a Master Builder (`gate` great_works in
+  `ranks.json`, checked by `struct_block`). Baked models `_wall_stone`, `_wall_tower`,
+  `_trading_post`. Not built: raid targeting by the wall (raiders going for what's outside
+  first) and the war band turning home when bloodied, both I2's; wall blocks all face one
+  way rather than following the ring.
 
 ### I5. The village grows a name
 - Camp → village → town by what's been built (a rule over `sim.structures`, config),

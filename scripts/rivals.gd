@@ -885,7 +885,7 @@ func _traders(c: Dictionary, dt: float) -> void:
 	if sim.predators.any(func(p): return p.clan == c["id"] and p.kind == "trader" and not p.dead and not p.fled): return
 	c["trade_t"] -= dt
 	if c["trade_t"] > 0: return
-	c["trade_t"] = D.DAY_LEN * float(ctr["every_days"] if c["relation"] < float(ctr["trusted_at"]) else ctr["every_days_trusted"]) * Config.rand_in(ctr["jitter"])
+	c["trade_t"] = D.DAY_LEN * float(ctr["every_days"] if c["relation"] < float(ctr["trusted_at"]) else ctr["every_days_trusted"]) * Config.rand_in(ctr["jitter"]) * sim.struct_mul("trade_every") # (a trading post brings them sooner)
 	var tp := _spawn(c, "trader", D.VILLAGE + Vector2(randf_range(60, 120), randf_range(40, 90)))
 	tp.name = c["trader_name"]
 	tp.atk = float(C["people"]["trader"]["atk"])
@@ -894,7 +894,7 @@ func _traders(c: Dictionary, dt: float) -> void:
 func trader_arrived(p: E.Predator) -> void:
 	var c: Dictionary = clans[p.clan]
 	var ctr: Dictionary = C["traders"]
-	var rate: float = (1.0 + (float(ctr["trusted_bonus"]) if c["relation"] >= float(ctr["trusted_at"]) else 0.0)) * sim.folk.haggle(home_trader()) # our best trader bargains
+	var rate: float = (1.0 + (float(ctr["trusted_bonus"]) if c["relation"] >= float(ctr["trusted_at"]) else 0.0)) * sim.folk.haggle(home_trader()) * sim.struct_mul("trade_rate") # our best trader bargains; a trading post pays
 	var sells: String = c["sells"]
 	var wants: String = c["wants"]
 	var offers: Array = [

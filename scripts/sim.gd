@@ -2394,7 +2394,7 @@ func upgrades_for(s: E.Structure) -> Array:
 		if not D.STRUCTURES.has(to): continue
 		var a: Dictionary = D.STRUCTURES[s.type]
 		var b: Dictionary = D.STRUCTURES[to]
-		var k := float(BLD.get("upgrade_cost", 1.0))
+		var k := float(BLD.get("upgrade_cost", 1.0)) * (struct_r(s) / float(a["r"]) if a.get("ring", false) else 1.0) # (a wall costs by its size)
 		var w := maxi(int(BLD.get("min_wood", 0)), ceili((b["wood"] - a["wood"]) * k))
 		var st := maxi(0, ceili((b.get("stone", 0) - a.get("stone", 0)) * k))
 		var why := ""
@@ -2803,6 +2803,7 @@ func struct_block(type: String) -> String:
 	if sd.is_empty(): return tr("No such building")
 	if sd.has("tech") and not has_tech(sd["tech"]): return tr("Requires %s") % tr(evo.tech_def(sd["tech"])["name"])
 	if evo.era < int(sd.get("era", 1)): return tr("Requires the %s") % tr(D.ERA_NAMES.get(int(sd["era"]), ""))
+	if sd.has("gate"): return ranks.block(str(sd["gate"])) # (a rank the tribe must hold: a Master Builder for the great works)
 	return ""
 
 ## How much more lore a ritual at `p` gives: the highest "ritual_mult" of our buildings

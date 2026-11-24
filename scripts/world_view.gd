@@ -1351,9 +1351,18 @@ func _round_house(b: Vector2, r: float, wall_h: float, roof_h: float, wall: Colo
 	ci.draw_line(apex, apex + Vector2(-3, -5), Color("#5a3d22"), 2)
 	ci.draw_line(apex, apex + Vector2(3, -5), Color("#5a3d22"), 2)
 
-func _draw_post(b: Vector2, shown: bool, built: bool, style := 2) -> void:
+func _draw_post(b: Vector2, shown: bool, built: bool, style := 2, stone := false, tower := false) -> void:
 	if not shown:
 		ci.draw_circle(b, 2, Color(0.5, 0.4, 0.3, 0.35))
+		return
+	if stone: # a stone wall's block, or one of its towers
+		if _sprite(("wall_tower" if tower else "wall_stone") + _snowy(), b): return
+		var h := 30.0 if tower else 14.0
+		var w := 9.0 if tower else 7.0
+		ci.draw_rect(Rect2(b.x - w, b.y - h, w * 2, h), Color("#8f8b82"))
+		ci.draw_rect(Rect2(b.x, b.y - h, w, h), Color("#77736b"))
+		for k in int(h / 5): ci.draw_line(b + Vector2(-w, -k * 5 - 2), b + Vector2(w, -k * 5 - 2), Color(0, 0, 0, 0.18), 1)
+		if tower: ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-w - 2, -h), b + Vector2(w + 2, -h), b + Vector2(0, -h - 12)]), Color("#a57a4a"))
 		return
 	if _sprite("post%d%s" % [clampi(style, 1, 3), _snowy()], b): return
 	var h := 20.0 + 3.0 * style
@@ -1521,7 +1530,7 @@ func _draw_ground_part(s) -> void:
 const SITE_SHAPES := {
 	"hut": ["round", 20], "large_hut": ["round", 26], "granary": ["round", 20], "smelter": ["round", 14],
 	"council_ring": ["round", 26], "totem_shrine": ["round", 14], "grand_altar": ["rect", 26],
-	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14], "lookout_tower": ["round", 14], "smokehouse": ["round", 18], "longhouse": ["rect", 30], "temple": ["round", 18],
+	"weapon_rack": ["round", 14], "aurochs_pen": ["round", 26], "bonfire": ["round", 14], "lookout_tower": ["round", 14], "smokehouse": ["round", 18], "longhouse": ["rect", 30], "temple": ["round", 18], "trading_post": ["round", 20],
 }
 func _draw_site_stage(s, b: Vector2) -> bool:
 	if not SITE_SHAPES.has(s.type): return false
@@ -1555,7 +1564,7 @@ func _draw_structure(s) -> void:
 			var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
 			ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
 			return
-	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse", "longhouse", "temple"]:
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse", "longhouse", "temple", "trading_post"]:
 		if spr_shadow.call(s.type + _snowy(), float(sim.struct_r(s))):
 			if _sprite(s.type + _snowy(), b):
 				if s.decor > 0: _decor(s, b, 18.0)
@@ -1640,6 +1649,11 @@ func _draw_structure(s) -> void:
 				var q := b + Vector2(cos(i * TAU / 6) * 12, sin(i * TAU / 6) * 6)
 				ci.draw_circle(q, 3, Color(0.6, 0.58, 0.52, a))
 			_totem(b, 44, 1.0, a)
+		"trading_post": # (hand-drawn fallback: an awning on poles over goods)
+			_ell(b + Vector2(4, 2), 22, 8, SHADOW)
+			for dx in [-14.0, 14.0]: ci.draw_line(b + Vector2(dx, 0), b + Vector2(dx, -20), Color(C_WOOD, a), 2.5)
+			ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-18, -18), b + Vector2(18, -18), b + Vector2(14, -26), b + Vector2(-14, -26)]), Color(0.72, 0.34, 0.22, a))
+			for i in 3: ci.draw_circle(b + Vector2(-8 + i * 8, -4), 4, Color(0.66, 0.5, 0.32, a))
 		"longhouse": # (hand-drawn fallback)
 			_longhouse(s.pos, 34.0)
 			if s.built and sim.has_tech("fire"): _smoke(b - Vector2(0, 40), s.id)
@@ -2816,7 +2830,7 @@ func draw_item(kind: int, obj) -> void:
 		2: _draw_unit(obj)
 		3: _draw_pred(obj)
 		4: _draw_guardian(obj)
-		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3])
+		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3], obj[4] if obj.size() > 4 else false, obj[5] if obj.size() > 5 else false)
 		6: _draw_landmark(obj)
 		7:
 			for d in obj: _draw_decor(d)
@@ -2890,9 +2904,12 @@ func _sync_items() -> void:
 		_touch(it, 0)
 	for st in sim.structures:
 		var exp: bool = sim.is_explored(st.pos)
-		if st.type == "palisade":
+		if D.STRUCTURES[st.type].get("ring", false):
+			var sdr: Dictionary = D.STRUCTURES[st.type]
 			var r: float = sim.struct_r(st)
-			var cnt := maxi(16, roundi(64.0 * r / float(D.STRUCTURES["palisade"]["r"]))) # (stakes as close as ever)
+			var cnt := maxi(16, roundi(64.0 * r / float(sdr["r"]))) # (stakes as close as ever)
+			var stone: bool = sdr.get("stakes", "") == "stone"
+			var tower_every: int = int(sdr.get("tower_every", 0))
 			var shown: int = cnt if st.built else int(cnt * st.progress / st.work)
 			# buildings standing on the wall's line make gates in it (no stakes through a hut)
 			var in_way: Array = sim.structures.filter(func(o): return o != st and not D.STRUCTURES[o.type].get("ring", false) \
@@ -2901,7 +2918,7 @@ func _sync_items() -> void:
 				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
 				var key := "s%d_%d" % [st.id, i]
 				seen[key] = true
-				var it := _item(key, 5, [pp, i < shown, st.built, st.style], iso(pp), false)
+				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type == "roadworks": pass # (drawn on the ground: _draw_ground_part)

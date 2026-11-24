@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_last_stand_and_heritage, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2854,6 +2854,35 @@ func test_last_stand_and_heritage() -> void:
 	check(nxt.rivals.clans["heron"]["relation"] > rel0 and nxt.rivals.clans["heron"]["ledger"].any(func(e): return e["kind"] == "kin"), "the Heron remember their kin")
 	check(nxt.log_lines.any(func(l): return l["text"].contains(tr(h["hero"]))), "the elders tell of them")
 	nxt.dispose()
+
+func test_era3_buildings() -> void:
+	print("\n== Era-3 buildings: stone wall, trading post, the altar's master (make_it_fun I) ==")
+	var sim = _new_sim()
+	sim.stock["wood"] = 800.0
+	sim.stock["stone"] = 400.0
+	var pal = sim.add_structure("palisade", D.VILLAGE, true)
+	pal.size = sim.ring_radius("palisade", 200.0)
+	var ups: Array = sim.upgrades_for(pal)
+	check(ups.size() == 1 and ups[0]["to"] == "stone_wall" and ups[0]["why"] != "", "a palisade can become a stone wall, from the third age (%s)" % str(ups))
+	sim.evo.era = 3
+	ups = sim.upgrades_for(pal)
+	var small = sim.add_structure("palisade", D.VILLAGE + Vector2(1500, 0), true)
+	var su: Array = sim.upgrades_for(small)
+	check(ups[0]["why"] == "" and ups[0]["stone"] > su[0]["stone"], "in the third age; a bigger ring costs more stone (%d vs %d)" % [ups[0]["stone"], su[0]["stone"]])
+	pal.type = "stone_wall"
+	check(sim.wall_def(D.VILLAGE + Vector2(20, 0)) == 6.0 and not sim.hit_by(pal, "wildfire"), "inside the stone wall +6 DEF, and it does not burn")
+	# trading post
+	check(sim.struct_mul("trade_rate") == 1.0, "no trading post, the usual prices")
+	sim.add_structure("trading_post", D.VILLAGE + Vector2(-200, 180), true)
+	check(is_equal_approx(sim.struct_mul("trade_rate"), 1.25) and sim.struct_mul("trade_every") < 1.0, "a trading post: traders come sooner and pay better")
+	# the grand altar needs a Master Builder
+	sim.ranks.gates = true
+	sim.techs["totems"] = 1
+	check(sim.struct_block("grand_altar") == sim.ranks.block("great_works") and sim.struct_block("grand_altar") != "", "no Master Builder, no grand altar (%s)" % sim.struct_block("grand_altar"))
+	var u = sim.living()[0]
+	sim.ranks.grant(u.id, "craft")
+	sim.ranks.grant(u.id, "craft")
+	check(sim.struct_block("grand_altar") == "", "with a Master Builder it can be raised")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
