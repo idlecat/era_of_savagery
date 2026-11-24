@@ -783,6 +783,14 @@ play (that is the measurable form of "decisions matter"):
      the trial now opens on reaching Lv 4 and the deed is the door.
 - **G2.** Wire the metric run into CI as a balance canary: config edits that shift the
   distributions show up as diffs.
+  **Built:** `tools/metrics.gd --baseline=<file> [--write-baseline]` compares each policy's
+  G1 summary with `tests/balance_baseline.json` (2 runs x 8 days, steward and feaster, The
+  Ford; about 75 s) and reports every metric that moved past `TOLERANCE` (shares by 0.26,
+  counts by 35% or at least 0.6), as GitHub `::warning` annotations on CI. The CI step is
+  `continue-on-error` and the tool never fails: a canary, not a gate, since every gameplay
+  change moves a deterministic run. Not yet known: whether Linux CI reproduces the macOS
+  baseline exactly; the first CI run will show it (small float drift stays inside the
+  tolerances).
 - **G3.** Tune the director's per-level caps against these curves, not by feel.
 
 Why these bands: ~100% near-misses with ~0 starvation deaths (the first draft) describes

@@ -35,6 +35,10 @@ jobs:
       - name: Unit and smoke tests
         run: ~/godot/godot --headless --path . --script res://tests/test_contract.gd
 
+      - name: Balance canary (warns, never fails)
+        continue-on-error: true
+        run: ~/godot/godot --headless --path . --script res://tools/metrics.gd -- --runs=2 --days=8 --policies=steward,feaster --baseline=res://tests/balance_baseline.json
+
       - name: Culture packs
         run: ~/godot/godot --headless --path . --script res://tools/check_culture.gd
 

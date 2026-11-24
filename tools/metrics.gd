@@ -6,6 +6,8 @@
 ##     [--policies=steward,hoarder,feaster] [--level=normal] [--map=the_ford|standard...] [--dt=0.1] [--out=/path.csv]
 ##     [--choose=autumn:2,festival:0] (these dilemmas take that option, whatever the policy says)
 ##     [--winter=white|wolf|lean|mild] (the first winter is that kind: hz.set_winter, as a game master would)
+##     [--baseline=res://tests/balance_baseline.json [--write-baseline]] (G2, the balance canary: compare each
+##     policy's summary with the baseline and warn where a metric moved past its tolerance, or write it anew)
 ##
 ## A policy is a game-master script, tests/policies/<id>.json, using only the operations a
 ## game master has (so the harness is also a smoke test of that surface):
@@ -316,6 +318,7 @@ func _report(rows: Array, pols: Array) -> void:
 		var d: float = absf(summ["hoarder"]["min_food"] - summ["feaster"]["min_food"]) + absf(summ["hoarder"]["famine"] - summ["feaster"]["famine"]) + absf(summ["hoarder"]["near_miss"] - summ["feaster"]["near_miss"])
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
 	_calibration(rows)
+	if a.has("baseline"): _baseline(summ)
 	var allc: Array = []
 	for r in rows: allc.append_array(r["forecasts"])
 	if not allc.is_empty():
@@ -386,6 +389,44 @@ func _calibration(rows: Array) -> void:
 		for f in with: mean += float(f["scores"][k])
 		print("  %-17s forecast %3d%%, was the first abort %3d%% (%d contracts)" % [k, roundi(mean / with.size() * 100), roundi(with.filter(func(f): return f["first"] == k).size() * 100.0 / with.size()), with.size()])
 
+
+## How far a metric may move before the canary speaks: shares (0..1) by an absolute step,
+## counts by a share of their size (and at least `floor`).
+const TOLERANCE := {"share": 0.26, "count": 0.35, "floor": 0.6}
+const SHARES := ["near_miss", "famine", "min_food", "era2", "craft_gate"]
+
+## G2, the balance canary: the summaries against a committed baseline (same runs, days,
+## policies and map), or written anew with --write-baseline. Moves past TOLERANCE are
+## printed and, on CI, raised as GitHub warning annotations. Never fails the run.
+func _baseline(summ: Dictionary) -> void:
+	var path: String = a["baseline"]
+	var key := {"runs": a.get("runs", "4"), "days": a.get("days", "12"), "seed": a.get("seed", "1"), "map": a.get("map", "the_ford")}
+	if a.has("write-baseline"):
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		f.store_string(JSON.stringify({"_doc": "The balance canary's baseline (tools/metrics.gd --baseline, make_it_fun G2): per policy, the G1 summary of these runs. Refresh with --write-baseline after a change meant to move the balance.", "args": key, "policies": summ}, " ", false))
+		f.close()
+		print("\nBaseline written: %s" % path)
+		return
+	if not FileAccess.file_exists(path):
+		print("\nBaseline: none at %s (write one with --write-baseline)" % path)
+		return
+	var base = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not base is Dictionary or base.get("args", {}) != key:
+		print("\nBaseline: made with other runs (%s), not compared" % str(base.get("args", {}) if base is Dictionary else "?"))
+		return
+	var moved: Array = []
+	for pid in summ:
+		var b: Dictionary = base["policies"].get(pid, {})
+		for k in summ[pid]:
+			if not b.has(k): continue
+			var now := float(summ[pid][k])
+			var was := float(b[k])
+			var lim: float = TOLERANCE["share"] if k in SHARES else maxf(float(TOLERANCE["floor"]), absf(was) * float(TOLERANCE["count"]))
+			if absf(now - was) > lim: moved.append([pid, k, was, now])
+	print("\nBalance canary against %s: %s" % [path, "no metric moved past its tolerance" if moved.is_empty() else "%d moved" % moved.size()])
+	for m in moved:
+		print("  %s %s: %.2f -> %.2f" % m)
+		if OS.get_environment("GITHUB_ACTIONS") == "true": print("::warning title=Balance canary::%s %s moved from %.2f to %.2f" % m)
 
 func _mean(rs: Array, k: String) -> float:
 	var t := 0.0

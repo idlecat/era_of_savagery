@@ -1,0 +1,45 @@
+{
+ "_doc": "The balance canary's baseline (tools/metrics.gd --baseline, make_it_fun G2): per policy, the G1 summary of these runs. Refresh with --write-baseline after a change meant to move the balance.",
+ "args": {
+  "runs": "2",
+  "days": "8",
+  "seed": "1",
+  "map": "the_ford"
+ },
+ "policies": {
+  "steward": {
+   "near_miss": 0.0,
+   "famine": 0.0,
+   "deaths": 1.0,
+   "starved": 0.0,
+   "killed": 0.5,
+   "left": 0.0,
+   "empty": 0.0,
+   "min_food": 0.23,
+   "sealed": 3.0,
+   "interrupts": 1.5,
+   "pauses": 0.18,
+   "gap": 0.9,
+   "era2": 1.0,
+   "ranks": 2.5,
+   "craft_gate": 1.0
+  },
+  "feaster": {
+   "near_miss": 1.0,
+   "famine": 0.0,
+   "deaths": 2.0,
+   "starved": 0.0,
+   "killed": 2.0,
+   "left": 0.0,
+   "empty": 0.0,
+   "min_food": 0.095,
+   "sealed": 4.0,
+   "interrupts": 1.5,
+   "pauses": 0.195,
+   "gap": 0.8,
+   "era2": 1.0,
+   "ranks": 2.0,
+   "craft_gate": 1.0
+  }
+ }
+}
