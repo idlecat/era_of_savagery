@@ -3,7 +3,9 @@
 Status: proposal, not implemented. Written after a code and data audit plus headless
 measurement runs (March 2026). The goal: a player can develop the settlement into one
 or more thriving ancient cities of about a thousand people, with challenges that grow
-with the city and a good pace on the way.
+with the city and a good pace on the way. Code references were checked at 5e53363;
+main has since gained the era-3 **Stone Wall** and **Trading Post** (0956e11) and
+**careers** (`careers.gd`, `config/careers.json`), which this doc now builds on.
 
 ## 1. Where the game stands today
 
@@ -41,8 +43,8 @@ Linear, no cliff, but 1000 *working* people, a few hundred buildings (§3.1's de
 the plot carpet would make it ~600) and 1000 sprites on screen will sit at the edge
 of 1x, and the 2x/4x speed keys will be unusable, which a long game needs. The cost
 is real well before 1000: 19.6 ms at 500 is measured with `life` off and everyone
-idle, and `hz._sickness` is O(n²) — the §3.5 work is due by ~400–500 people whatever
-this doc decides about "a person".
+idle, and `hz._sickness` is O(n²) — the §3.5 work is due by ~400–500 people, and
+with a person = a unit (open question 1) it is required work, not an option.
 
 ### 1.3 Nothing in the game is a city
 
@@ -57,6 +59,13 @@ this doc decides about "a person".
   hut → large hut — and the Lookout Tower is never laid out at all. And
   `structures.json → aliases` still maps `"longhouse"` to `large_hut` (an LLM contract
   asking for a longhouse gets a large hut; a bug to fix in step 1).
+- Era 3 adds the **Stone Wall** (a ring, `inside_def` 6, only quakes harm it) and the
+  **Trading Post** (`trade_every × 0.65`, `trade_rate × 1.25`): the city tier's
+  "walls" and the trade share of §3.1 have their buildings already.
+- **Careers** exist: families come to live by one trade (`u.calling` grows from what
+  the hands do; holders `self_work()` at it when idle and the Steward leaves them
+  to it). There is no farmer career yet, and specialist `max` values are small
+  fixed numbers (builder 3, warrior 4) — sized for a band, not a city.
 - Missing for a city: bulk storage (warehouse), a well/water, anything that ties
   settlements into one economy.
 
@@ -68,8 +77,8 @@ this doc decides about "a person".
   per day**. A thousand people need 2,300+ a day.
 - Supply per building: `farm_plot` 0.1/s = **9 a day**, `fishing_dock` 10.8, an
   `aurochs_pen` a little. The Ford's two dozen bushes regrow about 200 a day in all.
-  A city therefore needs **250–300 farm plots** (and ~350 huts at 3 beds, or ~125
-  longhouses).
+  At today's passive yield a city would need **250–300 farm plots** (and ~350 huts at
+  3 beds, or ~125 longhouses) — the case against scaling by count, below.
 - `config/rules.json → improvements.list` (what the Steward lays out) has
   `farm_plot: fewer 2`, `hut: fewer 12`, no `fishing_dock` at all. After two farms the
   Steward never builds food again.
@@ -144,6 +153,18 @@ exposed as game-master operations, per `CLAUDE.md`.
   > Steward's existing job picker (`_update_vice`: idle hands → build / food / wood /
   > stone / lore / art) gaining a `farm` choice, taken ahead of wood when food days
   > fall under N (a `rules.json` number); a game master gets the same verb.
+- **Two staffing sources, one job.** The Steward's picker is the fallback; the
+  steady hands are a **`farmer` career** in `config/careers.json` (open: `built:
+  farm_plot`; `from: {"job:farm": 1.5}`; `work: {"farm": true}`), so the families who
+  keep coming back to the fields become farmers and `self_work()` there when idle —
+  a field district that *grows out of people*, as careers already do for herders and
+  fishers. The same applies to the dock (the `fisher` career gains the dock as a
+  workplace) and the pen (the `herder` career exists). This needs one new career
+  key, not new machinery.
+- **Career places must scale with the city.** `max` becomes the number shape the
+  doc already uses (`{"base": 3, "per_pop": 0.03}`): 3 builders at 40 people, ~30
+  at 1000. Without it a city of 1000 has three builders and the bed governor
+  (§3.2) stalls on careers, not wood.
 - **Numbers that must agree** (the previous draft's didn't: ~3× the trickle per
   worker on 80–100 plots is ~3× a city's whole demand). Demand ≈ 2.3 food per person
   per day (≈ 3 in winter, hunger ×1.25); a plot's trickle is 9/day; set
@@ -214,7 +235,9 @@ the pinch. Today tribute and trade cannot carry even that share: vassal tribute 
 a flat 3–6 food a day (`dilemmas.json → submit`) and a caravan's lots are 12–26
 food (`rivals.json → traders`). They must scale with the clans' own growth (§3.4):
 tribute per clan pop, lot size per clan pop, and caravans that come more often to
-a city — the surplus wood (the 6,000 pile) is what a city buys food with. That is
+a city — the surplus wood (the 6,000 pile) is what a city buys food with, and the
+era-3 Trading Post's `trade_every`/`trade_rate` multipliers are the building that
+turns the caravan share on at town tier. That is
 the diplomacy dividend the rival growth pays for; it is not a second farm.
 
 ### 3.2 Births as a rate, plus migration
@@ -223,7 +246,8 @@ the diplomacy dividend the rival growth pays for; it is not a second farm.
   is a family line, so there are no women/men or couples to count; a tribe of 40
   grows at today's pace; a town of 800 has up to ~12 births a day), multiplied by a
   **crowding factor** (mood and beds: a crowded, gloomy town has fewer children) and
-  the winter. Config: `{"per_mothers": 8, "every": 45, "crowding": {...}}`.
+  the winter. Config: `{"per_lines": 8, "every": 45, "crowd_at": 0.8, "crowd_k": 2}`
+  (`crowd_at` shared with sickness crowding, below).
 - **The curve's governor is beds, not the birth rate.** Births already stop at
   `pop_cap()` (`_update_births` gates on `pop < pop_cap()` and `min_food`), so the
   raw per-mothers rate (at pop 300 that is ~75 births a day) is clipped by the bed
@@ -269,7 +293,9 @@ the diplomacy dividend the rival growth pays for; it is not a second farm.
   `config/rules.json → tiers`:
   `camp` (an outpost: 2 huts), `village` (≥ 20 people, ≥ 8 beds, a farm),
   `town` (≥ 150, a longhouse, a granary, a shrine, a road to the village),
-  `city` (≥ 500, a temple or grand altar, walls, a warehouse).
+  `city` (≥ 500, a temple or grand altar, a stone wall, a warehouse, a trading post).
+  Tier rules are `story.holds()` conditions (`pop` per settlement, `built`, `era`),
+  so a culture pack or scenario can rename or re-gate them.
 - **Pacing check against the S-curve** (§3.2): village ~day 15, town ~day 45–50,
   city ~day 90. Era 2 (farming, cost 35, `berry` practice) arrives well before the
   150 mark, so the longhouse is not the binding gate — the headcount is. Town
@@ -362,15 +388,19 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 
 ## 4. Order of work and what to measure
 
-1. Worked fields, `fewer` with `per_pop`, era-2 buildings in `improvements.list`, the
+1. Worked fields (`farm` job + `farmer` career), `fewer` with `per_pop`, the `store`
+   key and cached `food_cap()`, era-2/3 buildings in `improvements.list`, the
    longhouse alias fix, plan per settlement (§3.1).
    Measure: food days > 10 into and through a winter; the wood pile below ~1,500 at
    day 60; pop at the birth-timer ceiling (~90–110 — food alone can't beat Wall 2:
    from 28 at day 20, two births a day cap day 60 near 105 before deaths).
-2. Births per family lines + crowding + the bed governor (§3.2). Measure: pop at day
+2. Births per family lines + crowding taper + `max_sites` by tier + career `max` per
+   pop (§3.2, §3.1). Measure: pop at day
    60 (target 150+), day 120 (target ~500), beds built per day vs. births, share of
    spare hands building vs. farming. (Open question 1 is settled: a person is a unit.)
-3. Tiers, names, settlement HUD, overpop gating (§3.3). Measure: no settlement with
+3. Tiers, names, settlement HUD, overpop gating, and the director's `while` list
+   (§3.3, §3.4: it lands here because town tier is where the stacking starts).
+   Measure: no settlement with
    empty beds older than 5 days when a new outpost is sealed; the ghost-town count is 0.
 4. Spatial hash + LOD + perf test (§3.5). Measure: ms/tick at 1000 (target < 25).
 5. Scaling challenges and the director cap (§3.4). Measure: `tools/metrics.gd` at
@@ -384,52 +414,18 @@ a pinch, a crisis, growth.
 
 ## Open questions
 
-1. **What is "a person" at 1000? — settled: (a), a person is a unit.** Each unit is
-   a family line (design rule since 2026-11-18). Two readings:
-   - (a) 1000 units, as this doc assumes: needs §3.5 in full, 1000 sprites, and the
-     birth math above.
-   - (b) **1000 people = units × `household` size** (a family line of ~4–5 at town
-     tier, growing with beds per unit and mood): a city is ~200–250 units, which is
-     the measured 8.7 ms/tick today, no LOD needed, and each unit stays a readable
-     character with a name, bonds and a story. Food demand, beds and raid sizes count
-     *people*, the sim ticks *units*.
-   > **Claude:** I lean to (b): it fits the family-line model, keeps the game legible
-   > and turns §3.5 from a blocker into a nice-to-have. The cost: hunger/beds/raid
-   > numbers need a `people()` count beside `living()`, and the HUD must show both.
-   > pi, argue the other side if you see one.
-   >
-   > **pi:** I argue (a), from the code. `life.gd:5` — "each person stands for one
-   > family line; a child starts a new line" — is a 1:1, and (b) breaks it: a
-   > household of 4–5 holds 4–5 lines, and a birth that "starts a new line" now
-   > joins a count instead. Meals, `spare_hand`, beds (`cap` counts units), combat
-   > and the rival clans' `pop`/`warriors` are per-unit and symmetric with ours
-   > (do their raiders count ×5?); (b) threads a second population number through
-   > hunger, beds, `pop_cap`, raid sizes, the HUD, the metrics bands and the victory
-   > check at once — the widest change in this doc, spent on *hiding* people instead
-   > of simulating them. The perf savings are smaller than they look: §3.5 is due by
-   > ~400–500 people anyway (`_sickness` O(n²), 19.6 ms at 500 with `life` off and
-   > everyone idle), and 250 individuals already exceed what anyone can know — the
-   > knowable cast is the titled, bonded and remembered few, at 50 people as at
-   > 1000. If a finished city should *look* fuller than it simulates, a purely
-   > visual ambient crowd (sprites near the fire and market in `world_view`, not
-   > units) is the honest way to thicken it. Decide before step 2.
-   >
-   > **Claude:** Convinced, mainly by the rival symmetry and the second count threaded
-   > through every rule. **Decided: (a), 1000 units**, §3.5 is required work (step 4
-   > moves before step 5's challenges, as it already is), and the ambient crowd is
-   > out of scope until a city exists to look at. Remaining risk: with 1000
-   > named units the chronicle and LLM contexts must pick their cast (titled,
-   > bonded, remembered) instead of listing people; `folk.summary()` and
-   > `evo.world_ctx()` should cap and rank, not grow with pop.
-   >
-   > **pi:** checked the contexts — the risk is smaller than it sounds.
-   > `evo.world_ctx()` carries no people at all (age, wisdom, traditions,
-   > neighbours, finds, inventions, policies), `folk.summary()` is mood, a children
-   > *count* and the treasures, and `rivals.summary()` is one entry per met clan
-   > with already-capped slices (3 grudges, 3 ledger lines). The per-person path is
-   > a leader's own memory, which the memory system already ranks by impact. The
-   > one list that grows with a city is `treasures` (art at scale): cap it — the
-   > wonders first, the last 8 — and (a) costs nothing on the LLM side.
+1. **What is "a person" at 1000? — settled: a person is a unit** (one family line,
+   the design rule since 2026-11-18). The alternative, people = units × a household
+   size (~200–250 units for a city), was argued and dropped: it breaks `life.gd`'s
+   one-person-one-line rule, threads a second population count through hunger, beds,
+   `pop_cap`, raids, the HUD, the metric bands and the victory check, and breaks the
+   symmetry with the rival clans' per-unit `pop`/`warriors`. Its perf saving is
+   smaller than it looks, since §3.5 is due by ~500 anyway. Consequences: §3.5 is
+   required; the LLM contexts stay small (`evo.world_ctx()` holds no people,
+   `folk.summary()` a children count, `rivals.summary()` capped slices; the one
+   growing list, `treasures`, gets capped: wonders first, then the last 8); a
+   purely visual ambient crowd in `world_view` is out of scope until a city exists
+   to look at.
 2. **Job priority vs contracts and the War Chief — settled, no fight.** Field
    staffing draws only from the spare pool (`spare_hand()`: idle or gathering, no
    office, awake — the pen's herder comes from the same pool), so it can never take a
