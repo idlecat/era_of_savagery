@@ -1183,6 +1183,33 @@ func _draw_water_fx() -> void:
 			var p: Vector2 = a + Vector2(-tg.y, tg.x) * sin(i * 12.3) * D.RIVER_HALF * 0.6
 			if D.is_ford_at(p) or not _in_view(p): continue
 			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.35), 2)
+	# foam curls where the water worries the bank, crawling slowly downstream
+	for bk in river_banks:
+		for line in bk:
+			var n2: int = line.size() - 1
+			if n2 < 2: continue
+			for i in mini(50, n2):
+				var s := fposmod(i * 53.7 + t * 0.55, float(n2))
+				var k := int(s)
+				var q: Vector2 = line[k].lerp(line[k + 1], s - k)
+				if not _in_view(q): continue
+				ci.draw_circle(q + Vector2(0, -1), 1.8 + sin(i * 3.1) * 0.6, Color(0.95, 0.98, 1.0, 0.3))
+	# low sun and moonlight scatter on the water: twinkling glints
+	var glow_amt := 0.0
+	if sim.is_day_part("dusk"): glow_amt = sin(_part_k("dusk") * PI)
+	elif sim.is_day_part("dawn"): glow_amt = sin(_part_k("dawn") * PI) * 0.8
+	glow_amt = maxf(glow_amt, sim.night_amt * 0.5)
+	if glow_amt > 0.05:
+		for pts in D.RIVERS:
+			var n: int = pts.size()
+			for i in mini(60, n / 2):
+				var s := fposmod(i * 89.1 + t * 0.35, float(n - 1))
+				var k := int(s)
+				var p: Vector2 = pts[k].lerp(pts[k + 1], s - k)
+				if D.is_ford_at(p) or not _in_view(p): continue
+				var tw: float = sin(t * 3.0 + i * 2.7)
+				if tw < 0.55: continue
+				ci.draw_circle(p, 1.6, Color(1.0, 0.95, 0.8, (tw - 0.55) * glow_amt * 0.9))
 
 func _draw_decor(d: Dictionary) -> void:
 	var p := iso(d["p"])
