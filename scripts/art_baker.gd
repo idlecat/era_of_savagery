@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 21
+const ART_VERSION := 22
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -21,6 +21,10 @@ const WORK_FRAMES := 4
 ## Villager animations: name -> frames. Tool animations also bake a bronze variant.
 const MAN_ANIMS := {"idle": 1, "walk": 8, "chop": 4, "build": 4, "gather": 4, "attack": 4, "ritual": 4, "dead": 1, "sit": 2, "talk": 4}
 const TOOL_ANIMS := ["chop", "build", "attack"]
+## The attack animation again for each weapon besides the spear (arms.gd ids): keys
+## man_attack_<weapon>_<dir>_<frame>; those in BRONZE_WEAPONS also with a bronze head.
+const WEAPON_ANIMS := ["club", "axe", "sling", "bow"]
+const BRONZE_WEAPONS := ["axe"]
 const SITE_SIZES := [14, 20, 26] # footprint radius of construction-site sprites
 
 var sprites := {} # key -> {"tex": Texture2D, "anchor": Vector2}  (anchor = ground point in sprite px)
@@ -465,6 +469,12 @@ func _jobs() -> Array:
 					var ph := float(f) / n
 					jobs.append({"key": key, "size": 112, "lift": 13.0, "build": _person.bind(yaw, anim, ph, false, tool)})
 					jobs.append({"key": key + "_cloth", "size": 112, "lift": 13.0, "mask": true, "build": _person.bind(yaw, anim, ph, true, tool)})
+		for w in WEAPON_ANIMS: # each weapon's own way of fighting
+			for f in 4:
+				for tool in (["stone", "bronze"] if w in BRONZE_WEAPONS else ["stone"]):
+					var key := "man_attack_%s_%d_%d%s" % [w, d, f, "_bronze" if tool == "bronze" else ""]
+					jobs.append({"key": key, "size": 112, "lift": 13.0, "build": _person.bind(yaw, "attack", f / 4.0, false, tool, w)})
+					jobs.append({"key": key + "_cloth", "size": 112, "lift": 13.0, "mask": true, "build": _person.bind(yaw, "attack", f / 4.0, true, tool, w)})
 	return jobs
 
 # ---- nature
@@ -1501,7 +1511,8 @@ func _beast(kind: String, yaw: float, phase: float, walking: bool, anim := "") -
 ## A villager in a pose. cloth_only renders the tunic white and everything else black
 ## so the game can tint the clothes per person. Legs bend at the knee (feet stay on the
 ## ground: the body drops to the lowest standing leg), arms bend at the elbow.
-func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "stone") -> Node3D:
+## A villager in a pose. `weapon` (attack only): which weapon they fight with (arms.gd ids).
+func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "stone", weapon := "spear") -> Node3D:
 	var holder := Node3D.new()
 	holder.rotation_degrees.y = yaw
 	var root := Node3D.new()
@@ -1533,6 +1544,7 @@ func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "
 	var tilt := 0.0 # upper body leaning forward
 	var bob := 0.0
 	var held := "" # tool in the right hand
+	var draw := 0.0 # bow: how far the string is drawn (0..1)
 	match anim:
 		"walk":
 			legs = {1: [s * 0.48, maxf(0.0, c) * 0.95 + 0.05], -1: [-s * 0.48, maxf(0.0, -c) * 0.95 + 0.05]}
@@ -1556,12 +1568,35 @@ func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "
 			arm = {1: [-40.0, -70.0, -50.0, -25.0][k], -1: [-70.0, -40.0, -25.0, -50.0][k]}
 			elbow = {1: -20.0, -1: -20.0}
 			legs = {1: [0.3, 0.45], -1: [0.1, 0.35]}
-		"attack": # spear: draw back, thrust
-			arm = {1: [-40.0, -10.0, -95.0, -80.0][k], -1: -55.0}
-			elbow = {1: [-60.0, -75.0, -5.0, -15.0][k], -1: -45.0}
-			tilt = [-5.0, -8.0, 14.0, 10.0][k]
-			legs = {1: [[0.25, 0.3, 0.55, 0.45][k], 0.35], -1: [[-0.25, -0.3, -0.4, -0.35][k], 0.1]}
-			held = "spear"
+		"attack":
+			match weapon:
+				"club", "axe": # overhead blow
+					arm = {1: [-160.0, -120.0, -20.0, 10.0][k], -1: -40.0}
+					elbow = {1: [-30.0, -15.0, 0.0, -10.0][k], -1: -55.0}
+					tilt = [-4.0, 2.0, 18.0, 16.0][k]
+					legs = {1: [0.3, 0.3], -1: [-0.25, 0.12]}
+					held = weapon
+				"sling": # whirl overhead, then let fly
+					arm = {1: [-170.0, -150.0, -175.0, -70.0][k], -1: -30.0}
+					elbow = {1: [-20.0, -45.0, -10.0, -5.0][k], -1: -40.0}
+					spread = [10.0, 16.0, 6.0, 4.0][k]
+					tilt = [-4.0, -2.0, 2.0, 12.0][k]
+					legs = {1: [0.2, 0.2], -1: [-0.2, 0.1]}
+					held = "sling_loaded" if k < 3 else "sling"
+				"bow": # left arm out with the bow, right hand draws the string back
+					arm = {1: [-80.0, -85.0, -88.0, -70.0][k], -1: -88.0}
+					elbow = {1: [-70.0, -115.0, -130.0, -40.0][k], -1: 0.0}
+					spread = 2.0
+					tilt = 2.0
+					legs = {1: [0.15, 0.12], -1: [-0.2, 0.1]}
+					draw = [0.3, 0.75, 1.0, 0.0][k]
+					held = "bow"
+				_: # spear: draw back, thrust
+					arm = {1: [-40.0, -10.0, -95.0, -80.0][k], -1: -55.0}
+					elbow = {1: [-60.0, -75.0, -5.0, -15.0][k], -1: -45.0}
+					tilt = [-5.0, -8.0, 14.0, 10.0][k]
+					legs = {1: [[0.25, 0.3, 0.55, 0.45][k], 0.35], -1: [[-0.25, -0.3, -0.4, -0.35][k], 0.1]}
+					held = "spear"
 		"ritual": # arms raised to the sky, swaying, stamping
 			arm = {1: -165.0 + s * 15.0, -1: -165.0 - s * 15.0}
 			elbow = {1: -15.0, -1: -15.0}
@@ -1639,9 +1674,35 @@ func _person(yaw: float, anim: String, phase: float, cloth_only: bool, tool := "
 		limb(el, [Vector3.ZERO, Vector3(0, -4.3, 0)], [1.0, 0.78], skin, 8)
 		mi(el, cyl(0.9, 0.9, 1.0, 8), leather, Vector3(0, -3.6, 0)) # wrist wrap
 		mi(el, sph(0.95, 8, 5), skin, Vector3(0, -5.0, 0.15), Vector3.ZERO, Vector3(0.8, 1.0, 0.95))
+		if side < 0 and held == "bow": # the bow, upright in the left fist, its string drawn back
+			var bg := Node3D.new()
+			bg.position = Vector3(0, -5.0, 0)
+			bg.rotation_degrees.x = -(arm[-1] + elbow[-1] + tilt)
+			el.add_child(bg)
+			var bow_pts := []
+			for i in 7:
+				var a := lerpf(-1.0, 1.0, i / 6.0)
+				bow_pts.append(Vector3(0, a * 9.0, 1.6 - a * a * 3.2))
+			limb(bg, bow_pts, [0.22, 0.32, 0.42, 0.5, 0.42, 0.32, 0.22], wood, 6)
+			mi(bg, cyl(0.6, 0.6, 1.6, 6), leather, Vector3(0, 0, 1.6))
+			var nock := Vector3(0, 0, -1.6 - draw * 6.5)
+			var strg: Material = mat(Color("#e8dcc0"), "fine", 0.2, Vector3.ONE, 0.1) if not cloth_only else flat(Color.BLACK)
+			limb(bg, [Vector3(0, 9.0, -1.6), nock, Vector3(0, -9.0, -1.6)], [0.1, 0.1, 0.1], strg, 4)
+			if draw > 0.0: # the arrow on the string
+				limb(bg, [nock, Vector3(0, 0, 4.0)], [0.14, 0.14], wood, 4)
+				mi(bg, cyl(0.0, 0.45, 1.4, 5), head_m, Vector3(0, 0, 4.6), Vector3(90, 0, 0))
 		if side > 0:
 			var hand := Vector3(0, -5.0, 0)
 			match held:
+				"club":
+					mi(el, cyl(0.85, 0.45, 9.5, 6), wood, hand + Vector3(0, 0, 3.6), Vector3(90, 0, 0))
+					mi(el, lumpy(sph(1.5, 8, 5), 0.35, 7, 0.7, true), wood, hand + Vector3(0, 0, 8.6))
+				"sling", "sling_loaded": # a cord hanging from the fist, a stone in its pouch
+					var cord: Material = mat(Color("#8a6a42"), "fine", 0.3, Vector3.ONE, 0.2) if not cloth_only else flat(Color.BLACK)
+					limb(el, [hand, hand + Vector3(0, -3.5, 0.6), hand + Vector3(0, -6.5, 0.2)], [0.12, 0.12, 0.12], cord, 4)
+					if held == "sling_loaded":
+						mi(el, sph(0.9, 6, 4), leather, hand + Vector3(0, -7.0, 0.2))
+						mi(el, sph(0.6, 6, 4), head_m, hand + Vector3(0, -7.3, 0.6))
 				"axe":
 					mi(el, cyl(0.45, 0.5, 10, 6), wood, hand + Vector3(0, 0, 3.4), Vector3(90, 0, 0))
 					mi(el, lumpy(box(Vector3(1.2, 3.0, 3.6)), 0.25, 11, 0.6, true) if tool == "stone" else box(Vector3(0.8, 3.4, 3.2)), head_m, hand + Vector3(0, 0.2, 7.6))

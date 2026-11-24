@@ -2126,6 +2126,9 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 	var frames: int = {"idle": 1, "walk": 8, "sit": 2}.get(anim, 4)
 	var speed := 11.0 if anim == "walk" else 7.0
 	var name := "man_%s_%d_%d" % [anim, di, int(anim_t * speed + u.id) % frames]
+	if anim == "attack": # (each weapon fights its own way: art_baker WEAPON_ANIMS; the spear is the plain attack)
+		var wn := "man_attack_%s_%d_%d" % [str(sim.arms.wielded(u).get("id", "")), di, int(anim_t * speed + u.id) % frames]
+		if art.has(wn): name = wn
 	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
 	var k := 0.95
 	_sprite(name, b, k)
