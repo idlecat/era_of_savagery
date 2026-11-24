@@ -621,17 +621,32 @@ func _set_status(c: E.Contract, s: String) -> void:
 	c.state_t = 0.0
 	c.clear_t = 0.0
 
+## Where a wounded crew member goes to rest: beside the nearest fire of ours on their side of
+## the river (any fire if none is), else the village. The spot round the fire is fixed per person.
+func rest_spot(u: E.Unit) -> Vector2:
+	var best: E.Structure = null
+	var best_side := false
+	for s in sim.structures:
+		if not s.built or not sim.ours(s) or s.type != "bonfire": continue
+		var side := D.same_side(s.pos, u.pos)
+		if best == null or (side and not best_side) or (side == best_side and s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)):
+			best = s
+			best_side = side
+	var a := float(u.id) * 2.39996 # (golden angle: each at their own place round the fire)
+	if best == null: return D.VILLAGE + Vector2(cos(a) * 30.0, 30.0)
+	return sim.dry_spot(best.pos + Vector2(cos(a), sin(a) * 0.8) * 40.0)
+
 func _manage_wounded(c: E.Contract) -> void:
 	for u in crew(c, true):
 		if u.id in c.resting_ids:
 			if u.hp >= u.max_hp * 0.7:
 				c.resting_ids.erase(u.id)
 				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), c.plan["plan_id"]], "contract", [u])
-			elif u.job.is_empty() and u.pos.distance_to(D.VILLAGE) > 60:
-				sim.set_job(u, {"type": "move", "to": D.VILLAGE + Vector2(randf_range(-30, 30), 30), "flee": true})
+			elif u.job.is_empty() and u.pos.distance_to(rest_spot(u)) > 60:
+				sim.set_job(u, {"type": "move", "to": rest_spot(u), "flee": true})
 		elif u.hp < u.max_hp * 0.25 and not u.has_trait("belligerent") and u.id != c.leader_id:
 			c.resting_ids.append(u.id)
-			sim.set_job(u, {"type": "move", "to": D.VILLAGE + Vector2(randf_range(-30, 30), 30), "flee": true})
+			sim.set_job(u, {"type": "move", "to": rest_spot(u), "flee": true})
 			_clog(c, tr("%s is badly hurt and limps home.") % tr(u.name))
 
 func _assemble(c: E.Contract) -> void:
@@ -1012,7 +1027,7 @@ func resolve(c: E.Contract, effect: String, label := "") -> void:
 			for u in fleeing: sim.assign_flee(u)
 		"rest":
 			c.resting_ids.append(ld.id)
-			sim.set_job(ld, {"type": "move", "to": D.VILLAGE, "flee": true})
+			sim.set_job(ld, {"type": "move", "to": rest_spot(ld), "flee": true})
 			c.abort_cooldowns["leader_wounded"] = INF
 			_set_status(c, "executing")
 		"press_on":
