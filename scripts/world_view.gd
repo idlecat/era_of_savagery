@@ -616,6 +616,14 @@ func _pan_keys(delta: float) -> void:
 		cam.position += pan_vel * delta
 		cam.position = _clamp_target(cam.position)
 
+## Any other camera move (minimap, drag, swipe, zoom) stops a focus glide and the
+## leftover pan drift, so the camera stays where it was put.
+func cancel_glide() -> void:
+	if cam_tween:
+		cam_tween.kill()
+		cam_tween = null
+	pan_vel = Vector2.ZERO
+
 func _pan_input() -> Vector2:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit or focus is SpinBox:
@@ -650,6 +658,7 @@ func _edge_dir() -> Vector2:
 ## Zoom by factor k: the target glides there over a few frames (_zoom_step),
 ## keeping the world point under the cursor fixed while it moves.
 func _zoom_by(k: float) -> void:
+	cancel_glide()
 	zoom_target = clampf(zoom_target * k, 0.45, 2.4)
 
 ## A zoom set straight on the camera (a loaded save, a screenshot demo) becomes the target.
@@ -2516,11 +2525,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 		elif mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 			_zoom_by(1.1 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1 / 1.1)
 	elif ev is InputEventPanGesture: # trackpad two-finger swipe (macOS) -> pan
+		cancel_glide()
 		cam.position += (ev as InputEventPanGesture).delta * PAN_GESTURE_SPEED / cam.zoom.x
 		_clamp_cam()
 	elif ev is InputEventMagnifyGesture: # trackpad pinch -> zoom
 		_zoom_by((ev as InputEventMagnifyGesture).factor)
 	elif ev is InputEventMouseMotion and mid_drag:
+		cancel_glide()
 		cam.position -= (ev as InputEventMouseMotion).relative / cam.zoom.x
 		_clamp_cam()
 
@@ -2874,7 +2885,8 @@ func _sync_items() -> void:
 			var key := "s%d" % st.id
 			seen[key] = true
 			var anim: bool = st.type in ["bonfire", "fishing_dock", "aurochs_pen", "smelter", "council_ring"] or not st.built or st.reno \
-				or (st.type in ["hut", "large_hut"] and sim.has_tech("fire"))
+				or (st.type in ["hut", "large_hut"] and sim.has_tech("fire")) \
+				or (st.type in ["totem_shrine", "grand_altar"] and sim.evo.era >= 3) # (era pennants flutter)
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp

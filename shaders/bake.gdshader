@@ -58,7 +58,8 @@ void fragment() {
 	// a light final grade: a touch more saturation, a gentle S-curve, and warm
 	// crowns over cool depths, so every model reads a little richer at map zoom
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(vec3(lum), col, 1.12);
+	col = max(mix(vec3(lum), col, 1.12), vec3(0.0)); // (pushing saturation past 1 can go below 0)
+	lum = clamp(lum, 0.0, 1.0); // (the S-curve is only an S on 0..1)
 	float sc = lum * lum * (3.0 - 2.0 * lum);
 	col = mix(col, col * (sc / max(lum, 1e-4)), 0.35);
 	col *= mix(vec3(0.98, 0.99, 1.04), vec3(1.05, 1.02, 0.96), smoothstep(0.0, 40.0, wpos.y));
