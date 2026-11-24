@@ -46,7 +46,13 @@ long game needs.
 - `docs/make_it_fun.md` I5 ("camp → village → town by what's been built") is not
   implemented; there is no town or city concept in any script or config.
 - `config/legacy.json` has conquest, unity and wisdom; no population or city path.
-- No urban buildings (longhouse, temple, warehouse, well, wall...).
+- Era-2 buildings exist since a52e346/18fe442: **Longhouse** (8 beds, `hearth_bond`),
+  **Temple**, **Smokehouse** (`spoil × 0.6`), **Lookout Tower**, and the palisade ring.
+  None of them is in `improvements.list`, so the Steward never builds them, and
+  `structures.json → aliases` still maps `"longhouse"` to `large_hut` (an LLM contract
+  asking for a longhouse gets a large hut; a bug to fix in step 1).
+- Missing for a city: bulk storage (warehouse), a well/water, anything that ties
+  settlements into one economy.
 
 ## 2. The walls, and why they exist
 
@@ -63,6 +69,14 @@ long game needs.
 - `improve.gd:spot()` only places within `reach: 450` of `D.VILLAGE`, one site at a
   time (`max_sites: 1`). Outposts get no Steward layouts at all.
 - Granaries are the only food storage (+100 each).
+- **The deeper cause: food buildings are passive trickles.** `farm_plot.food` and
+  `fishing_dock.food` are per-second constants; nobody works them. That is why wood
+  piles to 6000 while people starve: labour has no way to become food except foraging
+  bushes. More people do not mean more food, only more mouths.
+- **250 plots don't fit.** A plot is r 28 plus `gap` 14; 250 of them need ~1.4 M
+  units², the whole 450-reach disc is 0.64 M. Even spread over five settlements the
+  map turns into a carpet of fields with 250 static sprites. Scaling by *count* alone
+  is the wrong lever; yield per plot must grow too (worked fields, tech, irrigation).
 
 ### Wall 2 — births are a timer, not a population curve
 
@@ -103,9 +117,17 @@ exposed as game-master operations, per `CLAUDE.md`.
 
 ### 3.1 Let the food economy scale (data + two small verbs)
 
-- Add a **`per_pop` condition** to `story.holds()` (`{"structure": "farm_plot",
-  "per_pop": 12, "of": "farm_plot"}` = fewer than one per 12 mouths; also a `beds_per_pop`
-  shorthand). Register its types in `story.COND_TYPES`; `test_spend` covers it.
+- **Worked fields (the main change).** A farm plot, dock and pen keep a small passive
+  trickle (today's number, so a camp plays as now) and gain a **work slot**: a person
+  on a `farm` job adds `food_per_worker` (data per type, ~3× the trickle per worker,
+  `workers` max 2–3, season and `inv.mul("farm")` applied). Labour now turns into
+  food, the wood surplus becomes a choice (build vs. farm), and 1000 people need
+  ~80–100 worked plots, not 250. The Steward's job picker staffs fields before
+  chopping when food days < N (a `rules.json` number). New job type → `JOB_TYPES`.
+- Let `fewer` take the **number shape `story` already has** for dilemmas
+  (`{"per_pop": k}`, `story` line ~351): `"fewer": {"farm_plot": {"per_pop": 0.1}}` =
+  fewer than one plot per 10 mouths. No new condition key, only `fewer` accepting a
+  number-or-`per_pop` value; `COND_TYPES` and `test_spend` cover it.
 - `improvements.list` becomes a growing plan: farms per 12 mouths, a dock wherever a
   settlement stands near water and fish are known, a pen per 40, huts per homeless 3
   (upgraded to large huts in era 2), a granary per 100 food of demand, workshops and
@@ -113,10 +135,12 @@ exposed as game-master operations, per `CLAUDE.md`.
 - **Plan per settlement**: `improve.gd` anchors on every point of `sim.settlements()`
   with its own `reach`, which grows with the settlement's tier (§3.3). `max_sites`
   becomes per settlement.
-- New building types for scale (config + baked models, `ART_VERSION` bump):
-  **longhouse** (era 2, 10 beds), **warehouse** (era 2, +200 food), **well**
-  (reduces sickness crowding), **irrigated field** (era 3, 1.6 × farm), **granary
-  upgrade**. The Steward's `when` picks them by tier and tech.
+- Put the **existing** era-2 buildings in the plan first (Longhouse when homeless and
+  era 2, Temple at town tier, Smokehouse already there). Then new types for scale
+  (config + baked models, `ART_VERSION` bump): **warehouse** (era 2, +200 food),
+  **well** (reduces sickness crowding), **irrigated field** (era 3, an upgrade of a
+  plot via `sim.upgrade()`: more workers and yield, same footprint). The Steward's
+  `when` picks them by tier and tech.
 - `food_cap()`/`pop_cap()` become cached sums updated when a structure is built,
   upgraded or demolished (a `_cache…` var, so it isn't saved).
 
@@ -125,8 +149,9 @@ trade, with winter still the pinch.
 
 ### 3.2 Births as a rate, plus migration
 
-- `births.every` becomes the interval **per eight grown women** (a tribe of 40 grows
-  at today's pace; a town of 800 has up to ~12 births a day), multiplied by a
+- `births.every` becomes the interval **per eight grown family lines** (each person
+  is a family line, so there are no women/men or couples to count; a tribe of 40
+  grows at today's pace; a town of 800 has up to ~12 births a day), multiplied by a
   **crowding factor** (mood and beds: a crowded, gloomy town has fewer children) and
   the winter. Config: `{"per_mothers": 8, "every": 45, "crowding": {...}}`.
 - **Migration** as the second growth path, tied to diplomacy and reputation:
@@ -202,7 +227,8 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 
 ## 4. Order of work and what to measure
 
-1. `per_pop` condition + `improvements.list` per settlement (§3.1, data and ~60 lines).
+1. Worked fields, `fewer` with `per_pop`, era-2 buildings in `improvements.list`, the
+   longhouse alias fix, plan per settlement (§3.1).
    Measure: pop at day 60 under the steward policy (target 150+), food days (target < 5).
 2. Births per mothers + crowding (§3.2). Measure: pop at day 120 (target ~500).
 3. Tiers, names, settlement HUD, overpop gating (§3.3). Measure: no settlement with
@@ -216,6 +242,27 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
 After each step the metric runs (`tools/metrics.gd --days=120`, `tools/pacing.gd`)
 and `test_smoke` with every system on tell whether the curve is a story: growth,
 a pinch, a crisis, growth.
+
+## Open questions
+
+1. **What is "a person" at 1000?** Each unit is a family line (design rule since
+   2026-11-18). Two readings:
+   - (a) 1000 units, as this doc assumes: needs §3.5 in full, 1000 sprites, and the
+     birth math above.
+   - (b) **1000 people = units × `household` size** (a family line of ~4–5 at town
+     tier, growing with beds per unit and mood): a city is ~200–250 units, which is
+     the measured 8.7 ms/tick today, no LOD needed, and each unit stays a readable
+     character with a name, bonds and a story. Food demand, beds and raid sizes count
+     *people*, the sim ticks *units*.
+   > **Claude:** I lean to (b): it fits the family-line model, keeps the game legible
+   > and turns §3.5 from a blocker into a nice-to-have. The cost: hunger/beds/raid
+   > numbers need a `people()` count beside `living()`, and the HUD must show both.
+   > pi, argue the other side if you see one.
+2. Worked fields change how the Steward assigns jobs; does that fight the contract
+   executor (contract crews are taken off work) or the War Chief? Needs a priority
+   order written down.
+3. Are outposts worth keeping as separate settlements at all before tier village, or
+   should the overpop dilemma only ever offer "grow the village" until a road exists?
 
 ## 5. Out of scope / deliberately not proposed
 
