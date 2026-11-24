@@ -129,6 +129,26 @@ func settlement_label(c: E.Contract) -> String:
 	var ld: E.Unit = sim.unit_by_id(c.leader_id)
 	return tr("%s's Outpost") % tr(ld.name) if ld else tr("Outpost")
 
+## A contract's name as players read it, translated (rules.json contracts.titles by
+## kind); plan_id is an internal id the leader picks. Takes a blueprint or plan.
+func title(plan: Dictionary) -> String:
+	var kind := str(plan.get("kind", "settle"))
+	var fmt := str(sim.RULES.get("contracts", {}).get("titles", {}).get(kind, ""))
+	var what := ""
+	match kind:
+		"research":
+			var td: Dictionary = sim.evo.tech_def(str(plan.get("tech", "")))
+			what = tr(td["name"]) if td.has("name") else ""
+		"war":
+			var rc: Dictionary = sim.rivals.clans.get(str(plan.get("target", "")), {})
+			what = tr(rc["name"]) if rc.has("name") else ""
+		"seek": what = tr(SEEK_WORDS.get(str(plan.get("group", "")), ""))
+		_:
+			var ld: E.Unit = sim.unit_by_id(int(str(plan.get("leader_id", "")).trim_prefix("unit_")))
+			what = tr(ld.name) if ld else ""
+	if fmt == "" or what == "": return str(plan.get("plan_id", ""))
+	return tr(fmt) % what
+
 ## Has the tribe seen a river by the site?
 func river_known(site: Vector2) -> bool:
 	if D.river_dist(site) >= 700.0: return false
@@ -771,7 +791,7 @@ func create(bp: Dictionary, leader: E.Unit, directive: String) -> E.Contract:
 	elif c.kind == "war":
 		where = tr("to make war on the %s") % tr(sim.rivals.clans[bp["target"]]["name"])
 		sim.evo.drift("martial", 5.0)
-	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [bp["plan_id"], tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract", c.crew_ids.map(func(id): return sim.unit_by_id(id)))
+	sim.add_log(tr("Task Contract '%s' sealed. %s leads %s %s. The LLM connection is closed.") % [title(bp), tr(leader.name), ", ".join(names.slice(1)) if names.size() > 1 else tr("no one"), where], "contract", c.crew_ids.map(func(id): return sim.unit_by_id(id)))
 	_clog(c, tr("Contract sealed: %d steps, crew of %d.") % [c.steps.size(), c.crew_ids.size()])
 	_clog(c, tr("%s: \"%s\" (risk %d%%)") % [tr(leader.name), c.forecast["words"], c.forecast["pct"]])
 	sim.policy.on_contract(c)
@@ -898,7 +918,7 @@ func event_vars(c: E.Contract, ev: Dictionary) -> Dictionary:
 	if cr.is_empty() or ld == null: return {}
 	var others: Array = cr.filter(func(u): return u != ld)
 	var one: E.Unit = others.pick_random() if not others.is_empty() else ld
-	var v := {"plan": c.plan.get("plan_id", ""), "leader": tr(ld.name), "leader_who": "id:%d" % ld.id, "one": tr(one.name), "one_who": "id:%d" % one.id,
+	var v := {"plan": title(c.plan), "leader": tr(ld.name), "leader_who": "id:%d" % ld.id, "one": tr(one.name), "one_who": "id:%d" % one.id,
 		"crew_who": "ids:" + ",".join(cr.map(func(u): return str(u.id)))}
 	var pair := str(ev.get("pair", ""))
 	if pair != "":
@@ -942,7 +962,7 @@ func happen(c: E.Contract, id: String) -> String:
 	var what: String = sim.story.text(ev["text"], v)
 	var line: String = tr("%s %s decides: %s. %s") % [what, tr(ld.name), sim.story.text(pick["label"], v), sim.story.text(pick.get("result", ""), v)]
 	_clog(c, line)
-	sim.add_log("'%s': %s" % [c.plan.get("plan_id", ""), line], "contract", crew(c))
+	sim.add_log("'%s': %s" % [title(c.plan), line], "contract", crew(c))
 	return line
 
 func crew(c: E.Contract, include_resting := false) -> Array:
@@ -1022,7 +1042,7 @@ func _manage_wounded(c: E.Contract) -> void:
 		if u.id in c.resting_ids:
 			if u.hp >= u.max_hp * 0.7:
 				c.resting_ids.erase(u.id)
-				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), c.plan["plan_id"]], "contract", [u])
+				sim.add_log(tr("%s has recovered and rejoins '%s'.") % [tr(u.name), title(c.plan)], "contract", [u])
 			elif u.job.is_empty() and u.pos.distance_to(rest_spot(u)) > 60:
 				sim.set_job(u, {"type": "move", "to": rest_spot(u), "flee": true})
 		elif u.hp < u.max_hp * 0.25 and not u.has_trait("belligerent") and u.id != c.leader_id:
@@ -1322,7 +1342,7 @@ func _check_aborts(c: E.Contract) -> bool:
 	for u in crew(c): sim.set_job(u, {})
 	_clog(c, tr("ABORT CONDITION: %s at %d%% progress.") % [tr(reason), roundi(c.progress * 100)])
 	field_say(c, ("foreseen:" + reason) if foresaw(c, reason) else "unforeseen", "", false, true)
-	sim.add_log(tr("Contract '%s' interrupted (%s). The leader's LLM node is re-awakening...") % [c.plan["plan_id"], tr(reason)], "danger")
+	sim.add_log(tr("Contract '%s' interrupted (%s). The leader's LLM node is re-awakening...") % [title(c.plan), tr(reason)], "danger")
 	sim.paused = true
 	sim.contract_interrupted.emit(c)
 	return true
@@ -1368,7 +1388,7 @@ func summary(c: E.Contract) -> Dictionary:
 	var ld := leader(c)
 	var crew_state: Array = crew(c, true).map(func(u): return "%s %d/%d HP" % [tr(u.name), roundi(u.hp), roundi(u.max_hp)])
 	return {
-		"plan_id": c.plan["plan_id"], "progress_pct": roundi(c.progress * 100),
+		"plan_id": c.plan["plan_id"], "title": title(c.plan), "progress_pct": roundi(c.progress * 100),
 		"current_step": c.substate, "built": built, "half_built": partial,
 		"threat": _threat_text(c.site),
 		"reason": c.abort_reason, "disaster": sim.flags.get("disaster", "blizzard") if sim.flags.get("disaster_t", -1.0) > sim.flags.get("flood_active", -1.0) else "flood", "leader_hp": "%d/%d" % [roundi(ld.hp), roundi(ld.max_hp)],
@@ -1407,7 +1427,7 @@ func resolve(c: E.Contract, effect: String, label := "", by_leader := false) -> 
 				u.contract_id = c.id
 				c.reinforcement_ids.append(u.id)
 				sim.set_job(u, {})
-			sim.add_log(tr("%d warriors rush out to reinforce '%s'.") % [mini(3, helpers.size()), c.plan["plan_id"]], "contract")
+			sim.add_log(tr("%d warriors rush out to reinforce '%s'.") % [mini(3, helpers.size()), title(c.plan)], "contract")
 			if c.kind == "war":
 				c.abort_cooldowns["heavy_losses"] = sim.time + 60.0
 				_set_status(c, "executing")
@@ -1423,8 +1443,8 @@ func resolve(c: E.Contract, effect: String, label := "", by_leader := false) -> 
 			var fleeing := crew(c, true)
 			for u in fleeing:
 				if c.kind == "war": sim.remember(u, tr("fled from the battle with the %s on Day %d") % [tr(sim.rivals.clans[c.plan["target"]]["name"]), sim.day()], 7)
-				else: sim.remember(u, tr("abandoned the half-built camp '%s' on Day %d") % [c.plan["plan_id"], sim.day()], 7)
-			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees for home.") % [c.plan["plan_id"], roundi(c.progress * 100)], "danger")
+				else: sim.remember(u, tr("abandoned the half-built camp '%s' on Day %d") % [title(c.plan), sim.day()], 7)
+			sim.add_log(tr("'%s' abandoned at %d%%. The crew flees for home.") % [title(c.plan), roundi(c.progress * 100)], "danger")
 			c.status = "abandoned"
 			_disband(c)
 			for u in fleeing: sim.assign_flee(u)
@@ -1448,9 +1468,9 @@ func _defend(c: E.Contract, dt: float) -> void:
 		c.clear_t += dt
 		if c.clear_t > 2.5:
 			for u in crew_list:
-				sim.remember(u, tr("held the half-built camp '%s' against saber-tooths on Day %d") % [c.plan["plan_id"], sim.day()], 8)
+				sim.remember(u, tr("held the half-built camp '%s' against saber-tooths on Day %d") % [title(c.plan), sim.day()], 8)
 			_clog(c, tr("The beasts are gone. Resuming the blueprint where we left off."))
-			sim.add_log(tr("'%s' secured. The state machine resumes - no LLM needed.") % c.plan["plan_id"], "contract")
+			sim.add_log(tr("'%s' secured. The state machine resumes - no LLM needed.") % title(c.plan), "contract")
 			_set_status(c, "executing")
 		return
 	c.clear_t = 0
@@ -1499,11 +1519,11 @@ func _complete(c: E.Contract) -> void:
 	var what := ", ".join(built)
 	for u in crew(c, true):
 		if c.reinforcement_ids.has(u.id):
-			sim.remember(u, tr("helped defend and finish '%s' on Day %d") % [c.plan["plan_id"], sim.day()], 6)
+			sim.remember(u, tr("helped defend and finish '%s' on Day %d") % [title(c.plan), sim.day()], 6)
 			u.home = D.VILLAGE
 		else:
 			var lead: bool = u == ld
-			sim.remember(u, (tr("led the founding of '%s' on the frontier on Day %d (%s)") if lead else tr("helped the founding of '%s' on the frontier on Day %d (%s)")) % [c.plan["plan_id"], sim.day(), what], 9 if lead else 7)
+			sim.remember(u, (tr("led the founding of '%s' on the frontier on Day %d (%s)") if lead else tr("helped the founding of '%s' on the frontier on Day %d (%s)")) % [title(c.plan), sim.day(), what], 9 if lead else 7)
 			sim.gain_xp(u, "craft", 10)
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
 			else: sim.ranks.learned_under(u, ld, "craft")
@@ -1513,7 +1533,7 @@ func _complete(c: E.Contract) -> void:
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)
 	sim.inv.feat("outpost", tr("Founded the outpost '%s'") % settlement_label(c), ld,
 		{"desc": tr("A new settlement on the frontier: %s.") % ", ".join(built.map(func(n): return tr(n))), "at": c.site})
-	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [c.plan["plan_id"], what, housing(c.plan)], "contract")
+	sim.add_log(tr("Contract '%s' complete! %s. Housing for %d more.") % [title(c.plan), what, housing(c.plan)], "contract")
 	sim.contract_finished.emit(c)
 
 func _complete_war(c: E.Contract) -> void:
@@ -1528,7 +1548,7 @@ func _complete_war(c: E.Contract) -> void:
 	_disband(c)
 	sim.ranks.deed(ld, "win_war")
 	sim.popup(base_of(c.plan) + Vector2(0, -80), tr("The war party returns!"), Color("#ffb07a"), true)
-	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [c.plan["plan_id"], cname, spoils], "contract")
+	sim.add_log(tr("War contract '%s' complete against the %s: %s.") % [title(c.plan), cname, spoils], "contract")
 	sim.contract_finished.emit(c)
 
 func _complete_research(c: E.Contract) -> void:
@@ -1547,9 +1567,9 @@ func _complete_research(c: E.Contract) -> void:
 	if not fresh:
 		var gives: Dictionary = sim.RULES["research"]["known_gives"]
 		sim.give(gives)
-		sim.add_log(tr("'%s' finished, but %s was already known - the work became %d lore.") % [c.plan["plan_id"], tr(t["name"]), int(gives.get("lore", 0))], "contract")
+		sim.add_log(tr("'%s' finished, but %s was already known - the work became %d lore.") % [title(c.plan), tr(t["name"]), int(gives.get("lore", 0))], "contract")
 	else:
-		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [c.plan["plan_id"], tr(ld.name), tr(t["name"])], "contract", [ld])
+		sim.add_log(tr("Research contract '%s' complete: %s now knows %s.") % [title(c.plan), tr(ld.name), tr(t["name"])], "contract", [ld])
 	sim.contract_finished.emit(c)
 
 ## Back from the search: what they found (c.flags["found"], filled by sim.discover_find).
@@ -1562,14 +1582,14 @@ func _complete_seek(c: E.Contract) -> void:
 		sim.remember(u, (tr("searched %s and found %s on Day %d") % [c.plan.get("place_name", ""), ", ".join(names), sim.day()]) if not found.is_empty() else (tr("searched %s and found nothing new on Day %d") % [c.plan.get("place_name", ""), sim.day()]), 5 if not found.is_empty() else 2)
 		sim.gain_xp(u, skill, 10 if not found.is_empty() else 4)
 	_disband(c)
-	if found.is_empty(): sim.add_log(tr("The search '%s' is over: %s found nothing new in %s.") % [c.plan["plan_id"], tr(ld.name), c.plan.get("place_name", "")], "contract", [ld])
-	else: sim.add_log(tr("The search '%s' is over: %s's crew found %s.") % [c.plan["plan_id"], tr(ld.name), ", ".join(names)], "contract", [ld])
+	if found.is_empty(): sim.add_log(tr("The search '%s' is over: %s found nothing new in %s.") % [title(c.plan), tr(ld.name), c.plan.get("place_name", "")], "contract", [ld])
+	else: sim.add_log(tr("The search '%s' is over: %s's crew found %s.") % [title(c.plan), tr(ld.name), ", ".join(names)], "contract", [ld])
 	sim.contract_finished.emit(c)
 
 func _fail(c: E.Contract, why: String) -> void:
 	c.status = "failed"
 	_disband(c)
-	sim.add_log(tr("Contract '%s' failed: %s") % [c.plan["plan_id"], why], "danger")
+	sim.add_log(tr("Contract '%s' failed: %s") % [title(c.plan), why], "danger")
 
 func _step_text(s: Dictionary) -> String:
 	match s["action"]:

@@ -343,6 +343,10 @@ func test_research_contract() -> void:
 	var bad: Dictionary = sim.contracts.sanitize({"kind": "research", "tech": "bronze", "steps": [{"action": "build", "structure": "hut"}]}, {"kind": "research"}, u)
 	check(bad["ok"] and bad["blueprint"]["tech"] != "bronze" and bad["blueprint"]["steps"].any(func(s): return s["action"] == "experiment"), "out-of-reach idea replaced, experiment step enforced")
 	var c = sim.contracts.create(san["blueprint"], u, "Find new wisdom")
+	check(sim.contracts.title(c.plan) == "Seeking Friction Fire", "the contract's title names the wisdom, not the plan id (%s)" % sim.contracts.title(c.plan))
+	I18N.setup("zh")
+	check(sim.contracts.title(c.plan) == "探求" + I18N.t("Friction Fire"), "the contract's title is translated")
+	I18N.setup("en")
 	var t := 0.0
 	while sim.contracts.is_running(c) and t < 400:
 		_run(sim, 1.0)
