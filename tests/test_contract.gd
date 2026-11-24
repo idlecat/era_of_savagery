@@ -2199,6 +2199,25 @@ func test_ranks() -> void:
 	only.dead = true
 	g.evo.on_death(only)
 	check(g.has_tech("fire"), "a living lore Master keeps a secret whose last knower died")
+	# the naming rite at the fire, and the feathers
+	var n = _new_sim()
+	var hero = n.living().filter(func(o): return o.lv("trade") < 4)[0]
+	hero.pos = D.VILLAGE + Vector2(40, 0)
+	hero.epithet = ""
+	hero.morale = 40.0
+	check(n.ranks.marks(hero).is_empty(), "no rank, no feather")
+	n.ranks.grant(hero.id, "trade")
+	check(n.ranks.rites.size() == 1 and not n.folk.festival_on(), "a rank-up waits for its rite")
+	n.ranks.update(0.05)
+	check(n.ranks.rites.size() == 1 or n.is_day_part("dusk"), "the rite waits for dusk")
+	var guard := 0
+	while not n.is_day_part("dusk") and guard < 4000:
+		n.time += 1.0
+		guard += 1
+	n.ranks.update(0.05)
+	check(n.ranks.rites.is_empty() and n.folk.festival_on(), "at dusk the tribe dances the rite by the fire")
+	check(hero.morale > 40.0 and hero.epithet == n.ranks.def("trade", "proven")["title"], "the named one is lifted and takes the title as an epithet")
+	check(n.ranks.marks(hero).size() == 1 and not n.ranks.marks(hero)[0]["master"], "a Proven trader wears one feather")
 
 func test_policies() -> void:
 	print("\n== The Council's policies (config/policies.json) ==")

@@ -2260,4 +2260,7 @@ const STRINGS := {
 	"War Chief (%s)": "战争首领（%s）",
 	"Only one who has proven themselves in battle can be War Chief.": "只有在战斗中证明过自己的人才能担任战争首领。",
 	"[color=#8a7a60]  then: %s[/color]\n": "[color=#8a7a60]  届时：%s[/color]\n",
+	"Naming Rite": "命名礼",
+	"By the fire the whole tribe gathers to name %s a %s.": "全族聚集在火堆旁，授予%s“%s”之名。",
+	"I will not shame this name.": "我不会辱没这个名号。",
 }

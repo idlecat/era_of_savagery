@@ -38,6 +38,21 @@
   "long_treaties": {"skill": "trade", "rank": "master", "desc": "Treaties they seal last half again as long", "mult": 1.5}
  },
  "blocked": "Needs a %s",
+ "_rite_doc": "A rank-up is named before the tribe at a rite by the fire: at the next dusk when the person is at home (within `reach` of the village, not away on a contract or errand, no emergency, no festival under way), the rite's `actions` run (story.run actions; vars: who (the person, for \"$who\"), name, title, festival (the rite's name, for the festival action's dancing ring)). epithet: someone without an epithet takes the rank title as one. marks: the colour of the feather each skill's rank puts in a person's hair (world_view; a Master's is longer with a gold tip).",
+ "rite": {
+  "name": "Naming Rite",
+  "reach": 420,
+  "epithet": true,
+  "actions": [
+   {"festival": {"length": 25, "glow_days": 0}},
+   {"log": ["By the fire the whole tribe gathers to name %s a %s.", "name", "title"], "kind": "story"},
+   {"mood": 4},
+   {"morale": 20, "who": "$who"},
+   {"say": "I will not shame this name.", "who": "$who"},
+   {"sound": "fanfare"}
+  ]
+ },
+ "marks": {"forage": "#7fbf5a", "craft": "#c08a4a", "combat": "#d0503c", "lore": "#9a7fe0", "trade": "#4fa8d8"},
  "first_feat": true,
  "log": "%s has proven themselves: now a %s!",
  "popup": "RANK! %s",

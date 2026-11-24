@@ -16,6 +16,8 @@ var C: Dictionary = preload("res://scripts/config.gd").load_cfg("ranks")
 var sim
 ## The rank gates are enforced (tests switch them off to keep older rules; C["gates"]).
 var gates := true
+## Rank-ups waiting for their naming rite at the fire: [{id, skill, rank}].
+var rites: Array = []
 
 func _init(s) -> void:
 	sim = s
@@ -113,6 +115,7 @@ func _rank_up(u: E.Unit, skill: String) -> void:
 	sim.remember(u, tr(C["remember"]) % [t, sim.day()], 8)
 	sim.add_log(tr(C["log"]) % [tr(u.name), t], "story", [u])
 	sim.life.praise(u, "level_up")
+	if C.has("rite") and u.role != "child": rites.append({"id": u.id, "skill": skill, "rank": r})
 	if C.get("first_feat", true) and not _held_by_other(u, skill, r):
 		sim.inv.feat("rank", tr("The first %s") % t, u, {"desc": tr(def(skill, r).get("desc", ""))})
 	if r == rank_ids()[0]: # their first rank: whoever they learned under taught them
@@ -135,6 +138,38 @@ func learned_under(u: E.Unit, leader: E.Unit, skill: String) -> void:
 	if u == null or leader == null or u == leader: return
 	if not u.mentors.has(skill): u.mentors[skill] = []
 	if not leader.id in u.mentors[skill]: u.mentors[skill].append(leader.id)
+
+# ------------------------------------------------------------ the naming rite
+## Hold the next waiting rite at dusk, once its person is home (config "rite").
+func update(_dt: float) -> void:
+	if rites.is_empty() or not sim.is_day_part("dusk") or sim.crisis.active() or sim.folk.festival_on(): return
+	for i in rites.size():
+		var u = sim.unit_by_id(int(rites[i]["id"]))
+		if u == null or u.dead:
+			rites.remove_at(i)
+			return
+		if u.role != "" or u.pos.distance_to(D.VILLAGE) > float(C["rite"].get("reach", 420)): continue
+		var r: Dictionary = rites[i]
+		rites.remove_at(i)
+		hold_rite(u, r["skill"], r["rank"])
+		return
+
+## The naming rite for u's rank in `skill` (also a game master's operation).
+func hold_rite(u: E.Unit, skill: String, rank_id: String) -> void:
+	if u == null or u.dead or not C.has("rite"): return
+	var t: String = tr(def(skill, rank_id).get("title", rank_id))
+	if C["rite"].get("epithet", true) and u.epithet == "": u.epithet = def(skill, rank_id).get("title", "")
+	sim.story.run(C["rite"]["actions"], null, {"who": "id:%d" % u.id, "name": tr(u.name), "title": t, "festival": tr(C["rite"]["name"])})
+
+## The feather colours of u's ranks, highest first: [{color, master}] (world_view draws them).
+func marks(u: E.Unit) -> Array:
+	var out: Array = []
+	var top: String = rank_ids()[-1]
+	for skill in D.SKILLS:
+		var r := rank(u, skill)
+		if r != "": out.append({"color": Color(str(C.get("marks", {}).get(skill, "#e8d8b0"))), "master": r == top})
+	out.sort_custom(func(a, b): return a["master"] and not b["master"])
+	return out
 
 # ------------------------------------------------------------ what ranks unlock
 ## A gate's entry in config ({skill, rank, desc, ...}), or {}.
@@ -200,4 +235,4 @@ func summary() -> Dictionary:
 			if trial_open(u, skill): ready.append({"who": u.name, "skill": skill, "rank": next_rank(u, skill), "trial": def(skill, next_rank(u, skill)).get("desc", "")})
 	var open := {}
 	for id in C.get("gates", {}): open[id] = tribe_has(id)
-	return {"held": held, "ready": ready, "gates": open}
+	return {"held": held, "ready": ready, "gates": open, "rites_waiting": rites.size()}

@@ -245,8 +245,12 @@ those knobs, not new mechanics:
 > craft gate (upgrades, renovations, bronze), the lore keeper, war leaders and War Chief,
 > longer treaties. Deviation: War Chief needs a *Proven* warrior, not a Master — a Master
 > needs a war won, which would leave most runs without a War Chief. The lore Proven row
-> (healer, wise one) stays at lore 3 as H1 says (reachable by work). **Not yet:** H2's
-> fire-side initiation and sprite mark; trials set up through contracts with the A0
+> (healer, wise one) stays at lore 3 as H1 says (reachable by work).
+> **Third slice (H2):** the naming rite — at the next dusk the person is home, the
+> tribe dances in a ring by the fire (`ranks.json` `rite`: story actions), the person's
+> spirits lift and an empty epithet takes the title; one feather per ranked skill in
+> the hair (drawn over the sprite, colours in `marks`; a Master's is long and
+> gold-tipped), so no rebake. **Not yet:** trials set up through contracts with the A0
 > forecast; a director mercy if the last Proven crafter dies (watch it in G1).
 
 Levelling exists (`sim.gain_xp`: five skills, Lv 0–10, a Lv-5 unlock from

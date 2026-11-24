@@ -1960,6 +1960,7 @@ func tick(dt: float) -> void:
 			if wear[k] > 0.0: wear[k] *= 0.996
 	_update_vice(dt)
 	improve.update(dt)
+	ranks.update(dt)
 	policy.update(dt)
 	crisis.update(dt)
 	director.update(dt)

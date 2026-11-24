@@ -248,7 +248,11 @@ func _debug_shot(args: Dictionary) -> void:
 	match args.get("demo", ""):
 		"sheet":
 			hud._close_modal()
-			world.select_only(sim.unit_by_name("Panshi"))
+			var ps = sim.unit_by_name(args.get("who", "Panshi"))
+			for sk in str(args.get("rank", "")).split(",", false): # (--rank=craft,combat: give them ranks; twice = Master)
+				sim.ranks.grant(ps.id, sk)
+			sim.ranks.rites.clear()
+			world.select_only(ps)
 		"negotiate":
 			hud._close_modal()
 			world.select_only(sim.unit_by_name(args.get("who", "Panshi")))

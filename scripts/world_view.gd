@@ -1900,6 +1900,7 @@ func _draw_unit(u) -> void:
 		ci.draw_circle(hip + Vector2(0, -6), 2.5, Color("#d49a3a"))
 	if u.title != "":
 		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-4, -5), head + Vector2(-1, -11), head + Vector2(0, -5.5), head + Vector2(2, -12), head + Vector2(4, -5)]), Color("#e8c25a"))
+	_rank_feathers(u, head + Vector2(-3 * f, -3), f)
 	if u.sick > 0: # fever: green, sweating
 		ci.draw_circle(head + Vector2(-1, -1), 4.6, Color(0.55, 0.85, 0.35, 0.45))
 		for i in 2:
@@ -1971,6 +1972,20 @@ func _zzz(at: Vector2, seed_: int) -> void:
 const DOING_ANIM := {"fight": "attack", "ritual": "ritual", "dance": "ritual", "pick": "gather", "craft": "gather", "watch": "gather",
 	"build": "build", "experiment": "build", "paint": "build", "chop": "chop", "butcher": "chop", "quarry": "chop"}
 
+## The feathers a person's ranks put in their hair (ranks.marks): one per ranked skill,
+## fanned out behind the head; a Master's is longer and gold-tipped.
+func _rank_feathers(u, at: Vector2, f: float) -> void:
+	var ms: Array = sim.ranks.marks(u)
+	for i in mini(ms.size(), 3):
+		var m: Dictionary = ms[i]
+		var ln: float = 10.0 if m["master"] else 7.0
+		var dir := Vector2(-0.35 * f - i * 0.3 * f, -1).normalized()
+		var tip: Vector2 = at + dir * ln
+		var side := Vector2(-dir.y, dir.x) * 1.6
+		ci.draw_colored_polygon(PackedVector2Array([at, at + dir * ln * 0.5 + side, tip, at + dir * ln * 0.5 - side]), m["color"])
+		ci.draw_line(at, tip, m["color"].darkened(0.35), 0.8)
+		if m["master"]: ci.draw_circle(tip, 1.4, Color("#ffd36b"))
+
 func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
 	var di := _dir_index(key)
 	var anim := "idle"
@@ -1996,6 +2011,7 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 			ci.draw_circle(head + Vector2(5 - i * 10, -5 - 12 * kk), 1.4, Color(0.6, 0.9, 0.4, 1.0 - kk))
 	if u.title != "":
 		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-3.5, -3), head + Vector2(-1, -9), head + Vector2(0, -3.5), head + Vector2(2, -10), head + Vector2(3.5, -3)]), Color("#e8c25a"))
+	_rank_feathers(u, head + Vector2(-2.5 * f, -2), f)
 	if u.carry_amt > 0:
 		var bk := hip + Vector2(-5 * f, -6)
 		if u.carry_type == "wood":
