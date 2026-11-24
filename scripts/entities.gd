@@ -61,6 +61,8 @@ class Unit:
 	var kills: int = 0
 	var deeds: Dictionary = {} # deed -> count: the record rank trials are checked against (ranks.gd)
 	var mentors: Dictionary = {} # skill -> ids of the leaders they worked under (ranks.learned_under)
+	var career: String = "" # the trade they live by (careers.gd; "" = none, they do whatever is asked)
+	var calling: Dictionary = {} # career id -> points from the work they have done (careers.gd)
 	var resume_job: Dictionary = {}
 	var resume_key: String = ""
 	var resume_t: float = 0.0

@@ -976,6 +976,7 @@ func _refresh_left_content() -> void:
 		if not foes.is_empty(): s += tr("[color=#b8a888]At odds with:[/color] %s\n") % names.call(foes)
 		var mourned = sim.unit_by_id(u.mourn_id)
 		if u.grief > 1.0 and mourned: s += tr("[color=#b8a888]Mourning:[/color] %s\n") % tr(mourned.name)
+	if u.role != "child": s += _career_line(u)
 	var knows: Array = sim.evo.known_by(u).map(func(id): return tr(sim.evo.tech_def(id)["name"]))
 	s += tr("[color=#b8a888]Knows:[/color] %s\n\n") % (", ".join(knows) if not knows.is_empty() else tr("[color=#8a7a60]only the old ways[/color]"))
 	s += tr("[color=#ffd36b]SPECIALIZATIONS[/color]\n")
@@ -1024,6 +1025,18 @@ func _refresh_left_content() -> void:
 	sheet_weapon_btn.visible = not child and not u.dead
 	var wnow: Dictionary = sim.arms.wielded(u)
 	sheet_weapon_btn.text = (tr("Carry: %s") % tr(str(sim.arms.def(u.wield)["name"]))) if u.wield != "" else (tr("Carry: own choice (%s)") % tr(str(wnow.get("name", "Club"))))
+
+## The sheet's line about u's trade: the career they live by, or the calling growing in them.
+func _career_line(u) -> String:
+	var cr = sim.careers
+	if u.career != "":
+		return tr("[color=#b8a888]Trade:[/color] [color=#bfe39a]%s[/color] [color=#8a7a60]- %s[/color]\n") % [tr(cr.title(u)), tr(cr.def(u.career).get("desc", ""))]
+	var tc: Array = cr.top_calling(u)
+	if tc[0] == "" or float(tc[1]) < float(cr.C["take"]) * 0.2: return ""
+	var pct := roundi(100.0 * minf(1.0, float(tc[1]) / float(cr.C["take"])))
+	var why: String = {"closed": tr("the tribe has no such trade yet"), "places": tr("the tribe can't spare more hands"),
+		"full": tr("the tribe has enough of them"), "skill": tr("not yet skilled enough")}.get(cr.block(u, tc[0]), "")
+	return tr("[color=#b8a888]Calling:[/color] %s %d%%%s\n") % [tr(cr.def(tc[0]).get("name", tc[0])), pct, (tr(" [color=#8a7a60](%s)[/color]") % why) if why != "" else ""]
 
 ## The sheet's weapons: each the tribe has (and those it can't use yet), the person's
 ## mastery and knack, and what they carry.
@@ -2491,7 +2504,7 @@ func _open_legacy() -> void:
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"], "challenge": ["Challenge", "#ffd36b"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"], "challenge": ["Challenge", "#ffd36b"], "career": ["Trade", "#bfe39a"],
 	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)
@@ -2536,7 +2549,7 @@ func open_achievements() -> void:
 ## up and wait while any other dialog (an event, a negotiation) is open.
 const SETTINGS_CFG := "user://settings.cfg"
 const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
-	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "challenge": "✪", "story": "☼", "tale": "❦", "hero": "★"}
+	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "challenge": "✪", "career": "⚒", "story": "☼", "tale": "❦", "hero": "★"}
 
 func _feat_pref() -> bool:
 	var cf := ConfigFile.new()

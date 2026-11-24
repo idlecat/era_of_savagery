@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -98,6 +98,7 @@ func _new_sim():
 	s.life.on = false # (nor everyday life: meals, idle acts, spirits, speech; test_life switches it on)
 	s.ranks.gates = false # (nor rank gates on upgrades, bronze, taming, war leaders; test_ranks switches them on)
 	s.challenges.on = false # (nor the council's challenges; test_challenges switches them on)
+	s.careers.on = false # (nor careers taken up by themselves; test_careers switches them on)
 	s.opening = false # (nor the opening's remembered find and first-day fever; test_opening switches it on)
 	s.new_game()
 	return s
@@ -358,7 +359,7 @@ func test_translations() -> void:
 	var letters := RegEx.create_from_string("[A-Za-z]{2}")
 	var markup := RegEx.create_from_string("\\[/?[a-z_]+(=[^\\]]*)?\\]|%[-+0-9.]*[dsf]")
 	var missing: Array = []
-	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen", "culture", "cultures", "inventions", "life"]:
+	for f in ["sim", "contract_system", "evolution", "hazards", "nature", "folk", "rivals", "legacy", "hud", "world_view", "persona_engine", "llm_client", "new_game_ui", "story", "mapgen", "culture", "cultures", "inventions", "life", "careers"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		for m in re.search_all(src):
 			var k := m.get_string(1).c_unescape()
@@ -374,7 +375,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons", "challenges"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons", "challenges", "careers"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])
@@ -2883,6 +2884,95 @@ func test_era3_buildings() -> void:
 	sim.ranks.grant(u.id, "craft")
 	sim.ranks.grant(u.id, "craft")
 	check(sim.struct_block("grand_altar") == "", "with a Master Builder it can be raised")
+func test_careers() -> void:
+	print("\n== Careers emerge as the tribe develops (config/careers.json) ==")
+	var sim = _new_sim()
+	var K = sim.careers
+	K.on = true
+	for p in sim.predators: p.fled = true
+	var cfg: Dictionary = preload("res://scripts/config.gd").load_cfg("careers")
+	var bad: Array = []
+	for id in K.ids():
+		var d: Dictionary = K.def(id)
+		if not d.get("skill", "") in D.SKILLS or d.get("from", {}).is_empty() or not _Story.bad_keys(d.get("open", {}), _Story.COND_TYPES).is_empty(): bad.append(id)
+	check(bad.is_empty(), "every career has a skill, a calling and a well-formed opening %s" % [bad])
+	var n: int = K.adults().size()
+	check(K.places() == (0 if n < int(cfg["min_pop"]) else floori(n * float(cfg["share"]["1"]))), "specialist places follow the tribe's size (%d of %d)" % [K.places(), n])
+	sim.techs.erase("tools")
+	check(not K.is_open("woodcutter") and K.block(sim.living()[0], "woodcutter") == "closed", "before stone tools nobody can live by the axe")
+	var u = sim.living().filter(func(o): return o.role == "")[0]
+	u.calling["woodcutter"] = float(cfg["take"]) * 2.0
+	K.update(1.1)
+	check(u.career == "", "a strong calling waits while the trade is closed")
+	sim.techs["tools"] = true
+	var feats0: int = sim.inv.feats.size()
+	K.update(1.1)
+	check(K.opened.has("woodcutter"), "the tribe notes when a trade first opens")
+	check(u.career == "woodcutter", "with tools, the one who has chopped most becomes a Woodcutter")
+	check(sim.inv.feats.size() == feats0 + 1 and sim.inv.feats[-1]["kind"] == "career", "the tribe's first of a trade is an achievement")
+	var v = sim.living().filter(func(o): return o != u and o.role == "")[0]
+	v.calling = {"woodcutter": float(cfg["take"]) * 1.1, "stonecutter": float(cfg["take"])}
+	K.update(1.1)
+	check(v.career == "", "a calling that isn't clearly theirs doesn't make a career")
+	# the calling grows from the work itself
+	var w = sim.living().filter(func(o): return o != u and o != v and o.role == "")[0]
+	w.calling.clear()
+	sim.assign_gather(w, "wood")
+	for i in 400: sim.tick(0.05)
+	check(float(w.calling.get("woodcutter", 0.0)) > 0.0 and not w.calling.has("hunter"), "chopping grows the woodcutter's calling (%s)" % str(w.calling))
+	# a career's work goes faster and they go to it by themselves
+	var tree = sim.find_node("wood", u.pos, D.region_at(u.pos), 5000.0)
+	sim.assign_gather(u, "wood", {"node_id": tree.id})
+	u.doing = "chop"
+	check(is_equal_approx(K.work_mult(u), float(cfg["work_mult"])), "a Woodcutter chops %.2fx as fast" % K.work_mult(u))
+	u.job = {}
+	u.doing = ""
+	check(is_equal_approx(K.work_mult(u), 1.0), "away from their trade they are like anyone")
+	u.pos = u.home
+	sim.time = 10.0
+	check(not K.self_work(u), "a moment's rest first")
+	sim.time += float(cfg["idle_secs"]) + 0.1
+	check(K.self_work(u) and u.job.get("type", "") == "gather" and u.job.get("res", "") == "wood", "then, idle by day, a Woodcutter goes to the trees by themselves")
+	var tr_n = sim.find_node("food", u.home, D.region_at(u.home), 5000.0, ["deer"])
+	check(tr_n == null or tr_n.kind == "deer", "a trade can look for its own kind of game")
+	# lapsing, naming, releasing
+	u.calling["woodcutter"] = float(cfg["keep"]) - 1.0
+	K.update(1.1)
+	check(u.career == "", "a trade they stop practising lapses")
+	check(K.set_career(u.id, "no_such") == "unknown" and K.set_career(-5, "woodcutter") == "unknown", "unknown careers and people are refused")
+	check(K.set_career(u.id, "artisan") in ["closed", "skill"], "a game master can't name someone to a trade the tribe doesn't have")
+	check(K.set_career(u.id, "woodcutter") == "" and u.career == "woodcutter", "the chieftain can name someone to an open trade")
+	check(K.set_career(u.id, "woodcutter") == "already", "naming twice does nothing")
+	check(K.release(u.id) and u.career == "" and not K.release(u.id), "and release them")
+	K.update(1.1)
+	check(u.career == "", "a released calling doesn't come back by itself")
+	sim.story.run([{"career": "woodcutter", "who": "id:%d" % u.id}], null)
+	check(u.career == "woodcutter" and sim.story.holds({"career": "woodcutter"}) and not sim.story.holds({"career": "hunter"}), "story actions and conditions name trades")
+	sim.story.run([{"career": "", "who": "id:%d" % u.id}, {"career": 7}], null)
+	check(u.career == "", "an empty career releases; a malformed one is skipped")
+	# places are limited
+	for o in K.adults(): o.career = "woodcutter" if o != u else ""
+	check(K.block(u, "woodcutter") in ["places", "full"], "no more places: the trade waits")
+	for o in K.adults(): o.career = ""
+	var kid = sim.folk.make_child("Test Kid", u)
+	sim.units.append(kid)
+	check(K.block(kid, "woodcutter") == "child", "children have no trade")
+	# the Steward leaves them to it
+	u.career = "woodcutter"
+	u.calling["woodcutter"] = float(cfg["take"])
+	u.job = {}
+	u.pos = u.home
+	sim.stock["food"] = 999.0
+	sim.appoint(sim.living().filter(func(o): return o != u and o.role == "")[0], "steward")
+	sim.vice_timer = 0.0
+	sim._update_vice(0.1)
+	check(u.job.get("type", "") == "gather" and u.job.get("res", "") == "wood", "the Steward leaves a Woodcutter to the trees")
+	var sm: Dictionary = K.summary()
+	check(sm["held"].get(u.name, "") == "woodcutter" and "woodcutter" in sm["open"], "the summary says who lives by which trade")
+	check(sim.evo.world_ctx().has("trades_people_live_by"), "and the LLM prompts hear of it")
+	check(sim.check_invariants().is_empty(), "no invariant broken (%s)" % str(sim.check_invariants()))
+	u.career = "nonsense"
+	check(sim.check_invariants().size() == 1, "an unknown career is caught")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
