@@ -12,6 +12,7 @@ const Nature = preload("res://scripts/nature.gd")
 const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
 const Ranks = preload("res://scripts/ranks.gd")
+const Careers = preload("res://scripts/careers.gd")
 const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
@@ -102,6 +103,7 @@ var nat: Nature
 var folk: Folk
 var challenges: Challenges
 var ranks: Ranks # ranks earned by deeds: trials gate the levels past routine work (ranks.gd)
+var careers: Careers # trades people come to live by as the tribe develops (careers.gd)
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
 var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
@@ -134,6 +136,7 @@ func _init() -> void:
 	challenges = Challenges.new(self)
 	improve = Improve.new(self)
 	ranks = Ranks.new(self)
+	careers = Careers.new(self)
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
 	director = Director.new(self)
@@ -579,6 +582,7 @@ func unit_atk(u: E.Unit) -> float:
 	elif knows_find("obsidian"): a *= 1.15 # black-glass blades
 	if struct_near("weapon_rack", u.pos, 160): a *= 1.2
 	a *= arms.atk_mult(u) # (the weapon they carry, and how well they know it)
+	a *= careers.atk_mult(u) # (a warrior by trade)
 	if u.role == "contract":
 		var c = contracts.by_id(u.contract_id)
 		if c and c.flags.get("blessed", false): a *= 1.15 # the war dance
@@ -605,9 +609,9 @@ func unit_speed(u: E.Unit) -> float:
 	if evo.has_trad("wayfinders"): s *= 1.1
 	s *= hz.speed_mult() * inv.mul("speed")
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
-	return s * roads.speed_at(u.pos) * life.speed_mult(u) # (trails and roads; weariness, hurry)
+	return s * roads.speed_at(u.pos) * life.speed_mult(u) * careers.speed_mult(u) # (trails and roads; weariness, hurry; a scout at their trade)
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u)
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u)
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, each Granary FOOD_STORE_GRANARY more;
 ## anything over that rots at FOOD_ROT per second (config/rules.json "survival").
@@ -731,7 +735,8 @@ func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void:
 ## AoE2-DE-style auto-scout: keep walking to the nearest unexplored land.
 func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
-func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResNode:
+## `kinds`: only nodes of these kinds (a career's trade); [] = any.
+func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Array = []) -> E.ResNode:
 	var best: E.ResNode = null
 	var best_score := INF
 	var claims_of := {} # node id -> people already working it (counted once, not per node)
@@ -739,7 +744,7 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float) -> E.ResN
 		if not u.dead and u.job.has("node_id"): claims_of[u.job["node_id"]] = claims_of.get(u.job["node_id"], 0) + 1
 	var prefer := {} # kind -> the ways' preference (looked up once per kind)
 	for n in nodes_of(res):
-		if n.amount < 1: continue
+		if n.amount < 1 or (not kinds.is_empty() and not n.kind in kinds): continue
 		var d: float = n.pos.distance_to(from) # (cheap checks first: thousands of trees in a forest)
 		if d > max_dist: continue
 		if n.kind == "boulder" and not has_tech("tools"): continue
@@ -1383,6 +1388,10 @@ func _send_herder() -> void:
 	var ps := pens()
 	if ps.is_empty(): return
 	var best := _nearest_spare(ps[0].pos, INF)
+	for u in living(): # a herder goes first, if one is free
+		if careers.is_preferred(u, "tend") and spare_hand(u) >= 0:
+			best = u
+			break
 	if best == null: return
 	set_aside(best)
 	set_job(best, {"type": "tend", "pen_id": ps[0].id, "t": 0.0})
@@ -1675,6 +1684,7 @@ func dry_spot(p: Vector2) -> Vector2:
 	return out if D.region_at(out) == D.region_at(p) else p
 
 func unit_idle(u: E.Unit, dt: float) -> void:
+	if careers.self_work(u): return # (someone with a trade goes to it by themselves)
 	if life.on and u.role == "" and D.same_side(u.pos, u.home): # (the idle acts of config/life.json)
 		life.idle(u, dt)
 		return
@@ -2043,6 +2053,7 @@ func tick(dt: float) -> void:
 	folk.update(dt)
 	challenges.update(dt)
 	life.update(dt)
+	careers.update(dt)
 	rivals.update(dt)
 	legacy.update(dt)
 	wear_t -= dt
@@ -2199,6 +2210,7 @@ func check_invariants() -> Array:
 		if u.hp > u.max_hp + 0.01 or is_nan(u.hp): bad.append("%s has hp %.1f of %.1f" % [u.name, u.hp, u.max_hp])
 		if u.morale < -0.01 or u.morale > 100.01: bad.append("%s has morale %.1f" % [u.name, u.morale])
 		if u.fatigue < -0.01 or u.fatigue > 100.01: bad.append("%s has fatigue %.1f" % [u.name, u.fatigue])
+		if u.career != "" and (careers.def(u.career).is_empty() or u.role == "child"): bad.append("%s has career %s" % [u.name, u.career])
 		if u.role == "contract" and contracts.by_id(u.contract_id) == null: bad.append("%s is on missing contract %d" % [u.name, u.contract_id])
 		for j in [u.job, u.resume_job]:
 			var dc = contracts.by_id(int(j.get("dropoff", -1)))
@@ -2230,8 +2242,9 @@ func _update_vice(dt: float) -> void:
 				if s.paid and ((not s.built and s.owner == "village" and not settler) or (s.reno and ours(s) and settlement_of(s.pos) == settlement_of(u.home))):
 					unbuilt = s
 					break
-			var choice: String
 			var sw: Dictionary = vc["steward"]
+			if careers.on and stock["food"] >= pop * float(careers.C["steward_food_per_head"]) and careers.go_work(u): continue # (those with a trade are left to it while the stores are healthy)
+			var choice: String
 			var want := _steward_want(u) if stock["food"] >= pop * float(sw["food_per_head"]) and steward_policy != "lore" else "" # (short of stone, herbs, ore...)
 			if unbuilt and randf() < float(sw["build_chance"]): choice = "build"
 			elif stock["food"] >= pop * float(sw["food_per_head_art"]) and stock["wood"] >= float(sw["art_wood"]) and randf() < float(sw["art_chance"]): choice = "art" # (stores are healthy: time for crafts)
@@ -2263,7 +2276,9 @@ func _update_vice(dt: float) -> void:
 			if need > 0:
 				var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack" and not in_hut(u) and u.sick <= 0.0 \
 					and u.hp >= u.max_hp * float(vc["min_hp"]) and u.pos.distance_to(foe.pos) < float(vc["reach"]) and D.same_side(u.pos, foe.pos))
-				fighters.sort_custom(func(a, b): return a.lv("combat") > b.lv("combat"))
+				fighters.sort_custom(func(a, b):
+					if careers.is_preferred(a, "warchief") != careers.is_preferred(b, "warchief"): return careers.is_preferred(a, "warchief") # (warriors first)
+					return a.lv("combat") > b.lv("combat"))
 				for u in fighters.slice(0, need):
 					set_aside(u) # (back to work once the beast is dealt with)
 					assign_attack(u, foe, u.job_key)

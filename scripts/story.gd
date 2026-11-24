@@ -8,7 +8,8 @@
 ##         type), devotion / mood (at least), deaths (dead at least), after (an event that
 ##         has happened: "flood", "eclipse", "eruption", "festival", "chosen", "era2"...),
 ##         culture {axis: value} (at least, or at most for a negative value),
-##         told (tale id), joined (person id), happened (culture event id)
+##         told (tale id), joined (person id), happened (culture event id),
+##         career (someone living holds that career: config/careers.json)
 ##   do:   {"event": id} a dilemma (sim.event_def), {"log": text, "kind", "arg": "plan"},
 ##         {"alert": text, "at", "level"}, {"spawn": "tiger"|"wolf", "at", "offsets"},
 ##         {"give": {res: n}} (negative takes), {"reveal": at, "r"}, {"flag": name},
@@ -20,7 +21,8 @@
 ##         {"tale": tale id} (told now), {"join": person id} (a culture's people arrive),
 ##         {"prepare": {stat: mult}} (for the coming winter: hz.prepare), {"slaughter": n} (oxen, 0 = all),
 ##         {"ledger": kind, "clan"} (written into the clan's ledger: rivals.note),
-##         {"wield": weapon id, "who"} ("" = their own choice), {"arms_xp": {weapon: n}, "who"} (sim.arms)
+##         {"wield": weapon id, "who"} ("" = their own choice), {"arms_xp": {weapon: n}, "who"} (sim.arms),
+##         {"career": career id, "who"} (named to it: careers.set_career; "" releases them)
 ## The culture system (culture.gd) runs its events and tales through holds() and run() too.
 ##
 ## Dilemmas share one data format, run by dilemma_view()/dilemma_choose() for culture
@@ -81,6 +83,7 @@ func holds(w: Dictionary) -> bool:
 	if w.has("friend_any") and bool(w["friend_any"]) != sim.rivals.clans.keys().any(func(id): return sim.rivals.clans[id]["met"] and sim.rivals.stance(id) in ["Friendly", "Trusted", "Allied", "Vassal"]): return false
 	if w.has("outposts") and sim.contracts.list.filter(func(k): return k.kind == "settle" and k.status == "done").size() < int(w["outposts"]): return false
 	if w.has("flag") and not sim.flags.has(w["flag"]): return false
+	if w.has("career") and sim.careers.holders(str(w["career"])).is_empty(): return false
 	if w.has("found") and not sim.landmarks.any(func(l): return l["id"] == w["found"] and l["found"]): return false
 	if w.has("met_any") and bool(w["met_any"]) != sim.rivals.clans.values().any(func(c): return c["met"]): return false
 	if w.has("met"):
@@ -130,7 +133,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "career"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -143,11 +146,11 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "career": "str"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "wood": "num", "fewer": "nums", "deaths": "num", "culture": "nums",
-	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num"}
+	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "career": "str"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6
@@ -271,6 +274,10 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 				for k in a["xp"]: sim.gain_xp(u, k, float(a["xp"][k]))
 		if a.has("wield"):
 			for u in people(a.get("who", "all"), vars): sim.arms.set_wield(u, str(a["wield"]))
+		if a.has("career"):
+			for u in people(a.get("who", ""), vars):
+				if str(a["career"]) == "": sim.careers.release(u.id)
+				else: sim.careers.set_career(u.id, str(a["career"]))
 		if a.has("arms_xp"):
 			for u in people(a.get("who", "all"), vars):
 				for k in a["arms_xp"]: sim.arms.practice(u, str(k), float(a["arms_xp"][k]))

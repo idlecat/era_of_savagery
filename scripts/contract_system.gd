@@ -62,6 +62,7 @@ func leader_profile(u: E.Unit) -> Dictionary:
 	for t in u.traits: traits.append("%s (%s)" % [tr(D.TRAITS[t]["name"]), tr(D.TRAITS[t]["desc"])])
 	return {
 		"name": tr(u.name), "epithet": tr(u.epithet), "personality": traits, "archetype": sim.arch(u),
+		"trade": tr(sim.careers.title(u)) if u.career != "" else tr("none: they do whatever is asked"),
 		"level": sim.unit_level(u), "skills": skills,
 		"hp": "%d/%d" % [roundi(u.hp), roundi(u.max_hp)], "hunger": "%d%%" % roundi(u.hunger),
 		"memory_stream": mem,

@@ -270,4 +270,5 @@ func world_ctx() -> Dictionary:
 		"everyday_inventions": sim.inv.known.keys().map(func(id): return tr(sim.inv.def(id)["name"])),
 		"the_ways_the_tribe_lives_by": sim.policy.in_words() if sim.policy else [],
 		"the_land": "%s: %s" % [tr(D.LAND.get("name", "")), tr(D.LAND.get("desc", ""))] if D.LAND.has("name") else "",
+		"trades_people_live_by": sim.careers.in_words() if sim.careers else {},
 	}.merged(sim.cult.ctx())
