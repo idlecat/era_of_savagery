@@ -309,5 +309,53 @@
    "treaty": 8.0,
    "teach": 0.6
   }
+ },
+
+ "ledger": {
+  "_doc": "What passed between us and each clan, dated (rivals.note; make_it_fun C1): our deeds to them (the deeds above, their reason as the words) and these kinds: text in the chief's words (vars in order), weight (+ good for us, - bad). The chief brings up the weightiest (|weight| at least quote_min, fading with age: half its pull after half_days days) in dilemmas with the clan and when the offline chief answers an envoy: quote (when, text) and a closing remark from tags (bad/good; _inherited for what happened under the chief before, %s = that chief). keep: entries kept per clan. dates: how a date is said (%s = the season).",
+  "keep": 24, "quote_min": 5, "half_days": 6,
+  "quote": "%s, %s.",
+  "dates": {"today": "today", "this": "this %s", "last": "last %s", "long": "in the %s of Year %d"},
+  "tags": {
+   "bad": ["We have not forgotten.", "My people remember.", "That is not forgiven."],
+   "good": ["We remember it.", "That was well done."],
+   "bad_inherited": ["%s told me of it before the end.", "%s did not forgive it, and nor do I."],
+   "good_inherited": ["%s spoke well of you for it.", "%s remembered it, and so do I."]
+  },
+  "kinds": {
+   "raided": {"text": "our warriors came to your fire with spears", "weight": -4},
+   "stole": {"text": "we took %s food from your stores", "weight": -3},
+   "killed_ours": {"text": "our warriors killed %s of your people", "weight": -6},
+   "sealed": {"text": "we struck a bargain at my fire: %s", "weight": 8},
+   "allied": {"text": "we swore to stand together: %s", "weight": 15},
+   "traded": {"text": "you traded fairly with our trader", "weight": 4},
+   "feasted": {"text": "you shared your feast with us", "weight": 6},
+   "gifts": {"text": "you came to us with gifts", "weight": 8},
+   "showed_strength": {"text": "you came to us showing your spears", "weight": -2},
+   "paid": {"text": "you paid what we asked", "weight": 5},
+   "refused": {"text": "you sent our messenger away empty-handed", "weight": -6},
+   "answered_call": {"text": "you came when we called you to war", "weight": 12},
+   "sent_gifts": {"text": "you sent gifts instead of warriors", "weight": 2},
+   "left_alone": {"text": "you left us to fight alone", "weight": -10},
+   "spared": {"text": "you spared us when you could have crushed us", "weight": 15},
+   "took_tribute": {"text": "you crushed us under a heavy tribute", "weight": -15}
+  }
+ },
+
+ "chiefs": {
+  "_doc": "Rival chiefs as people (rivals.gd; make_it_fun C1). A chief rules reign_days (a range), then dies and a successor takes the seat (rivals.succeed, also a game master's verb): a name and epithet from names for the clan's culture, another temper, and the relation drawn reset of the way to the clan's base + the new temper's base. The ledger stays: the successor inherits it. tempers: word (how the chronicle names it), base (added to the relation the clan drifts to), hostility (raid hostility mult), deal (added to how good a parley deal looks to them). first: the first chief's temper by culture. log: the succession (old chief, clan, new chief, epithet, temper word).",
+  "reign_days": [16, 28],
+  "reset": 0.5,
+  "first": {"martial": "wary", "spiritual": "wary"},
+  "tempers": {
+   "wary": {"word": "wary", "base": 0, "hostility": 1.0, "deal": 0},
+   "proud": {"word": "proud and quick to anger", "base": -10, "hostility": 1.3, "deal": -8},
+   "open": {"word": "open-handed", "base": 10, "hostility": 0.75, "deal": 8}
+  },
+  "log": "%s, chief of the %s, has died. %s %s leads them now: %s.",
+  "names": {
+   "martial": [["Harn", "the Young Spear"], ["Ruk", "Iron-Jaw"], ["Teka", "Who Never Kneels"], ["Bor", "the Red Hand"], ["Kael", "Wolf-Born"]],
+   "spiritual": [["Mira", "Who Hears the Rain"], ["Oen", "the Patient"], ["Lai", "Moon-Daughter"], ["Suri", "Who Walks Softly"], ["Tam", "the Dreamer"]]
+  }
  }
 }

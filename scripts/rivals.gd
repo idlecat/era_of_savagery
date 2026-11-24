@@ -41,6 +41,7 @@ func _deed(id: String, key: String, at: Variant = null, extra: Dictionary = {}) 
 	var dd: Dictionary = C["deeds"][key]
 	var c: Dictionary = clans[id]
 	change(id, float(dd["relation"]), _txt(dd["reason"], c, extra) if dd.has("reason") else "")
+	note(id, key, [extra["kind"]] if extra.has("kind") else [])
 	if dd.has("alert"): sim.alert(_txt(dd["alert"], c, extra), at if at is Vector2 else c["pos"], "danger" if key in ["killed", "broke_peace", "unpaid_tribute"] else "warn")
 
 ## A [martial, peaceful] pair (or one number for both).
@@ -57,6 +58,7 @@ func setup() -> void:
 		c["hunter_t"] = 0.0
 		c["trespass_warned"] = -999.0
 		c["grudges"] = [] # short texts for personas
+		_ensure_chief(c)
 		c["treaties"] = {} # type -> {"until": sim time, "tribute": food per day}
 		c["tribute_day"] = 0
 		c["last_demand"] = -999.0
@@ -155,7 +157,8 @@ func summary() -> Array:
 		var c: Dictionary = clans[id]
 		if not c["met"]: continue
 		out.append({"clan": tr(c["name"]), "chieftain": tr(c["chief"]), "stance": tr(stance(id)),
-			"their_ways": tr(c["desc"]), "wrongs_remembered": c["grudges"].slice(-3), "treaties": treaty_text(id)})
+			"their_ways": tr(c["desc"]), "wrongs_remembered": c["grudges"].slice(-3), "treaties": treaty_text(id),
+			"chief_temper": tr(temper(id).get("word", "")), "remembers": ledger_lines(id, 3)})
 	return out
 
 func change(id: String, amount: float, reason := "") -> void:
@@ -196,6 +199,7 @@ func on_villager_killed(u, killer) -> void:
 	if killer == null or not (killer is E.Predator) or killer.clan == "": return
 	var c: Dictionary = clans[killer.clan]
 	c["grudges"].append(tr("they killed %s") % tr(u.name))
+	note(killer.clan, "killed_ours", [u.name])
 	for o in sim.living():
 		if o.pos.distance_to(u.pos) < 400 or o.home == u.home:
 			sim.remember(o, tr("saw %s killed by the %s on Day %d") % [tr(u.name), tr(c["name"]), sim.day()], 8)
@@ -210,15 +214,18 @@ func steal(p: E.Predator) -> void:
 	sim.popup(p.pos + Vector2(0, -30), tr(ct["popup"]) % roundi(amount), Color("#ff8a7a"), true)
 	if sim.flags.get("theft_alert_" + p.clan, -1) != sim.day():
 		sim.flags["theft_alert_" + p.clan] = sim.day()
+		note(p.clan, "stole", [roundi(amount)])
 		sim.alert(_txt(ct["alert"], clans[p.clan]), p.pos, "danger")
 
 # ------------------------------------------------------------ tick
 func update(dt: float) -> void:
 	for id in clans:
 		var c: Dictionary = clans[id]
+		_ensure_chief(c)
+		_succession(c)
 		# drift back toward the clan's temperament (slowly)
 		var gw: Dictionary = C["relations"]["goodwill"]
-		var target: float = c["base"] + sim.inv.add("relation") + (float(gw["peace"]) if has_treaty(id, "peace") else 0.0) + (float(gw["alliance"]) if has_treaty(id, "alliance") else 0.0) + (float(gw["vassal"]) if c["vassal"] > 0 else 0.0)
+		var target: float = c["base"] + float(temper(id).get("base", 0.0)) + sim.inv.add("relation") + (float(gw["peace"]) if has_treaty(id, "peace") else 0.0) + (float(gw["alliance"]) if has_treaty(id, "alliance") else 0.0) + (float(gw["vassal"]) if c["vassal"] > 0 else 0.0)
 		c["relation"] += (target - c["relation"]) * dt * float(C["relations"]["drift"])
 		_treaties(c)
 		_contact(c)
@@ -318,7 +325,7 @@ func _raids(c: Dictionary, dt: float) -> void:
 
 ## 0 (merely hostile) .. 1 (a full blood feud).
 func _hostility(c: Dictionary) -> float:
-	return clampf(-c["relation"] / float(C["raids"]["full_hostility"]), 0.0, 1.0)
+	return clampf(-c["relation"] / float(C["raids"]["full_hostility"]) * float(temper(c["id"]).get("hostility", 1.0)), 0.0, 1.0)
 
 func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
@@ -333,6 +340,7 @@ func launch_raid(c: Dictionary) -> void:
 		w.raid = true
 		w.raid_t = float(cr["give_up_s"])
 	c["warriors"] -= size
+	note(c["id"], "raided")
 	if not c["met"]:
 		c["met"] = true # strangers attack: contact by force
 		pending.append("contact_" + c["id"])
@@ -346,13 +354,123 @@ func _hunters(c: Dictionary, dt: float) -> void:
 	c["hunter_t"] = D.DAY_LEN * float(C["people"]["hunter_every_days"])
 	_spawn(c, "hunter")
 
+# ------------------------------------------------------------ the ledger and the chief (make_it_fun C1)
+## Fill in what an older save lacks (the ledger and the chief's temper came later).
+func _ensure_chief(c: Dictionary) -> void:
+	if c.has("ledger"): return
+	c["ledger"] = [] # what passed between us: [{t, kind, args}]
+	c["temper"] = str(C["chiefs"]["first"].get(c["culture"], "wary"))
+	c["chief_t"] = 0.0 # when the chief took the seat (older entries were their forebear's)
+	c["reign"] = Config.rand_in(C["chiefs"]["reign_days"])
+
+## The chief's temper (rivals.json chiefs.tempers): {word, base, hostility, deal}.
+func temper(id: String) -> Dictionary:
+	return C["chiefs"]["tempers"].get(clans[id].get("temper", "wary"), {})
+
+## Write what happened between us into the clan's ledger: a kind of rivals.json "ledger"
+## kinds (or of "deeds", whose reason is then the words), with the vars its text takes. A
+## game master's verb too (and the "ledger" story action).
+func note(id: String, kind: String, args: Array = []) -> void:
+	if not clans.has(id) or not (C["ledger"]["kinds"].has(kind) or C["deeds"].has(kind)): return
+	_ensure_chief(clans[id])
+	var L: Array = clans[id]["ledger"]
+	L.append({"t": sim.time, "kind": kind, "args": args.map(func(x): return str(x))})
+	if L.size() > int(C["ledger"]["keep"]): L.pop_front()
+
+## How much a ledger entry weighs (+ good for us, - bad).
+func entry_weight(e: Dictionary) -> float:
+	var k: Dictionary = C["ledger"]["kinds"].get(e["kind"], {})
+	return float(k.get("weight", C["deeds"].get(e["kind"], {}).get("relation", 0.0)))
+
+## A ledger entry in the chief's words ("you attacked our trader").
+func entry_text(e: Dictionary) -> String:
+	var k: Dictionary = C["ledger"]["kinds"].get(e["kind"], {})
+	var t = k.get("text", C["deeds"].get(e["kind"], {}).get("reason", e["kind"]))
+	var s: String = tr(str(t[0] if t is Array else t))
+	var args: Array = e.get("args", []).map(func(x): return tr(x))
+	if s.count("%") == args.size() and not args.is_empty(): s = s % args
+	return s
+
+## When it was, as the chief says it: "today", "this spring", "last winter", "in the summer of Year 1".
+func when_text(t: float) -> String:
+	var W: Dictionary = C["ledger"]["dates"]
+	var span: float = D.DAY_LEN * sim.hz.SEASON_DAYS
+	var then := int(t / span)
+	var now := int(sim.time / span)
+	var season: String = tr(sim.hz.SEASONS[then % 4]).to_lower()
+	if int(t / D.DAY_LEN) == sim.day() - 1: return tr(W["today"])
+	if then == now: return tr(W["this"]) % season
+	if then == now - 1: return tr(W["last"]) % season
+	return tr(W["long"]) % [season, 1 + then / 4]
+
+## The dated lines of the ledger, newest first (for a game master and the LLM chief).
+func ledger_lines(id: String, n := 6) -> Array:
+	var L: Array = clans[id].get("ledger", [])
+	var out: Array = []
+	for i in range(L.size() - 1, maxi(-1, L.size() - 1 - n), -1):
+		out.append("%s: %s" % [when_text(L[i]["t"]), entry_text(L[i])])
+	return out
+
+## What the chief brings up: the weightiest memory (fading with age, ledger "half_days"),
+## in their words with a closing remark, or "" if nothing weighs enough ("quote_min").
+func quote(id: String) -> String:
+	var c: Dictionary = clans[id]
+	var LC: Dictionary = C["ledger"]
+	var best = null
+	var best_v := 0.0
+	for e in c.get("ledger", []):
+		var age_days: float = (sim.time - float(e["t"])) / D.DAY_LEN
+		var v := absf(entry_weight(e)) / (1.0 + age_days / float(LC["half_days"]))
+		if absf(entry_weight(e)) >= float(LC["quote_min"]) and v > best_v:
+			best = e
+			best_v = v
+	if best == null: return ""
+	var s: String = tr(LC["quote"]) % [when_text(best["t"]), entry_text(best)]
+	s = s.left(1).to_upper() + s.substr(1)
+	var tag: String = ("good" if entry_weight(best) > 0 else "bad") + ("_inherited" if float(best["t"]) < float(c.get("chief_t", 0.0)) else "")
+	var tags: Array = LC["tags"][tag]
+	return s + " " + (tr(tags.pick_random()) % tr(c.get("old_chief", c["chief"])) if tag.ends_with("_inherited") else tr(tags.pick_random()))
+
+## The chief dies and another takes the seat (reign over, or a game master): a new name from
+## rivals.json chiefs.names for their culture, another temper, the relation drawn part of the
+## way to the new chief's own; the ledger stays: it is what the successor inherits.
+func succeed(id: String) -> String:
+	if not clans.has(id): return ""
+	var c: Dictionary = clans[id]
+	_ensure_chief(c)
+	var ch: Dictionary = C["chiefs"]
+	var pool: Array = ch["names"].get(c["culture"], ch["names"].values()[0]).filter(func(nm): return nm[0] != c["chief"])
+	if pool.is_empty(): return ""
+	var nm: Array = pool.pick_random()
+	var tempers: Array = ch["tempers"].keys().filter(func(k): return k != c["temper"])
+	var old: String = c["chief"]
+	c["old_chief"] = old
+	c["chief"] = nm[0]
+	c["epithet"] = nm[1]
+	c["temper"] = tempers.pick_random() if not tempers.is_empty() else c["temper"]
+	c["chief_t"] = sim.time
+	c["reign"] = Config.rand_in(ch["reign_days"])
+	var target: float = c["base"] + float(temper(id).get("base", 0.0))
+	c["relation"] = lerpf(c["relation"], target, float(ch["reset"]))
+	if c["met"]:
+		var t: String = tr(ch["log"]) % [tr(old), tr(c["name"]), tr(c["chief"]), tr(c["epithet"]), tr(temper(id)["word"])]
+		sim.add_log(t, "story")
+		sim.alert(t, c["pos"], "warn")
+	return c["chief"]
+
+func _succession(c: Dictionary) -> void:
+	if sim.time - float(c["chief_t"]) > float(c["reign"]) * D.DAY_LEN: succeed(c["id"])
+
 # ------------------------------------------------------------ first-contact choice
 ## The clan dilemmas (contact, demand, call, submit) are config/dilemmas.json, run by the
 ## shared runner with the clan's values; the trader's offers (computed goods) are coded.
 func event_def(ev: String) -> Dictionary:
 	if ev.begins_with("trade_"): return _trade_def(ev.trim_prefix("trade_"))
 	var d := _dilemma(ev)
-	return sim.story.dilemma_view(sim.DILEMMAS[d[0]], d[1])
+	var view: Dictionary = sim.story.dilemma_view(sim.DILEMMAS[d[0]], d[1])
+	var q := quote(d[1]["clan"])
+	if q != "" and d[0] != "contact": view["text"] = str(view.get("text", "")) + "\n\n" + tr("%s %s says: \"%s\"") % [d[1]["chief"], d[1]["epithet"], q]
+	return view
 
 func resolve(ev: String, idx: int) -> String:
 	if ev.begins_with("trade_"): return _trade_resolve(ev.trim_prefix("trade_"), idx)
@@ -464,7 +582,7 @@ func deal_value(id: String, t: Dictionary, envoy: E.Unit, round_i := 0) -> float
 	var cp: Dictionary = C["parley"]
 	var w := _weights(c)
 	var martial: bool = c["culture"] == "martial"
-	var v: float = c["relation"] * float(cp["relation"]) + round_i * float(cp["per_round"])
+	var v: float = c["relation"] * float(cp["relation"]) + round_i * float(cp["per_round"]) + float(temper(id).get("deal", 0.0))
 	if envoy:
 		v += envoy.lv("lore") * float(cp["envoy_lore"]) + (envoy.lv("combat") * float(cp["envoy_combat_martial"]) if martial else 0.0)
 		for trait_id in cp["traits"]:
@@ -541,6 +659,7 @@ func parley_ctx(envoy: E.Unit, id: String, offer: Dictionary, message: String, h
 		"chief": {"name": tr(c["chief"]), "epithet": tr(c["epithet"]), "clan": tr(c["name"]), "ways": tr(c["desc"]),
 			"culture": c["culture"], "stance": tr(stance(id)), "relation": roundi(c["relation"]),
 			"wrongs_remembered": c["grudges"].slice(-4), "treaties_in_force": treaty_text(id),
+			"temper": tr(temper(id).get("word", "")), "what_passed_between_us": ledger_lines(id, 6), "bring_up": quote(id),
 			"people": c["pop"], "warriors": c["warriors"], "season": tr(sim.hz.season()) if sim.hz.on() else ""},
 		"envoy": {"name": tr(envoy.name), "epithet": tr(envoy.epithet), "traits": trs, "lore": envoy.lv("lore"), "combat": envoy.lv("combat")},
 		"their_tribe": {"people": sim.living().size(), "food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"])},
@@ -556,6 +675,13 @@ func chief_reply(ctx: Dictionary, envoy: E.Unit) -> Dictionary:
 	var martial: bool = c["culture"] == "martial"
 	var v: float = ctx["value"]
 	var offer: Dictionary = ctx["offer"]
+	var said: String = (str(ctx.get("chief", {}).get("bring_up", "")) + " ") if int(ctx.get("round", 0)) == 0 and str(ctx.get("chief", {}).get("bring_up", "")) != "" else ""
+	var r := _chief_answer(ctx, envoy, c, martial, v, offer)
+	r["speech"] = said + str(r["speech"])
+	return r
+
+func _chief_answer(ctx: Dictionary, envoy: E.Unit, c: Dictionary, martial: bool, v: float, offer: Dictionary) -> Dictionary:
+	var id: String = ctx["clan_id"]
 	if v >= 0:
 		return {"verdict": "accept", "terms": offer, "speech": (tr("Ha! %s. Done - and may your spears stay far from ours.") if martial else tr("The water is calm. %s - let it be so between our peoples.")) % terms_text(offer)}
 	var ct := counter_terms(id, offer, envoy, ctx["round"])
@@ -597,6 +723,7 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 	var cs: Dictionary = C["parley"]["seal"]
 	change(id, clampf(float(cs["base"]) + v * float(cs["per_value"]), float(cs["min"]), float(cs["max"])) + (float(cs["treaty"]) if t["treaty"] != "none" else 0.0))
 	var what := terms_text(t)
+	note(id, "allied" if t["treaty"] == "alliance" else "sealed", [what])
 	sim.remember(envoy, tr("sealed an agreement with the %s on Day %d: %s") % [tr(c["name"]), sim.day(), what], 7)
 	sim.gain_xp(envoy, "lore", 12)
 	sim.gain_xp(envoy, "trade", 6) # striking a bargain
@@ -743,6 +870,7 @@ func _trade_resolve(id: String, idx: int) -> String:
 	var o: Dictionary = offers[idx]
 	if not sim.spend(o["give"]): return tr("We cannot pay what we promised. The trader leaves.")
 	change(id, 3.0)
+	note(id, "traded")
 	if o.has("teach"):
 		var tid: String = o["teach"]
 		var learner = sim.best_unit("lore", false)

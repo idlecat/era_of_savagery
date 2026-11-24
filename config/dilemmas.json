@@ -527,6 +527,7 @@
     },
     "cost_note": false,
     "do": [
+     {"ledger": "gifts"},
      {
       "relation": 20
      }
@@ -544,6 +545,7 @@
      "var": "martial"
     },
     "do": [
+     {"ledger": "showed_strength"},
      {
       "relation": 8
      }
@@ -597,6 +599,7 @@
     },
     "cost_note": false,
     "do": [
+     {"ledger": "paid"},
      {
       "relation": 5
      },
@@ -613,6 +616,7 @@
     "label": "Refuse",
     "desc": "Send the runner away. Their war band will come.",
     "do": [
+     {"ledger": "refused"},
      {
       "relation": -5,
       "reason": "you sent our messenger away empty-handed"
@@ -648,6 +652,7 @@
      "foe_name"
     ],
     "do": [
+     {"ledger": "answered_call"},
      {
       "relation": 10
      },
@@ -669,6 +674,7 @@
     },
     "cost_note": false,
     "do": [
+     {"ledger": "sent_gifts"},
      {
       "relation": 3
      },
@@ -691,6 +697,7 @@
     "label": "Refuse",
     "desc": "This is not our fight (-12 with our allies).",
     "do": [
+     {"ledger": "left_alone"},
      {
       "relation": -12,
       "reason": "you left us to fight alone"
@@ -748,6 +755,7 @@
     "label": "Demand a heavy tribute",
     "desc": "6 food a day - but they will hate us, and may rise again.",
     "do": [
+     {"ledger": "took_tribute"},
      {
       "vassal": 6,
       "relation_max": -60,
@@ -768,6 +776,7 @@
     "label": "Spare them freely",
     "desc": "Make peace with no tribute (+20 relations, 20 days of peace).",
     "do": [
+     {"ledger": "spared"},
      {
       "relation_min": -10
      },

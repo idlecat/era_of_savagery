@@ -265,6 +265,7 @@ func invite(amount: float) -> String:
 		var c: Dictionary = sim.rivals.clans[id]
 		if c["met"] and (sim.rivals.at_peace(id) or c["relation"] >= 15):
 			sim.rivals.change(id, amount)
+			sim.rivals.note(id, "feasted")
 			guests.append(tr(c["name"]))
 	return (" " + tr("Guests of the %s come to share it.") % ", ".join(guests)) if not guests.is_empty() else ""
 

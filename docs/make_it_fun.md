@@ -197,6 +197,17 @@ movement (`beds.day_only`, `camp_asleep`, snow speed), so crossing ice must open
 - Chiefs age and die: a successor with a different temperament resets the diplomatic
   game mid-run (a `rivals.json` event, offline via `rivals.chief_reply()`); the ledger
   is what the successor *inherits*, which is the drama.
+- **Built:** `c["ledger"]` of `{t, kind, args}` (`rivals.note()`, called from `_deed()` and
+  from raids, thefts, kills, seals, trades, feasts; dilemma options write theirs with the
+  new `ledger` story action), kinds and weights in `rivals.json` `ledger`. Quoted
+  (`rivals.quote()`: the weightiest, fading over `half_days`, dated "this spring / last
+  winter") in the demand, call and submit dilemmas and as the offline chief's opening line;
+  the LLM chief gets `what_passed_between_us` and `bring_up`; `summary()` shows
+  `remembers` and `chief_temper`. Chiefs reign `reign_days` and are succeeded
+  (`rivals.succeed()`) by a chief of another temper (`chiefs.tempers`: the relation the
+  clan drifts to, raid hostility, parley value); the relation is drawn halfway to the new
+  chief's, the ledger stays, and the new chief quotes their forebear. The first chiefs are
+  all "wary" (neutral) so the existing balance holds until a succession.
 
 ### C2. One horizon threat at a time
 Drama needs a face; today all clans roll the same raid dice. Grounding from the code:

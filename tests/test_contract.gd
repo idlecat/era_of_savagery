@@ -29,7 +29,7 @@ func check(cond: bool, msg: String) -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2480,6 +2480,52 @@ func test_autumn_decision() -> void:
 			n += 1
 			if s["kind"] == "wolf": right += 1
 	check(absf(float(right) / n - float(hz.winters()["sign_truth"])) < 0.08, "the signs are right about %d%% of the time" % roundi(100.0 * right / n))
+
+func test_chief_ledger() -> void:
+	print("\n== The rival chief remembers (rivals ledger, make_it_fun C1) ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	R.clans["ochre"]["met"] = true
+	var c: Dictionary = R.clans["ochre"]
+	check(c["ledger"].is_empty() and c["temper"] != "", "a clan starts with an empty ledger and a chief's temper (%s)" % c["temper"])
+	sim.time = 50.0
+	var h = sim.predators.filter(func(p): return p.clan == "ochre" and p.kind == "hunter")[0]
+	R.on_hunter_attacked(h)
+	check(c["ledger"].size() == 1 and c["ledger"][0]["kind"] == "attacked_hunter", "our deeds are written in their ledger, dated")
+	var q: String = R.quote("ochre")
+	check(q.contains(tr("you attacked our hunter")) and q.begins_with(tr("today").left(1).to_upper()), "the chief brings it up, with when (%s)" % q)
+	R.note("ochre", "gifts")
+	R.note("nobody", "gifts")
+	R.note("ochre", "no_such_kind")
+	check(c["ledger"].size() == 2, "good deeds are written too; unknown clans and kinds are ignored")
+	# later: the season in the words
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 1 + 10.0
+	check(R.when_text(50.0) == tr("last %s") % tr("Spring").to_lower(), "a season later it was 'last spring' (%s)" % R.when_text(50.0))
+	# the clan's dilemmas quote it; so does the offline chief
+	c["demand"] = 20
+	var view: Dictionary = R.event_def("demand_ochre")
+	check(view["text"].contains(tr(c["chief"])) and view["text"].contains(tr("you attacked our hunter")), "a demand quotes the ledger")
+	var u = sim.unit_by_name("Linghe")
+	var ctx: Dictionary = R.parley_ctx(u, "ochre", R.empty_terms(), "", [], 0)
+	check(not ctx["chief"]["what_passed_between_us"].is_empty() and R.chief_reply(ctx, u)["speech"].begins_with(ctx["chief"]["bring_up"]), "the offline chief opens with it; the LLM chief gets the dated ledger")
+	check(not R.summary().filter(func(x): return x["clan"] == tr(c["name"]))[0]["remembers"].is_empty(), "the summary shows what they remember")
+	# a dilemma option writes in it (the "ledger" story action)
+	var n: int = c["ledger"].size()
+	sim.story.run([{"ledger": "paid"}], null, {"clan": "ochre"})
+	check(c["ledger"].size() == n + 1 and c["ledger"][-1]["kind"] == "paid", "the ledger story action")
+	# succession: a new chief, another temper, the same ledger
+	var old: String = c["chief"]
+	var old_temper: String = c["temper"]
+	var rel: float = c["relation"]
+	var nm: String = R.succeed("ochre")
+	check(nm != "" and c["chief"] != old and c["temper"] != old_temper and c["ledger"].size() == n + 1, "a successor takes the seat with another temper (%s, %s) and inherits the ledger" % [nm, c["temper"]])
+	check(sim.log_lines.any(func(l): return l["text"].contains(tr(old)) and l["text"].contains(tr(nm))), "the chronicle tells of it")
+	check(R.quote("ochre").contains(tr(old)), "the new chief quotes the old one (%s)" % R.quote("ochre"))
+	var before_reign: float = c["chief_t"]
+	sim.time += float(c["reign"]) * D.DAY_LEN + 1.0
+	R.update(0.05)
+	check(c["chief_t"] > before_reign, "a chief's reign ends in time")
+	check(sim.check_invariants().is_empty(), "invariants hold")
 
 func test_hungry_sickness() -> void:
 	print("\n== Sickness hits a hungry camp (events.json sickness) ==")
