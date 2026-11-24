@@ -996,20 +996,41 @@ func _refresh_left_content() -> void:
 	var on_contract: bool = u.role == "contract"
 	var child: bool = u.role == "child"
 	if child: sheet_text.text = (tr("[color=#ffd6f0]A child of the tribe: plays, watches and learns. Comes of age in %d days.[/color]\n") % sim.folk.days_to_grow(u)) + sheet_text.text
-	sheet_contract_btn.disabled = on_contract or child or not D.home_side(u.pos)
-	sheet_contract_btn.text = tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…")
+	var lead_why := _lead_block(u)
+	_why_button(sheet_contract_btn, tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…"), "" if on_contract else lead_why, on_contract)
 	sheet_scout_btn.disabled = on_contract or child
-	sheet_research_btn.disabled = on_contract or child or sim.evo.candidates().is_empty() or not D.home_side(u.pos)
-	sheet_seek_btn.disabled = on_contract or child or not D.home_side(u.pos)
+	var wisdom_why: String = lead_why if lead_why != "" or not sim.evo.candidates().is_empty() else tr("nothing new within reach")
+	_why_button(sheet_research_btn, tr("Seek new wisdom…"), wisdom_why)
+	_why_button(sheet_seek_btn, tr("Search for new finds…"), lead_why)
 	sheet_envoy_btn.disabled = u.role != ""
-	var war_why: String = sim.ranks.block("lead_war", u)
-	sheet_war_btn.disabled = u.role != "" or not D.home_side(u.pos) or not sim.rivals.clans.values().any(func(c): return c["met"]) or war_why != ""
-	sheet_war_btn.text = tr("Lead a war party (%s)") % war_why.to_lower() if war_why != "" else tr("Lead a war party…")
+	var war_why: String = lead_why
+	if war_why == "" and u.role != "": war_why = tr("busy elsewhere")
+	if war_why == "" and not sim.rivals.clans.values().any(func(c): return c["met"]): war_why = tr("no clan met yet")
+	if war_why == "": war_why = sim.ranks.block("lead_war", u).to_lower()
+	_why_button(sheet_war_btn, tr("Lead a war party…"), war_why)
 	sheet_envoy_btn.text = tr("Envoy — on a mission") if u.role == "envoy" else tr("Send as envoy…")
-	sheet_research_btn.text = tr("Seek new wisdom…") if not sim.evo.candidates().is_empty() else tr("No new wisdom within reach")
 	sheet_scout_btn.text = tr("Scouting… (right-click to recall)") if u.job.get("type", "") == "explore" else tr("Scout the unknown (X)")
 	_vice_button(sheet_steward_btn, u, "steward")
 	_vice_button(sheet_chief_btn, u, "warchief")
+
+## Why this person can't lead a Task Contract from where they are ("" when they can).
+func _lead_block(u) -> String:
+	if u.role == "child": return tr("a child")
+	if u.role == "contract": return tr("on a contract")
+	if not D.home_side(u.pos): return tr("away from home")
+	return ""
+
+## Sets a sheet button's label and enables it, or disables it with the reason in its label and tooltip.
+## `keep` disables it without a reason (its label already says why).
+func _why_button(b: Button, label: String, why: String, keep := false) -> void:
+	if not b.has_meta("tip"): b.set_meta("tip", tr(b.tooltip_text))
+	b.disabled = keep or why != ""
+	var base: String = label.trim_suffix("…")
+	b.text = tr("%s (%s)") % [base, why] if why != "" else label
+	var tip: String = b.get_meta("tip")
+	if why == tr("away from home"):
+		tip = tr("Task Contracts set out from home: bring this person back to the village's side of the river first, over a ford.") + "\n\n" + tip
+	b.tooltip_text = tip
 
 func _cap(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1) if s.length() > 0 else s
