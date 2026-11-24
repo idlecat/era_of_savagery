@@ -328,18 +328,24 @@ func do_firefight(u: E.Unit, j: Dictionary, dt: float) -> void:
 		if nat.burning.is_empty() and r.has("log"): sim.add_log(tr(r["log"]), "story")
 
 # ------------------------------------------------------------ warm (freezing)
+## Below `below` of their health, or at the point of no return (weigh.must_head_back: what
+## is left only just covers the way back), someone out in the cold heads for the nearest
+## fire by the way they walk.
 func _start_warm(r: Dictionary, u: E.Unit) -> bool:
-	if u.job.get("type", "") == "warm" or u.hp >= u.max_hp * float(r.get("below", 0.55)) or sim.near_warmth(u): return false
-	var fire = sim.nearest_fire(u.pos)
+	if u.job.get("type", "") == "warm" or sim.near_warmth(u): return false
+	var low := u.hp < u.max_hp * float(r.get("below", 0.55))
+	if not low and not sim.weigh.must_head_back(u): return false
+	var fire = sim.weigh.nearest_warmth(u.pos)
 	if fire == null: return false
 	interrupt(u, {"type": "warm", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "r": r})
-	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
+	if not low: sim.weigh.note_turned_back(u)
+	elif r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
 	return true
 
 func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
-	if u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill():
-		sim.end_errand(u) # (warm again, or the cold is over)
+	if (u.hp >= u.max_hp * float(r.get("until", 0.8)) and sim.near_warmth(u)) or not sim.hz.cold_can_kill():
+		sim.end_errand(u) # (warm again by the fire, or the cold is over)
 		return
 	if not sim.approach(u, j["to"], 4, dt):
 		u.act = _act(r, 0)

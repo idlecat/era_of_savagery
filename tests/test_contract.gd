@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_band_hunt, test_back_to_the_kill, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -152,6 +152,87 @@ func test_sanitize() -> void:
 	check(bp["steps"][0]["structure"] == "palisade" and bp["steps"][2]["structure"] == "large_hut", "aliases mapped")
 	check(bp["steps"][1]["target_amount"] == 120, "amount clamped")
 	check(bp["abort_conditions"] == ["enemy_attack", "hp_below_25%"], "aborts whitelisted, enemy_attack forced")
+
+## The farthest land on the village's side of the water, along one of eight directions.
+func _far_home_spot(dist: float) -> Vector2:
+	for dir in [Vector2(-1, 1), Vector2(1, 1), Vector2(-1, -1), Vector2(1, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0), Vector2(0, -1)]:
+		var p: Vector2 = D.VILLAGE + dir.normalized() * dist
+		if p.x > 50 and p.y > 50 and p.x < D.W - 50 and p.y < D.H - 50 and D.same_side(p, D.VILLAGE) and not D.is_water(p) and D.river_dist(p) > 150.0:
+			return p
+	return Vector2.INF
+
+func test_weigh() -> void:
+	print("\n== Weighing an errand: the way back to a fire in a cold that kills ==")
+	var sim = _new_sim()
+	sim.hz.level = "normal"
+	var u = sim.unit_by_name("Panshi")
+	u.traits = ["devout"] # (no trait that scales what they keep in hand)
+	u.pos = D.VILLAGE + Vector2(30, 30)
+	var winter: float = D.DAY_LEN * sim.hz.SEASON_DAYS * 3
+	sim.time = D.DAY_LEN * 0.25 # (a summer morning)
+	check(not sim.weigh.plan(u).has("segs"), "in summer nothing is weighed for the cold")
+	sim.time = winter + D.DAY_LEN * 0.25 # (a winter morning)
+	check(sim.hz.winter() and sim.weigh.plan(u).has("segs"), "in winter the cold is weighed")
+	var far := _far_home_spot(1800.0)
+	check(far != Vector2.INF, "found land far out on the village's side")
+	if far == Vector2.INF: return
+	var near: Vector2 = D.VILLAGE + (far - D.VILLAGE).normalized() * 300.0
+	var day_near: Dictionary = sim.weigh.trip(u, near, 12.0)
+	check(day_near["ok"], "a short walk on a winter morning is fine (%s)" % day_near)
+	check(not sim.weigh.trip(u, far, 12.0)["ok"], "a long one that runs into the dark is not (%s)" % sim.weigh.trip(u, far, 12.0))
+	sim.time = winter + D.DAY_LEN * 0.68 # (the same short walk just before dark)
+	check(float(sim.weigh.trip(u, near, 12.0)["cold_hp"]) > float(day_near["cold_hp"]), "the same trip costs more when it runs into the night")
+	sim.time = winter + D.DAY_LEN * 0.25
+	# need: with the food gone people keep less in hand for food; temperament
+	var full: float = sim.weigh.budget(u, "food")
+	sim.stock["food"] = 0.0
+	check(sim.weigh.budget(u, "food") > full and sim.weigh.budget(u, "wood") == full, "with the food gone, people risk more for food (not for wood)")
+	sim.stock["food"] = 100.0
+	u.traits = ["cautious"]
+	check(sim.weigh.budget(u) < full, "the cautious keep more in hand")
+	u.traits = ["devout"]
+	# gathering: a far patch is left alone, a near one taken; nothing within a safe walk: given up
+	for n in sim.nodes_of("food"): n.amount = 0
+	var bush = sim.add_node("bush", "food", far, 30)
+	var bank: int = D.region_at(D.VILLAGE)
+	check(sim.find_node("food", D.VILLAGE, bank, 9000.0) == bush, "by distance alone, the far bush is found")
+	check(sim.find_node("food", D.VILLAGE, bank, 9000.0, [], u) == null, "weighed, it is too far in winter")
+	var near_bush = sim.add_node("bush", "food", near, 30)
+	check(sim.find_node("food", D.VILLAGE, bank, 9000.0, [], u) == near_bush, "a near patch is taken instead")
+	near_bush.amount = 0
+	sim.assign_gather(u, "food", {"bank": bank, "area": u.home, "area_r": 9000.0})
+	for i in 5: sim.update_unit(u, 0.05)
+	check(u.job.is_empty() and sim.weigh.refused >= 1, "a gatherer gives up a trip they can't come back from (%s)" % u.act)
+	check(sim.weigh.appraise(u.id, far.x, far.y)["ok"] == false and sim.weigh.appraise("x", 1, 2).is_empty() and sim.weigh.appraise(u.id, NAN, 0).is_empty(), "a game master can appraise a trip; junk gets {}")
+	# the contract forecast names the cold
+	sim.hz.set_weather("blizzard")
+	var plan := {"kind": "seek", "abort_conditions": [], "base": [D.VILLAGE.x, D.VILLAGE.y], "site": [far.x, far.y]}
+	var fc: Dictionary = sim.contracts.forecast(plan, u)
+	check(fc["reasons"].any(func(r): return r["id"] == "cold"), "a far errand in a blizzard: the leader's forecast names the cold (%s)" % fc["words"])
+	# the point of no return: out in a blizzard, they head back in time, not at a fixed 55%
+	var out := _far_home_spot(1350.0)
+	u.pos = out
+	u.hp = u.max_hp
+	sim.set_job(u, {})
+	sim.weigh._cache_check.clear()
+	var walk: float = sim.weigh.walk_to_warmth(out) / sim.unit_speed(u)
+	check(sim.weigh.exposure(sim.weigh.cold_ahead(u), walk) > u.max_hp * 0.55, "(turning at 55%% of their health they would freeze on the way: %.0f s of walk)" % walk)
+	var turned := false
+	var t := 0.0
+	while t < 120.0 and not u.dead and not sim.near_warmth(u):
+		sim.time += 0.05
+		t += 0.05
+		sim.update_unit(u, 0.05)
+		if u.job.get("type", "") == "warm" and not turned:
+			turned = true
+			check(u.hp > u.max_hp * 0.55, "they turn back while they still can (%.0f of %.0f hp)" % [u.hp, u.max_hp])
+	check(turned and not u.dead and sim.near_warmth(u), "and reach the fire alive (%.0f hp after %.0f s)" % [u.hp, t])
+	sim.hz.set_weather("clear")
+	sim.time = D.DAY_LEN * 0.25
+	check(not sim.contracts.forecast(plan, u)["reasons"].any(func(r): return r["id"] == "cold"), "in summer the forecast doesn't name the cold")
+	var sm: Dictionary = sim.weigh.summary()
+	check(sm.has("out_in_cold") and sm["refused_today"] >= 0 and sm["on"], "summary() for a game master")
+	sim.dispose()
 
 func test_rest_at_nearest_fire() -> void:
 	print("\n== A wounded leader rests at the nearest fire, not back at the village ==")

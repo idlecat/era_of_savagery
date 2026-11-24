@@ -1,0 +1,17 @@
+{
+ "_doc": "How people weigh an errand before they commit to it, and again while it lasts (weigh.gd, docs/weigh.md). Cost: the time out there (the walk there, `work` seconds at it, the walk back to the nearest fire; straight-line distances count `detour` times). Risk: the health that time costs in a cold that can kill (by day, and by night once the trip runs into the dark; an announced weather from when it comes), counted `safety` times over; nothing is weighed while the cold can't kill within `horizon` seconds. An errand fits when it leaves at least `floor` of the person's health. `traits` scale the floor (cautious people keep more in hand); `need`: while a store holds less than `per_head` a head, people keep `mult` less in hand for it (hunger drives them further). While out in a deadly cold, someone heads back to the nearest fire as soon as what they have above `back_floor` only just covers the way there (counted `safety` times), checked every `check_every` seconds. Gathering weighs its node again every `recheck` seconds. `beasts`: places within `reach` of a hunting beast or a known den count `penalty` more in the choice of where to work (as if that much further).",
+ "on": true,
+ "detour": 1.2,
+ "safety": 1.4,
+ "floor": 0.4,
+ "back_floor": 0.2,
+ "check_every": 1.0,
+ "horizon": 120,
+ "recheck": 4.0,
+ "work": {"gather": 12, "seek": 30, "explore": 0},
+ "traits": {"cautious": 1.3, "belligerent": 0.7, "lazy": 1.1},
+ "need": {
+  "food": {"per_head": 2, "mult": 1.6}
+ },
+ "beasts": {"reach": 280, "den_reach": 450, "penalty": 700}
+}
