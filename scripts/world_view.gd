@@ -318,7 +318,12 @@ func _process(delta: float) -> void:
 	t += delta
 	if not sim.paused and not (blocked.is_valid() and blocked.call()): anim_t += delta * sim.crisis.slow()
 	_pan_keys(delta)
-	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake) if sim.nat.shake > 0 else Vector2.ZERO
+	if sim.nat.shake > 0: # a hard jolt: the ground jumps
+		cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 7.0 * minf(1.0, sim.nat.shake)
+	elif sim.crisis.on: # an emergency: a slow uneasy sway
+		cam.offset = Vector2(sin(t * 0.7), cos(t * 0.9)) * 2.5
+	else:
+		cam.offset = Vector2.ZERO
 	night.color = _sky_tint()
 	_grade_step(delta)
 	_wet_step(delta)
@@ -596,23 +601,36 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		pan_held.clear()
 
+const PAN_SPEED := 800.0
+var pan_vel := Vector2.ZERO # the camera's actual pan velocity, eased toward the input
+var cam_tween: Tween # a focus_on glide; user input cancels it
+
 func _pan_keys(delta: float) -> void:
+	var v := _pan_input()
+	if v != Vector2.ZERO and cam_tween:
+		cam_tween.kill() # a nudge takes over from any glide
+		cam_tween = null
+	# the camera gathers speed while held and glides to a stop when released
+	pan_vel = pan_vel.lerp(v * PAN_SPEED / cam.zoom.x, minf(1.0, delta * 8.0))
+	if pan_vel.length_squared() > 1.0:
+		cam.position += pan_vel * delta
+		cam.position = _clamp_target(cam.position)
+
+func _pan_input() -> Vector2:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit or focus is SpinBox:
 		pan_held.clear()
-		return
+		return Vector2.ZERO
 	if blocked.is_valid() and blocked.call(): # map is frozen behind dialogs
 		pan_held.clear()
-		return
+		return Vector2.ZERO
 	var v := Vector2.ZERO
 	if pan_held.has(KEY_A) or pan_held.has(KEY_LEFT): v.x -= 1
 	if pan_held.has(KEY_D) or pan_held.has(KEY_RIGHT): v.x += 1
 	if pan_held.has(KEY_W) or pan_held.has(KEY_UP): v.y -= 1
 	if pan_held.has(KEY_S) or pan_held.has(KEY_DOWN): v.y += 1
 	v += _edge_dir()
-	if v != Vector2.ZERO:
-		cam.position += v.normalized() * 800 * delta / cam.zoom.x
-		_clamp_cam()
+	return v.normalized() if v != Vector2.ZERO else Vector2.ZERO
 
 ## AoE-style edge scrolling: push the cursor against a window edge to pan.
 func _edge_dir() -> Vector2:
@@ -651,7 +669,16 @@ func _zoom_step(delta: float) -> void:
 	_clamp_cam()
 
 func _clamp_cam() -> void:
-	cam.position = Vector2(clampf(cam.position.x, -D.H * IX, D.W * IX), clampf(cam.position.y, 0, (D.W + D.H) * IY))
+	cam.position = _clamp_target(cam.position)
+
+func _clamp_target(p: Vector2) -> Vector2:
+	return Vector2(clampf(p.x, -D.H * IX, D.W * IX), clampf(p.y, 0, (D.W + D.H) * IY))
+
+## Glide to a place (an alert, an envoy, a new site) instead of teleporting there.
+func focus_on(p: Vector2) -> void:
+	if cam_tween: cam_tween.kill()
+	cam_tween = create_tween()
+	cam_tween.tween_property(cam, "position", _clamp_target(iso(p)), 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _sync_lights() -> void:
 	var alive := {}
@@ -2438,11 +2465,6 @@ func select_only(u) -> void:
 	selected = [u.id] if u else []
 	selected_struct = -1
 	selection_changed.emit()
-
-## p is a world-space point.
-func focus_on(p: Vector2) -> void:
-	cam.position = iso(p)
-	_clamp_cam()
 
 ## Screen-space distance from the cursor to an upright figure (base or body).
 func _pick_dist(sm: Vector2, world_pos: Vector2, height: float) -> float:
