@@ -167,10 +167,22 @@ exposed as game-master operations, per `CLAUDE.md`.
     `structures.json` (granary 100, warehouse 500, a smokehouse or cellar on a
     longhouse adding some), summed by the cached `food_cap()`. ~10 warehouses then
     hold a city's winter, and losing one to a fire is a real blow.
+    > **pi:** checked — it is that small. `food_cap()` is one function, and every
+    > other reader (the director's `rich_food_at`, `story`'s `food_frac`, the
+    > Steward's "stores are full" switch, spoil, the HUD numbers) calls it as a
+    > number. Two touch points beyond it: the HUD tooltip string hardcodes "each
+    > Granary %d more" (`hud.gd`), and `inv.store_bonus()` inventions stay additive.
+    > Arithmetic check: ~6,000 burn − ~700 still produced in winter (docks ×0.5,
+    > pens ×0.7, tribute) ≈ 5,300 must be stored; a 6,000–7,000 cap leaves the
+    > autumn margin.
   - With a winter every 8 days, the "pinch" is a heartbeat, not an event. That is
     good for the rhythm (build up, hold, build up) but it means a *bad* winter
     (long, early, blizzard) must be the escalation, not winter itself — an
-    `events.json` chance that a winter runs a third day, rising with era.
+    `events.json` chance that a winter runs a third day, rising with era. Make the
+    bad winter **weather, not a longer season**: a spring "late frost" (a new
+    `events.json` weather kind: `crops × 0`, `berries × 0`, cold) does everything a
+    third winter day would, through the multipliers weather already applies,
+    without touching `seasons.days` or the season clock every seasonal rule reads.
 - Let `fewer` take the **number shape `story` already has** for dilemmas
   (`{"per_pop": k}`, `story` line ~351): `"fewer": {"farm_plot": {"per_pop": 0.05}}` =
   fewer than one field per 20 mouths — 2 fields at pop 40 (as now), a ceiling of ~50
@@ -187,7 +199,7 @@ exposed as game-master operations, per `CLAUDE.md`.
   becomes per settlement.
 - Put the **existing** era-2 buildings in the plan first (Longhouse when homeless and
   era 2, Temple at town tier, Smokehouse already there). Then new types for scale
-  (config + baked models, `ART_VERSION` bump): **warehouse** (era 2, +200 food),
+  (config + baked models, `ART_VERSION` bump): **warehouse** (era 2, `store` 500),
   **well** (reduces sickness crowding), **irrigated field** (era 3, an upgrade of a
   plot via `sim.upgrade()`: more workers and yield, same footprint). The Steward's
   `when` picks them by tier and tech.
@@ -196,10 +208,14 @@ exposed as game-master operations, per `CLAUDE.md`.
 
 Target mix for 1000 people (~2,300 a day, more in winter), made to agree with the
 numbers above: **~50 % worked fields** (25–35 plots), **~25 % docks and pens**,
-**~15 % tribute and trade** (vassals' and allies' tribute in food, caravans: this
-is what makes diplomacy feed a city), **≤ 10 % forage and hunt** (the Ford's bushes
+**~10–15 % tribute and trade**, **≤ 10 % forage and hunt** (the Ford's bushes
 regrow ~200 a day in all; forage can't be more than a camp's living). Winter still
-the pinch.
+the pinch. Today tribute and trade cannot carry even that share: vassal tribute is
+a flat 3–6 food a day (`dilemmas.json → submit`) and a caravan's lots are 12–26
+food (`rivals.json → traders`). They must scale with the clans' own growth (§3.4):
+tribute per clan pop, lot size per clan pop, and caravans that come more often to
+a city — the surplus wood (the 6,000 pile) is what a city buys food with. That is
+the diplomacy dividend the rival growth pays for; it is not a second farm.
 
 ### 3.2 Births as a rate, plus migration
 
@@ -215,14 +231,23 @@ the pinch.
   Steward's *build pace* — wood and work for huts and longhouses — which couples
   population to the economy and makes "draw settlers" and "grow the village" real
   alternatives rather than birth-rate knobs.
-  - So the build pace has to be able to keep up: ~200 beds between day 50 and 90 is
-    ~25 longhouses in 40 days, plus fields and stores. One site at a time per
-    settlement every 15 s (`improve.every`, `max_sites: 1`) will be the next wall.
-    `max_sites` should grow with tier (1 camp, 2 village, 3 town, 4 city) and the
-    builders come from the same spare pool as the farmers — the labour market again.
+  - So the build pace has to be able to keep up: ~300 beds between day 50 and 90 is
+    ~37 longhouses (or a hut mix) in 40 days, plus fields and stores. One site at a
+    time per settlement every 15 s (`improve.every`, `max_sites: 1`) will be the next
+    wall. `max_sites` should grow with tier (1 camp, 2 village, 3 town, 4 city) and
+    the builders come from the same spare pool as the farmers — the labour market
+    again. Checked against the build job: a builder's rate is already
+    `dt × (1 + 0.12 × craft) × work_mul × inv.mul("build")` — craft levels, mood,
+    weather, the `makers_pride` tradition and inventions all scale it — and a
+    3-hand crew finishes a longhouse (60 work) in ~15–20 s of work, faster than one
+    `improve.every` cycle. The limiter is layout cadence, wood flow and the
+    one-unbuilt-at-a-time-per-type rule, not work rate: `max_sites` by tier plus the
+    upgrade rows should be enough (settles open question 4).
   - The bed gate makes births a cliff (full rate, then zero). Crowding should taper
     it instead: rate × (1 − beds_used/beds)^k past ~80 % full, the same threshold the
-    sickness crowding already uses, so one number in data drives both.
+    sickness crowding already uses, so one number in data drives both (checked:
+    `hazards.gd` computes `living()/pop_cap() − 0.8`; one `crowd_at` key can feed
+    both).
 - **Migration** as the second growth path, tied to diplomacy and reputation:
   - vassals and allies send **families** (a new `rivals.json → people.join` key),
     one a day while there are empty beds;
@@ -245,6 +270,16 @@ the pinch.
   `camp` (an outpost: 2 huts), `village` (≥ 20 people, ≥ 8 beds, a farm),
   `town` (≥ 150, a longhouse, a granary, a shrine, a road to the village),
   `city` (≥ 500, a temple or grand altar, walls, a warehouse).
+- **Pacing check against the S-curve** (§3.2): village ~day 15, town ~day 45–50,
+  city ~day 90. Era 2 (farming, cost 35, `berry` practice) arrives well before the
+  150 mark, so the longhouse is not the binding gate — the headcount is. Town
+  lands at the growth spurt's peak, when beds (the governor) are fullest, so the
+  first town plague or fire is exactly the "villagehood ends" beat — good drama,
+  but the director's spike-death softening (§3.4's `while` list) is a few lines and
+  should land with this step, not wait for step 5. The city row then carries the
+  last ~60 days (500 → 1000); if the metrics show tension going flat there, split
+  the row at ~800 ("the crowded city": fuel, rot and strife together) rather than
+  adding a fifth tier.
 - Each step is an `inv.feat("settlement", …)` moment with a snapshot, the
   chronicle, and a **name**: the settlement loses "'Panshi's Outpost'" for a proper
   place name (`D.PLACE_NAMES`, translated), which the clans' parley texts use.
@@ -279,7 +314,17 @@ All data (`events.json`, `rivals.json`, `director.json`) with a few pop/era hook
   3. **Newcomers**: a new clan (from `D.CLANS`) arrives at an empty site in a later
      era — a "the people from beyond the hills" beat, with first contact again.
   Vassals and allies grow the same way, and that is also what makes their tribute
-  (the 15 % above) and their families (§3.2 migration) scale.
+  (the 10–15 % above) and their families (§3.2 migration) scale.
+  Checked: the cap is computed in exactly one place (`_update`:
+  `mini(int(cp["max_pop"]), c["pop"] + 1)`), the warrior clamps scale with pop on
+  their own, and a clan's walking people stay few (2 hunters, home guards, the raid
+  party — `max_pop` is a ledger number, not a spawn count, so §3.5 owes nothing to
+  this). The regrow rate already fits, too: +1 per 2 days ≈ the cap's own growth at
+  the S-curve's slope (0.08 × ~6 people/day), so clans ride their cap without a
+  rate change. Their village's huts don't grow with pop — acceptable behind the
+  fog; a hut per 10 pop in `_build_village` is the cheap fix if it ever shows. For
+  the tribute and trade to be worth anything at scale, their flat numbers must
+  become per-pop too (see the target mix: 3–6 food/day and 12–26-food lots today).
 - The **director's cap** becomes a function of population (`director.json levels.*.cap_per_pop`)
   so big tribes still get quiet stretches.
 - **Spike deaths** are softened: the director holds a raid while a sickness wave or
@@ -339,8 +384,8 @@ a pinch, a crisis, growth.
 
 ## Open questions
 
-1. **What is "a person" at 1000?** Each unit is a family line (design rule since
-   2026-11-18). Two readings:
+1. **What is "a person" at 1000? — settled: (a), a person is a unit.** Each unit is
+   a family line (design rule since 2026-11-18). Two readings:
    - (a) 1000 units, as this doc assumes: needs §3.5 in full, 1000 sprites, and the
      birth math above.
    - (b) **1000 people = units × `household` size** (a family line of ~4–5 at town
@@ -376,13 +421,15 @@ a pinch, a crisis, growth.
    > named units the chronicle and LLM contexts must pick their cast (titled,
    > bonded, remembered) instead of listing people; `folk.summary()` and
    > `evo.world_ctx()` should cap and rank, not grow with pop.
-4. **Build throughput.** Is `max_sites` by tier (§3.2) enough, or do we need the
-   builders' work rate to rise with era (tools, oxen carrying wood) so a city isn't
-   all builders? Measure in step 2.
-5. **Winter cadence.** With 2-day seasons, ~19 winters on the way to a city. Does a
-   winter every 8 days feel like rhythm or like nagging at 4x? Should `seasons.days`
-   grow with era (a longer year for a bigger world) — careful, it moves every
-   seasonal number in the game.
+   >
+   > **pi:** checked the contexts — the risk is smaller than it sounds.
+   > `evo.world_ctx()` carries no people at all (age, wisdom, traditions,
+   > neighbours, finds, inventions, policies), `folk.summary()` is mood, a children
+   > *count* and the treasures, and `rivals.summary()` is one entry per met clan
+   > with already-capped slices (3 grudges, 3 ledger lines). The per-person path is
+   > a leader's own memory, which the memory system already ranks by impact. The
+   > one list that grows with a city is `treasures` (art at scale): cap it — the
+   > wonders first, the last 8 — and (a) costs nothing on the LLM side.
 2. **Job priority vs contracts and the War Chief — settled, no fight.** Field
    staffing draws only from the spare pool (`spare_hand()`: idle or gathering, no
    office, awake — the pen's herder comes from the same pool), so it can never take a
@@ -399,6 +446,18 @@ a pinch, a crisis, growth.
    settle contract a farm-first plan — a field, a hut, a granary, not two huts and a
    bonfire. Far fields already pay in walked distance (walk hunger), which is the
    pressure that earns roads.
+4. **Build throughput — settled: cadence, not rate.** `max_sites` by tier plus the
+   upgrade rows should be enough: a builder's rate already scales with craft, mood
+   and inventions (`inv.mul("build")`), and a 3-hand crew finishes a longhouse
+   faster than one `improve.every` cycle (§3.2). What step 2's metrics must watch
+   is wood flow and the one-unbuilt-per-type rule, not work speed.
+5. **Winter cadence — settled: keep the 8-day year.** A winter every 8 days is
+   rhythm, not nagging, because what the player experiences is decisions, not
+   clock: at 4x a year is 3 real minutes, and winter prep is one choice (the
+   autumn dilemma) plus a passive harvest. The escalation is the *bad* winter —
+   the late frost as weather (§3.1), rising with era. Don't grow `seasons.days`:
+   it moves every seasonal number in the game (berry regrow, spoil, the winter
+   picker, this doc's arithmetic). Revisit only if playtests at 4x call it nagging.
 
 ## 5. Out of scope / deliberately not proposed
 
