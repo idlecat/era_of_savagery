@@ -96,6 +96,7 @@ const STRINGS := {
 	"Cancel": "取消",
 	"Continue": "继续",
 	"Close": "关闭",
+	"Close (Esc)": "关闭 (Esc)",
 	"Test connection": "测试连接",
 	"Save & close": "保存并关闭",
 	"Resume": "继续",
