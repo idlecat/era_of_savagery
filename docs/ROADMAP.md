@@ -281,3 +281,11 @@ Two things carry through every step:
   grows with the tribe; a new 150-day run is measuring it). Winters at 250–370 people
   are tight (stores at 0–45 on winter days 80, 90, 120), and two spring floods killed
   4 and 7 at 350+ people: the next findings to trace.
+- **The second 150-day game** (seed 1, with the growing reach, enough wood and the
+  blizzard fixes): no plateau, 128 at day 60, 236 at 100, 308 at 120, 414 at 150 and
+  still growing (the Steward's reach was the wall). Found: a spring flood with
+  strife killed 25 on day 129 (homes in the flood band: fixed since, homes stand
+  beyond `nat.flood_band()`); the woodpile ran down to 31 at 300 people (low_wood
+  now grows with the tribe); winters at 190–308 people still ran the stores to 0
+  (granaries now follow a winter's need, `store_below`). A third run with all of
+  it is measuring.
