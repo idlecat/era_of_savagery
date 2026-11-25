@@ -4190,6 +4190,11 @@ func test_tiers() -> void:
 	check(sim.contracts.settle_block() != "", "an outpost with empty beds holds back the next one (%s)" % sim.contracts.settle_block())
 	var sealed: Dictionary = sim.contracts.seal(grown[1], "settle")
 	check(not sealed["ok"], "so a settle contract can't be sealed")
+	check(sim.story.holds({"can_settle": false}) and not sim.story.holds({"can_settle": true}), "can_settle tells the dilemmas so")
+	var ns: int = sim.structures.size()
+	sim.stock["wood"] = 200.0
+	sim.story.run([{"lay_out": "hut"}], null)
+	check(sim.structures.size() == ns + 1, "the lay_out action has a home laid out (grow the village)")
 	# the director holds a raid back while a sickness wave is on
 	sim.director.on = true
 	sim.hz.level = "normal"

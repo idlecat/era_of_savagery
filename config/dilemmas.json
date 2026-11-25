@@ -83,6 +83,7 @@
   "options": [
    {
     "label": "Frontier Colonization",
+    "when": {"can_settle": true},
     "desc": "Appoint an experienced leader via a Task Contract to found a sister settlement on the frontier.",
     "do": [
      {
@@ -91,6 +92,7 @@
     ],
     "result": "Choose a leader for the frontier. Their Task Contract negotiation begins now."
    },
+   {"label": "Grow the village", "desc": "Raise more homes here, where the fire and the fields are.", "do": [{"lay_out": "hut", "reason": "the tribe chose to grow the village."}, {"mood": 2}], "result": "The tribe stays together: stakes are driven for new homes by the fire."},
    {
     "label": "Territorial Conquest",
     "desc": "Rally your 3 best warriors to raid a rival tribe for food and timber. Risky.",
