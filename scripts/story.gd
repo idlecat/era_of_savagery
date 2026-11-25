@@ -313,8 +313,10 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 				for o in people(str(a.get("with", "all")), vars): sim.life.add_bond(u, o, float(a["bond"]))
 		if a.has("say"):
 			for u in people(a.get("who", "all"), vars): sim.life.say_text(u, text(a["say"], vars))
-		if a.has("depart"):
-			for u in people(a.get("who", ""), vars): sim.life.depart(u)
+		if a.has("depart"): # (only those named: no "who", or "all", is never the whole tribe walking away)
+			var dw := str(a.get("who", ""))
+			if dw != "" and dw != "all":
+				for u in people(dw, vars): sim.life.depart(u)
 		if a.has("panic"):
 			sim.nat.panic_until = maxf(sim.nat.panic_until, sim.time + float(a["panic"]))
 			sim.react.trigger("panic", {"at": D.VILLAGE, "until": sim.nat.panic_until})

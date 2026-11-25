@@ -316,7 +316,7 @@ func woke(u: E.Unit) -> void:
 ## True while someone is still waking up (their job waits).
 func waking(u: E.Unit) -> bool:
 	if not on or sim.time >= u.wake_until: return false
-	if u.job.get("flee", false) or u.job.get("react", false) or u.job.get("type", "") in ["attack", "bury"]:
+	if u.job.get("flee", false) or u.job.get("react", false) or u.job.get("crisis", false) or u.job.get("type", "") in ["attack", "bury"]: # (the chieftain's orders in a crisis don't wait for a stretch)
 		u.wake_until = -1.0
 		return false
 	u.act = C["wake"]["act"]

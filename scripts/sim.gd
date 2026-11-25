@@ -474,10 +474,7 @@ func has_tech(t: String) -> bool: return techs.has(t)
 ## Bronze arms the tribe only while a smelter stands and has copper and tin to work.
 func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1 and ranks.tribe_can("fine_craft")
 func knows_find(id: String) -> bool: return known_finds.has(id)
-func struct_exists(type: String) -> bool:
-	for s in structures:
-		if s.built and ours(s) and s.type == type: return true
-	return false
+func struct_exists(type: String) -> bool: return not built_of(type).is_empty() # (the per-tick index: asked per blow through has_bronze())
 func living() -> Array: return units.filter(func(u): return not u.dead)
 
 ## Level of detail (rules.json lod): people out of danger are updated every `every`-th tick
@@ -598,7 +595,7 @@ var _cache_built_t := -1.0
 ## A building was lost or changed outside the usual paths: built_of() looks again.
 func buildings_changed() -> void: _cache_built_t = -1.0
 func built_of(type: String) -> Array:
-	if _cache_built_t != time:
+	if _cache_built_t != time or not _cache_in_tick: # (outside a tick a building may have been changed by hand: look again)
 		_cache_built_t = time
 		_cache_built = {}
 		for s in structures:
@@ -710,8 +707,8 @@ func unit_def(u: E.Unit) -> float:
 	d += wall_def(u.pos)
 	d += crisis.def_bonus(u) # (rallied together)
 	var aura: Dictionary = SKILL_RULES["aura"]
-	for o in units: # Centurion Aura
-		if not o.dead and o != u and ranks.has(o, "combat", aura["rank"]) and o.pos.distance_to(u.pos) < float(aura["radius"]):
+	for o in units_near(u.pos, float(aura["radius"])): # Centurion Aura (the grid: only those near)
+		if o != u and ranks.has(o, "combat", aura["rank"]) and o.pos.distance_to(u.pos) < float(aura["radius"]):
 			d *= float(aura["def_mult"])
 			break
 	return d
@@ -1458,13 +1455,15 @@ func settlements() -> Array:
 
 ## The settlement a person at `p` sets out from: the nearest of ours on the same land
 ## (between the same rivers), or Vector2.INF when none is (they are away in the wild).
+## Unlike settlement_of(), it never answers across the water: use it for where someone can go.
 func home_of(p: Vector2) -> Vector2:
 	var best := Vector2.INF
 	for q in settlements():
 		if D.same_side(p, q) and (best == Vector2.INF or q.distance_to(p) < best.distance_to(p)): best = q
 	return best
 
-## Whether `p` is on land where one of our settlements stands (where Task Contracts can set out from).
+## Whether `p` is on land where one of our settlements stands (where Task Contracts can set out from;
+## the same-side rule of home_of(), not settlement_of()'s plain nearest).
 func at_settlement(p: Vector2) -> bool:
 	return home_of(p) != Vector2.INF
 
@@ -1737,11 +1736,22 @@ func _do_tend(u: E.Unit, j: Dictionary, dt: float) -> void:
 
 # ------------------------------------------------------------------ worked fields
 ## How many people are working structure `s` (a field or a dock) right now.
-func field_hands(s: E.Structure) -> int:
-	var n := 0
-	for u in units:
-		if not u.dead and u.job.get("type", "") == "field" and int(u.job.get("struct_id", -1)) == s.id: n += 1
-	return n
+func field_hands(s: E.Structure) -> int: return int(_field_hands().get(s.id, 0))
+
+## Structure id -> people working it: counted once a tick (a _cache; the Steward asks for
+## every idle person and every field), kept up as assign_field() sends people, and counted
+## afresh outside a tick.
+var _cache_fields := {}
+var _cache_fields_t := -1.0
+func _field_hands() -> Dictionary:
+	if _cache_fields_t != time or not _cache_in_tick:
+		_cache_fields_t = time
+		_cache_fields = {}
+		for u in units:
+			if not u.dead and u.job.get("type", "") == "field":
+				var id := int(u.job.get("struct_id", -1))
+				_cache_fields[id] = int(_cache_fields.get(id, 0)) + 1
+	return _cache_fields
 
 ## Whether working `s` gives anything now (built, ours, worked, and something grows: no field work in winter).
 func field_yields(s: E.Structure) -> bool:
@@ -1749,18 +1759,22 @@ func field_yields(s: E.Structure) -> bool:
 
 ## The nearest field or dock of `types` ([] = any worked type) within `reach` of `at`, on
 ## `at`'s side of the water, that yields now and has a free place; null if none.
+var WORKED_TYPES: Array = D.STRUCTURES.keys().filter(func(k): return D.STRUCTURES[k].has("worked")) # (structures.json `worked`)
 func free_field(at: Vector2, reach: float, types: Array = []) -> E.Structure:
 	var best: E.Structure = null
-	for s in structures:
-		if not types.is_empty() and not s.type in types: continue
-		if not field_yields(s) or s.pos.distance_to(at) > reach or not D.same_side(s.pos, at): continue
-		if field_hands(s) >= int(D.STRUCTURES[s.type]["worked"]["hands"]): continue
-		if best == null or s.pos.distance_to(at) < best.pos.distance_to(at): best = s
+	for t in (WORKED_TYPES if types.is_empty() else types):
+		for s in built_of(t): # (our built ones of the type, indexed once a tick)
+			if s.pos.distance_to(at) > reach or not field_yields(s) or not D.same_side(s.pos, at): continue
+			if field_hands(s) >= int(D.STRUCTURES[s.type]["worked"]["hands"]): continue
+			if best == null or s.pos.distance_to(at) < best.pos.distance_to(at): best = s
 	return best
 
 ## Send u to work field (or dock) `s`: the game master's verb as much as the Steward's.
 func assign_field(u: E.Unit, s: E.Structure, key := "") -> void:
-	set_job(u, {"type": "field", "struct_id": s.id, "slot": field_hands(s)}, key)
+	var fh := _field_hands()
+	var slot := int(fh.get(s.id, 0))
+	set_job(u, {"type": "field", "struct_id": s.id, "slot": slot}, key)
+	fh[s.id] = slot + 1 # (the next one asked this tick sees the place taken)
 
 func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var s := struct_by_id(int(j.get("struct_id", -1)))
@@ -2932,7 +2946,8 @@ func finish_reno(s: E.Structure, u: E.Unit) -> void:
 			if o.reno and ours(o) and settlement_of(o.pos) == settlement_of(s.pos): next = o
 	if next: assign_build(u, next)
 
-## The settlement (from settlements()) a point belongs to: the nearest one.
+## The settlement (from settlements()) a point belongs to: the nearest one, water or not
+## (what a building or a home counts toward). For where a person can set out from, use home_of().
 func settlement_of(p: Vector2) -> Vector2:
 	var best: Vector2 = D.VILLAGE
 	for q in settlements():
@@ -3244,8 +3259,7 @@ func _hearths(dt: float) -> void:
 		var sleepers: Array = units.filter(func(u): return not u.dead and u.sleeping and u.bed_id == s.id)
 		for i in sleepers.size():
 			for j in range(i + 1, sleepers.size()):
-				life.add_bond(sleepers[i], sleepers[j], hb * 2.0)
-				life.add_bond(sleepers[j], sleepers[i], hb * 2.0)
+				life.add_bond(sleepers[i], sleepers[j], hb * 2.0) # (both ways at once: hb a second, every 2 s)
 
 ## A building's effects (structures.json "effects", the effect-stat format): the product of
 ## the "mul" on `stat` over each type of ours that stands (one of a type counts once).

@@ -19,6 +19,7 @@ const _HUD = preload("res://scripts/hud.gd")
 const _World = preload("res://scripts/world_view.gd")
 
 var failures := 0
+var _sims: Array = [] # every sim _new_sim() made: disposed after each test (they hold each other through `sim`)
 
 func check(cond: bool, msg: String) -> void:
 	if cond: print("  PASS ", msg)
@@ -65,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -83,6 +84,8 @@ func _initialize() -> void:
 		var before := errs.n
 		errs.last = ""
 		t.call()
+		for sm in _sims: sm.dispose() # (a test that forgot to free its sim leaks no more than one test's worth)
+		_sims.clear()
 		check(errs.n == before, "%s raised no engine error (%d: %s)" % [t.get_method(), errs.n - before, errs.last])
 	OS.remove_logger(errs)
 	print("\n%s (%d failures)" % ["ALL PASSED" if failures == 0 else "FAILED", failures])
@@ -101,6 +104,7 @@ func _new_sim():
 	s.careers.on = false # (nor careers taken up by themselves; test_careers switches them on)
 	s.opening = false # (nor the opening's remembered find and first-day fever; test_opening switches it on)
 	s.new_game()
+	_sims.append(s)
 	return s
 
 ## A point `off` from the river on the village's side, level with the village (+dy).
@@ -526,6 +530,7 @@ func test_research_contract() -> void:
 	check(bad["ok"] and bad["blueprint"]["tech"] != "bronze" and bad["blueprint"]["steps"].any(func(s): return s["action"] == "experiment"), "out-of-reach idea replaced, experiment step enforced")
 	var c = sim.contracts.create(san["blueprint"], u, "Find new wisdom")
 	check(sim.contracts.title(c.plan) == "Seeking Friction Fire", "the contract's title names the wisdom, not the plan id (%s)" % sim.contracts.title(c.plan))
+	check(sim.contracts.title({"kind": "settle", "plan_id": "east_camp"}) == "east_camp" and sim.contracts.title({"kind": "settle", "plan_id": "x", "leader_id": "unit_"}) == "x", "a settle plan with no leader keeps its plan id, never another's name")
 	I18N.setup("zh")
 	check(sim.contracts.title(c.plan) == "探求" + I18N.t("Friction Fire"), "the contract's title is translated")
 	I18N.setup("en")
@@ -2980,8 +2985,12 @@ func test_temple_and_longhouse() -> void:
 	for u in [a, b]:
 		u.sleeping = true
 		u.bed_id = lh.id
+	var b0: float = sim.life.bond(a, b)
 	for i in 100: sim._hearths(0.1)
-	check(sim.life.bond(a, b) > 0.0 and sim.life.bond(b, a) > 0.0, "two who sleep in the longhouse grow closer (%.1f)" % sim.life.bond(a, b))
+	var grew: float = sim.life.bond(a, b) - b0
+	var hb: float = float(D.STRUCTURES["longhouse"]["hearth_bond"])
+	check(grew > 0.0 and sim.life.bond(b, a) == sim.life.bond(a, b), "two who sleep in the longhouse grow closer (%.1f)" % sim.life.bond(a, b))
+	check(absf(grew - hb * 10.0) < hb * 2.5, "by hearth_bond a second, not twice that (%.2f in 10 s, ~%.2f)" % [grew, hb * 10.0])
 	check(sim.pop_cap() >= int(D.STRUCTURES["longhouse"]["cap"]), "it houses 8")
 
 func test_challenges() -> void:
@@ -4021,6 +4030,7 @@ func test_dispose() -> void:
 	for i in 100: sim.tick(0.05)
 	check(Performance.get_monitor(Performance.OBJECT_COUNT) > n0 + 100, "a game is many objects")
 	sim.dispose()
+	_sims.erase(sim) # (the suite's own list holds it too)
 	sim = null
 	var left := int(Performance.get_monitor(Performance.OBJECT_COUNT) - n0)
 	check(left <= 0, "after dispose() nothing of it stays in memory (%d objects left)" % left)
@@ -4605,6 +4615,25 @@ func test_house_fire() -> void:
 	check(caught >= 1, "the fire leaps to huts packed beside it (%d of 8)" % caught)
 	for k in 5: sim.nat._house_fires(float(sim.nat.C["house_fire"]["leap_secs"]) + 0.1)
 	check(far.built, "a hut standing apart is spared")
+	sim.dispose()
+
+func test_depart_needs_who() -> void:
+	print("\n== A departure names who leaves ==")
+	var sim = _new_sim()
+	var n: int = sim.living().size()
+	sim.story.run([{"depart": true}], null)
+	sim.story.run([{"depart": true, "who": "all"}], null)
+	check(sim.living().filter(func(u): return u.role == "leaving").is_empty() and sim.living().size() == n, "no who, or all: nobody walks away")
+	var u = sim.living().filter(func(x): return x.role == "")[0]
+	sim.story.run([{"depart": true, "who": "id:%d" % u.id}], null)
+	check(u.role == "leaving", "one named family leaves")
+	# a crisis order is not kept waiting by a morning stretch
+	sim.life.on = true
+	var w = sim.living().filter(func(x): return x.role == "")[0]
+	w.wake_until = sim.time + 4.0
+	check(sim.life.waking(w), "a moment to stretch on waking")
+	w.job = {"type": "move", "to": w.pos + Vector2(50, 0), "crisis": true}
+	check(not sim.life.waking(w), "but not when the chieftain gives an order in a crisis")
 	sim.dispose()
 
 func test_strife() -> void:

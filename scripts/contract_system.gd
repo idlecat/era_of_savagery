@@ -153,7 +153,8 @@ func title(plan: Dictionary) -> String:
 			what = tr(rc["name"]) if rc.has("name") else ""
 		"seek": what = tr(SEEK_WORDS.get(str(plan.get("group", "")), ""))
 		_:
-			var ld: E.Unit = sim.unit_by_id(int(str(plan.get("leader_id", "")).trim_prefix("unit_")))
+			var lid := str(plan.get("leader_id", "")).trim_prefix("unit_")
+			var ld: E.Unit = sim.unit_by_id(int(lid)) if lid.is_valid_int() else null # (no leader named: nobody, never person #0)
 			what = tr(ld.name) if ld else ""
 	if fmt == "" or what == "": return str(plan.get("plan_id", ""))
 	return tr(fmt) % what
