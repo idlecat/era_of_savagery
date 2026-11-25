@@ -265,3 +265,19 @@ Two things carry through every step:
   walking people are the floor now (~25 µs a person-update); next levers are a
   cheaper step for walkers and level of detail by distance from the camera. Wood
   still piles up (7,000–12,000 by day 60) even with winter fuel.
+- **Wood and blizzards, round two.** "Enough wood" (vice.steward wood_enough) took
+  the day-60 woodpile from 7,000–12,000 to ~2,200, the hands going to food (stores
+  near full by day 60). Blizzards kept killing 6–7 in a night until traced twice
+  more: the errand to the fire ended as soon as a daytime blizzard was not yet
+  deadly, and a gatherer who stood within a fire's warmth when it began walked 600
+  paces out into it on her job. Now the response holds while the blizzard lasts
+  (`while_weather`), the Steward and the trades send no one out in it (`keep_in`),
+  and the reaction repeats every 5 s. Seed 2's day-55 blizzard: 6 dead → 0. 60-day
+  runs (seeds 1–3, 26b503f): 123–172 people, 5–11 deaths, most of them in raids now
+  (clans and war bands grow with us, as intended).
+- **The first 150-day game** (seed 1, code before the reach, wood and blizzard
+  changes): 157 people at day 60, 295 at 100, 374 at 120, then flat at 384–392: the
+  beds stopped at 392 from day 120, most likely the 450-wide disc full (the reach now
+  grows with the tribe; a new 150-day run is measuring it). Winters at 250–370 people
+  are tight (stores at 0–45 on winter days 80, 90, 120), and two spring floods killed
+  4 and 7 at 350+ people: the next findings to trace.
