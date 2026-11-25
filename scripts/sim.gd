@@ -2581,6 +2581,8 @@ func _update_vice(dt: float) -> void:
 			elif steward_policy == "lore": choice = "lore"
 			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
 			else: choice = "food" if randf() < 0.5 else "wood"
+			if choice == "wood" and steward_policy != "wood" and stock["wood"] >= story.count(sw.get("wood_enough", 1e9)): # (the woodpile is high enough: hands go where they are wanted)
+				choice = "food" if stock["food"] < food_cap() * float(sw["full"]) else "lore"
 			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" and bool(sw.get("fields_first", true)) else null
 			if field: choice = "field" # (food: a field or dock with a free place before the wild)
 			match choice:
