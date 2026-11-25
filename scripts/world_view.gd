@@ -8,6 +8,7 @@ extends Node2D
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const I = preload("res://scripts/i18n.gd")
+const ArtBaker = preload("res://scripts/art_baker.gd") # (its WALL_DIRS and YARD_PROPS)
 
 signal selection_changed()
 signal structure_clicked(s) # a click on a building with something to show (the burial ground)
@@ -52,6 +53,8 @@ var minimap_tex: ImageTexture
 var fog_tex: ImageTexture
 var fog_img: Image
 var fog: Node2D # draws the fog of war (fog.gdshader)
+var plaza_layer: Node2D # the flagstone plazas of towns (draw_plazas), redrawn when plaza_sig changes
+var plaza_sig := -1
 var fog_mat: ShaderMaterial
 var fog_refresh := 0.0
 var wear_tex: ImageTexture
@@ -170,6 +173,9 @@ func setup(s) -> void:
 	_ground_photos(gm)
 	ground.material = gm
 	add_child(ground)
+	plaza_layer = PlazaLayer.new()
+	plaza_layer.wv = self
+	add_child(plaza_layer)
 	ground_fx = GroundFX.new()
 	ground_fx.wv = self
 	add_child(ground_fx)
@@ -364,6 +370,10 @@ func _process(delta: float) -> void:
 	if wear_refresh <= 0:
 		wear_refresh = 1.0
 		_refresh_wear()
+		var psig := _plaza_sig()
+		if psig != plaza_sig:
+			plaza_sig = psig
+			plaza_layer.queue_redraw()
 	fog_refresh -= delta
 	if fog_refresh <= 0:
 		fog_refresh = 0.1
@@ -1612,12 +1622,12 @@ func _round_house(b: Vector2, r: float, wall_h: float, roof_h: float, wall: Colo
 	ci.draw_line(apex, apex + Vector2(-3, -5), Color("#5a3d22"), 2)
 	ci.draw_line(apex, apex + Vector2(3, -5), Color("#5a3d22"), 2)
 
-func _draw_post(b: Vector2, shown: bool, built: bool, style := 2, stone := false, tower := false) -> void:
+func _draw_post(b: Vector2, shown: bool, built: bool, style := 2, stone := false, tower := false, dir := 0) -> void:
 	if not shown:
 		ci.draw_circle(b, 2, Color(0.5, 0.4, 0.3, 0.35))
 		return
 	if stone: # a stone wall's block, or one of its towers
-		if _sprite(("wall_tower" if tower else "wall_stone") + _snowy(), b): return
+		if _sprite(("wall_tower" if tower else "wall_stone_%d" % dir) + _snowy(), b): return
 		var h := 30.0 if tower else 14.0
 		var w := 9.0 if tower else 7.0
 		ci.draw_rect(Rect2(b.x - w, b.y - h, w * 2, h), Color("#8f8b82"))
@@ -1786,6 +1796,47 @@ func _draw_ground_part(s) -> void:
 			for i in 20:
 				ci.draw_circle(p + Vector2.from_angle(i * TAU / 20) * 46, 3.0, Color(0.62, 0.6, 0.55, 0.95))
 
+## The plazas: every fire of a settlement grown to a town or city stands on laid flagstones.
+## Drawn by the PlazaLayer (between the ground and GroundFX), redrawn only when what it shows
+## changes (_plaza_sig(), looked at once a second).
+func draw_plazas() -> void:
+	ci.draw_set_transform_matrix(GROUND)
+	for s in sim.structures:
+		if s.type == "bonfire" and s.built and sim.ours(s):
+			var k := _tier_k(s.pos)
+			if k >= 2: _plaza(s.pos, s.id, k)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _plaza_sig() -> int:
+	var sig := 0
+	for s in sim.structures:
+		if s.type == "bonfire" and s.built and sim.ours(s): sig = sig * 31 + s.id * 4 + _tier_k(s.pos)
+	return sig + (1 if sim.hz.snow > 0.5 else 0)
+
+## A plaza of irregular flagstones in rings round a fire (a city's wider), with dark joints;
+## toward the edge more stones are missing and the grass comes through.
+func _plaza(c: Vector2, seed_id: int, tier: int) -> void:
+	var rings := 12 if tier >= 3 else 9
+	var snow: bool = sim.hz.snow > 0.5
+	for ring in rings:
+		var rr := 18.0 + ring * 15.0
+		var n := int(rr * TAU / 15.0)
+		for i in n:
+			var id := seed_id * 977 + ring * 131 + i
+			if _h(id, 1) < 0.04 + 0.6 * pow(float(ring) / rings, 2.5): continue # (the edge frays into grass)
+			var ang := (i + 0.5 * (ring % 2)) * TAU / n
+			var q := c + Vector2.from_angle(ang) * (rr + (_h(id, 2) - 0.5) * 3.0)
+			var g := 0.5 + 0.12 * _h(id, 3)
+			var col := Color(g + 0.05, g + 0.01, g - 0.06) if not snow else Color(0.86, 0.88, 0.92)
+			var w := 6.4 + _h(id, 4) * 1.6
+			var pts := PackedVector2Array()
+			for k in 6:
+				var a2 := ang + k * TAU / 6 + _h(id, 5)
+				pts.append(q + Vector2.from_angle(a2) * w * (0.82 + 0.25 * _h(id, 6 + k)))
+			ci.draw_colored_polygon(pts, Color(0.22, 0.19, 0.15, 0.55)) # (the joint: the stone's own shadow, a little larger)
+			for k in pts.size(): pts[k] = q + (pts[k] - q) * 0.84
+			ci.draw_colored_polygon(pts, col)
+
 ## Construction sprite for an unbuilt structure: footprint shape and size by type
 ## (homes follow the current era), stage by progress. False if not baked.
 const SITE_SHAPES := {
@@ -1843,6 +1894,7 @@ func _draw_structure(s) -> void:
 			var home_key := "%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()]
 			if s.built and spr_shadow.call(home_key, r) and _sprite(home_key, b):
 				if s.decor > 0: _decor(s, b, r)
+				_yard_props(s, r)
 				if sim.has_tech("fire"): _smoke(b - Vector2(0, (32 if s.style == 1 else 36) + (6 if big else 0)), s.id)
 				if s.reno: _scaffold(b, r)
 				return
@@ -2140,6 +2192,35 @@ func _era_dressing(s, b: Vector2) -> void:
 					_pennant(b + Vector2(cos(ang) * 18, sin(ang) * 9), 26, s.id + i)
 		"totem_shrine", "grand_altar", "temple":
 			if era >= 3: _pennant(b + Vector2(-26, 6), 46, s.id)
+
+## How far the settlement round `p` has grown: 0 camp, 1 village, 2 town, 3 city (the
+## index of its tier in rules.json "tiers").
+func _tier_k(p: Vector2) -> int:
+	var tier := str(sim.place_of(sim.settlement_of(p)).get("tier", "camp"))
+	var l: Array = sim.RULES["tiers"]["list"]
+	for i in l.size():
+		if str(l[i]["id"]) == tier: return i
+	return 0
+
+## A lived-in yard: as the settlement grows from camp to city, each home gathers up to three
+## things before it (ArtBaker.YARD_PROPS: woodpile, pots, hide rack, baskets, chopping block),
+## picked and placed by its id, on the front side so they draw over the home (one canvas
+## item), clear of the door.
+func _yard_props(s, r: float) -> void:
+	var n := mini(_tier_k(s.pos), 3)
+	if n == 0 or not s.built: return
+	var door := 90.0 if clampi(s.style, 1, 3) != 2 else 45.0 # (world degrees: where the door faces)
+	var spots := [-30.0, 0.0, 20.0, 125.0, 150.0, 65.0, 110.0]
+	var kinds: Array = ArtBaker.YARD_PROPS
+	var placed := 0
+	for i in spots.size():
+		if placed >= n: break
+		var ang: float = spots[(i + s.id) % spots.size()]
+		if absf(ang - door) < 28.0: continue
+		var kind: String = kinds[(s.id * 7 + placed * 3) % kinds.size()]
+		var at: Vector2 = s.pos + Vector2.from_angle(deg_to_rad(ang)) * (r + 9.0 + 4.0 * _h(s.id, placed))
+		_sprite("yard_%s%s" % [kind, _snowy()], iso(at))
+		placed += 1
 
 ## A tall pole with a fluttering pennant: the cloth leans with the wind.
 func _pennant(b: Vector2, h: float, seed_id: int) -> void:
@@ -3127,6 +3208,13 @@ class Ground extends Node2D:
 		wv.draw_terrain()
 		wv.ci = wv
 
+class PlazaLayer extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_plazas()
+		wv.ci = wv
+
 class GroundFX extends Node2D:
 	var wv
 	func _draw() -> void:
@@ -3170,7 +3258,7 @@ func draw_item(kind: int, obj) -> void:
 		2: _draw_unit(obj)
 		3: _draw_pred(obj)
 		4: _draw_guardian(obj)
-		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3], obj[4] if obj.size() > 4 else false, obj[5] if obj.size() > 5 else false)
+		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3], obj[4] if obj.size() > 4 else false, obj[5] if obj.size() > 5 else false, obj[6] if obj.size() > 6 else 0)
 		6: _draw_landmark(obj)
 		7:
 			for d in obj: _draw_decor(d)
@@ -3258,7 +3346,10 @@ func _sync_items() -> void:
 				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
 				var key := "s%d_%d" % [st.id, i]
 				seen[key] = true
-				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0], iso(pp), false)
+				# a stone block turned along the ring: its tangent's world angle, as one of the baked turns
+				var tang := float(i) / cnt * TAU + PI / 2.0
+				var dir := posmod(roundi(fposmod(-tang, PI) / (PI / ArtBaker.WALL_DIRS)), ArtBaker.WALL_DIRS)
+				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0, dir], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				it.modulate = _pick_glow(st)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
@@ -3273,7 +3364,7 @@ func _sync_items() -> void:
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
 			it.modulate = _pick_glow(st)
-			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
+			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0) + (_tier_k(st.pos) * 100000000 if st.type in ["hut", "large_hut"] else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true
