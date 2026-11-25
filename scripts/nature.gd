@@ -373,6 +373,12 @@ func flood_half() -> float:
 	elif flood_at > 0 and sim.time >= flood_at - warn: k = clampf(1.0 - (flood_at - sim.time) / warn, 0.0, 1.0) * 0.5
 	return D.RIVER_HALF + float(C["flood"]["extra_width"]) * k
 
+## How far from a river's centre the spring flood reaches buildings at its height
+## (events.json flood: the river, its extra_width, building damage reach): homes kept
+## beyond it stay dry.
+func flood_band() -> float:
+	return maxf(D.RIVER_HALF + float(C["flood"]["extra_width"]), float(C["flood"]["building_radius"]))
+
 ## The stretch of river nearest the village (where flood alerts point).
 func river_near_home() -> Vector2:
 	return D.nearest_river_point(D.VILLAGE) if not D.RIVERS.is_empty() else D.VILLAGE

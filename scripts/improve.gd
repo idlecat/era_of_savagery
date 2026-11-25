@@ -230,6 +230,7 @@ func spot(st: String, near: String) -> Vector2:
 	var step := float(C.get("ring_step", 35))
 	var region = D.region_at(D.VILLAGE)
 	var far := reach()
+	var dry: float = sim.nat.flood_band() if int(D.STRUCTURES[st].get("cap", 0)) > 0 else 0.0 # (homes stand clear of the spring flood; fields may take the silt)
 	var near_structs: Array = sim.structures.filter(func(s): return s.pos.distance_to(anchor) < far + 200)
 	var near_nodes: Array = sim.nodes.filter(func(n): return (n.kind in ["tree", "bush", "boulder"] or n.kind in D.FINDS) and n.pos.distance_to(anchor) < far + 60)
 	var d := step * 1.5
@@ -238,13 +239,13 @@ func spot(st: String, near: String) -> Vector2:
 		var a0 := float(sim.structures.size()) * 0.7 # (varies between sites, deterministic)
 		for i in n:
 			var p: Vector2 = anchor + Vector2.from_angle(a0 + TAU * i / n) * d
-			if p.distance_to(D.VILLAGE) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes): return p
+			if p.distance_to(D.VILLAGE) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes, dry): return p
 		d += step
 	return Vector2.INF
 
-func _free(p: Vector2, r: float, structs: Array, obstacles: Array) -> bool:
+func _free(p: Vector2, r: float, structs: Array, obstacles: Array, dry := 0.0) -> bool:
 	if p.x < 40 or p.y < 40 or p.x > D.W - 40 or p.y > D.H - 40: return false
-	if D.is_water(p) or D.river_dist(p) < sim.wet_reach() + r: return false
+	if D.is_water(p) or D.river_dist(p) < maxf(sim.wet_reach(), dry) + r: return false
 	var gap := float(C.get("gap", 14))
 	for s in structs:
 		var sr: float = sim.struct_r(s)
