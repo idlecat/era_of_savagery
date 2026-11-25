@@ -17,6 +17,11 @@
   "mercy": {"mild": 3.0, "white": 0.5, "lean": 0.5},
   "rich": {"white": 1.5, "lean": 1.5, "wolf": 1.3}},
  "hold_while": {"_doc": "Hardships held back while another trouble is on, so they don't stack into a day that erases ten (director.allow): per kind, held while at least `sick` people are ill or the camp has gone hungry `hungry_hours` game hours.", "clan_raid": {"sick": 3, "hungry_hours": 3}, "tiger_raid": {"sick": 3, "hungry_hours": 3}, "wolves": {"sick": 4}},
+ "bored": {"_doc": "The missing twin of the cap: when the tension stays under `below` for `days` days and the tribe is not in distress, something stirs (director.bored(), _stir()): the first of `stirs` whose `when` holds runs its story actions (needs_clan: only with a clan that is not at peace with us; `clan` is the feud's, else the worst met), then nothing more for cooldown_days.", "below": 0.5, "days": 3, "cooldown_days": 4,
+  "stirs": [
+   {"needs_clan": true, "when": {"day": 8}, "do": [{"raid": true}, {"log": "Too quiet for too long: the clan that hates us most has been watching, and its war band is on the move."}]},
+   {"when": {"day": 4}, "do": [{"spawn": "wolf", "at": "village", "offsets": [[560, -380], [600, -350], [580, -420]]}, {"log": "The quiet breaks: a wolf pack has come down from the hills, hungry and bold."}]}
+  ]},
  "same_secs": 30,
  "retry": 30,
  "distress": {"food_per_head": 0.5, "deaths": 2, "death_days": 2, "mood": 20, "check_every": 5},

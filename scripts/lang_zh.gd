@@ -2693,6 +2693,8 @@ const STRINGS := {
 	"Knows every berry patch and root ground": "熟知每一片浆果丛与块根地",
 	"Fisher": "渔人",
 	"Farmer": "农人",
+	"Too quiet for too long: the clan that hates us most has been watching, and its war band is on the move.": "太平静了，太久了：最恨我们的部落一直在窥伺，他们的战团已经出动。",
+	"The quiet breaks: a wolf pack has come down from the hills, hungry and bold.": "平静被打破了：一群饥饿而大胆的狼从山上下来了。",
 	"Settlements joined to the city by road: %d / %d": "以道路与城邑相连的聚落：%d / %d",
 	"A thousand kept warm through the hungry dark, and every settlement joined by road.": "千人熬过饥寒长夜，炉火不熄；每座聚落都有道路相连。",
 	"the town's stores could not hold what a winter eats.": "城镇的仓储装不下一个冬天要吃的粮食。",

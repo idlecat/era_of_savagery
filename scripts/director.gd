@@ -27,6 +27,8 @@ var mercy_until := -1.0
 var mercy_ready := 0.0 # no gift before this time
 var held: Array = [] # [{kind, t}] what was put off lately (for summary)
 var check_t := 0.0
+var calm_t := 0.0 # seconds the tension has stayed under bored.below (the tribe is not in distress)
+var stir_ready := 0.0 # no stir before this time
 
 func _init(s) -> void:
 	sim = s
@@ -100,6 +102,33 @@ func update(dt: float) -> void:
 	var pop: int = sim.living().size()
 	distress = pop > 0 and (sim.stock["food"] < pop * float(ds.get("food_per_head", 0.5)) or deaths.size() >= int(ds.get("deaths", 2)) or sim.folk.mood < float(ds.get("mood", 20)))
 	if distress and active() and sim.time >= mercy_ready: _mercy()
+	var B: Dictionary = C.get("bored", {})
+	calm_t = calm_t + float(ds.get("check_every", 5)) if tension < float(B.get("below", 0.5)) and not distress else 0.0
+	if bored() and active() and sim.time >= stir_ready: _stir()
+
+## The missing twin of allow(): days on end with nothing going wrong (tension under
+## director.json bored.below for bored.days, no distress). A game master can ask it too.
+func bored() -> bool:
+	var B: Dictionary = C.get("bored", {})
+	return not B.is_empty() and calm_t >= float(B.get("days", 3)) * D.DAY_LEN
+
+## Something stirs on the horizon: the first bored.stirs entry whose conditions hold (story
+## actions; "clan" is the clan that hates us most among those met: the feud's, else the worst).
+func _stir() -> void:
+	var B: Dictionary = C.get("bored", {})
+	stir_ready = sim.time + D.DAY_LEN * float(B.get("cooldown_days", 4))
+	calm_t = 0.0
+	var R = sim.rivals
+	var cid: String = R.feud_id()
+	if cid == "":
+		for id in R.clans:
+			if R.clans[id]["met"] and not R.at_peace(id) and (cid == "" or R.clans[id]["relation"] < R.clans[cid]["relation"]): cid = id
+	for g in B.get("stirs", []):
+		var w: Dictionary = g.get("when", {})
+		if bool(g.get("needs_clan", false)) and cid == "": continue
+		if sim.story.holds(w):
+			sim.story.run(g.get("do", []), null, {"clan": cid})
+			return
 
 ## A gift in the worst of it: the first mercy.gifts entry whose conditions hold.
 func _mercy() -> void:

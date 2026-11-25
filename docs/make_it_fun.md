@@ -46,8 +46,9 @@ rush).
   Flood; a bloodied band turning home; the ghost's site words; `sim.site_value()`;
   the Steward scoring sites; the G1 check that random placement does worse.
 - **I3, timing:** a best season per building, a food reserve beside `wood_reserve`.
-- **Director `bored()`** and the reactive successor nemesis (only if G1 shows the late
-  game dragging).
+- **The reactive successor nemesis** (only if G1 shows the late game dragging; the
+  director's `bored()` itself is built: after days of calm a hostile clan raids or a
+  wolf pack comes, `director.json` `bored`).
 - **B3, the frozen river** (only if winters prove lacking).
 
 **Partial (gaps noted in the sections):**
