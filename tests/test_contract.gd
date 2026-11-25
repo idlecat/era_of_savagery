@@ -66,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2141,6 +2141,56 @@ func test_dilemma_config() -> void:
 	sim.DILEMMAS = sim.DILEMMAS.duplicate(true) # (its own copy to change)
 	sim.DILEMMAS["overpop"]["options"][0]["label"] = "Found a colony"
 	check(sim.event_def("overpop")["options"][0]["label"] == "Found a colony", "editing config/dilemmas.json changes the dilemma")
+
+func test_layout() -> void:
+	print("\n== The village is laid out in quarters (rules.json improvements.layout) ==")
+	var sim = _new_sim()
+	var imp = sim.improve
+	var lay: Dictionary = imp.C["layout"]
+	sim.research("farming")
+	sim.stock["wood"] = 4000.0
+	while sim.living().size() < 60: sim.folk.add_family(6)
+	var placed: Array = [] # [type, pos, how it was laid out]
+	for k in 120:
+		var want := ""
+		var near := "village"
+		if sim.built_of("farm_plot").size() < 4: want = "farm_plot"
+		elif sim.built_of("totem_shrine").is_empty(): want = "totem_shrine"
+		elif sim.built_of("granary").is_empty():
+			want = "granary"
+			near = "farm_plot"
+		elif sim.pop_cap() < 70: want = "longhouse"
+		else: break
+		var how: String = imp.placing(want, D.VILLAGE)
+		var p: Vector2 = imp.spot(want, near)
+		if p == Vector2.INF: break
+		sim.complete_structure(sim.add_structure(want, p), null)
+		placed.append([want, p, how])
+		sim.tier_t = 0.0
+		sim.tick(0.05)
+	check(sim.pop_cap() >= 70, "room was found for all of them (beds %d)" % sim.pop_cap())
+	var wedge: float = imp.fields_dir(D.VILLAGE)
+	var half := deg_to_rad(float(lay["fields"]["half_angle"]))
+	var in_wedge := func(p: Vector2) -> bool: return absf(angle_difference(wedge, (p - D.VILLAGE).angle())) < half
+	var fields := placed.filter(func(e): return e[0] == "farm_plot")
+	check(fields.all(func(e): return in_wedge.call(e[1]) and e[1].distance_to(D.VILLAGE) >= float(lay["core"])), "fields lie in their wedge, beyond the plaza")
+	var shrine = placed.filter(func(e): return e[0] == "totem_shrine")[0]
+	check(shrine[2] == "ring" and shrine[1].distance_to(D.VILLAGE) <= float(lay["ring"]["last"]) + 1.0, "the shrine stands on the ring round the plaza (%s)" % str(shrine[1] - D.VILLAGE))
+	var halls := placed.filter(func(e): return e[0] == "longhouse")
+	check(halls.any(func(e): return e[2] == "grid"), "a village lays out its homes on the grid")
+	var L: Dictionary = lay["lattices"]["homes"]
+	var coords := {}
+	for k in range(-12, 13):
+		if k != 0: coords[roundi(imp.lot_coord(k, L))] = true
+	var on_grid := func(p: Vector2) -> bool: return coords.has(roundi(p.x - D.VILLAGE.x)) and coords.has(roundi(p.y - D.VILLAGE.y))
+	check(halls.filter(func(e): return e[2] == "grid").all(func(e): return on_grid.call(e[1]) and not in_wedge.call(e[1])), "its homes stand on lots, in rows, outside the fields")
+	check(not halls.any(func(e): return absf(e[1].x - D.VILLAGE.x) < float(L["street"]) / 2.0 + 30.0 or absf(e[1].y - D.VILLAGE.y) < float(L["street"]) / 2.0 + 30.0), "the main streets through the plaza stay open")
+	var clash := false
+	for i in placed.size():
+		for j in range(i + 1, placed.size()):
+			if placed[i][1].distance_to(placed[j][1]) < D.STRUCTURES[placed[i][0]]["r"] + D.STRUCTURES[placed[j][0]]["r"]: clash = true
+	check(not clash, "no two buildings overlap")
+	check(imp.summary()["layout"]["homes"] == "grid" and imp.plans.size() >= 1, "a game master can read the layout (%s)" % str(imp.summary()["layout"]))
 
 func test_improvements() -> void:
 	print("\n== The village lays out improvements ==")

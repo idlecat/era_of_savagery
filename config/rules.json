@@ -286,6 +286,18 @@
   "outpost_share": 0.5,
   "ring_step": 35,
   "gap": 14,
+  "layout": {
+   "_doc": "How the planner lays out a settlement (improve.spot()). Each building type has a zone (`zones`: homes if not named, fields, plaza). ring_zones: by the tier the settlement has earned (rules.json tiers), the zones laid out on rings round the fire (`ring`: the first at `first`, then every `step`, up to `last`): a camp's huts in a circle, and always the shrines and halls round the plaza; everything else on a grid = lots on lattices, in blocks with streets between them (blocks of `block` lots, `street` wide; lots `pitch` apart, held at radius `lot` so a hut can grow into a longhouse in place). The grid begins beyond `core` (the camp circle and the plaza); of the free places, the one nearest the anchor (the village, or the `near` building) is taken; a full ring spills onto the grid. Fields lie in a wedge of `half_angle` degrees toward the most open land (looked at from look[0] to look[1] away; trees, bushes and stones within `clear` count against a way, water and the far side of a river more), chosen once per settlement; every other lattice keeps out of the wedge.",
+   "ring_zones": {"camp": ["homes", "plaza"], "village": ["plaza"], "town": ["plaza"], "city": ["plaza"]},
+   "ring": {"first": 130, "step": 60, "last": 190},
+   "core": 175,
+   "lattices": {
+    "homes": {"pitch": 74, "lot": 30, "gap": 14, "block": 2, "street": 36},
+    "fields": {"pitch": 62, "lot": 28, "gap": 4, "block": 3, "street": 22}
+   },
+   "zones": {"farm_plot": "fields", "aurochs_pen": "fields", "totem_shrine": "plaza", "temple": "plaza", "council_ring": "plaza", "grand_altar": "plaza"},
+   "fields": {"half_angle": 55, "look": [250, 650], "clear": 70}
+  },
   "ask": true,
   "ask_wait": 20,
   "ask_every": 90,

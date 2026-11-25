@@ -611,15 +611,25 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.research("farming")
 			sim.stock["wood"] = 4000.0
 			var n := int(args.get("people", "40"))
-			var k := 0
-			while sim.pop_cap() < n + 6 and k < 60:
-				var h = sim.add_structure("longhouse" if k % 2 == 0 else "large_hut", sim.dry_spot(sim.D.VILLAGE + Vector2.from_angle(k * 0.9) * (150.0 + k * 9.0)))
-				sim.complete_structure(h, null)
-				k += 1
-			for j in 3:
-				var f = sim.add_structure("farm_plot", sim.dry_spot(sim.D.VILLAGE + Vector2(-330 + j * 80, 300)))
-				sim.complete_structure(f, null)
 			while sim.living().size() < n: sim.folk.add_family(6)
+			for k in 300: # (laid out where the planner would: improve.spot(), rising tiers and all)
+				var ppl: int = sim.living().size()
+				var want := ""
+				var near := "village"
+				if sim.built_of("farm_plot").size() < 1 + ppl / 12: want = "farm_plot"
+				elif sim.built_of("granary").size() < ppl / 40:
+					want = "granary"
+					near = "farm_plot"
+				elif sim.built_of("totem_shrine").is_empty(): want = "totem_shrine"
+				elif sim.pop_cap() < n + 6: want = "longhouse" if k % 2 == 0 else "large_hut"
+				else: break
+				var p: Vector2 = sim.improve.spot(want, near)
+				if p == Vector2.INF: break
+				sim.complete_structure(sim.add_structure(want, p), null)
+				sim.tier_t = 0.0
+				sim.tick(STEP)
+				if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+				sim.paused = false
 			sim.tier_t = 0.0
 			for i in int(float(args.get("secs", "6")) / STEP):
 				sim.tick(STEP)
