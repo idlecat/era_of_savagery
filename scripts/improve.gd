@@ -336,7 +336,7 @@ func spot(st: String, near: String, center: Vector2 = D.VILLAGE, far := -1.0) ->
 		var a0 := float(sim.structures.size()) * 0.7 # (varies between sites, deterministic)
 		for i in n:
 			var p: Vector2 = anchor + Vector2.from_angle(a0 + TAU * i / n) * d
-			if p.distance_to(center) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes, dry): return p
+			if p.distance_to(center) < far and D.region_at(p) == region and is_free(p, r, near_structs, near_nodes, dry): return p
 		d += step
 	return Vector2.INF
 
@@ -379,7 +379,7 @@ func _ring_spot(st: String, anchor: Vector2, center: Vector2, far: float, struct
 		cells.sort_custom(func(x, y): return x[0] < y[0])
 		for c in cells:
 			var p: Vector2 = c[1]
-			if D.region_at(p) == region and _free(p, lot, structs, obstacles, dry, float(L["gap"])): return p
+			if D.region_at(p) == region and is_free(p, lot, structs, obstacles, dry, float(L["gap"])): return p
 		R += float(lay["ring"]["step"])
 		k += 1
 	return Vector2.INF
@@ -418,7 +418,7 @@ func _grid_spot(st: String, anchor: Vector2, center: Vector2, far: float, struct
 	cells.sort_custom(func(a, b): return a[0] < b[0])
 	for c in cells:
 		var p: Vector2 = c[1]
-		if D.region_at(p) == region and _free(p, lot, structs, obstacles, dry, float(L["gap"])): return p
+		if D.region_at(p) == region and is_free(p, lot, structs, obstacles, dry, float(L["gap"])): return p
 	return Vector2.INF
 
 ## The way settlement `center`'s fields lie (an angle), chosen once (saved in `plans`): toward
@@ -450,7 +450,10 @@ func fields_dir(center: Vector2) -> float:
 	plans[key] = {"fields": best}
 	return best
 
-func _free(p: Vector2, r: float, structs: Array, obstacles: Array, dry := 0.0, gap := -1.0) -> bool:
+## Whether a building of radius r fits at p: on dry land clear of the water's reach (and
+## of `dry` from the river), `gap` from `structs` (on a wall's ring line counts, inside it
+## doesn't), clear of `obstacles` (nodes) and landmarks. Rival clans lay out by it too.
+func is_free(p: Vector2, r: float, structs: Array, obstacles: Array, dry := 0.0, gap := -1.0) -> bool:
 	if p.x < 40 or p.y < 40 or p.x > D.W - 40 or p.y > D.H - 40: return false
 	if D.is_water(p) or D.river_dist(p) < maxf(sim.wet_reach(), dry) + r: return false
 	if gap < 0.0: gap = float(C.get("gap", 14))

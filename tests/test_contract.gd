@@ -66,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -1059,6 +1059,7 @@ func test_night_rest() -> void:
 	camper.bed_id = -1
 	camper.bed_pos = camper.pos
 	camper.sleeping = true
+	sim.lod_on = false # (one tick: everyone updates in it, whatever their id)
 	sim.tick(0.05)
 	check(not camper.sleeping and camper.act == "Keeping watch", "someone sleeping in the open wakes and keeps watch when a beast is near (%s)" % camper.act)
 	far.dead = true
@@ -1590,7 +1591,7 @@ func test_endgames() -> void:
 	check("submit_ochre" in R.pending, "a beaten clan may bend the knee")
 	R.pending.clear()
 	d = sim.event_def("submit_ochre")
-	check(d["options"].size() == 3, "accept, demand more, or spare them")
+	check(d["options"].size() == 4, "accept, demand more, spare them, or take them in")
 	sim.resolve_event("submit_ochre", 0)
 	check(R.stance("ochre") == "Vassal" and R.at_peace("ochre"), "the Red Ochre become our vassals")
 	var food0: float = sim.stock["food"]
@@ -2075,7 +2076,9 @@ func test_gm_operations() -> void:
 	tiger.fled = false
 	tiger.fleeing = false
 	tiger.pos = sc.pos + Vector2(150, 0)
+	sim2.lod_on = false # (one tick: everyone updates in it, whatever their id)
 	sim2.tick(0.05)
+	sim2.lod_on = true
 	check(sc.job.get("flee", false) and sc.resume_job.get("type", "") == "explore", "a scout who sees a beast backs away (beast_seen)")
 	# panic: people hide in their huts until it passes
 	var sim3 = _new_sim()
@@ -3154,7 +3157,7 @@ func test_last_stand_and_heritage() -> void:
 	sim.check_events()
 	check(sim.pending_event == "last_stand", "with 3 left, the last stand is posed")
 	var view: Dictionary = sim.event_def("last_stand")
-	check(view["options"].size() == 2, "hold the fire, or join friends")
+	check(view["options"].size() == 3, "hold the fire, join friends, or bow to our enemies")
 	# no friend: joining is not possible, holding is
 	var r: Dictionary = sim.resolve_event("last_stand", 1)
 	check(sim.legacy.pending == "" and not sim.legacy.achieved.has("merged"), "with no clan to take us in, the tribe stays")
@@ -4369,7 +4372,9 @@ func test_worked_fields() -> void:
 	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + 5.0
 	check(sim.hz.winter() and not sim.field_yields(plot) and sim.free_field(D.VILLAGE, 900.0) == null, "no field work in winter")
 	sim.assign_field(folk[0], plot)
+	sim.lod_on = false # (one tick: everyone updates in it, whatever their id)
 	sim.tick(0.05)
+	sim.lod_on = true
 	check(folk[0].job.get("type", "") != "field", "someone sent to a winter field is free again")
 	sim.hz.level = "off"
 	sim.time = D.DAY_LEN * 0.3
@@ -5117,3 +5122,84 @@ func test_smoke() -> void:
 	bad = _smoke(sim, 3.0)
 	check(bad.is_empty(), "3 days on a random map break no invariant %s" % str(bad))
 	Scenarios.apply("the_ford")
+
+## Rival villages grow with their clan (rivals.json growth): homes for its people, its era's
+## buildings, walls round the homes, the era's style.
+func test_rival_growth() -> void:
+	print("\n== Rival villages grow ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	var G: Dictionary = R.C["growth"]
+	for cid in R.clans:
+		var cl: Dictionary = R.clans[cid]
+		var own: Array = sim.structures.filter(func(s): return s.owner == "rival:" + cid)
+		var homes: int = own.filter(func(s): return s.type in ["hut", "large_hut"]).size()
+		check(homes >= ceili(cl["pop"] / float(G["people_per_home"])), "%s start with a home for every %d people (%d homes, %d people)" % [cid, int(G["people_per_home"]), homes, cl["pop"]])
+		check(own.all(func(s): return not D.is_water(s.pos)), "%s build on dry land" % cid)
+		if cl["culture"] == "martial":
+			var wall: Array = own.filter(func(s): return s.type == "palisade")
+			var far: float = own.filter(func(s): return s.type in ["hut", "large_hut"]).map(func(s): return s.pos.distance_to(cl["pos"]) + sim.struct_r(s)).max()
+			check(wall.size() == 1 and sim.struct_r(wall[0]) >= far, "%s's palisade encloses its homes" % cid)
+	var id: String = R.clans.keys()[0]
+	var c: Dictionary = R.clans[id]
+	var n0: int = sim.structures.filter(func(s): return s.owner == "rival:" + id).size()
+	c["pop"] = 24
+	c["met"] = true
+	c["era"] = 1
+	R.set_era(id, 2)
+	check(int(c["era"]) == 2 and sim.structures.filter(func(s): return s.owner == "rival:" + id).all(func(s): return s.style == 2), "a clan entering an era restyles its village")
+	check(sim.log_lines[0]["text"].contains(sim.tr(c["name"])), "a met clan's new era is told")
+	for i in 20: R.develop(c, D.DAY_LEN * float(G["every_days"]))
+	var mine: Array = sim.structures.filter(func(s): return s.owner == "rival:" + id)
+	check(mine.size() > n0 + 4, "the village grows with its people (%d -> %d buildings)" % [n0, mine.size()])
+	check(mine.any(func(s): return s.type == "farm_plot") and mine.any(func(s): return s.type == "granary"), "the second era brings fields and a granary")
+	var fields: Array = mine.filter(func(s): return s.type == "farm_plot")
+	var homes_far: float = mine.filter(func(s): return s.type in ["hut", "large_hut"]).map(func(s): return s.pos.distance_to(c["pos"])).max()
+	check(fields.all(func(s): return s.pos.distance_to(c["pos"]) > homes_far), "fields lie beyond the homes")
+	sim.story.run([{"clan_era": 3}], null, {"clan": id})
+	for i in 6: R.develop(c, D.DAY_LEN * float(G["every_days"]))
+	mine = sim.structures.filter(func(s): return s.owner == "rival:" + id)
+	check(int(c["era"]) == 3 and mine.any(func(s): return s.type == "smelter"), "a game master's clan_era moves the clan on; the bronze era brings a smelter")
+	if c["culture"] == "martial": check(mine.any(func(s): return s.type == "stone_wall") and not mine.any(func(s): return s.type == "palisade"), "a stone wall replaces the palisade")
+	check(sim.check_invariants().is_empty(), "invariants hold (%s)" % str(sim.check_invariants()))
+	# by the day, clans move on without us
+	var c2: Dictionary = R.clans[R.clans.keys()[1]]
+	var e0 := int(c2["era"])
+	sim.time = D.DAY_LEN * (float(G["era_days"]["3"]) + 1)
+	for i in 3: R.develop(c2, D.DAY_LEN * float(G["every_days"]))
+	check(int(c2["era"]) == 3 and e0 < 3, "by day %d every clan has reached the bronze era" % int(G["era_days"]["3"]))
+
+## A feud can end with one side gone: a clan beaten at home may be taken into the tribe
+## (submit dilemma, story action absorb), and at the last stand we may bow to our enemies.
+func test_absorb_clan() -> void:
+	print("\n== One side is taken in ==")
+	var sim = _new_sim()
+	var R = sim.rivals
+	var id: String = "ochre"
+	var c: Dictionary = R.clans[id]
+	c["met"] = true
+	c["pop"] = 12
+	var pop0: int = sim.living().size()
+	var opts: Array = sim.DILEMMAS["submit"]["options"]
+	var take: Array = opts.filter(func(o): return o["label"] == "Take them into the tribe")
+	check(take.size() == 1, "after the battle we may take them into the tribe")
+	sim.story.run(take[0]["do"], null, {"clan": id})
+	var n: int = roundi(12 * float(R.C["absorb"]["share"]))
+	check(sim.living().size() == pop0 + n, "their people join us as families (%d -> %d)" % [pop0, sim.living().size()])
+	check(R.gone(id) and not c["met"] and R.at_peace(id), "the clan is gone")
+	check(not sim.structures.any(func(s): return s.owner == "rival:" + id), "its village is left and pulled down")
+	check(sim.predators.filter(func(p): return p.clan == id and not p.fled).is_empty(), "its people leave the map")
+	check(not R.summary().any(func(e): return e["clan"] == sim.tr(c["name"])), "a gone clan is no longer among the clans we know")
+	check(R.absorb(id) == 0, "a gone clan can't be taken in twice")
+	c["raid_t"] = 0.0
+	c["relation"] = -100.0
+	for i in 200: sim.tick(0.05)
+	check(not sim.predators.any(func(p): return p.clan == id and not p.fled) and not sim.structures.any(func(s): return s.owner == "rival:" + id), "a gone clan neither raids nor builds again")
+	check(sim.check_invariants().is_empty(), "invariants hold (%s)" % str(sim.check_invariants()))
+	# the other way round: at the last stand we may bow to the clan that beat us
+	var h: Dictionary = R.clans["heron"]
+	h["met"] = true
+	h["relation"] = -90.0
+	check(sim.legacy.conqueror() == "heron", "the most hostile clan we know could take us in as conquerors")
+	sim.legacy.merge(sim.legacy.conqueror())
+	check(sim.legacy.pending == "merged" and sim.legacy.merged_with == "heron", "bowing to them ends the chronicle as one fire among many")

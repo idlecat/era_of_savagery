@@ -171,6 +171,19 @@ func refuge() -> String:
 		if best == "" or c["relation"] > R.clans[best]["relation"]: best = id
 	return best
 
+## The clan the tribe could bow to at the end: the nemesis, else the most hostile clan we
+## have met (Hostile or worse, not at peace with us). "" if none.
+func conqueror() -> String:
+	var R = sim.rivals
+	var nem: String = R.nemesis_id()
+	if nem != "" and R.clans[nem]["met"] and not R.gone(nem): return nem
+	var best := ""
+	for id in R.clans:
+		var c: Dictionary = R.clans[id]
+		if not c["met"] or R.at_peace(id) or not R.stance(id) in ["Hostile", "Blood feud"]: continue
+		if best == "" or c["relation"] < R.clans[best]["relation"]: best = id
+	return best
+
 ## The tribe joins clan `id` and the chronicle ends there: a legacy ending of its own
 ## ("merged", legacy.json), not a defeat. The "merge" story action; a game master's verb.
 func merge(id: String) -> bool:

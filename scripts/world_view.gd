@@ -1959,7 +1959,7 @@ func _site_col(c) -> Color:
 ## A rival village's totem banner with the clan's name and how they feel about us.
 func _draw_clan_banner(c: Dictionary) -> void:
 	var pos: Vector2 = c["pos"]
-	if not sim.is_explored(pos) or not _in_view(pos): return
+	if c.get("gone", false) or not sim.is_explored(pos) or not _in_view(pos): return
 	var col: Color = c["color"]
 	var fp := iso(pos + Vector2(-70, -70))
 	ci.draw_line(fp + Vector2(1, 0), fp + Vector2(1, -58), Color(0, 0, 0, 0.4), 4)

@@ -345,7 +345,7 @@
   ]
  },
  "last_stand": {
-  "_doc": "The last stand (make_it_fun E1): posed once when few are left (rules.json triggers.last_stand). Joining a clan ends the chronicle as the merged ending (legacy.json), not a defeat; it needs a clan that would take us in (legacy.refuge(): met, Friendly or better, or at peace). Vars: clan, clan_name, can_merge, pop.",
+  "_doc": "The last stand (make_it_fun E1): posed once when few are left (rules.json triggers.last_stand). Joining a clan ends the chronicle as the merged ending (legacy.json), not a defeat; it needs a clan that would take us in (legacy.refuge(): met, Friendly or better, or at peace); bowing to our enemies needs one (legacy.conqueror(): the nemesis, else the most hostile clan met). Vars: clan, clan_name, can_merge, foe, foe_name, can_yield, pop.",
   "title": "The Last Stand",
   "text": ["Only %d of us are left. Around the fire the survivors ask what will become of the tribe.", "pop"],
   "options": [
@@ -357,7 +357,13 @@
     "do": [{"merge": true}],
     "result": ["The last of our people set out for the %s.", "clan_name"],
     "else_do": [{"mood": -5}],
-    "else_result": "No clan would take us in. The survivors stay by the fire."}
+    "else_result": "No clan would take us in. The survivors stay by the fire."},
+   {"label": "We bow to our enemies", "desc": ["Lay down our spears before the %s and live on as their people. (The chronicle ends here.)", "foe_name"],
+    "needs": {"var": "can_yield"},
+    "do": [{"merge": true, "clan": "foe"}],
+    "result": ["The last of our people walk unarmed to the fires of the %s.", "foe_name"],
+    "else_do": [{"mood": -5}],
+    "else_result": "No enemy is near enough to bow to. The survivors stay by the fire."}
   ]
  },
  "first_day": {
@@ -821,6 +827,15 @@
      }
     ],
     "result": "We let them go in peace. The tale of our mercy will travel far."
+   },
+   {
+    "label": "Take them into the tribe",
+    "desc": "Their fires go out: their people come to live among us as our own, and the clan is no more.",
+    "do": [
+     {"absorb": true},
+     {"culture": {"ranked": 4}}
+    ],
+    "result": ["The %s are no more. Their families walk to our fire.", "clan_name"]
    }
   ]
  },

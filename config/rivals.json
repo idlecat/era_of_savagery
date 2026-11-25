@@ -1,5 +1,19 @@
 {
  "_doc": "Rival clans: how their feelings toward us change, when they raid, trade and send messengers, how strong their people are, and how their chiefs weigh a deal. Times in days unless named *_s. Texts are English translation keys; [key, var...] texts take the clan's values (clan_name, chief, n...). See docs/CONFIG.md. The checks on LLM parley output (rivals.sanitize_terms/check_reply) stay in code.",
+ "growth": {"_doc": "How a clan's village grows (rivals.develop(), every every_days). Its era rises to `era` k by day era_days[k], and toward ours with catch_up_chance per check; its buildings take the new style. It keeps a home for every people_per_home people (every large_every-th a large one), on rings round the fire from home_ring[0] in steps of home_ring[1] out to home_ring[2]; a wall (palisade, stone_wall) is sized to enclose the homes. `buildings`: the others it puts up, at most one new building per check: `type`, needing `era`, `culture` (martial/spiritual), `min_pop`; `per_pop`: one for every that many people; `outer`: laid out beyond the homes; `replaces`: a type it takes down then. `era_log`: the chronicle line when a clan we have met enters an era.", "every_days": 0.5, "era_days": {"2": 8, "3": 24}, "catch_up_chance": 0.25, "people_per_home": 2, "large_every": 3, "home_ring": [62, 36, 300], "wall_gap": 24, "outer_gap": 50,
+  "buildings": [
+   {"type": "weapon_rack", "culture": "martial"},
+   {"type": "palisade", "culture": "martial"},
+   {"type": "totem_shrine", "culture": "spiritual"},
+   {"type": "farm_plot", "era": 2, "per_pop": 5, "outer": true},
+   {"type": "granary", "era": 2, "min_pop": 10},
+   {"type": "palisade", "era": 2, "min_pop": 14},
+   {"type": "temple", "era": 2, "culture": "spiritual", "min_pop": 12},
+   {"type": "lookout_tower", "era": 2, "culture": "martial", "min_pop": 12},
+   {"type": "smelter", "era": 3, "min_pop": 12},
+   {"type": "stone_wall", "era": 3, "culture": "martial", "replaces": "palisade"}
+  ],
+  "era_log": ["The %s have entered the %s.", "clan_name", "era"]},
  "relations": {
   "drift": 0.0008,
   "goodwill": {
@@ -195,6 +209,8 @@
    "clan_name"
   ]
  },
+ "absorb": {"_doc": "A clan beaten at home may be taken into the tribe (the story action absorb, rivals.absorb(id)): `share` of its people (at most `most`) come to live with us as families, the rest scatter; its village is left and falls away, its people leave the map, and the clan is gone (no longer met, raids, trades or parleys). `alert`: what we are told.", "share": 0.75, "most": 18,
+  "alert": ["The %s are no more: %d of their people come to live among us.", "clan_name", "n"]},
  "spoils": {
   "burn_huts": 2,
   "burn_pop": 3,

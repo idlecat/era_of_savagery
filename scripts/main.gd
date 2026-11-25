@@ -658,6 +658,19 @@ func _debug_shot(args: Dictionary) -> void:
 			var z: float = float(args.get("zoom", str(snappedf(minf(1600.0 / ((sim.D.W + sim.D.H) * 0.75), 900.0 / ((sim.D.W + sim.D.H) * 0.375)), 0.01))))
 			world.cam.zoom = Vector2(z, z)
 			world.focus_on(Vector2(sim.D.W, sim.D.H) / 2.0)
+		"clan": # a rival clan's village grown (--era=1..3, --people=N), no fog
+			hud._close_modal()
+			sim.fog_enabled = false
+			var R = sim.rivals
+			var cid: String = args.get("clan", R.clans.keys()[0])
+			var cl: Dictionary = R.clans[cid]
+			for id in R.clans: R.clans[id]["met"] = true
+			R.pending.clear()
+			cl["pop"] = int(args.get("people", "24"))
+			R.set_era(cid, int(args.get("era", "2")))
+			for i in 40: R.develop(cl, sim.D.DAY_LEN * float(R.C["growth"]["every_days"]))
+			world.cam.zoom = Vector2.ONE * float(args.get("zoom", "0.8"))
+			world.focus_on(cl["pos"])
 		"explore":
 			hud._close_modal()
 			for u in sim.living().filter(func(o): return o.role == "").slice(3, 6): sim.assign_explore(u)
