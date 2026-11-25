@@ -40,6 +40,8 @@ var wander_day := -1 # the last day wanderers were looked for
 var wanderers := 0 # how many are at the edge of the camp, asking to stay
 var extra_lines := {} # situation -> [texts] (add_lines: a game master's)
 var _t := 0.0
+var _cache_kids := {} # parent id -> its living children (kin_of)
+var _cache_kids_t := -1.0
 
 func _init(s) -> void:
 	sim = s
@@ -111,9 +113,31 @@ func _people(u: E.Unit, test: Callable) -> Array:
 		if o and not o.dead and test.call(float(u.bonds[id]), o): out.append(o)
 	return out
 
+## How many living friends u has (friends_of(u).size(), without building the list).
+func _friend_count(u: E.Unit) -> int:
+	var at := float(C["bonds"]["friend_at"])
+	var n := 0
+	for id in u.bonds:
+		if float(u.bonds[id]) < at: continue # (the cheap check first)
+		var o: E.Unit = sim.unit_by_id(id)
+		if o and not o.dead: n += 1
+	return n
+
 func friends_of(u: E.Unit) -> Array: return _people(u, func(v, _o): return v >= float(C["bonds"]["friend_at"]))
 func rivals_of(u: E.Unit) -> Array: return _people(u, func(v, _o): return v <= float(C["bonds"]["rival_at"]))
-func kin_of(u: E.Unit) -> Array: return sim.living().filter(func(o): return kin(u, o))
+## u's living kin: the line it came from and the lines that came from it.
+func kin_of(u: E.Unit) -> Array:
+	if _cache_kids_t != sim.time: # (who came from whom, indexed once a tick, not everyone per person)
+		_cache_kids_t = sim.time
+		_cache_kids = {}
+		for o in sim.units:
+			if not o.dead and o.parent_id >= 0:
+				if _cache_kids.has(o.parent_id): _cache_kids[o.parent_id].append(o)
+				else: _cache_kids[o.parent_id] = [o]
+	var out: Array = _cache_kids.get(u.id, []).duplicate()
+	var p: E.Unit = sim.unit_by_id(u.parent_id) if u.parent_id >= 0 else null
+	if p and not p.dead: out.append(p)
+	return out
 
 # ------------------------------------------------------------ the tick
 func update(dt: float) -> void:
@@ -161,7 +185,7 @@ func morale_target(u: E.Unit) -> float:
 	if u.sick > 0: t += float(m["sick"])
 	if u.hp < u.max_hp * float(m["hurt_below"]): t += float(m["hurt"])
 	if u.fatigue >= float(C["fatigue"]["tired_at"]): t += float(m["tired"])
-	var nf := friends_of(u).size() + kin_of(u).size()
+	var nf := _friend_count(u) + kin_of(u).size()
 	t += minf(float(m["friend_max"]), nf * float(m["friend"])) if nf > 0 else float(m["lonely"])
 	if u.company < 0: t += float(m["rival_near"])
 	t += u.cheer - u.grief
@@ -218,14 +242,18 @@ func on_death(dead: E.Unit, mult := 1.0) -> void:
 func _bond_tick(alive: Array, step: float) -> void:
 	var b: Dictionary = C["bonds"]
 	var near := float(b["near"])
+	var max_near := int(b.get("max_near", 8))
 	var workers: Array = alive.filter(func(u): return u.role != "child" and not u.sleeping and not _resting(u))
+	var working := {}
+	for u in workers: working[u.id] = true
 	for u in alive: u.company = 0
-	for i in workers.size():
-		var a: E.Unit = workers[i]
+	for a in workers: # (pairs near each other, from the sim's grid: never everyone against everyone)
 		var ja: Dictionary = a.job
-		for k in range(i + 1, workers.size()):
-			var o: E.Unit = workers[k]
-			if a.pos.distance_to(o.pos) > near: continue
+		var seen := 0
+		for o in sim.units_near(a.pos, near):
+			if o.id <= a.id or not working.has(o.id): continue
+			seen += 1
+			if seen > max_near: break # (in a crowd one works beside a few, not all of them)
 			var jo: Dictionary = o.job
 			var v := bond(a, o)
 			if v >= float(b["friend_at"]) or kin(a, o):
@@ -619,12 +647,9 @@ func _end_chat(u: E.Unit, p: E.Unit) -> void:
 func _watch_passers(alive: Array) -> void:
 	var leaders: Array = alive.filter(func(o): return (o.title != "" or o.hero) and not o.path.is_empty())
 	if leaders.is_empty(): return
-	for u in alive:
-		if not sim.is_idle(u) or u.sleeping or not u.path.is_empty(): continue
-		for l in leaders:
-			if l != u and l.pos.distance_to(u.pos) < 90.0:
-				u.face = l.pos
-				break
+	for l in leaders:
+		for u in sim.units_near(l.pos, 90.0):
+			if u != l and sim.is_idle(u) and not u.sleeping and u.path.is_empty(): u.face = l.pos
 
 # ------------------------------------------------------------ speech
 ## Say a line of `situation` (config "talk" plus lines added by a game master); "%s" in it

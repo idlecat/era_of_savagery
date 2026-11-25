@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4198,6 +4198,40 @@ func test_tiers() -> void:
 	for u in grown.slice(0, 3): u.sick = 1.0
 	check(not sim.director.allow("clan_raid") and sim.director.stacking("clan_raid"), "not while three are sick")
 	sim.hz.level = "off"
+	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
+func test_perf() -> void:
+	print("\n== A city stays fast (city_proposal step 4) ==")
+	var sim = _new_sim()
+	sim.life.on = true
+	sim.careers.on = true
+	for p in sim.predators: p.fled = true
+	sim.research("farming")
+	sim.appoint(sim.living()[0], "steward")
+	var i := 0
+	while sim.pop_cap() < 220 and i < 200:
+		var h = sim.add_structure("longhouse", sim.dry_spot(D.VILLAGE + Vector2.from_angle(i * 0.7) * (160.0 + i * 3.0)))
+		sim.complete_structure(h, null)
+		i += 1
+	while sim.living().size() < 200: sim.folk.add_family(6)
+	sim.stock["food"] = 3000.0
+	# the helpers behind it agree with a plain scan
+	var p0: Vector2 = sim.living()[5].pos
+	var near: Array = sim.units_near(p0, 150.0)
+	var plain: Array = sim.living().filter(func(u): return u.pos.distance_to(p0) <= 150.0)
+	check(near.size() == plain.size() and plain.all(func(u): return u in near), "units_near() finds the same people as a scan (%d)" % near.size())
+	check(sim.built_of("longhouse").size() == i, "built_of() lists our built longhouses")
+	var fire = sim.add_structure("bonfire", sim.dry_spot(D.VILLAGE + Vector2(30, 30)))
+	sim.complete_structure(fire, null)
+	check(fire in sim.built_of("bonfire"), "and sees a new one at once")
+	sim.time = D.DAY_LEN * 0.3
+	for k in 100: sim.tick(0.05)
+	var t0 := Time.get_ticks_usec()
+	for k in 100: sim.tick(0.05)
+	var ms := (Time.get_ticks_usec() - t0) / 1000.0 / 100.0
+	print("  200 people at work: %.2f ms a tick" % ms)
+	check(ms < 30.0, "200 people at work tick in under 30 ms (%.2f)" % ms)
 	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
 	sim.dispose()
 

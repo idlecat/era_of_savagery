@@ -80,6 +80,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 
 - `survival`: hunger rates, when people eat and how much a meal costs and fills, starving damage, food storage (`store_base`; each building adds its type's `store` in structures.json) and rot.
 - `gathering`: `return_to`, the kinds of node a gatherer goes back to after hauling a load (a half-butchered kill); for any other work they pick afresh.
+- `lod`: level of detail: people out of danger update every `every`-th tick with that many times the step; fighters, the fleeing, those reacting, in an emergency or hurt within `hot_secs` every tick.
 - `tiers`: camp, village, town, city: per settlement, the people, beds, buildings (any of a nested list), food storage and age each needs (`sim.tier_of(at)`, `sim.places_summary()`), the names settlements take and the texts. `contracts.settle_room`: no new outpost while one of ours has this many free beds.
 - `births`: the pace per grown family lines, the food a birth needs and costs, slower in winter and gloom; `beds` `crowd_at`/`crowd_k`: past this share of beds taken the camp is crowded (births taper, sickness spreads more). `migration`: families from allies and vassals, wanderers (the `wanderers` dilemma), and what newcomers bring. `herds` (the aurochs pens), `burial`, `beds`.
 - `triggers`: the conditions (as in scenario scripts) for the overpopulation and Chosen One dilemmas.

@@ -176,12 +176,23 @@ func marks(u: E.Unit) -> Array:
 func gate(id: String) -> Dictionary: return C.get("gates", {}).get(id, {})
 
 ## True when someone living holds the gate's rank (whatever the `gates` switch says: for bonuses).
+var _cache_has := {} # gate id -> whether someone living holds it, this tick
+var _cache_has_t := -1.0
 func tribe_has(id: String) -> bool:
+	if not sim.in_tick(): _cache_has_t = -1.0 # (outside a tick, a grant or a test may have changed it: look fresh)
+	if _cache_has_t != sim.time: # (asked every tick by the herd and the gates: look at everyone once a tick)
+		_cache_has_t = sim.time
+		_cache_has = {}
+	if _cache_has.has(id): return _cache_has[id]
 	var g := gate(id)
-	if g.is_empty(): return false
-	for u in sim.living():
-		if has(u, g["skill"], g["rank"]): return true
-	return false
+	var found := false
+	if not g.is_empty():
+		for u in sim.units:
+			if not u.dead and has(u, g["skill"], g["rank"]):
+				found = true
+				break
+	_cache_has[id] = found
+	return found
 
 ## The tribe may do what the gate allows (someone living holds its rank, or gates are off).
 func tribe_can(id: String) -> bool: return not gates or gate(id).is_empty() or tribe_has(id)

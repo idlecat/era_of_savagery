@@ -66,6 +66,11 @@
   "low_mood": 35,
   "low_mood_mult": 0.6
  },
+ "lod": {
+  "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick.",
+  "every": 2,
+  "hot_secs": 6
+ },
  "tiers": {
   "_doc": "Settlement tiers (sim.tier_of(at), checked every `every` s for each of our settlements): the last row of `list` whose needs a settlement meets. Its people are those whose home is there; `pop`: at least this many; `beds`: at least this many beds; `built`: building types it must have (a list in the list: any one of them); `store`: the tribe's food storage at least; `era`: the age. A settlement rising to a tier other than the first is named (the next free name of `names`) and celebrated (an achievement, `feat`); `log` tells the chronicle (the place, the tier), `named` when it takes its name.",
   "every": 5,
