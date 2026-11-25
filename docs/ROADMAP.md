@@ -251,3 +251,17 @@ Two things carry through every step:
 - **Step 6 built:** the City victory (a city-tier settlement, a thousand held through
   a whole winter, a Grand Altar). Not yet: roads linking every settlement as a
   condition, the chronicle's words for the town and the city.
+- **Since:** late frost and blight (weather, likelier with each age), the overpop
+  dilemma's "grow the village" (and colonization only while no outpost has room),
+  the Steward's reach grows with the tribe, the clans speak of our town by name,
+  civil strife in a town in low spirits, rival coalitions against a tribe of 250+,
+  fevers that spread faster in a crowded town (and through the grid), and a blizzard
+  sending those out in the open in. 60-day runs (seeds 2, 3): 148–166 people, 3
+  deaths each (8–18 before the winter fixes).
+- **Open findings:** the early game is easier on food now (12-day metrics: steward
+  near-miss 25%, band 60–90%): worked fields and the harvest rush help the camp too,
+  so the first winters bite less; tune fields per head or the per-hand yield for the
+  camp tier. 1,000 working people tick in ~40 ms on a busy machine (target 25):
+  walking people are the floor now (~25 µs a person-update); next levers are a
+  cheaper step for walkers and level of detail by distance from the camera. Wood
+  still piles up (7,000–12,000 by day 60) even with winter fuel.

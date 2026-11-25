@@ -1,6 +1,7 @@
 # Proposal: From Tribe to Ancient City (1000 people)
 
-Status: proposal, not implemented; the next plan (`ROADMAP.md` §3 sets its order with
+Status: steps 1–6 largely built (2026-11-24; `ROADMAP.md` §5 records what landed, what
+was found on the way and what is left); the plan (`ROADMAP.md` §3 sets its order with
 the open make_it_fun items folded in). Written after a code and data audit plus headless
 measurement runs (2026-11-24). The goal: a player can develop the settlement into one
 or more thriving ancient cities of about a thousand people, with challenges that grow

@@ -35,14 +35,17 @@ the numbers G3 measured but left for the designer to choose. The section notes b
 
 ### Left
 
+**Built since (with the city plan, `ROADMAP.md` §5):** I2's two rules (raids go for
+what's outside the wall first and torch the fields; house fires leap between packed
+buildings), I5 (camp → village → town → city, named, an achievement, the clans speak
+of it), and the food economy the bands below asked for (worked fields, the harvest
+rush).
+
 **Not built (designed):**
 - **I2, site factors:** the one river-band width shared by ghost, spring and Great
-  Flood; raids targeting what's outside the wall first and a bloodied band turning home;
-  fire spreading between packed buildings; the ghost's site words; `sim.site_value()`;
+  Flood; a bloodied band turning home; the ghost's site words; `sim.site_value()`;
   the Steward scoring sites; the G1 check that random placement does worse.
 - **I3, timing:** a best season per building, a food reserve beside `wood_reserve`.
-- **I5, the village grows a name** (camp → village → town, with a feat, and the clans
-  speak of it).
 - **Dilemma spacing** (Decisions): `min_gap` between posed dilemmas and `urgent` flags.
 - **Director `bored()`** and the reactive successor nemesis (only if G1 shows the late
   game dragging).
