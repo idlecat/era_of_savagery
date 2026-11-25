@@ -66,6 +66,12 @@
   "low_mood": 35,
   "low_mood_mult": 0.6
  },
+ "fuel": {
+  "_doc": "Winter fuel (sim.fuel_rate(), out_of_fuel()): in winter the fires burn per_head wood a second for each person (night_mult times in the dark); with no wood left the bonfires give no warmth until there is. The tribe's wood is its winter warmth.",
+  "per_head": 0.012,
+  "night_mult": 2.0,
+  "alert": "The woodpile is empty and the fires are dying: the tribe will freeze without wood!"
+ },
  "lod": {
   "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick.",
   "every": 2,

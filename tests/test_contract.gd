@@ -4224,6 +4224,17 @@ func test_freezing() -> void:
 		sim.react.do_warm(u, u.job, 0.1)
 		if sim.in_hut(u): break
 	check(sim.in_hut(u) and sim.near_warmth(u), "under the roof, they are warm")
+	# winter fuel: the fires burn wood, and without it they give no warmth
+	var v = sim.living().filter(func(x): return x.role == "" and x != u)[0]
+	v.pos = sim.dry_spot(fire.pos + Vector2(20, 20))
+	sim.stock["wood"] = 50.0
+	check(sim.fuel_rate() > 0.0 and sim.near_warmth(v), "in winter the fires burn wood (%.2f a second) and warm those beside them" % sim.fuel_rate())
+	sim._burn_fuel(1.0)
+	check(sim.stock["wood"] < 50.0, "the woodpile goes down")
+	sim.stock["wood"] = 0.0
+	check(sim.out_of_fuel() and not sim.near_warmth(v), "with no wood the fire is cold")
+	sim.dispose()
+
 func test_perf() -> void:
 	print("\n== A city stays fast (city_proposal step 4) ==")
 	var sim = _new_sim()

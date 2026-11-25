@@ -2669,6 +2669,7 @@ const STRINGS := {
 	"Knows every berry patch and root ground": "熟知每一片浆果丛与块根地",
 	"Fisher": "渔人",
 	"Farmer": "农人",
+	"The woodpile is empty and the fires are dying: the tribe will freeze without wood!": "柴堆空了，篝火将熄：没有柴火，部落会冻死！",
 	"The %s is on fire!": "%s着火了！",
 	"The fire leaps to the %s!": "火势蔓延到了%s！",
 	"The %s have put our %s to the torch!": "%s放火烧了我们的%s！",

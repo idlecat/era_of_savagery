@@ -75,6 +75,7 @@ var alarm_until := -1.0
 var was_rest_time := false
 var bury_t := 0.0
 var resettle_t := 4.0
+var fuel_warn_day := -1
 var places := {} # "x,y" of a settlement -> {"name": its own name ("" until it has one), "tier": tier id, "day": since}
 var tier_t := 0.0
 var rot_warn_day := 0
@@ -603,6 +604,23 @@ func built_of(type: String) -> Array:
 			else: _cache_built[s.type] = [s]
 	return _cache_built.get(type, [])
 
+## Fuel (rules.json fuel): in winter the fires burn wood, per head and more at night.
+func fuel_rate() -> float:
+	var f: Dictionary = RULES["fuel"]
+	if not hz.winter(): return 0.0
+	return float(f["per_head"]) * living().size() * (float(f["night_mult"]) if is_day_part("dark") else 1.0)
+
+## Winter, and no wood left to keep the fires going: bonfires give no warmth.
+func out_of_fuel() -> bool: return hz.winter() and stock["wood"] < 1.0
+
+func _burn_fuel(dt: float) -> void:
+	var r := fuel_rate()
+	if r <= 0.0: return
+	stock["wood"] = maxf(0.0, stock["wood"] - r * dt)
+	if stock["wood"] < 1.0 and day() != fuel_warn_day:
+		fuel_warn_day = day()
+		alert(tr(RULES["fuel"]["alert"]), D.VILLAGE, "danger")
+
 func nearest_fire(p: Vector2) -> E.Structure:
 	var best: E.Structure = null
 	for s in built_of("bonfire"):
@@ -611,6 +629,7 @@ func nearest_fire(p: Vector2) -> E.Structure:
 
 func near_warmth(u: E.Unit) -> bool:
 	if in_hut(u): return true
+	if out_of_fuel(): return false # (the fires have burned down: no wood to feed them)
 	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
 	for s in built_of("bonfire"):
 		if s.pos.distance_to(u.pos) < r: return true
@@ -2308,6 +2327,7 @@ func _tick(dt: float) -> void:
 	_herd(dt)
 	_resettle(dt)
 	_tiers(dt)
+	_burn_fuel(dt)
 	_finds_tick(dt)
 	hunt.update(dt)
 	_cache_tick_n += 1
