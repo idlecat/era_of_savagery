@@ -1350,6 +1350,16 @@ func test_settling() -> void:
 		sim.resettle_t = 0.0
 		sim.tick(0.05)
 	check(sim.residents_of(D.SITES[0]).size() <= sim.beds_at(D.SITES[0]), "but never more than its beds")
+	check(sim.move_to(7) == null and sim.move_to(-1) == null, "a game master can't move a family to a settlement that isn't there")
+	while sim.residents_of(D.SITES[0]).size() < sim.beds_at(D.SITES[0]):
+		check(sim.move_to(1) != null, "a game master moves a family to an outpost with a free bed")
+	check(sim.move_to(1) == null, "but not once its beds are taken")
+	var back: int = sim.residents_of(D.VILLAGE).size()
+	var free: bool = back < sim.beds_at(D.VILLAGE)
+	for u in sim.residents_of(D.SITES[0]): sim.set_job(u, {}) # (they have arrived)
+	sim.story.run([{"move_out": 0}], null)
+	check(sim.residents_of(D.VILLAGE).size() == back + (1 if free else 0), "the story action moves a family home only if a bed is free there (%d people, %d beds, now %d)" % [back, sim.beds_at(D.VILLAGE), sim.residents_of(D.VILLAGE).size()])
+	check(sim.places_summary()[1]["index"] == 1, "places_summary() names each settlement's index")
 	# a finished contract's damaged building is its settlement's to rebuild
 	var hut2 = sim.structures.filter(func(st): return st.type == "hut" and st.owner == "contract:%d" % c.id)[0]
 	var settler = sim.residents_of(D.SITES[0])[0]

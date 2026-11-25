@@ -1575,12 +1575,14 @@ func _tiers(dt: float) -> void:
 func places_summary() -> Array:
 	var out: Array = []
 	var l: Array = RULES["tiers"]["list"]
-	for at in settlements():
+	var homes := settlements()
+	for i in homes.size():
+		var at: Vector2 = homes[i]
 		var tier := tier_of(at)
 		var nxt: Dictionary = l[mini(_tier_index(tier) + 1, l.size() - 1)]
 		var beds := 0
 		for s in buildings_of(at): beds += int(D.STRUCTURES[s.type].get("cap", 0))
-		out.append({"name": settlement_name(at), "tier": tr(tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
+		out.append({"index": i, "name": settlement_name(at), "tier": tr(tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
 			"next": tr(nxt["name"]) if str(nxt["id"]) != tier else "", "lacks": tier_lacks(at, nxt) if str(nxt["id"]) != tier else []})
 	return out
 
@@ -1601,25 +1603,47 @@ func site_for(u: E.Unit):
 func _resettle(dt: float) -> void:
 	resettle_t -= dt
 	if resettle_t > 0: return
-	resettle_t = 8.0
+	resettle_t = float(RULES["beds"]["resettle_every"])
 	if rest_time(): return
 	var homes := settlements()
 	if homes.size() < 2: return
 	var at := float(RULES["beds"]["crowd_at"]) # (crowded past this share of its beds: the same threshold births and sickness read)
 	var crowded: Array = homes.filter(func(p): return residents_of(p).size() > beds_at(p) * at)
 	if crowded.is_empty(): return
+	crowded.sort_custom(func(a, b): return fullness(a) > fullness(b)) # (the most crowded sends first)
 	for p in homes:
 		if p in crowded or residents_of(p).size() >= beds_at(p) or not warm_at(p): continue # (a free bed and a fire, in a place not crowded: nobody moves back)
 		for from in crowded:
-			var movers: Array = residents_of(from).filter(func(u): return u.title == "" and spare_hand(u) >= 0)
-			if movers.is_empty(): continue
-			movers.sort_custom(func(a, b): return spare_hand(a) < spare_hand(b))
-			var u: E.Unit = movers[0]
-			u.home = p
-			set_job(u, {"type": "move", "to": p + Vector2(randf_range(-40, 40), randf_range(-30, 30))})
-			add_log(tr("%s moves to '%s', where there are empty beds.") % [tr(u.name), settlement_name(p)], "story", [u])
-			remember(u, tr("moved to '%s' on Day %d") % [settlement_name(p), day()], 6)
-			return
+			if move_out(from, p) != null: return
+
+## A family moves to settlement `i` (its index in settlements() and places_summary(); 0 is the
+## village) from the most crowded other settlement, if it has a free bed. Returns who moved, or null.
+func move_to(i: int) -> E.Unit:
+	var homes := settlements()
+	if i < 0 or i >= homes.size(): return null
+	var to: Vector2 = homes[i]
+	if residents_of(to).size() >= beds_at(to): return null
+	var others: Array = homes.filter(func(p): return p != to)
+	others.sort_custom(func(a, b): return fullness(a) > fullness(b))
+	for from in others:
+		var u := move_out(from, to)
+		if u: return u
+	return null
+
+## A family of the settlement at `from` (an idle hand or a gatherer, no office holder) moves
+## to the settlement at `to` (both from settlements()) and makes it home. For a game master:
+## move_to(), the story action `move_out`. Returns who moved, or null.
+func move_out(from: Vector2, to: Vector2) -> E.Unit:
+	if from == to: return null
+	var movers: Array = residents_of(from).filter(func(u): return u.title == "" and spare_hand(u) >= 0)
+	if movers.is_empty(): return null
+	movers.sort_custom(func(a, b): return spare_hand(a) < spare_hand(b))
+	var u: E.Unit = movers[0]
+	u.home = to
+	set_job(u, {"type": "move", "to": to + Vector2(randf_range(-40, 40), randf_range(-30, 30))})
+	add_log(tr("%s moves to '%s', where there are empty beds.") % [tr(u.name), settlement_name(to)], "story", [u])
+	remember(u, tr("moved to '%s' on Day %d") % [settlement_name(to), day()], 6)
+	return u
 
 # ------------------------------------------------------------------ the herd
 ## The aurochs pens (config/rules.json "herds"): oxen per pen, food eaten per ox per second

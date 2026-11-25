@@ -240,7 +240,8 @@ tech's cost) · `{"culture": {"spiritual": 5}}` · `{"invent": id}` · `{"boon":
 text}` (an achievement) · `{"tale": id}` (tell it now) · `{"join": person id}` ·
 `{"spawn": "wolf" | "tiger", "at": "village", "offsets": [[260, -180]]}` (a beast for each offset from `at`) · `{"reveal": "village", "r": 400}` ·
 `{"flag": name}` · `{"newcomers": 2, "from": clan id}` (families come to live with the
-tribe) · `{"lay_out": "hut", "reason": text}` (a building site where the Steward would put it).
+tribe) · `{"lay_out": "hut", "reason": text}` (a building site where the Steward would put it) ·
+`{"move_out": 1}` (a family moves to settlement 1, 0 being the village, from the most crowded other one, if it has a free bed).
 
 ## Drafting a pack with an LLM
 

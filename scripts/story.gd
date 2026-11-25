@@ -138,7 +138,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "newcomers", "from", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge", "career", "lay_out"]
+	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge", "career", "lay_out", "move_out"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -151,7 +151,7 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
 	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
-	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str", "newcomers": "any", "from": "str", "lay_out": "str"}
+	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str", "newcomers": "any", "from": "str", "lay_out": "str", "move_out": "num"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "village_full": "num", "beds_free_below": "any", "wood": "num", "fewer": "counts", "deaths": "num", "culture": "nums",
@@ -326,6 +326,7 @@ func run(actions: Array, c, vars: Dictionary = {}) -> void:
 		if a.has("festival"): sim.folk.hold(a["festival"], vars)
 		if a.has("births"): sim.birth_timer += float(a["births"])
 		if a.has("lay_out"): sim.improve.order(str(a["lay_out"]), tr(str(a.get("reason", "")))) # (a building site where the Steward would put it)
+		if a.has("move_out"): sim.move_to(int(a["move_out"])) # (a family moves to settlement n of places_summary(), from the most crowded other)
 		if a.has("newcomers"): # (families come to live with us: a number or a var)
 			var nn := _num(a["newcomers"], vars)
 			if not is_nan(nn): sim.folk.add_family(int(nn), str(a.get("from", "")))

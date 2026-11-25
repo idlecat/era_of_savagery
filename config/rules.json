@@ -122,11 +122,12 @@
   "dig": 5
  },
  "beds": {
-  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings). crowd_at: past this share of the beds taken the camp is crowded (sickness spreads more, births taper by crowd_k; a crowded settlement sends a family to one with a free bed and a fire of ours within fire_reach).",
+  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings). crowd_at: past this share of the beds taken the camp is crowded (sickness spreads more, births taper by crowd_k; a crowded settlement sends a family to one with a free bed and a fire of ours within fire_reach; it looks every `resettle_every` seconds by day, the most crowded first).",
   "far": 700,
   "crowd_at": 0.8,
   "crowd_k": 2,
   "fire_reach": 250,
+  "resettle_every": 8,
   "day_only": ["renovate", "field"]
  },
  "vice": {
