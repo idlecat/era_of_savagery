@@ -222,7 +222,7 @@ An option the tribe can't pay for is greyed out. Each event happens once.
 
 All conditions must hold. `time` (seconds), `day`, `pop` (living, at least), `era`, `tech`,
 `invention`, `find` (known), `season` (`Spring`…`Winter`), `built` (a structure type),
-`devotion`, `mood` (at least), `deaths` (at least), `food_frac` (food at least this share of the storage), `homeless` (people without a bed, at least), `beds_free_below` (fewer beds to spare than this count: build ahead of the births), `wood` (at least), `fewer` (`{"granary": 3}`: fewer of ours, building sites included; a count may grow with the tribe: `{"farm_plot": {"base": 1, "per_pop": 0.05}}` = fewer than 1 + one per 20 people), `culture` (`{"martial": 20}` at least,
+`devotion`, `mood` (at least), `deaths` (at least), `food_frac` (food at least this share of the storage), `homeless` (people without a bed, at least), `beds_free_below` (fewer beds to spare than this count: build ahead of the births), `can_settle` (true: a new outpost may be founded, none of ours stands half empty), `wood` (at least), `fewer` (`{"granary": 3}`: fewer of ours, building sites included; a count may grow with the tribe: `{"farm_plot": {"base": 1, "per_pop": 0.05}}` = fewer than 1 + one per 20 people), `culture` (`{"martial": 20}` at least,
 `{"martial": -20}` at most), `found` (landmark id), `met` (clan id), `flag`, and the
 culture's own: `told` (tale id), `joined` (person id), `happened` (event id of this pack),
 `after` (something that has happened in the game: `drought`, `rain`, `blizzard`, `storm`,
@@ -239,7 +239,8 @@ tech's cost) · `{"culture": {"spiritual": 5}}` · `{"invent": id}` · `{"boon":
 (lasting) · `{"remember": text, "who": "all" | "best:lore", "impact": 6}` · `{"feat":
 text}` (an achievement) · `{"tale": id}` (tell it now) · `{"join": person id}` ·
 `{"spawn": "wolf" | "tiger", "at": "village", "offsets": [[260, -180]]}` (a beast for each offset from `at`) · `{"reveal": "village", "r": 400}` ·
-`{"flag": name}`.
+`{"flag": name}` · `{"newcomers": 2, "from": clan id}` (families come to live with the
+tribe) · `{"lay_out": "hut", "reason": text}` (a building site where the Steward would put it).
 
 ## Drafting a pack with an LLM
 
