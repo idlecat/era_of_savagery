@@ -344,7 +344,8 @@ func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 
 func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
-	if u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill():
+	var storm: bool = str(r.get("while_weather", "")) != "" and sim.hz.weather == str(r["while_weather"]) # (sheltering until the blizzard is over)
+	if not storm and (r.has("while_weather") or u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill()): # (a weather's errand ends with it)
 		sim.end_errand(u) # (warm again, or the cold is over)
 		return
 	if not sim.approach(u, j["to"], 4, dt):

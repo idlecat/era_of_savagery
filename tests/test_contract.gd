@@ -4247,6 +4247,12 @@ func test_freezing() -> void:
 	sim.assign_gather(w, "wood")
 	sim.react.trigger("blizzard", {"at": D.VILLAGE})
 	check(w.job.get("type", "") == "warm" and w.resume_job.get("type", "") == "gather", "a blizzard sends a woodcutter far out to the fire, the work set aside (%s)" % w.job.get("type", ""))
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + D.DAY_LEN * 0.3 # (midday: the cold is not deadly yet)
+	sim.react.do_warm(w, w.job, 0.1)
+	check(w.job.get("type", "") == "warm", "they stay by the warmth while the blizzard lasts, even when the day is not yet deadly")
+	sim.hz.weather = "clear"
+	sim.react.do_warm(w, w.job, 0.1)
+	check(w.job.get("type", "") == "gather", "and go back to work when it has passed")
 	sim.dispose()
 
 func test_perf() -> void:
