@@ -1194,7 +1194,7 @@ func _draw_fireflies() -> void:
 	if sim.hz.on() and (sim.hz.season_idx() == 3 or sim.hz.weather != "clear" or sim.hz.snow > 0.2): return
 	var dusk := sin(_part_k("dusk") * PI) if sim.is_day_part("dusk") else 0.0
 	var k := maxf(dusk, sim.night_amt)
-	if k < 0.15: return
+	if k < 0.15 or cam.zoom.x < 0.6: return # (zoomed far out they'd be specks: not worth the cells)
 	var cell := 160.0 # one firefly per cell of the screen at most, fixed to the ground
 	var x0 := floori(view.position.x / cell)
 	var y0 := floori(view.position.y / cell)
