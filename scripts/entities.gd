@@ -119,6 +119,7 @@ class Predator:
 	var arrived: bool = false # a trader who has reached our village
 	var raid: bool = false # a den tiger out hunting in the village
 	var raid_t: float = 0.0
+	var aim_id: int = -1 # a raider's target: a building of ours outside the wall (-1: the village itself)
 	var prey_id: int = -1 # the person it is going for (-1: nobody)
 	var struck_t: float = -100.0 # sim time of its last blow (hunt.gd: a band waits less while it mauls someone)
 

@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4276,6 +4276,56 @@ func test_city_path() -> void:
 	check(sim.legacy.held_winter == n, "spring: the tribe held %d through the winter" % sim.legacy.held_winter)
 	var conds: Array = sim.legacy.progress().filter(func(p): return p["path"] == "city")[0]["conds"]
 	check(conds[1]["text"].contains(str(n)) and not conds[1]["done"], "the condition counts them against a thousand (%s)" % conds[1]["text"])
+	sim.dispose()
+
+func test_outside_first() -> void:
+	print("\n== Raiders go for what's outside the wall first ==")
+	var sim = _new_sim()
+	var cid: String = sim.rivals.clans.keys()[0]
+	var c: Dictionary = sim.rivals.clans[cid]
+	sim.research("farming")
+	var plot = sim.add_structure("farm_plot", sim.dry_spot(D.VILLAGE + Vector2(-380, 60)))
+	sim.complete_structure(plot, null)
+	var none_without_wall := true
+	for k in 20:
+		if sim.rivals.outside_target(c) != null: none_without_wall = false
+	check(none_without_wall, "an open camp is raided at its heart")
+	var wall = sim.add_structure("palisade", D.VILLAGE, true)
+	check(sim.inside_wall(D.VILLAGE) and not sim.inside_wall(plot.pos), "the wall rings the village, the field lies outside")
+	var aimed := false
+	for k in 40:
+		var t = sim.rivals.outside_target(c)
+		if t == plot:
+			aimed = true
+			break
+	check(aimed, "a walled village's raiders aim for the field outside")
+	var w = sim.spawn_predator(plot.pos)
+	w.kind = "warrior"
+	w.clan = cid
+	w.raid = true
+	w.aim_id = plot.id
+	sim.stock["food"] = 50.0
+	sim.rivals.steal(w)
+	check(not plot.built and plot.progress > 0.0 and w.loot, "they put the field to the torch and make off with food")
+	check(c["ledger"].any(func(e): return e["kind"] == "torched"), "the clan remembers it")
+	sim.dispose()
+
+func test_house_fire() -> void:
+	print("\n== Fire leaps between packed buildings ==")
+	var sim = _new_sim()
+	var mid: Vector2 = sim.dry_spot(D.VILLAGE + Vector2(-400, 300))
+	var src = sim.add_structure("hut", mid, true)
+	var ring: Array = []
+	for k in 8:
+		ring.append(sim.add_structure("hut", mid + Vector2.from_angle(k * TAU / 8) * 48.0, true)) # (huts touching)
+	var far = sim.add_structure("hut", mid + Vector2(400, 0), true)
+	sim.nat.set_alight(src)
+	check(not src.built and sim.nat.blazing.has(src.id), "a hut catches fire")
+	sim.nat._house_fires(float(sim.nat.C["house_fire"]["leap_secs"]) + 0.1)
+	var caught: int = ring.filter(func(h): return not h.built).size()
+	check(caught >= 1, "the fire leaps to huts packed beside it (%d of 8)" % caught)
+	for k in 5: sim.nat._house_fires(float(sim.nat.C["house_fire"]["leap_secs"]) + 0.1)
+	check(far.built, "a hut standing apart is spared")
 	sim.dispose()
 
 func test_weapons() -> void:

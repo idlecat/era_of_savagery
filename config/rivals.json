@@ -149,6 +149,7 @@
    "per_our_pop": 0.04
   },
   "outpost_chance": 0.4,
+  "outside_first": {"_doc": "With the village walled, a war band goes for a building of `types` of ours outside every ring (within `reach` of the village, the nearest to the clan) with chance `chance`: it steals there, and a building of `torch` it puts to the torch (left at torch_left of its work).", "chance": 0.7, "types": ["granary", "farm_plot", "aurochs_pen", "fishing_dock"], "torch": ["farm_plot"], "torch_left": 0.3, "reach": 700, "torch_alert": ["The %s have put our %s to the torch!", "clan_name", "what"]},
   "give_up_s": 160,
   "no_raids_after_beaten_days": 6,
   "alert": [
@@ -325,7 +326,7 @@
   },
   "kinds": {
    "raided": {"text": "our warriors came to your fire with spears", "weight": -4},
-   "stole": {"text": "we took %s food from your stores", "weight": -3},
+   "stole": {"text": "we took %s food from your stores", "weight": -3}, "torched": {"text": "we burned your fields", "weight": -4},
    "killed_ours": {"text": "our warriors killed %s of your people", "weight": -6},
    "sealed": {"text": "we struck a bargain at my fire: %s", "weight": 8},
    "allied": {"text": "we swore to stand together: %s", "weight": 15},

@@ -80,7 +80,8 @@
   "building_alert": "Lightning sets the %s on fire! It must be rebuilt."
  },
 
- "wildfire": {
+ "house_fire": {"_doc": "A building that catches fire (nat.set_alight: lightning, wildfire, a raider's torch) burns down; after leap_secs the fire may leap to each flammable building of ours (hazards: wildfire; never a wall ring) whose edge is within `gap` of its edge, with `chance` (times wet_mult in rain or winter, drought_mult in a drought), and on from there: a packed camp burns together, a spread one does not. The buildings it leaps to are left at `left` of their work.", "leap_secs": 6, "gap": 24, "chance": 0.45, "wet_mult": 0.35, "drought_mult": 1.5, "left": 0.4, "alert": "The %s is on fire!", "leap_alert": "The fire leaps to the %s!"},
+"wildfire": {
   "burn_time": 12, "wet_burn_mult": 1.8, "spread_every": 2, "spread_chance": 0.35,
   "drought_mult": 1.6, "wet_mult": 0.3, "spread_radius": 75, "max_trees": 70,
   "burn_radius": 55, "burn_damage": 4, "building_radius": 70, "berry_chance": 0.25, "regrow": 420,

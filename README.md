@@ -199,7 +199,7 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
 ## Hardships (Challenges: Off / Normal / Harsh in LLM Settings)
 
 - **Seasons:** each lasts 2 days. Spring has fast berries, summer spoils food faster, autumn brings the harvest and a warning. In winter there are no berries or crops, half the herds migrate, people eat 25% more and the cold can kill. You need stores, fires and Hide Tailoring.
-- **Weather:** spring rain, summer drought, autumn thunderstorms (lightning splits trees), and announced winter blizzards. Blizzards slow work and travel, shrink sight, freeze anyone far from a fire, and count as a natural disaster for Task Contracts, which wakes the leader's LLM. Freezing people head to the nearest bonfire on their own, then go back to work.
+- **Weather:** spring rain, summer drought, autumn thunderstorms (lightning splits trees), and announced winter blizzards. Blizzards slow work and travel, shrink sight, freeze anyone far from a fire, and count as a natural disaster for Task Contracts, which wakes the leader's LLM. Freezing people head for the nearer warmth on their own (a bonfire, or their own bed under a roof), then go back to work.
 - **Wild animals:**
   - Wolf packs come out at night, mostly in autumn and winter. They pick off stragglers away from fires and groups, and leave after a kill or at dawn.
   - Saber-tooths leave their dens every few days to raid the village; a raider leaves with one victim.
@@ -236,6 +236,8 @@ Twelve kinds of finds are scattered over the map, clustered where they belong: f
   - Rarely it hits someone in the open. A survivor is "touched by the sky" (+lore and a strong memory).
   - Before Friction Fire is known, a strike near people gives the tribe its first fire (+50% insight).
 - **Wildfire** spreads from tree to tree: faster in drought, slower in rain or winter. It burns people and buildings in its path and leaves charred trunks that take a long time to regrow. Berries sprout in the ashes.
+- **House fires:** a building that catches fire (lightning, wildfire, a raider's torch) can set the ones packed close beside it alight, and those the next: a tight camp is cheap to wall and quick to walk, and burns together (`config/events.json` house_fire).
+- **Raids on what's outside:** once the village is walled, war bands go first for what lies outside the ring: a granary, a pen, a dock, the fields, which they put to the torch. How much the wall encloses is the choice (`config/rivals.json` raids.outside_first).
 - **River floods** (spring) start with a warning: people near the banks run for high ground. Then riverside buildings are damaged, anyone near the water is hurt, and riverside plants are washed out. Afterwards the silt gives farms near the river +40% food for 2 days, and the fish return.
 - **The Fire Mountain**, a volcano in the far north-east, is also a landmark scouts can find.
   - It erupts every 9–14 days, with tremors 30 s before. Lava burns everything within about 460 units, and obsidian is left on the slopes.

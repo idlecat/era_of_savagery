@@ -4,7 +4,7 @@ The forces of nature, the hardships and how people respond to them are data, in 
 
 | File | Read by | What it holds |
 |---|---|---|
-| `config/events.json` | `hazards.gd`, `nature.gd` | seasons, weather, wolves, tiger raids, sickness, famine, lightning, wildfire, flood, Fire Mountain, earthquake, eclipse: when they happen, how strong they are, what the tribe is told; the kinds of winter (`winters`: their signs, their effects in winter, and the stats the tribe can prepare) |
+| `config/events.json` | `hazards.gd`, `nature.gd` | seasons, weather, wolves, tiger raids, sickness, famine, lightning, wildfire, house fires leaping between packed buildings (`house_fire`, `nat.set_alight(s)`), flood, Fire Mountain, earthquake, eclipse: when they happen, how strong they are, what the tribe is told; the kinds of winter (`winters`: their signs, their effects in winter, and the stats the tribe can prepare) |
 | `config/reactions.json` | `reactions.gd` (`sim.react`) | for each happening, what people do about it |
 | `config/hunt.json` | `hunt.gd` (`sim.hunt`) | how a band fights a dangerous beast: muster, charge together, ring it, fall back hurt |
 | `config/weapons.json` | `arms.gd` (`sim.arms`) | the weapons (club, spear, stone axe, sling, bow): what opens each, how it fights; weapon mastery (levels, XP, what a level gives, masters); each person's knack for each weapon |
@@ -73,7 +73,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 
 - `relations`: how fast feelings drift back toward a clan's temperament (`drift`), what treaties add (`goodwill`), the stance thresholds (`stance_at`; the stance names are fixed ids), and from which loss a clan keeps a grudge (`grudge_at`).
 - `deeds`: what each of our deeds does (`relation`, the `reason` they remember, the `alert` we get): killing their people, attacking their hunters or traders, breaking a peace, building on their land, an unpaid tribute, attacking, burning or plundering their village.
-- `raids`, `demands`, `theft`, `trespass`, `defence`, `spoils`, `traders`, `alliance`, `people`: when and how strongly clans act, all numbers. Clans grow as we do: `people.max_pop` is `{base, per_our_pop}` (`rivals.max_pop()`) and a war band's size gains `raids.size.per_our_pop` per person of ours (if the clan has the warriors).
+- `raids`, `demands`, `theft`, `trespass`, `defence`, `spoils`, `traders`, `alliance`, `people`: when and how strongly clans act, all numbers. Clans grow as we do: `people.max_pop` is `{base, per_our_pop}` (`rivals.max_pop()`) and a war band's size gains `raids.size.per_our_pop` per person of ours (if the clan has the warriors). `raids.outside_first`: a walled village's raiders go for a building outside the ring first (`rivals.outside_target()`), and torch fields.
 - `parley`: the chief's valuation of a deal. `[martial, peaceful]` pairs give different values for the two kinds of clan; `weights.stone` is `[before era 2, after]`. The checks on what an LLM chief may answer (`sanitize_terms`, `check_reply`) stay in code.
 
 ## rules.json

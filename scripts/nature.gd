@@ -40,6 +40,7 @@ var spread_t := 0.0
 var burn_tick := 0.0
 var fire_size := 0
 var scorched := {} # structure ids already burned by this fire
+var blazing := {} # structure id -> seconds until its fire may leap to the buildings beside it
 # river flood
 var flood_day := -1
 var flood_at := -1.0
@@ -123,6 +124,7 @@ func update(dt: float) -> void:
 	for s in strikes: s["t"] += dt
 	strikes = strikes.filter(func(s): return s["t"] < 0.7)
 	_fire_tick(dt) # a fire already burning goes on even if the challenges are switched off
+	_house_fires(dt)
 	_ash_tick(dt)
 	if eclipse_t >= 0: _eclipse_tick(dt)
 	if not on(): return
@@ -179,10 +181,7 @@ func strike() -> void:
 		if not targets.is_empty():
 			var s: E.Structure = targets.pick_random()
 			_flash(s.pos)
-			s.built = false
-			sim.buildings_changed()
-			s.progress = s.work * 0.5
-			sim.alert(tr(cl["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
+			set_alight(s, 0.5, tr(cl["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]))
 			_sky_fire(s.pos)
 			return
 	var reach: float = float(cl["tree_range"])
@@ -280,12 +279,38 @@ func _fire_tick(dt: float) -> void:
 			for s in sim.structures:
 				if s.built and sim.ours(s) and not scorched.has(s.id) and sim.hit_by(s, "wildfire") and s.pos.distance_to(n.pos) < float(cw["building_radius"]):
 					scorched[s.id] = true
-					s.built = false
-					sim.buildings_changed()
-					s.progress = s.work * 0.4
-					sim.alert(tr(cw["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
+					set_alight(s, 0.4, tr(cw["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]))
 	if burning.is_empty():
 		sim.add_log(tr(cw["log"]) % fire_size, "story")
+
+## A building of ours catches fire (lightning, a wildfire, a raider's torch, a game master):
+## it burns down to `left` of its work, and in a while the fire may leap to the buildings
+## packed beside it (events.json house_fire). `alert` is the text told ("" = the default).
+func set_alight(s: E.Structure, left: float = 0.4, alert: String = "") -> void:
+	if s == null or not s.built or not sim.ours(s): return
+	var hf: Dictionary = C["house_fire"]
+	s.built = false
+	sim.buildings_changed()
+	s.progress = s.work * left
+	sim.alert(alert if alert != "" else tr(hf["alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
+	blazing[s.id] = float(hf["leap_secs"])
+
+## Burning buildings set the ones close beside them alight: each flammable building of ours
+## within `gap` of a burning one's edge catches with `chance` (less in the wet and the snow).
+func _house_fires(dt: float) -> void:
+	if blazing.is_empty(): return
+	var hf: Dictionary = C["house_fire"]
+	for id in blazing.keys():
+		blazing[id] -= dt
+		if blazing[id] > 0.0: continue
+		blazing.erase(id)
+		var src: E.Structure = sim.struct_by_id(id)
+		if src == null: continue
+		var p: float = float(hf["chance"]) * (float(hf["wet_mult"]) if sim.hz.wet() or sim.hz.winter() else 1.0) * (float(hf["drought_mult"]) if sim.hz.dry() else 1.0)
+		for o in sim.structures:
+			if o == src or not o.built or not sim.ours(o) or not sim.hit_by(o, "wildfire") or D.STRUCTURES[o.type].get("ring", false): continue
+			if o.pos.distance_to(src.pos) - sim.struct_r(o) - sim.struct_r(src) > float(hf["gap"]): continue
+			if randf() < p: set_alight(o, float(hf["left"]), tr(hf["leap_alert"]) % tr(D.STRUCTURES[o.type]["name"]))
 
 # ------------------------------------------------------------ river flood (spring)
 func _flood_tick(dt: float) -> void:

@@ -215,6 +215,11 @@ func on_villager_killed(u, killer) -> void:
 ## Food stolen by a raider standing in an undefended village.
 func steal(p: E.Predator) -> void:
 	var ct: Dictionary = C["theft"]
+	var aim = sim.struct_by_id(p.aim_id) if p.aim_id >= 0 else null
+	var of: Dictionary = C["raids"].get("outside_first", {})
+	if aim and aim.built and aim.type in of.get("torch", []): # (a field outside the wall: put to the torch)
+		sim.nat.set_alight(aim, float(of["torch_left"]), _txt(of["torch_alert"], clans[p.clan], {"what": tr(D.STRUCTURES[aim.type]["name"])}))
+		note(p.clan, "torched")
 	var amount: float = minf(sim.stock["food"], Config.rand_in(ct["food"]))
 	sim.stock["food"] -= amount
 	p.loot = true
@@ -342,6 +347,18 @@ func _raids(c: Dictionary, dt: float) -> void:
 func _hostility(c: Dictionary) -> float:
 	return clampf(-c["relation"] / float(C["raids"]["full_hostility"]) * float(temper(c["id"]).get("hostility", 1.0)), 0.0, 1.0)
 
+## Raiders go for what's outside the wall first (rivals.json raids.outside_first): with the
+## village walled, the building of `types` of ours outside every ring nearest the clan,
+## with chance `chance`; null = the village itself.
+func outside_target(c: Dictionary):
+	var of: Dictionary = C["raids"].get("outside_first", {})
+	if of.is_empty() or not sim.inside_wall(D.VILLAGE) or randf() >= float(of["chance"]): return null
+	var best = null
+	for s in sim.structures:
+		if not s.built or not sim.ours(s) or not s.type in of["types"] or sim.inside_wall(s.pos) or s.pos.distance_to(D.VILLAGE) > float(of["reach"]): continue
+		if best == null or s.pos.distance_to(c["pos"]) < best.pos.distance_to(c["pos"]): best = s
+	return best
+
 func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
 	var hostility := _hostility(c)
@@ -353,10 +370,13 @@ func launch_raid(c: Dictionary) -> void:
 	var target: Vector2 = D.VILLAGE
 	var outposts: Array = sim.contracts.list.filter(func(k): return k.kind == "settle" and sim.contracts.is_running(k))
 	if not outposts.is_empty() and randf() < float(cr["outpost_chance"]): target = outposts[0].site
+	var aim = outside_target(c) if target == D.VILLAGE else null
+	if aim: target = aim.pos
 	for i in size:
 		var w := _spawn(c, "warrior", target + Vector2(randf_range(-60, 60), randf_range(-50, 50)))
 		w.raid = true
 		w.raid_t = float(cr["give_up_s"])
+		w.aim_id = aim.id if aim else -1
 	c["warriors"] = maxi(0, c["warriors"] - size)
 	note(c["id"], "raided")
 	if not c["met"]:
