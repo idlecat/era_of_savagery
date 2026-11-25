@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_strife, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4351,6 +4351,26 @@ func test_house_fire() -> void:
 	check(caught >= 1, "the fire leaps to huts packed beside it (%d of 8)" % caught)
 	for k in 5: sim.nat._house_fires(float(sim.nat.C["house_fire"]["leap_secs"]) + 0.1)
 	check(far.built, "a hut standing apart is spared")
+	sim.dispose()
+
+func test_strife() -> void:
+	print("\n== A big tribe in low spirits rises ==")
+	var sim = _new_sim()
+	sim.life.on = true
+	while sim.living().size() < int(sim.RULES["strife"]["min_pop"]): sim.folk.add_family(6)
+	sim.folk.mood = 20.0
+	var days := float(sim.RULES["strife"]["days"]) * D.DAY_LEN
+	sim.life._strife(sim.living(), days * 0.5)
+	check(sim.life.pending == "", "not at once")
+	sim.life._strife(sim.living(), days * 0.6)
+	check(sim.life.pending == "strife", "after a day of gloom the town rises")
+	var view: Dictionary = sim.event_def("strife")
+	check(view.get("options", []).size() == 3, "the chieftain must answer: feast, hear them, or stand firm")
+	sim.life.pending = ""
+	var m0: float = sim.folk.mood
+	sim.stock["goods"] = 10.0
+	sim.resolve_event("strife", 1)
+	check(sim.folk.mood > m0 and sim.stock["goods"] < 10.0, "heard at the council, the tribe takes heart (mood %d -> %d)" % [roundi(m0), roundi(sim.folk.mood)])
 	sim.dispose()
 
 func test_weapons() -> void:

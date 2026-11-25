@@ -878,5 +878,16 @@
    {"label": "Send them on", "desc": "Our fire is for our own.", "do": [{"mood": -1}], "result": "The wanderers walk on into the wild."}
   ],
   "routine": {"prefer": [0, 1]}
+ },
+ "strife": {
+  "_doc": "Civil strife (life.gd _strife, rules.json strife): a big tribe in low spirits for long rises against its leaders.",
+  "title": "Unrest in the Town",
+  "text": "The fires burn low and the talk around them is bitter. Crowds gather at the council fire: they want to be heard, and some speak of new leaders.",
+  "urgent": true,
+  "options": [
+   {"label": "Hold a great feast", "desc": "Open the stores to everyone.", "cost": {"food": {"per_pop": 1.5}}, "do": [{"mood": 15}], "result": "The tribe eats together late into the night, and the anger cools with the embers."},
+   {"label": "Hear them at the council", "desc": "Gifts for the families who speak, and a promise.", "cost": {"goods": 4}, "do": [{"mood": 8}, {"morale": 15, "who": "all"}], "result": "Family after family speaks at the council fire. They are heard, and they go home."},
+   {"label": "Stand firm", "desc": "The chieftain's word is law.", "do": [{"mood": -8}, {"culture": {"ranked": 6}}], "result": "The crowds disperse under the warriors' eyes. The tribe obeys, but it does not forget."}
+  ]
  }
 }

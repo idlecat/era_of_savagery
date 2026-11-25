@@ -72,6 +72,13 @@
   "night_mult": 2.0,
   "alert": "The woodpile is empty and the fires are dying: the tribe will freeze without wood!"
  },
+ "strife": {
+  "_doc": "Civil strife (life.gd): with at least min_pop people and the tribe's mood under `mood` for `days` days, the people rise and the chieftain must answer (dilemma 'strife'), at most every every_days days.",
+  "min_pop": 120,
+  "mood": 35,
+  "days": 1.0,
+  "every_days": 4
+ },
  "lod": {
   "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick.",
   "every": 2,

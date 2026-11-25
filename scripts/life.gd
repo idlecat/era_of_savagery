@@ -38,6 +38,8 @@ var pending_who := -1
 var asked_day := -99
 var wander_day := -1 # the last day wanderers were looked for
 var wanderers := 0 # how many are at the edge of the camp, asking to stay
+var low_mood_t := 0.0 # seconds the tribe's mood has stayed under strife.mood
+var strife_day := -99
 var extra_lines := {} # situation -> [texts] (add_lines: a game master's)
 var _t := 0.0
 var _cache_kids := {} # parent id -> its living children (kin_of)
@@ -155,6 +157,18 @@ func update(dt: float) -> void:
 	_bond_tick(alive, step)
 	_watch_passers(alive)
 	_wanderers(alive)
+	_strife(alive, step)
+
+## A big tribe in low spirits for long rises (rules.json strife): the chieftain must answer
+## (dilemma 'strife'). A camp grumbles; a town of hundreds can turn on its leaders.
+func _strife(alive: Array, step: float) -> void:
+	var sc: Dictionary = sim.RULES["strife"]
+	if alive.size() < int(sc["min_pop"]): return
+	low_mood_t = low_mood_t + step if sim.folk.mood < float(sc["mood"]) else maxf(0.0, low_mood_t - step)
+	if low_mood_t < float(sc["days"]) * D.DAY_LEN or pending != "" or sim.day() - strife_day < int(sc["every_days"]): return
+	low_mood_t = 0.0
+	strife_day = sim.day()
+	pending = "strife"
 
 ## Once a day, in the morning: wanderers may come to a thriving camp with beds to spare
 ## (rules.json migration `wanderers`); the chieftain decides (dilemma 'wanderers').
@@ -708,7 +722,7 @@ func add_lines(situation: String, lines: Array) -> Array:
 	return []
 
 # ------------------------------------------------------------ a family leaves
-func owns_event(id: String) -> bool: return id == "discontent" or id == "wanderers"
+func owns_event(id: String) -> bool: return id in ["discontent", "wanderers", "strife"]
 
 func _event_vars() -> Dictionary:
 	var u: E.Unit = sim.unit_by_id(pending_who)
