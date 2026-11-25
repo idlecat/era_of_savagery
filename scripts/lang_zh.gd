@@ -2669,6 +2669,7 @@ const STRINGS := {
 	"Knows every berry patch and root ground": "熟知每一片浆果丛与块根地",
 	"Fisher": "渔人",
 	"Farmer": "农人",
+	"the stores could not hold what a winter eats.": "仓储装不下一个冬天要吃的粮食。",
 	"The %s join the %s against us: %d more warriors are coming!": "%s与%s联手来犯：又有 %d 名武士杀来了！",
 	"Unrest in the Town": "城中动荡",
 	"The fires burn low and the talk around them is bitter. Crowds gather at the council fire: they want to be heard, and some speak of new leaders.": "火塘渐暗，围火的议论满是怨气。人群聚到议事火边：他们要求被倾听，有人说要换首领。",

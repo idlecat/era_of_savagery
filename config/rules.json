@@ -304,6 +304,7 @@
     "near": "farm_plot",
     "reason": "the stores are nearly full and food would rot."
    },
+   {"structure": "granary", "when": {"store_below": {"base": 0, "per_pop": 6}, "fewer": {"granary": {"base": 2, "per_pop": 0.1}}}, "near": "farm_plot", "reason": "the stores could not hold what a winter eats."},
    {
     "upgrade": "large_hut",
     "structure": "longhouse",
