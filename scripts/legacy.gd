@@ -23,6 +23,8 @@ var achieved := {} # path -> day
 var pending := ""
 var check_t := 0.0
 var merged_with := "" # the clan the tribe joined (the "merged" ending)
+var winter_low := -1 # the fewest alive during the winter under way (-1: not winter)
+var held_winter := 0 # the most people the tribe has kept alive through a whole winter
 
 func _init(s) -> void:
 	sim = s
@@ -35,9 +37,12 @@ func progress() -> Array:
 		out.append({"path": path, "title": tr(pd["title"]), "desc": tr(pd["desc"]), "conds": pd["conds"].map(func(c): return _cond(c))})
 	return out
 
-## A condition: {count: vassals|allies|techs} (all of them) or {built: structure}.
+## A condition: {count: vassals|allies|techs} (all of them), {count: people|held_winter, of: n}
+## (at least n), {built: structure} or {tier: a settlement tier}.
 func _cond(c: Dictionary) -> Dictionary:
 	if c.has("built"): return {"text": sim.story.text(c["text"]), "done": sim.struct_exists(c["built"])}
+	if c.has("tier"): # a settlement of ours of this tier (rules.json tiers)
+		return {"text": sim.story.text(c["text"]), "done": sim.settlements().any(func(p): return sim.tier_of(p) == str(c["tier"]))}
 	var R = sim.rivals
 	var n := 0
 	var of := 0
@@ -51,12 +56,23 @@ func _cond(c: Dictionary) -> Dictionary:
 		"techs":
 			of = D.TECHS.size()
 			n = D.TECHS.filter(func(t): return sim.has_tech(t["id"])).size()
-	return {"text": sim.story.text(c["text"], {"n": n, "of": of}), "done": n == of}
+		"people": # alive now, against a number
+			of = int(c.get("of", 1))
+			n = sim.living().size()
+		"held_winter": # kept alive through a whole winter
+			of = int(c.get("of", 1))
+			n = held_winter
+	return {"text": sim.story.text(c["text"], {"n": n, "of": of}), "done": n >= of if c.has("of") else n == of}
 
 func update(dt: float) -> void:
 	check_t -= dt
 	if check_t > 0 or pending != "": return
 	check_t = 1.0
+	var alive: int = sim.living().size()
+	if sim.hz.winter(): winter_low = alive if winter_low < 0 else mini(winter_low, alive)
+	elif winter_low >= 0: # a winter has ended: this many saw it through
+		held_winter = maxi(held_winter, winter_low)
+		winter_low = -1
 	if sim.living().is_empty() and not achieved.has("defeat"):
 		achieved["defeat"] = sim.day()
 		pending = "defeat"

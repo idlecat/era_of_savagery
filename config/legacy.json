@@ -1,5 +1,5 @@
 {
- "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id). text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
+ "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id) or a settlement of a tier (tier: rules.json tiers id). count people / held_winter (the most kept alive through a whole winter) against `of`. text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
  "paths": {
   "conquest": {
    "title": "Victory by Conquest",
@@ -56,6 +56,31 @@
    ],
    "text": "Beneath the Grand Altar the elders recite all that our people know - fire, stone, bronze and the law. Nothing will be forgotten.",
    "opening": "Hear how the tribe of the bonfire came to know all that can be known."
+  },
+  "city": {
+   "title": "Victory of the City",
+   "desc": "A thousand kept warm through the hungry dark.",
+   "conds": [
+    {
+     "tier": "city",
+     "text": "A settlement grown into a city"
+    },
+    {
+     "count": "held_winter",
+     "of": 1000,
+     "text": [
+      "People kept alive through a whole winter: %d / %d",
+      "n",
+      "of"
+     ]
+    },
+    {
+     "built": "grand_altar",
+     "text": "A Grand Altar raised"
+    }
+   ],
+   "text": "The snow lies on a thousand roofs, and under every one a fire. What began as a bonfire by the ford is a city now, and it has seen the hungry dark through.",
+   "opening": "Hear how the tribe of the bonfire raised the first city of the river - and kept a thousand warm through the hungry dark."
   }
  },
  "defeat": {
@@ -72,8 +97,19 @@
  },
  "heritage": {
   "_doc": "What the next chronicle remembers of the last one (sim._remember_heritage; written by main.gd when a game ends): a landmark at the old camp (kind, name and text with the most renowned person's name, reward, devotion), dist from the new village (a range), the elders' words (intro by how it ended: %s the person, then the clan for merged), and kin_relation: a clan the old tribe joined starts this much friendlier and remembers it (ledger kind).",
-  "dist": [700, 1300],
-  "landmark": {"kind": "stones", "name": "The Old Fire of %s", "text": "found the cold hearth where the people of %s once lived, ringed with old stones", "reward": {"lore": 25}, "devotion": 6.0},
+  "dist": [
+   700,
+   1300
+  ],
+  "landmark": {
+   "kind": "stones",
+   "name": "The Old Fire of %s",
+   "text": "found the cold hearth where the people of %s once lived, ringed with old stones",
+   "reward": {
+    "lore": 25
+   },
+   "devotion": 6.0
+  },
   "intro": {
    "defeat": "The elders tell of a people who lived on this land before us: the people of %s, whose fire went out.",
    "merged": "The elders tell of the people of %s, who lived here before us and went to live among the %s.",
