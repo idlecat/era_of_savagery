@@ -495,7 +495,7 @@ var _cache_grid := {}
 var _cache_grid_t := -1.0
 
 func _grid() -> Dictionary:
-	if _cache_grid_t != time:
+	if _cache_grid_t != time or not _cache_in_tick: # (outside a tick people may have been moved by hand: look again)
 		_cache_grid_t = time
 		_cache_grid = {}
 		for u in units:

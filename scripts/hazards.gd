@@ -391,12 +391,14 @@ func _sickness(dt: float) -> void:
 	if spread_t > 0: return
 	spread_t = float(cs["spread_every"])
 	var alive2: Array = sim.living()
+	var fill: float = float(alive2.size()) / maxf(1.0, sim.pop_cap())
+	var packed: float = 1.0 + float(cs.get("crowd_spread", 0.0)) * maxf(0.0, fill - float(sim.RULES["beds"]["crowd_at"])) # (a crowded town: fevers pass hand to hand)
 	for u in alive2:
 		if u.sick <= 0: continue
-		for o in alive2:
+		for o in sim.units_near(u.pos, float(cs["spread_radius"])): # (the grid: those near, not everyone)
 			if o == u or o.sick > 0 or sim.time < o.immune_t: continue
 			var weak: float = float(cs.get("hungry_spread", 1.0)) if o.hunger < float(cs["recover"]["hungry_below"]) else 1.0
-			if o.pos.distance_to(u.pos) < float(cs["spread_radius"]) and randf() < float(cs["spread_chance"]) * weak * mult():
+			if randf() < float(cs["spread_chance"]) * weak * packed * mult():
 				o.sick = 1.0
 				sim.popup(o.pos + Vector2(0, -30), tr(cs["popup"]), Color("#a8e07a"))
 
