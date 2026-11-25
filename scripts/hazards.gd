@@ -269,7 +269,9 @@ func _weather(dt: float) -> void:
 	for w in WEATHER:
 		var kind: Dictionary = WEATHER[w]
 		var wm: float = float(winter_def().get("weather", {}).get(w, 1.0)) if winter() else 1.0 # (the kind of winter)
-		if randf() < float(kind["chance"][season_idx()]) * mult() * wm * float(D.LAND.get("weather", {}).get(w, 1.0)): # (the land: a steppe is drier)
+		var em: Array = kind.get("era_mult", [1.0, 1.0, 1.0])
+		var era_k: float = float(em[clampi(sim.evo.era - 1, 0, em.size() - 1)]) if not em.is_empty() else 1.0
+		if randf() < float(kind["chance"][season_idx()]) * mult() * wm * era_k * float(D.LAND.get("weather", {}).get(w, 1.0)): # (the land: a steppe is drier; the age)
 			if not sim.director.allow(w): return # (the director: not now, the tribe needs a breath)
 			if kind.has("warn_ahead"): # announced before it arrives
 				incoming = w

@@ -535,6 +535,8 @@ func _sky_tint() -> Color:
 		"storm": c = c.lerp(Color(0.68, 0.71, 0.78), 0.5)
 		"blizzard": c = c.lerp(Color(0.82, 0.86, 0.94), 0.45)
 		"drought": c = c.lerp(Color(1.0, 0.93, 0.78), 0.25)
+		"late_frost": c = c.lerp(Color(0.86, 0.92, 1.0), 0.3) # (a hard white morning)
+		"blight": c = c.lerp(Color(0.92, 0.90, 0.74), 0.2) # (a sickly yellow over the fields)
 	return c.lerp(Color(0.30, 0.34, 0.55), sim.night_amt * 0.85)
 
 ## Ease the full-screen grade toward the season's and weather's mood; slow enough

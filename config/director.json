@@ -5,7 +5,7 @@
   "harsh": {"cap": 5.0, "decay": 2.4, "cap_per_pop": 0.015, "cap_from_pop": 40}
  },
  "weights": {
-  "storm": 1.0, "blizzard": 1.5, "drought": 1.0, "rain": 0.0,
+  "storm": 1.0, "blizzard": 1.5, "drought": 1.0, "late_frost": 1.0, "blight": 1.0, "rain": 0.0,
   "wolves": 1.0, "tiger_raid": 1.0, "sickness": 1.0,
   "lightning": 0.5, "wildfire": 1.0, "earthquake": 1.5, "eruption": 2.5, "eclipse": 0.5,
   "spring_flood": 1.5, "great_flood": 3.0, "flood": 1.5,
