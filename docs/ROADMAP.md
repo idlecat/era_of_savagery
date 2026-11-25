@@ -311,3 +311,10 @@ Two things carry through every step:
   above the 25 ms target: people's updates are ~22 ms (walking gatherers the most),
   everyday life ~4.6 ms; the next levers are level of detail by distance from the
   camera and a cheaper life tick.
+- **Everything together** (three 150-day games on 379a195: the famine fix, the
+  village layout, rival growth, the warehouse, dilemma spacing, the bored director):
+  589–685 people at day 150, 429–506 at day 120 (the plan's ~500), 141–176 at day
+  60. Deaths 23–26 a game (24–38 before), now mostly raids: clans that grow with us
+  send war bands of 5–6 deaths at 150–250 people and one of 14 at 589 (seed 3, day
+  148). No more starvation days, though the stores still touch 0–1 once or twice a
+  game at the end of a winter. The woodpile holds at 4,500–9,000.
