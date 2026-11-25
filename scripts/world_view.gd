@@ -252,6 +252,8 @@ func _build_terrain() -> void:
 				var k := dx / D.RIVER_HALF
 				c = deep.lerp(shallow, k * k)
 				c.a = 0.08 + 0.3 * k
+				var fl: Vector2 = water_flow[j * w + i] # (the water shader reads the flow from the mask)
+				mask.set_pixel(i, j, Color(0.5 + 0.5 * fl.x, 0.5 + 0.5 * fl.y, 1.0))
 				if D.is_ford_at(p):
 					c = ford.lerp(shallow, 0.3 * k).lerp(Color("#9a9682"), 0.35 * f)
 					c.a = 0.4
@@ -307,10 +309,15 @@ func _offset_line(pts: PackedVector2Array, off: float) -> PackedVector2Array:
 
 ## Distance to the nearest river centreline for each terrain pixel (up to `reach`, else INF):
 ## each river segment stamps the pixels around it, much cheaper than asking per pixel.
+## Also fills `water_flow` (per pixel: the direction of the nearest river segment, the way
+## its polyline runs) for the water shader's flow-aligned ripples.
+var water_flow := PackedVector2Array()
 func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	out.resize(w * h)
 	out.fill(INF)
+	water_flow.resize(w * h)
+	water_flow.fill(Vector2.ZERO)
 	var sc := float(TEX_SCALE)
 	for pts in D.RIVERS:
 		for k in pts.size() - 1:
@@ -322,11 +329,14 @@ func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 			var y1 := mini(h - 1, int((maxf(a.y, b.y) + reach) / sc))
 			var ab := b - a
 			var l2 := maxf(ab.length_squared(), 0.0001)
+			var dir := ab.normalized()
 			for j in range(y0, y1 + 1):
 				for i in range(x0, x1 + 1):
 					var p := Vector2(i * sc + 1.5, j * sc + 1.5)
 					var d := p.distance_to(a + ab * clampf((p - a).dot(ab) / l2, 0.0, 1.0))
-					if d < out[j * w + i]: out[j * w + i] = d
+					if d < out[j * w + i]:
+						out[j * w + i] = d
+						water_flow[j * w + i] = dir
 	return out
 
 # ------------------------------------------------------------ frame
@@ -342,6 +352,7 @@ func _process(delta: float) -> void:
 		cam.offset = Vector2.ZERO
 	night.color = _sky_tint()
 	_grade_step(delta)
+	_water_step(delta)
 	_wet_step(delta)
 	_zoom_step(delta)
 	_update_hover()
@@ -609,6 +620,34 @@ func _grade_step(delta: float) -> void:
 	grade_mat.set_shader_parameter("bloom_from", grade_bloom_from)
 	grade_mat.set_shader_parameter("tone_k", grade_tone)
 	grade_mat.set_shader_parameter("moon", nk * 0.8)
+
+## What the water mirrors and how it glints: a pale blue sky by day, gold at dusk, rose at
+## dawn, gray under rain, a dim blue moonlit sky at night (terrain.gdshader sky_col, glint_col).
+var water_sky := Color(0.62, 0.74, 0.84)
+var water_glint := Color(0.55, 0.52, 0.42)
+func _water_step(delta: float) -> void:
+	var sky := Color(0.62, 0.74, 0.84)
+	var gl := Color(0.55, 0.52, 0.42)
+	if sim.is_day_part("dusk"):
+		var k := sin(_part_k("dusk") * PI)
+		sky = sky.lerp(Color(0.95, 0.68, 0.45), k)
+		gl = gl.lerp(Color(0.9, 0.6, 0.3), k)
+	elif sim.is_day_part("dawn"):
+		var k := sin(_part_k("dawn") * PI)
+		sky = sky.lerp(Color(0.92, 0.72, 0.74), k * 0.8)
+		gl = gl.lerp(Color(0.8, 0.6, 0.55), k * 0.8)
+	match sim.hz.weather:
+		"rain", "storm", "blizzard":
+			sky = sky.lerp(Color(0.5, 0.56, 0.62), 0.45)
+			gl *= 0.35
+	sky = sky.lerp(Color(0.3, 0.38, 0.6), sim.night_amt)
+	gl = gl.lerp(Color(0.35, 0.42, 0.6), sim.night_amt * 0.7)
+	var k2 := minf(1.0, delta * 1.5)
+	water_sky = water_sky.lerp(sky, k2)
+	water_glint = water_glint.lerp(gl, k2)
+	var gm: ShaderMaterial = ground.material
+	gm.set_shader_parameter("sky_col", Vector3(water_sky.r, water_sky.g, water_sky.b))
+	gm.set_shader_parameter("glint_col", Vector3(water_glint.r, water_glint.g, water_glint.b))
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -1264,7 +1303,7 @@ func _draw_water_fx() -> void:
 			var tg: Vector2 = (pts[k + 1] - pts[k]).normalized()
 			var p: Vector2 = a + Vector2(-tg.y, tg.x) * sin(i * 12.3) * D.RIVER_HALF * 0.6
 			if D.is_ford_at(p) or not _in_view(p): continue
-			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.35), 2)
+			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.2), 1.5)
 	# foam curls where the water worries the bank, crawling slowly downstream
 	for bk in river_banks:
 		for line in bk:
@@ -1276,6 +1315,13 @@ func _draw_water_fx() -> void:
 				var q: Vector2 = line[k].lerp(line[k + 1], s - k)
 				if not _in_view(q): continue
 				ci.draw_circle(q + Vector2(0, -1), 1.8 + sin(i * 3.1) * 0.6, Color(0.95, 0.98, 1.0, 0.3))
+	# rings round anyone wading (people at a ford, beasts at the water), a wake when they move
+	for u in sim.units:
+		if not u.dead and not sim.in_hut(u) and _in_view(u.pos) and sim.is_visible(u.pos) and D.in_river(u.pos):
+			_wade(u.pos, u.id, moving.get("u%d" % u.id, false))
+	for pr in sim.predators:
+		if not pr.dead and not pr.fled and _in_view(pr.pos) and sim.is_visible(pr.pos) and D.in_river(pr.pos):
+			_wade(pr.pos, pr.id + 7919, moving.get("p%d" % pr.id, false))
 	# low sun and moonlight scatter on the water: twinkling glints
 	var glow_amt := 0.0
 	if sim.is_day_part("dusk"): glow_amt = sin(_part_k("dusk") * PI)
@@ -1292,6 +1338,14 @@ func _draw_water_fx() -> void:
 				var tw: float = sin(t * 3.0 + i * 2.7)
 				if tw < 0.55: continue
 				ci.draw_circle(p, 1.6, Color(1.0, 0.95, 0.8, (tw - 0.55) * glow_amt * 0.9))
+
+## Two rings spreading from someone standing in the water (drawn under the GROUND transform,
+## so circles lie flat), quicker and closer together while they move.
+func _wade(p: Vector2, seed_id: int, walking: bool) -> void:
+	var period := 0.9 if walking else 1.8
+	for i in 2:
+		var ph := fposmod((t + seed_id * 0.37) / period + i * 0.5, 1.0)
+		ci.draw_arc(p, 5.0 + 16.0 * ph, 0, TAU, 20, Color(0.9, 0.96, 1.0, 0.45 * (1.0 - ph)), 1.6)
 
 func _draw_decor(d: Dictionary) -> void:
 	var p := iso(d["p"])
