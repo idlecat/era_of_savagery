@@ -82,6 +82,11 @@
   "days": 1.0,
   "every_days": 4
  },
+ "dilemmas": {
+  "_doc": "Spacing between the chieftain's dilemmas (sim.check_events): after one pauses the game, the next waits in its queue for min_gap_hours game hours, unless it is urgent (`urgent` here, or \"urgent\": true on the dilemma in dilemmas.json: waiting would change its options). Day one is exempt: the opening teaches the rhythm.",
+  "min_gap_hours": 4,
+  "urgent": ["flood", "last_stand", "defeat", "merged", "first_day"]
+ },
  "lod": {
   "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick, and those at calm_jobs (a meal, a pastime, idle) only every calm_every-th.",
   "every": 2,

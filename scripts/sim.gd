@@ -87,6 +87,7 @@ var ox_neglect := 0.0 # seconds of neglect
 var herd_t := 0.0
 var last_herd_day := 0
 var pending_event := ""
+var last_posed_t := -1e9 # when the last dilemma paused the game (rules.json dilemmas min_gap_hours)
 var scripted_ambush := true
 # ---- exploration (fog of war) ----
 var fog_enabled := true
@@ -3029,6 +3030,9 @@ func check_events() -> void:
 	if legacy.pending != "": # endings come first
 		_fire_event(legacy.pending)
 		return
+	if not dilemma_gap_ok(): # a breath between dilemmas: only the urgent come now, the rest wait in their queues
+		_fire_urgent()
+		return
 	if not story.pending.is_empty(): # the scenario's scripted events
 		_fire_event(story.pending.pop_front())
 	elif not cult.pending.is_empty(): # the culture's dilemmas
@@ -3072,9 +3076,40 @@ func check_events() -> void:
 
 var steward_routine := true # the Steward decides routine matters (dilemmas with "routine"); a player setting
 
+## Whether a dilemma may be put to the chieftain now: day one (the opening teaches the
+## rhythm), or rules.json dilemmas min_gap_hours game hours since the last one paused the game.
+func dilemma_gap_ok() -> bool:
+	return day() <= 1 or time - last_posed_t >= float(RULES["dilemmas"]["min_gap_hours"]) * D.DAY_LEN / 24.0
+
+## A dilemma that may not wait for the gap: marked "urgent" in dilemmas.json, or listed in
+## rules.json dilemmas.urgent (waiting would change its options: the flood, the last stand...).
+func is_urgent(id: String) -> bool:
+	return bool(DILEMMAS.get(id, {}).get("urgent", false)) or id in RULES["dilemmas"]["urgent"]
+
+## Within the gap: fire the first urgent dilemma waiting in a queue, if any (the others stay queued).
+func _fire_urgent() -> void:
+	for q in [story.pending, cult.pending, rivals.pending]:
+		for i in q.size():
+			if is_urgent(str(q[i])):
+				var id: String = q[i]
+				q.remove_at(i)
+				_fire_event(id)
+				return
+	if not flags.has("last_stand") and is_urgent("last_stand") and story.holds(RULES["triggers"]["last_stand"]):
+		flags["last_stand"] = true
+		_fire_event("last_stand")
+		return
+	for src in [nat, hz, life]:
+		if src.pending != "" and is_urgent(src.pending):
+			var e: String = src.pending
+			src.pending = ""
+			_fire_event(e)
+			return
+
 func _fire_event(id: String) -> void:
 	cult.on_event(id)
 	if _decide_routine(id): return
+	last_posed_t = time
 	pending_event = id
 	paused = true
 	event_fired.emit(id)

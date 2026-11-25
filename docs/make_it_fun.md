@@ -46,7 +46,6 @@ rush).
   Flood; a bloodied band turning home; the ghost's site words; `sim.site_value()`;
   the Steward scoring sites; the G1 check that random placement does worse.
 - **I3, timing:** a best season per building, a food reserve beside `wood_reserve`.
-- **Dilemma spacing** (Decisions): `min_gap` between posed dilemmas and `urgent` flags.
 - **Director `bored()`** and the reactive successor nemesis (only if G1 shows the late
   game dragging).
 - **B3, the frozen river** (only if winters prove lacking).
