@@ -653,12 +653,31 @@ func nearest_serving(role: String, p: Vector2) -> E.Structure:
 ## How near a fire someone must be to be warm by it.
 func warm_reach() -> float: return 110.0 * (2.0 if has_tech("fire") else 1.0)
 
+## What warms, by grid cell as wide as the farthest-reaching warmth: rebuilt with the
+## building index (asked for every person every tick; a town of a thousand has ~40 fires). A _cache.
+var _cache_warm := {}
+var _cache_warm_t := -2.0
+var _cache_warm_cell := 1.0
+
 func near_warmth(u: E.Unit) -> bool:
 	if in_hut(u): return true
 	if out_of_fuel(): return false # (the fires have burned down: no wood to feed them)
 	var r := warm_reach()
-	for s in serving("warmth"):
-		if s.pos.distance_to(u.pos) < r * serves(s, "warmth"): return true
+	var warm: Array = serving("warmth") # (also renews the building index)
+	if _cache_warm_t != _cache_built_t or not _cache_in_tick: # (outside a tick: look afresh, as built_of() does)
+		_cache_warm_t = _cache_built_t
+		_cache_warm = {}
+		_cache_warm_cell = r
+		for s in warm: _cache_warm_cell = maxf(_cache_warm_cell, r * serves(s, "warmth"))
+		for s in warm:
+			var k := Vector2i(floori(s.pos.x / _cache_warm_cell), floori(s.pos.y / _cache_warm_cell))
+			if _cache_warm.has(k): _cache_warm[k].append(s)
+			else: _cache_warm[k] = [s]
+	var c := Vector2i(floori(u.pos.x / _cache_warm_cell), floori(u.pos.y / _cache_warm_cell))
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			for s in _cache_warm.get(c + Vector2i(dx, dy), []):
+				if s.pos.distance_to(u.pos) < r * serves(s, "warmth"): return true
 	return false
 
 ## A building's radius: a wall's chosen one, else its type's.
@@ -2474,9 +2493,12 @@ func _tick(dt: float) -> void:
 	hunt.update(dt)
 	_cache_tick_n += 1
 	var lod := int(RULES["lod"]["every"]) if lod_on else 1
+	var calm_lod := int(RULES["lod"].get("calm_every", lod)) if lod_on else 1
+	var calm_jobs: Array = RULES["lod"].get("calm_jobs", [])
 	for u in units:
-		if lod > 1 and not hot(u): # (level of detail: out of danger, every lod-th tick with lod times the step)
-			if (u.id + _cache_tick_n) % lod == 0: update_unit(u, dt * lod)
+		if lod > 1 and not hot(u): # (level of detail: out of danger, every lod-th tick with lod times the step; eating and pastimes coarser still)
+			var n: int = calm_lod if str(u.job.get("type", "")) in calm_jobs else lod
+			if (u.id + _cache_tick_n) % n == 0: update_unit(u, dt * n)
 		else: update_unit(u, dt)
 	fog_t -= dt
 	if fog_t <= 0:
@@ -3265,8 +3287,14 @@ func reveal(p: Vector2, r: float) -> void:
 func fog_update() -> void:
 	if fog_w == 0: return
 	visible.fill(0)
+	var seen := {} # (a town's people stand in a few fog cells: one look per cell and sight, not one per person)
 	for u in units:
-		if not u.dead: reveal(u.pos, sight(u))
+		if u.dead: continue
+		var sr := sight(u)
+		var key := _cell_idx(u.pos) * 4096 + int(sr)
+		if seen.has(key): continue
+		seen[key] = true
+		reveal(u.pos, sr)
 	for s in structures:
 		if s.built and ours(s): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_STRUCT)))
 	_lookouts()

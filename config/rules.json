@@ -83,8 +83,10 @@
   "every_days": 4
  },
  "lod": {
-  "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick.",
+  "_doc": "Level of detail (sim.hot(), the tick): people out of danger are updated every `every`-th tick with that many times the step, so a city of a thousand stays fast; anyone fighting, fleeing, reacting, in an emergency or hurt in the last hot_secs seconds is updated every tick, and those at calm_jobs (a meal, a pastime, idle) only every calm_every-th.",
   "every": 2,
+  "calm_every": 4,
+  "calm_jobs": ["meal", "life", ""],
   "hot_secs": 6
  },
  "tiers": {
