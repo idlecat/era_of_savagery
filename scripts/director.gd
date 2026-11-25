@@ -41,7 +41,8 @@ func _level() -> Dictionary:
 ## How much trouble the tribe can take now.
 func cap() -> float:
 	if mercy(): return float(C.get("mercy", {}).get("cap", 0.5))
-	return float(_level().get("cap", 3.0))
+	var lv := _level()
+	return float(lv.get("cap", 3.0)) + float(lv.get("cap_per_pop", 0.0)) * maxf(0.0, sim.living().size() - float(lv.get("cap_from_pop", 0.0))) # (a town can take more at once than a camp)
 
 func weight(kind: String) -> float: return float(C.get("weights", {}).get(kind, 0.0))
 

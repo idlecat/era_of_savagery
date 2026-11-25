@@ -1,8 +1,8 @@
 {
- "_doc": "The director (director.gd, sim.director) paces the hardships. Everything that goes wrong adds its weight to a tension score that eases by decay per day. Before a rolled hardship starts (weather, wolves, tiger raids, sickness, lightning, earthquakes, the volcano, eclipses, clan raids and demands, an emergency) it asks: it may start if tension + its weight stays within the level's cap, else it is put off (retry seconds) or skipped. Hardships that are not rolled (seasonal floods, scripted events, deaths) always happen and count. When the tribe is in distress (too little food, deaths, despair) the cap drops to mercy.cap, and once in a while a gift helps (mercy.gifts: conditions and story actions). Kinds not in weights are never held back. The challenge level sets the cap and decay (off: the director rests).",
+ "_doc": "The director (director.gd, sim.director) paces the hardships. Everything that goes wrong adds its weight to a tension score that eases by decay per day. Before a rolled hardship starts (weather, wolves, tiger raids, sickness, lightning, earthquakes, the volcano, eclipses, clan raids and demands, an emergency) it asks: it may start if tension + its weight stays within the level's cap, else it is put off (retry seconds) or skipped. Hardships that are not rolled (seasonal floods, scripted events, deaths) always happen and count. When the tribe is in distress (too little food, deaths, despair) the cap drops to mercy.cap, and once in a while a gift helps (mercy.gifts: conditions and story actions). Kinds not in weights are never held back. The challenge level sets the cap and decay (off: the director rests); the cap grows by cap_per_pop for each person past cap_from_pop, so a town can take more at once than a camp, and still gets its quiet stretches.",
  "levels": {
-  "normal": {"cap": 3.0, "decay": 1.6},
-  "harsh": {"cap": 5.0, "decay": 2.4}
+  "normal": {"cap": 3.0, "decay": 1.6, "cap_per_pop": 0.01, "cap_from_pop": 40},
+  "harsh": {"cap": 5.0, "decay": 2.4, "cap_per_pop": 0.015, "cap_from_pop": 40}
  },
  "weights": {
   "storm": 1.0, "blizzard": 1.5, "drought": 1.0, "rain": 0.0,

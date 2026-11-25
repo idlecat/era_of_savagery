@@ -120,6 +120,13 @@ func stance(id: String) -> String:
 	return "Trusted"
 
 ## No raids, no demands: a peace pact, an alliance, or they are our vassals.
+## How many people a clan grows to (rivals.json people.max_pop: a number, or {base,
+## per_our_pop}: clans grow as we do, so a raid on a town is not a raid on a camp).
+func max_pop() -> int:
+	var m = C["people"]["max_pop"]
+	if m is Dictionary: return int(float(m.get("base", 14)) + float(m.get("per_our_pop", 0.0)) * sim.living().size())
+	return int(m)
+
 func at_peace(id: String) -> bool:
 	return has_treaty(id, "peace") or has_treaty(id, "alliance") or clans[id]["vassal"] > 0
 
@@ -238,7 +245,7 @@ func update(dt: float) -> void:
 		_guards_home(c)
 		# people and warriors regrow
 		var cp: Dictionary = C["people"]
-		if randf() < dt / (D.DAY_LEN * float(cp["pop_every_days"])): c["pop"] = mini(int(cp["max_pop"]), c["pop"] + 1)
+		if randf() < dt / (D.DAY_LEN * float(cp["pop_every_days"])): c["pop"] = mini(max_pop(), c["pop"] + 1)
 		c["warriors"] = clampi(c["warriors"], 0, int(c["pop"] / int(cp["max_warrior_share"])))
 		if randf() < dt / (D.DAY_LEN * float(cp["warrior_every_days"])) and c["warriors"] < int(c["pop"] / int(cp["warrior_share"])): c["warriors"] += 1
 	_pick_nemesis()
@@ -339,7 +346,8 @@ func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
 	var hostility := _hostility(c)
 	var stage_add: int = int(feud_stage().get("size_add", 0)) if feud_id() == c["id"] else 0
-	var size := mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add)
+	var size := mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add \
+		+ int(float(cr["size"].get("per_our_pop", 0.0)) * sim.living().size())) # (a bigger tribe draws bigger war bands, if the clan has the warriors)
 	if size < 1: return
 	if feud_id() == c["id"]: c["raid_live"] = true
 	var target: Vector2 = D.VILLAGE
