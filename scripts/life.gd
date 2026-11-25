@@ -342,7 +342,7 @@ func _meal_call(u: E.Unit) -> void:
 	if u.role == "child" and not u.job.is_empty(): return
 	u.meal_slot = slot # (asked once a meal time)
 	if u.hunger >= float(mc["hungry_below"]) or sim.stock["food"] < 1.0: return
-	var fire = sim.nearest_fire(u.pos)
+	var fire = sim.nearest_serving("gather", u.pos)
 	if fire == null or fire.pos.distance_to(u.pos) > float(mc["reach"]) or not D.same_side(fire.pos, u.pos): return
 	var a := float(u.id) * 2.39996 + randf_range(-0.2, 0.2) # (round the fire, each at their place)
 	var seat: Vector2 = sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * Config.rand_in(mc["seat"]))
@@ -458,7 +458,7 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 			if to == null: return false
 			job["to"] = to
 			if a.get("at", "") == "fire":
-				var fire = sim.nearest_fire(u.pos)
+				var fire = sim.nearest_serving("gather", u.pos)
 				job["face"] = fire.pos
 			if a.get("at", "") == "grave":
 				var dead: E.Unit = sim.unit_by_id(u.mourn_id)
@@ -532,7 +532,7 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 func _spot(u: E.Unit, at: String) -> Variant:
 	match at:
 		"fire":
-			var fire = sim.nearest_fire(u.pos)
+			var fire = sim.nearest_serving("gather", u.pos)
 			if fire == null or not D.same_side(fire.pos, u.pos): return null
 			var a := randf() * TAU
 			return sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * randf_range(40, 80))

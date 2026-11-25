@@ -1109,8 +1109,7 @@ func _set_status(c: E.Contract, s: String) -> void:
 func rest_spot(u: E.Unit) -> Vector2:
 	var best: E.Structure = null
 	var best_side := false
-	for s in sim.structures:
-		if not s.built or not sim.ours(s) or s.type != "bonfire": continue
+	for s in sim.serving("sleep"):
 		var side := D.same_side(s.pos, u.pos)
 		if best == null or (side and not best_side) or (side == best_side and s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)):
 			best = s

@@ -592,12 +592,14 @@ func pop_cap() -> int:
 ## the fires, the fields; never a loop over every structure per person). A _cache.
 var _cache_built := {}
 var _cache_built_t := -1.0
+var _cache_serving := {} # role -> our built buildings serving it (serving(), rebuilt with built_of's)
 ## A building was lost or changed outside the usual paths: built_of() looks again.
 func buildings_changed() -> void: _cache_built_t = -1.0
 func built_of(type: String) -> Array:
 	if _cache_built_t != time or not _cache_in_tick: # (outside a tick a building may have been changed by hand: look again)
 		_cache_built_t = time
 		_cache_built = {}
+		_cache_serving = {}
 		for s in structures:
 			if not s.built or not ours(s): continue
 			if _cache_built.has(s.type): _cache_built[s.type].append(s)
@@ -621,9 +623,30 @@ func _burn_fuel(dt: float) -> void:
 		fuel_warn_day = day()
 		alert(tr(RULES["fuel"]["alert"]), D.VILLAGE, "danger")
 
-func nearest_fire(p: Vector2) -> E.Structure:
+## Our built buildings that serve `role` (structures.json "serves": warmth, gather, haven, sleep).
+func serving(role: String) -> Array:
+	built_of("") # (renews the caches when they are stale)
+	if _cache_serving.has(role): return _cache_serving[role]
+	var out: Array = []
+	for t in D.STRUCTURES:
+		if float(D.STRUCTURES[t].get("serves", {}).get(role, 0.0)) > 0.0: out.append_array(built_of(t))
+	_cache_serving[role] = out
+	return out
+
+## How much of its role's full reach a building has (0: it doesn't serve that role).
+func serves(s: E.Structure, role: String) -> float:
+	return float(D.STRUCTURES[s.type].get("serves", {}).get(role, 0.0))
+
+## Whether buildings of `type` are outdated now (structures.json obsolete.when holds): the
+## planner builds no more of them at the village and puts out those others cover (improve.gd).
+func obsolete(type: String) -> bool:
+	var o = D.STRUCTURES.get(type, {}).get("obsolete", {})
+	return o is Dictionary and not o.is_empty() and story.holds(o.get("when", {}))
+
+## The nearest of our buildings serving `role` to `p` (any side of the water), or null.
+func nearest_serving(role: String, p: Vector2) -> E.Structure:
 	var best: E.Structure = null
-	for s in built_of("bonfire"):
+	for s in serving(role):
 		if best == null or s.pos.distance_to(p) < best.pos.distance_to(p): best = s
 	return best
 
@@ -634,8 +657,8 @@ func near_warmth(u: E.Unit) -> bool:
 	if in_hut(u): return true
 	if out_of_fuel(): return false # (the fires have burned down: no wood to feed them)
 	var r := warm_reach()
-	for s in built_of("bonfire"):
-		if s.pos.distance_to(u.pos) < r: return true
+	for s in serving("warmth"):
+		if s.pos.distance_to(u.pos) < r * serves(s, "warmth"): return true
 	return false
 
 ## A building's radius: a wall's chosen one, else its type's.
@@ -1492,7 +1515,7 @@ func beds_at(p: Vector2) -> int:
 ## Whether a fire of ours burns at the settlement at `p` (within rules.json beds.fire_reach,
 ## on its side of the water): a family only moves where it can keep warm and eat.
 func warm_at(p: Vector2) -> bool:
-	var f := nearest_fire(p)
+	var f := nearest_serving("warmth", p)
 	return f != null and D.same_side(f.pos, p) and f.pos.distance_to(p) < float(RULES["beds"]["fire_reach"])
 
 ## How full the settlement at `p` is: its people over its beds (people and no beds: INF).
@@ -2060,7 +2083,7 @@ func pick_bed(u: E.Unit) -> void:
 		u.bed_pos = best.pos + Vector2(0, 6)
 		return
 	u.bed_id = -1
-	var fire := nearest_fire(u.pos)
+	var fire := nearest_serving("sleep", u.pos)
 	if fire and D.region_at(fire.pos) == bank and fire.pos.distance_to(u.pos) < BED_FAR:
 		var a := float(u.id) * 2.39996 # golden angle: spread the sleepers round the fire
 		u.bed_pos = dry_spot(fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0))
@@ -3245,7 +3268,7 @@ func fog_update() -> void:
 	for u in units:
 		if not u.dead: reveal(u.pos, sight(u))
 	for s in structures:
-		if s.built and ours(s): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_BONFIRE if s.type == "bonfire" else D.SIGHT_STRUCT)))
+		if s.built and ours(s): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_STRUCT)))
 	_lookouts()
 	if guardian and not guardian.dead: reveal(guardian.pos, 260)
 	for lm in landmarks:

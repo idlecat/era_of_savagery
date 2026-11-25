@@ -336,7 +336,6 @@ const FOG_CELL := 40.0
 const SIGHT_UNIT := 200.0
 const SIGHT_SCOUT_BONUS := 30.0 # extra sight while auto-scouting
 const SIGHT_STRUCT := 200.0
-const SIGHT_BONFIRE := 300.0
 
 # ---- Rival clans: their own villages, people and moods (see rivals.gd) ----
 ## relation -100 (blood feud) .. +100 (allies); "base" is where it drifts back to.
