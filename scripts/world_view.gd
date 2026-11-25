@@ -919,19 +919,39 @@ func draw_overlay() -> void:
 		var ahead := a.lerp(b, minf(1.0, k + 0.08)) - Vector2(0, sin(PI * minf(1.0, k + 0.08)) * lift)
 		if s["weapon"] == "bow": ci.draw_line(at - (ahead - at).normalized() * 9.0, at, Color("#f3e2c0"), 1.5)
 		else: ci.draw_circle(at, 2.2, Color("#9a9184"))
-	for p in sim.popups:
-		if not sim.is_explored(p["pos"]): continue
+	if not clean: # speech marks: after the important names, before popups and ordinary names (which give way)
+		var talk: Array = [] # [rank, unit]: picked/hovered first, then those nearest the middle of the view
+		var mid := uniso(cam.get_screen_center_position())
+		for u in sim.units:
+			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
+				var pick: bool = u.id in selected or u.id == hover_unit
+				talk.append([-1.0 if pick else u.pos.distance_squared_to(mid), u])
+		talk.sort_custom(func(x, y): return x[0] < y[0])
+		var words_left := SPEECH_CAP
+		for e in talk:
+			var u = e[1]
+			var words: bool = words_left > 0 or e[0] < 0.0
+			if words: words_left -= 1
+			_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u, u.say_until - sim.time, words, e[0] < 0.0)
+	var small_left := POPUP_CAP
+	for i in range(sim.popups.size() - 1, -1, -1): # (newest first: they win the room)
+		var p: Dictionary = sim.popups[i]
+		if not sim.is_explored(p["pos"]) or not _in_view(p["pos"]): continue
+		if not p["big"]:
+			if small_left <= 0: continue
+			small_left -= 1
 		var a: float = 1.0 - pow(p["t"] / p["life"], 2)
 		var col: Color = p["color"]
 		col.a = a
 		var at: Vector2 = iso(p["pos"]) - Vector2(0, 26)
-		var size: int = 17 if p["big"] else 13
+		var size: int = 17 if p["big"] else 12
+		if not p["big"]: col.a *= 0.8
 		if _label_room(at, p["text"], size, p["big"]): _draw_label(at, p["text"], size, col, true)
+	if not (names_all or alt_held) and later.size() > NAME_CAP: # zoomed in: only those near the cursor
+		var m := uniso(get_global_mouse_position())
+		later.sort_custom(func(x, y): return x.pos.distance_squared_to(m) < y.pos.distance_squared_to(m))
+		later.resize(NAME_CAP)
 	for u in later: _draw_unit_name(u, false)
-	if not clean: # speech marks last, above names and popups
-		for u in sim.units:
-			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
-				_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u, u.say_until - sim.time)
 	if drag_start != null and wall_center == null: # (a box select, not a wall being sized)
 		var m := get_global_mouse_position()
 		var r := Rect2(drag_start, m - drag_start).abs()
@@ -2378,8 +2398,12 @@ func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
 ## player is looking for are named (name_priority() > 0); everyone is when show_all_names().
 ## A label that would cover one already drawn this frame is left out (_label_room), so the
 ## more important ones go first: picked and hovered people, title holders, the hurt and those
-## fighting, then the big popups, the small popups, and ordinary names last.
-const NAMES_ZOOM := 1.9 # zoomed in at least this far, everyone is named
+## fighting, then speech (SPEECH_CAP in words, the rest as icons), the big popups, the newest
+## small popups (POPUP_CAP), and ordinary names last (NAME_CAP nearest the cursor when zoomed in).
+const NAMES_ZOOM := 1.9 # zoomed in at least this far, ordinary names appear (up to NAME_CAP)
+const NAME_CAP := 10 # zoomed in, the ordinary names drawn: those nearest the cursor (all with the setting or Alt)
+const SPEECH_CAP := 3 # speech in words at once; the rest speak in icon bubbles
+const POPUP_CAP := 4 # small popups (+1 XP...) at once, the newest
 const NAME_ALWAYS := 3 # priority from which a name is drawn even over another label
 var names_all := false # the player's "Always show names" setting (hud.gd)
 var alt_held := false # Alt held over the map: every name, as long as it is held
@@ -2427,15 +2451,19 @@ const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief
 
 ## A speech mark: out at map zoom, a small icon bubble a player can read at a glance;
 ## up close (or for freeform lines from a game master), the words themselves.
-func _speech(at: Vector2, u, left: float) -> void:
-	if cam.zoom.x < 1.2 and u.say_kind in SAY_ICONS:
-		_icon_bubble(at, u.say_kind, left)
+## Only a few speak in words at once (`words`, SPEECH_CAP); the others show their icon, or
+## nothing when the line has none. A bubble that would cover another is left out unless `force`.
+func _speech(at: Vector2, u, left: float, words := true, force := false) -> void:
+	if (cam.zoom.x < 1.2 or not words) and u.say_kind in SAY_ICONS:
+		if _bubble_room(Rect2(at.x - 11, at.y - 25, 22, 22), force): _icon_bubble(at, u.say_kind, left)
 		return
+	if not words: return
 	var text: String = u.say
 	var a := clampf(left / 0.4, 0.0, 1.0)
 	var size := 12
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12.0
 	var r := Rect2(at.x - w / 2, at.y - 17, w, 19)
+	if not _bubble_room(r, force): return
 	var bg := Color(0.98, 0.95, 0.86, 0.92 * a)
 	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-5, 1), at + Vector2(5, 1), at + Vector2(0, 8)]), bg)
 	var sb := StyleBoxFlat.new()
@@ -2445,6 +2473,14 @@ func _speech(at: Vector2, u, left: float) -> void:
 	sb.set_border_width_all(1)
 	ci.draw_style_box(sb, r)
 	ci.draw_string(font, Vector2(r.position.x + 6, r.position.y + 14), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.22, 0.15, 0.08, a))
+
+## Like _label_room() for a speech bubble's box.
+func _bubble_room(r: Rect2, force: bool) -> bool:
+	if not force:
+		for o in _label_rects:
+			if o.intersects(r): return false
+	_label_rects.append(r)
+	return true
 
 ## A round speech bubble with one small pictogram inside, fading out at the end.
 func _icon_bubble(at: Vector2, kind: String, left: float) -> void:
