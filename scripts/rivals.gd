@@ -76,20 +76,117 @@ func setup() -> void:
 		for i in int(C["people"]["hunters"]): _spawn(c, "hunter")
 
 func _build_village(c: Dictionary) -> void:
-	var p: Vector2 = c["pos"]
-	var owner: String = "rival:" + c["id"]
-	var fire = sim.add_structure("bonfire", p, true, owner)
+	var fire = sim.add_structure("bonfire", c["pos"], true, "rival:" + c["id"])
 	fire.style = c["era"]
-	for i in 4:
-		var a := i * TAU / 4 + 0.4
-		var h = sim.add_structure("hut" if i % 2 == 0 else "large_hut", p + Vector2(cos(a), sin(a)) * (62.0 if c["culture"] == "martial" else 105.0), true, owner)
-		h.style = c["era"]
-	if c["culture"] == "martial":
-		sim.add_structure("weapon_rack", p + Vector2(40, -40), true, owner)
-		var pal = sim.add_structure("palisade", p, true, owner)
-		pal.style = c["era"]
-	else:
-		sim.add_structure("totem_shrine", p + Vector2(-50, 40), true, owner)
+	var obstacles := _obstacles(c)
+	for i in 60:
+		if not _grow_one(c, obstacles): break
+
+# ------------------------------------------------------------ the village grows (config "growth")
+## A clan's village keeps pace with the clan: every `every_days` its era may rise (by the
+## day, or toward ours) and it puts up one building it lacks (homes for its people first).
+func develop(c: Dictionary, dt: float) -> void:
+	var G: Dictionary = C["growth"]
+	c["grow_t"] = float(c.get("grow_t", 0.0)) + dt
+	if c["grow_t"] < D.DAY_LEN * float(G["every_days"]): return
+	c["grow_t"] = 0.0
+	var by_day := 1
+	for k in G["era_days"]:
+		if sim.day() >= int(G["era_days"][k]): by_day = maxi(by_day, int(k))
+	if int(c["era"]) < 3 and (by_day > int(c["era"]) or (sim.evo.era > int(c["era"]) and randf() < float(G["catch_up_chance"]))):
+		set_era(c["id"], int(c["era"]) + 1)
+	_grow_one(c, _obstacles(c))
+
+## A clan enters era `e` (1..3): its buildings take the era's style. For a game master too.
+func set_era(id: String, e: int) -> void:
+	if not clans.has(id): return
+	var c: Dictionary = clans[id]
+	e = clampi(e, 1, 3)
+	if e == int(c["era"]): return
+	c["era"] = e
+	for s in sim.structures:
+		if s.owner == "rival:" + id: s.style = e
+	if c["met"]: sim.add_log(_txt(C["growth"]["era_log"], c, {"era": tr(D.ERA_NAMES[e])}), "story")
+
+## Trees, bushes, boulders and finds round a clan's village (the village doesn't build on them).
+func _obstacles(c: Dictionary) -> Array:
+	var far: float = float(C["growth"]["home_ring"][2]) + 260.0
+	return sim.nodes.filter(func(n): return (n.kind in ["tree", "bush", "boulder"] or n.kind in D.FINDS) and n.pos.distance_to(c["pos"]) < far)
+
+## The clan puts up the one building it lacks most: a home while its people outnumber its
+## homes, else the first of growth.buildings its era, ways and numbers call for. False if none.
+func _grow_one(c: Dictionary, obstacles: Array) -> bool:
+	var G: Dictionary = C["growth"]
+	var owner: String = "rival:" + c["id"]
+	var mine: Array = sim.structures.filter(func(s): return s.owner == owner)
+	var pop := int(c["pop"])
+	var homes := mine.filter(func(s): return s.type in ["hut", "large_hut"]).size()
+	if homes < ceili(pop / float(G["people_per_home"])):
+		if _place(c, "large_hut" if (homes + 1) % int(G["large_every"]) == 0 else "hut", obstacles): return true
+	var replaced: Array = []
+	for b in G["buildings"]:
+		if b.has("replaces") and mine.any(func(s): return s.type == b["type"]): replaced.append(b["replaces"])
+	for b in G["buildings"]:
+		var type: String = b["type"]
+		if not D.STRUCTURES.has(type) or type in replaced or int(b.get("era", 1)) > int(c["era"]) or pop < int(b.get("min_pop", 0)): continue
+		if b.has("culture") and b["culture"] != c["culture"]: continue
+		var want: int = maxi(1, pop / int(b["per_pop"])) if b.has("per_pop") else 1
+		if mine.filter(func(s): return s.type == type).size() >= want: continue
+		if not _place(c, type, obstacles, b.get("outer", false)): continue
+		if b.has("replaces"):
+			for s in mine:
+				if s.type == b["replaces"]: sim.structures.erase(s)
+			sim.buildings_changed()
+		return true
+	return false
+
+## Lays out one building of `type` for the clan: a wall round the fire, sized to its homes;
+## else on rings round the fire (`outer`: beyond its homes and walls), on free dry ground.
+func _place(c: Dictionary, type: String, obstacles: Array, outer := false) -> bool:
+	var G: Dictionary = C["growth"]
+	var owner: String = "rival:" + c["id"]
+	var center: Vector2 = c["pos"]
+	if D.STRUCTURES[type].get("ring", false):
+		sim.add_structure(type, center, true, owner).style = c["era"]
+		_fit_walls(c)
+		return true
+	var hr: Array = G["home_ring"]
+	var r := float(D.STRUCTURES[type]["r"])
+	var step := float(hr[1])
+	var far := float(hr[2]) + (200.0 if outer else 0.0)
+	var structs: Array = sim.structures.filter(func(s): return s.pos.distance_to(center) < far + 200.0 and (outer or not D.STRUCTURES[s.type].get("ring", false)))
+	var d := float(hr[0])
+	if outer: d = maxf(d, _reach(c, true) + float(G["outer_gap"]) + r)
+	var region = D.region_at(center)
+	var a0 := float(hash(c["id"]) % 628) / 100.0 # (each clan its own way round, deterministic)
+	while d <= far:
+		var n := maxi(6, int(TAU * d / step))
+		for i in n:
+			var p: Vector2 = center + Vector2.from_angle(a0 + TAU * i / n) * d
+			if D.region_at(p) == region and sim.improve.is_free(p, r, structs, obstacles):
+				sim.add_structure(type, p, true, owner).style = c["era"]
+				if not outer: _fit_walls(c)
+				return true
+		d += step
+	return false
+
+## How far the clan's village reaches from its fire: its homes and other inner buildings
+## (`walls`: and its walls too), to their outer edge.
+func _reach(c: Dictionary, walls := false) -> float:
+	var outer_types: Array = C["growth"]["buildings"].filter(func(b): return b.get("outer", false)).map(func(b): return b["type"])
+	var out := 0.0
+	for s in sim.structures:
+		if s.owner != "rival:" + c["id"] or s.type in outer_types: continue
+		if D.STRUCTURES[s.type].get("ring", false):
+			if walls: out = maxf(out, sim.struct_r(s))
+		else: out = maxf(out, s.pos.distance_to(c["pos"]) + sim.struct_r(s))
+	return out
+
+## The clan's walls enclose all its homes.
+func _fit_walls(c: Dictionary) -> void:
+	var need := _reach(c) + float(C["growth"]["wall_gap"])
+	for s in sim.structures:
+		if s.owner == "rival:" + c["id"] and D.STRUCTURES[s.type].get("ring", false): s.size = sim.ring_radius(s.type, need)
 
 ## A clan member walking out of the village: a peaceful hunter or a warrior.
 func _spawn(c: Dictionary, kind: String, goal: Variant = null) -> E.Predator:
@@ -128,7 +225,41 @@ func max_pop() -> int:
 	return int(m)
 
 func at_peace(id: String) -> bool:
-	return has_treaty(id, "peace") or has_treaty(id, "alliance") or clans[id]["vassal"] > 0
+	return has_treaty(id, "peace") or has_treaty(id, "alliance") or clans[id]["vassal"] > 0 or gone(id)
+
+## A clan that is no more (taken into the tribe: absorb()). Its state stays for the
+## references to it (the ledger, a war plan, the chronicle) but it no longer acts.
+func gone(id: String) -> bool:
+	return clans.has(id) and clans[id].get("gone", false)
+
+## A beaten clan is taken into the tribe (config "absorb"; the story action absorb, a game
+## master's verb): part of its people join us as families, its village is left and pulled
+## down, its people leave the map, and the clan is gone. Returns how many joined.
+func absorb(id: String) -> int:
+	if not clans.has(id) or gone(id): return 0
+	var c: Dictionary = clans[id]
+	var A: Dictionary = C["absorb"]
+	var n: int = mini(int(A["most"]), roundi(int(c["pop"]) * float(A["share"])))
+	var joined := 0
+	var batch := maxi(1, int(sim.RULES["migration"]["most_at_once"]))
+	while joined < n:
+		var got: Array = sim.folk.add_family(mini(batch, n - joined), id)
+		if got.is_empty(): break
+		joined += got.size()
+	sim.alert(_txt(A["alert"], c, {"n": joined}), D.VILLAGE, "info")
+	c["gone"] = true
+	c["met"] = false
+	c["nemesis"] = false
+	c["vassal"] = 0
+	c["treaties"].clear()
+	c["pop"] = 0
+	c["warriors"] = 0
+	pending = pending.filter(func(e): return not e.ends_with("_" + id))
+	for p in sim.predators:
+		if p.clan == id: p.fled = true # (they walk off the map)
+	sim.structures = sim.structures.filter(func(s): return s.owner != "rival:" + id)
+	sim.buildings_changed()
+	return joined
 
 func allies() -> Array:
 	return clans.keys().filter(func(id): return has_treaty(id, "alliance"))
@@ -166,7 +297,8 @@ func summary() -> Array:
 		out.append({"clan": tr(c["name"]), "chieftain": tr(c["chief"]), "stance": tr(stance(id)),
 			"their_ways": tr(c["desc"]), "wrongs_remembered": c["grudges"].slice(-3), "treaties": treaty_text(id),
 			"chief_temper": tr(temper(id).get("word", "")), "remembers": ledger_lines(id, 3),
-			"nemesis": c.get("nemesis", false), "feud_over": c.get("feud_over", false)})
+			"nemesis": c.get("nemesis", false), "feud_over": c.get("feud_over", false),
+			"era": tr(D.ERA_NAMES.get(int(c["era"]), "")), "buildings": sim.structures.filter(func(s): return s.owner == "rival:" + id).size()})
 	return out
 
 func change(id: String, amount: float, reason := "") -> void:
@@ -234,6 +366,7 @@ func steal(p: E.Predator) -> void:
 func update(dt: float) -> void:
 	for id in clans:
 		var c: Dictionary = clans[id]
+		if c.get("gone", false): continue
 		_ensure_chief(c)
 		_succession(c)
 		_feud(c)
@@ -248,6 +381,7 @@ func update(dt: float) -> void:
 		_hunters(c, dt)
 		_traders(c, dt)
 		_guards_home(c)
+		develop(c, dt)
 		# people and warriors regrow
 		var cp: Dictionary = C["people"]
 		if randf() < dt / (D.DAY_LEN * float(cp["pop_every_days"])): c["pop"] = mini(max_pop(), c["pop"] + 1)
@@ -312,7 +446,7 @@ func _trespass(c: Dictionary, dt: float) -> void:
 func on_structure_placed(s) -> void:
 	for id in clans:
 		var c: Dictionary = clans[id]
-		if s.owner == "village" and s.pos.distance_to(c["pos"]) < D.RIVAL_TERRITORY + float(C["deeds"]["built_on_land"]["extra_reach"]):
+		if s.owner == "village" and not c.get("gone", false) and s.pos.distance_to(c["pos"]) < D.RIVAL_TERRITORY + float(C["deeds"]["built_on_land"]["extra_reach"]):
 			_deed(id, "built_on_land")
 
 ## Hostile clans raid: a war band marches on the village (or an outpost), steals food

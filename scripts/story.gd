@@ -138,7 +138,7 @@ const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn"
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
 	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "newcomers", "from", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
-	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge", "career", "lay_out", "move_out"]
+	"grudge", "peace_days", "clan_pop", "clan_era", "absorb", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge", "career", "lay_out", "move_out"]
 
 ## What each action key and condition key takes. Input from outside (a scenario, a config,
 ## a game master) is checked against these before it runs: an action with a value of the wrong
@@ -150,7 +150,7 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 	"panic": "num", "weather": "str", "react": "str", "feat": "str", "tale": "str", "join": "str", "great_flood": "any", "open": "str",
 	"hurt": "num", "chosen": "num", "festival": "dict", "births": "num", "guests": "num", "relation": "num", "reason": "text",
 	"clan": "str", "raid": "any", "raid_delay_days": "num", "vassal": "num", "relation_min": "num", "relation_max": "num",
-	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "sound": "str", "morale": "num", "bond": "num",
+	"clear_treaties": "any", "grudge": "text", "peace_days": "num", "clan_pop": "num", "clan_era": "num", "absorb": "any", "sound": "str", "morale": "num", "bond": "num",
 	"with": "str", "say": "text", "depart": "any", "prepare": "nums", "slaughter": "num", "ledger": "str", "wield": "str", "arms_xp": "nums", "merge": "any", "career": "str", "newcomers": "any", "from": "str", "lay_out": "str", "move_out": "num"}
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
@@ -356,6 +356,8 @@ func _clan_actions(a: Dictionary, vars: Dictionary) -> void:
 	if a.has("grudge"): cl["grudges"].append(text(a["grudge"], vars))
 	if a.has("peace_days"): cl["treaties"]["peace"] = {"until": sim.time + float(a["peace_days"]) * D.DAY_LEN, "tribute": 0}
 	if a.has("clan_pop"): cl["pop"] = maxi(3, cl["pop"] + int(a["clan_pop"]))
+	if a.has("clan_era"): sim.rivals.set_era(cid, int(a["clan_era"]))
+	if a.has("absorb"): vars["joined"] = sim.rivals.absorb(cid)
 
 # ------------------------------------------------------------ dilemmas (the shared format)
 ## The speaker of a dilemma ("best:<skill>"), or null.

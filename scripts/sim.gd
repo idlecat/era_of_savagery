@@ -3151,6 +3151,10 @@ func _dilemma_vars(id: String) -> Dictionary:
 		v["clan"] = refuge
 		v["clan_name"] = tr(rivals.clans[refuge]["name"]) if refuge != "" else tr("no clan")
 		v["can_merge"] = refuge != ""
+		var foe: String = legacy.conqueror()
+		v["foe"] = foe
+		v["foe_name"] = tr(rivals.clans[foe]["name"]) if foe != "" else tr("no clan")
+		v["can_yield"] = foe != ""
 	if id == "first_day":
 		var sick := unit_by_id(int(flags.get("first_day_sick", -1)))
 		var herb: String = rumoured.keys()[0] if not rumoured.is_empty() else ""
