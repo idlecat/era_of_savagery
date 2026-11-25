@@ -2691,8 +2691,10 @@ func _update_vice(dt: float) -> void:
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time() and not hz.keep_in(): # no work handed out at night, nor in a blizzard
 		var rest_below := float(vc["steward"].get("rest_below", 0.0))
+		var famine: bool = stock["food"] < living().size() # (less than a meal each in the stores)
+		var eat_below := float(RULES["survival"]["eat_below"])
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
-			and u.sick <= 0.0 and u.hp >= u.max_hp * rest_below) # (the sick and the badly hurt are left to rest)
+			and u.sick <= 0.0 and (u.hp >= u.max_hp * rest_below or (famine and u.hunger < eat_below))) # (the sick and the badly hurt are left to rest; but in a famine, rest cures no hunger: the weak from it go for food too)
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = site_for(u)

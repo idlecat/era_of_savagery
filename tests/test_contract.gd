@@ -307,6 +307,18 @@ func test_weigh_dangers() -> void:
 	sim._update_vice(0.1)
 	check(sick.job.is_empty() and helper.job.is_empty(), "the Steward leaves the sick and the badly hurt to rest")
 	check(sim.living().any(func(o): return o != u and o != sick and o != helper and not o.job.is_empty()), "and puts the others to work")
+	# but in a famine, rest cures no hunger: the weak from it go for food too
+	for o in sim.living(): sim.set_job(o, {})
+	var food0: float = sim.stock["food"]
+	sim.stock["food"] = 0.0
+	helper.hunger = 5.0
+	sick.hunger = 5.0
+	sim.vice_timer = 0.0
+	sim._update_vice(0.1)
+	check(not helper.job.is_empty() and sick.job.is_empty(), "in a famine the weak from hunger are sent for food; the sick still rest (%s)" % helper.job.get("type", ""))
+	sim.stock["food"] = food0
+	helper.hunger = 80.0
+	sick.hunger = 80.0
 	sick.sick = 0.0
 	helper.hp = helper.max_hp
 	# envoys and traders: not on a journey they can't come back from; a trader turns back from a clan turned hostile

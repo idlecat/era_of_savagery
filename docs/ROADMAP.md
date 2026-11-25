@@ -289,3 +289,11 @@ Two things carry through every step:
   now grows with the tribe); winters at 190–308 people still ran the stores to 0
   (granaries now follow a winter's need, `store_below`). A third run with all of
   it is measuring.
+- **The third 150-day game's deaths, replayed** (seed 1, 9337e38): no flood, no cold.
+  All 26 on its three bad days (81, 97, 113: each the first day of spring) starved:
+  winter had emptied the stores, and the starving sat idle by the fire, because the
+  Steward leaves those under half health to rest (`rest_below`), and hunger is what
+  drained their health; resting cures no hunger, so the famine fed itself. Now, while
+  the stores hold less than a meal each, those weak from hunger are sent for food too
+  (the sick still rest). The winter shortfall itself is what 4417d1c (fields 0.12 a
+  head, granaries for 8 food a head) addresses; three 150-day runs are measuring it.
