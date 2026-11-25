@@ -1713,6 +1713,7 @@ const STRINGS := {
 	"by the whole tribe": "由全族达成",
 	"Day %d · %s · the tribe's first no. %d": "第%d天 · %s · 部落的第%d项首创",
 	"Celebrate achievements as they happen": "成就达成时弹出庆祝",
+	"Always show names (otherwise only the picked, the chiefs and the hurt; zoom in or hold Alt to see all)": "始终显示名字（否则只显示选中的人、首领和伤者；放大或按住 Alt 可查看全部）",
 	"Next (%d more)": "下一个（还有%d个）",
 	"Achievement": "成就",
 	"To %s's aid!": "去救%s！",

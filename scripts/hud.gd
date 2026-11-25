@@ -112,6 +112,7 @@ func setup(s, w, l) -> void:
 	sim.crisis_started.connect(_on_crisis)
 	sim.crisis_ended.connect(func(_c): _crisis_bar_update())
 	feat_popups = _feat_pref()
+	world.names_all = _ui_pref("names_all", false)
 	world.selection_changed.connect(_refresh_left)
 	world.structure_clicked.connect(func(s): if s.type == "burial_ground": open_graves(s))
 	_refresh_left()
@@ -2279,6 +2280,13 @@ func _open_settings() -> void:
 	oral.button_pressed = sim.evo.oral_tradition
 	oral.toggled.connect(func(on): sim.evo.oral_tradition = on)
 	v.add_child(oral)
+	var names := CheckBox.new()
+	names.text = tr("Always show names (otherwise only the picked, the chiefs and the hurt; zoom in or hold Alt to see all)")
+	names.button_pressed = world.names_all
+	names.toggled.connect(func(on):
+		world.names_all = on
+		_set_ui_pref("names_all", on))
+	v.add_child(names)
 	var result := _label("", 14, Color("#9fd0ff"))
 	v.add_child(result)
 	var apply := func():
@@ -2604,6 +2612,18 @@ func open_achievements() -> void:
 const SETTINGS_CFG := "user://settings.cfg"
 const FEAT_SYMBOLS := {"invention": "✦", "wisdom": "✧", "find": "❖", "landmark": "▲", "contact": "☉", "tradition": "❂",
 	"era": "☀", "masterpiece": "✿", "rank": "✦", "outpost": "⌂", "feud": "⚔", "challenge": "✪", "career": "⚒", "story": "☼", "tale": "❦", "hero": "★"}
+
+## A [ui] setting of settings.cfg (default `def`).
+func _ui_pref(key: String, def: bool) -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(SETTINGS_CFG) == OK: return bool(cf.get_value("ui", key, def))
+	return def
+
+func _set_ui_pref(key: String, on: bool) -> void:
+	var cf := ConfigFile.new()
+	cf.load(SETTINGS_CFG)
+	cf.set_value("ui", key, on)
+	cf.save(SETTINGS_CFG)
 
 func _feat_pref() -> bool:
 	var cf := ConfigFile.new()
