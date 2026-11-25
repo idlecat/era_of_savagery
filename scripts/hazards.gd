@@ -109,14 +109,19 @@ func dry() -> bool: return wk().get("dry", false)
 ## sting; in winter they can kill, and a blizzard freezes even the well-dressed.
 func cold_rate(u: E.Unit, warm: bool) -> float:
 	if warm: return 0.0
+	return cold_rate_as(u, sim.night_amt > 0.5, weather)
+
+## The cold someone away from a fire would take per second at night or by day, in weather
+## `w` (a weather.kinds id or "clear"): cold_rate() for a time to come (weigh.gd projects
+## trips with it: an announced blizzard, a walk that runs into the night).
+func cold_rate_as(u: E.Unit, night: bool, w: String) -> float:
 	var cc: Dictionary = C["cold"]
 	var hide: bool = sim.has_tech("hide")
-	var night: bool = sim.night_amt > 0.5
 	var r := 0.0
 	if night and not hide: r += float(cc["night"])
 	if winter():
 		r += float(cc["winter_hide"] if hide else cc["winter"]) * (1.0 if night else float(cc["winter_day"]))
-	r += float(WEATHER.get(weather, {}).get("cold_hide" if hide else "cold", 0.0))
+	r += float(WEATHER.get(w, {}).get("cold_hide" if hide else "cold", 0.0))
 	return r * (mult() if on() else 1.0) * sim.inv.cold_mult() * winter_mod("cold")
 
 ## Outside winter and blizzards the cold only weakens (never below 35% HP).

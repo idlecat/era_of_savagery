@@ -24,6 +24,7 @@ const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
 const Reactions = preload("res://scripts/reactions.gd")
 const Hunt = preload("res://scripts/hunt.gd")
+const Weigh = preload("res://scripts/weigh.gd")
 const Arms = preload("res://scripts/arms.gd")
 const Life = preload("res://scripts/life.gd")
 const Challenges = preload("res://scripts/challenges.gd")
@@ -117,6 +118,7 @@ var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var react: Reactions # how people respond to quakes, fires, the hurt... (reactions.gd)
 var hunt: Hunt # how a band fights a dangerous beast: muster, charge together, ring it (hunt.gd)
+var weigh: Weigh # the cost, risk and outcome of an errand, weighed before going (weigh.gd)
 var arms: Arms # weapons, who carries which, and weapon mastery (arms.gd)
 var life: Life # meals, idle acts, bonds, spirits and weariness, speech (life.gd)
 var cause_hint := "" # how the next death happened (lightning, fire...), set around hurt_unit
@@ -150,6 +152,7 @@ func _init() -> void:
 	cult = Culture.new(self)
 	react = Reactions.new(self)
 	hunt = Hunt.new(self)
+	weigh = Weigh.new(self)
 	arms = Arms.new(self)
 	life = Life.new(self)
 	rivals = Rivals.new(self)
@@ -627,10 +630,13 @@ func nearest_fire(p: Vector2) -> E.Structure:
 		if best == null or s.pos.distance_to(p) < best.pos.distance_to(p): best = s
 	return best
 
+## How near a fire someone must be to be warm by it.
+func warm_reach() -> float: return 110.0 * (2.0 if has_tech("fire") else 1.0)
+
 func near_warmth(u: E.Unit) -> bool:
 	if in_hut(u): return true
 	if out_of_fuel(): return false # (the fires have burned down: no wood to feed them)
-	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
+	var r := warm_reach()
 	for s in built_of("bonfire"):
 		if s.pos.distance_to(u.pos) < r: return true
 	return false
@@ -790,11 +796,13 @@ func step_move(e, dt: float, spd: float) -> bool:
 	var d: float = e.pos.distance_to(wp)
 	var step := sp * dt
 	if d <= step:
+		if e is E.Unit and weigh.hold_at_flood(e, wp): return false
 		if e is E.Unit: e.walked += d * (1.5 if e.carry_amt > 0 else 1.0)
 		e.pos = wp
 		e.path.pop_front()
 		return e.path.is_empty()
 	var np: Vector2 = e.pos + (wp - e.pos) / d * step
+	if e is E.Unit and weigh.hold_at_flood(e, np): return false # (the river is in flood: wait on the bank)
 	if D.is_water(np) and not D.is_water(e.pos): # slide along the bank
 		var sh := D.shore(np, 1.0)
 		var info := D.river_info(e.pos)
@@ -850,7 +858,6 @@ func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void:
 ## AoE2-DE-style auto-scout: keep walking to the nearest unexplored land.
 func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
-## `kinds`: only nodes of these kinds (a career's trade); [] = any.
 ## Node id -> how many people are working it: counted once a tick (a _cache), and kept up
 ## as find_node() hands nodes out within the tick.
 var _cache_claims := {}
@@ -863,7 +870,11 @@ func node_claims() -> Dictionary:
 			if not u.dead and u.job.has("node_id"): _cache_claims[u.job["node_id"]] = _cache_claims.get(u.job["node_id"], 0) + 1
 	return _cache_claims
 
-func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Array = []) -> E.ResNode:
+## `kinds`: only nodes of these kinds (a career's trade); [] = any. `who`: the one who would
+## go: the trip is weighed for them (weigh.gd: places they can't come back from in the cold
+## are left out, beasts count against a place); null = by distance alone.
+func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Array = [], who: E.Unit = null) -> E.ResNode:
+	var wctx: Dictionary = weigh.plan(who, res) if who != null else {}
 	var best: E.ResNode = null
 	var best_score := INF
 	var claims_of := node_claims() # node id -> people already working it
@@ -878,6 +889,9 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Ar
 		var claims: int = claims_of.get(n.id, 0)
 		if not prefer.has(n.kind): prefer[n.kind] = inv.add("prefer", n.kind)
 		var score := d * 1.4 + claims * 70.0 + (60.0 if n.kind == "deer" else 0.0) + (0.0 if is_explored(n.pos) else 900.0) - float(prefer[n.kind])
+		if not wctx.is_empty():
+			if score >= best_score or not weigh.fits(wctx, n.pos): continue # (cheap checks first)
+			score += weigh.penalty(wctx, n.pos)
 		if score < best_score:
 			best_score = score
 			best = n
@@ -1078,11 +1092,19 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				react.trigger("beast_seen", {"victim": u, "danger": threat[0].pos, "attacker": threat[0]})
 				if u.job.get("type", "") != "explore": return
 			var tgt: Variant = j.get("to")
+			if tgt != null and time >= float(j.get("weigh_t", 0.0)): # (weighed again now and then, like gathering)
+				j["weigh_t"] = time + float(weigh.C["recheck"])
+				if not weigh.fits(weigh.plan(u, "", "explore"), tgt): tgt = null
 			if tgt == null or is_explored(tgt):
 				tgt = explore_target(u)
 				if tgt == null:
 					set_job(u, {})
-					popup(u.pos + Vector2(0, -30), tr("Nothing left to explore"), Color("#9fd0ff"))
+					var unsafe = explore_target(u, false) # (there is land to see, but not within a safe walk)
+					if unsafe != null:
+						var why := weigh.why_not(weigh.plan(u, "", "explore"), unsafe)
+						weigh.note_refused(u, why if why != "" else "cold")
+						popup(u.pos + Vector2(0, -30), tr("Too cold to scout further") if why in ["", "cold"] else tr(weigh.refusal(why)["popup"]), Color("#a8d8ff"))
+					else: popup(u.pos + Vector2(0, -30), tr("Nothing left to explore"), Color("#9fd0ff"))
 					return
 				j["to"] = tgt
 			if approach(u, tgt, 12, dt): j["to"] = null
@@ -1133,16 +1155,27 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			if kept == null or not kept.kind in RULES["gathering"]["return_to"]: j["node_id"] = -1
 		return
 	var n := node_by_id(j["node_id"]) if j["node_id"] >= 0 else null
+	if n != null and time >= float(j.get("weigh_t", 0.0)): # (weighed again now and then: the cold, their health)
+		j["weigh_t"] = time + float(weigh.C["recheck"])
+		if not weigh.fits(weigh.plan(u, j["res"]), n.pos): n = null
 	if n == null or n.amount < 1:
 		var from: Vector2 = j["area"] if j["area"] != null else u.pos
-		n = find_node(j["res"], from, j["bank"], j["area_r"])
+		n = find_node(j["res"], from, j["bank"], j["area_r"], [], u)
 		if n == null:
-			if u.carry_amt > 0: j["phase"] = "deliver"
-			u.act = "No %s nearby" % j["res"]
+			if u.carry_amt > 0:
+				j["phase"] = "deliver"
+				return
+			var some := find_node(j["res"], from, j["bank"], j["area_r"]) # (there is some, but not within a safe walk: why not?)
+			var why := weigh.why_not(weigh.plan(u, j["res"]), some.pos) if some else ""
+			u.act = str(weigh.refusal(why)["act"]) if why != "" else "No %s nearby" % j["res"]
+			if why != "" and u.role == "" and u.job_key == "": # (an ordinary person gives it up; a crew waits for its leader)
+				weigh.note_refused(u, why)
+				set_job(u, {})
 			return
 		j["node_id"] = n.id
 		var cl := node_claims()
 		cl[n.id] = int(cl.get(n.id, 0)) + 1 # (the next to look this tick sees it taken)
+		j["weigh_t"] = time + float(weigh.C["recheck"])
 	if n.kind == "boulder" and not has_tech("tools"):
 		set_job(u, {})
 		popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools"), Color("#ff9b7a"))
@@ -2497,7 +2530,19 @@ func _steward_want(u: E.Unit) -> String:
 		var res: String = str(w.get("res", ""))
 		if res == "" or stock.get(res, 0.0) >= float(w.get("below", 0)) or not story.holds(w.get("when", {})): continue
 		if randf() >= float(w.get("share", 0.0)): continue
-		if find_node(res, u.home, D.region_at(u.home), float(RULES["vice"].get("want_reach", 900))) != null: return res
+		if find_node(res, u.home, D.region_at(u.home), float(RULES["vice"].get("want_reach", 900)), [], u) != null: return res
+	return ""
+
+## What the Steward gives `u` instead of gathering `res` when no place for it is a safe walk
+## away (weigh.gd): the other of food and wood if it is, a building site, else "" (nothing).
+func _steward_instead(u: E.Unit, res: String, unbuilt, reach: float) -> String:
+	for other in ["food", "wood"]:
+		if other != res and find_node(other, u.home, D.region_at(u.home), reach, [], u) != null: return other
+	if unbuilt: return "build"
+	var some := find_node(res, u.home, D.region_at(u.home), reach)
+	if some != null:
+		var why := weigh.why_not(weigh.plan(u, res), some.pos)
+		weigh.note_refused(u, why if why != "" else "cold")
 	return ""
 
 ## Relieve the holder of a Vice-Chieftain role, freeing the slot. Returns false if nobody holds it.
@@ -2588,7 +2633,9 @@ func _update_vice(dt: float) -> void:
 	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time() and not hz.keep_in(): # no work handed out at night, nor in a blizzard
-		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]))
+		var rest_below := float(vc["steward"].get("rest_below", 0.0))
+		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
+			and u.sick <= 0.0 and u.hp >= u.max_hp * rest_below) # (the sick and the badly hurt are left to rest)
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = site_for(u)
@@ -2609,6 +2656,9 @@ func _update_vice(dt: float) -> void:
 				choice = "food" if stock["food"] < food_cap() * float(sw["full"]) else "lore"
 			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" and bool(sw.get("fields_first", true)) else null
 			if field: choice = "field" # (food: a field or dock with a free place before the wild)
+			if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)
+				choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (weighed: nothing of it within a safe walk)
+				if choice == "": continue # (left to themselves: in the cold they go and sit by the fire)
 			match choice:
 				"field": assign_field(u, field)
 				"build": assign_build(u, unbuilt)
@@ -3244,8 +3294,10 @@ func way_out(p: Vector2, out := -10.0) -> Vector2:
 	return best
 
 ## Nearest unexplored land cell, preferring the scout's own side of the water (crossing costs a detour)
-## and steering clear of known saber-tooth dens.
-func explore_target(u: E.Unit) -> Variant:
+## and steering clear of known saber-tooth dens. In a deadly cold, only cells the scout can
+## come back from (weigh.gd), unless `weighed` is false.
+func explore_target(u: E.Unit, weighed := true) -> Variant:
+	var wctx := weigh.plan(u, "", "explore") if weighed else {}
 	var best: Variant = null
 	var best_score := INF
 	var my_side := D.region_at(u.pos)
@@ -3267,6 +3319,7 @@ func explore_target(u: E.Unit) -> Variant:
 			for dp in dens:
 				if c.distance_to(dp) < 450: score += 2500.0
 			if score < best_score:
+				if not weigh.fits(wctx, c): continue
 				best_score = score
 				best = c
 	return best

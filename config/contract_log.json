@@ -11,6 +11,7 @@
   "natural_disaster": {"rolls_per_day": 2.0, "flood_mult": 0.3, "incoming": 0.6, "max": 0.9},
   "leader_wounded": {"wound": 0.15, "ref_pct": 35, "per_combat_lv": 0.06, "hurt_margin": 0.15, "hurt": 0.4, "max": 0.85},
   "heavy_losses": {"base": 0.25, "per_defender": 0.1, "per_strength": 0.08, "bronze": 0.7, "max": 0.85},
+  "cold": {"_doc": "Not an abort condition: when the walk there and back to a fire costs the leader more of their health than they can spare in a cold that kills (weigh.gd trip), the forecast names it with this chance.", "score": 0.45},
   "mercy_mult": 0.6,
   "mention_at": 0.08,
   "mentions": 2,
@@ -49,6 +50,7 @@
    "flood": {"text": "The river floods in spring."},
    "incoming": {"text": "The sky is turning; weather is coming."},
    "hurt": {"text": "My wounds have not healed."},
+   "cold": {"text": "It is too far in this cold: we may not make it back to a fire."},
    "fight": {"text": "If it comes to a fight, I may be hurt."},
    "outnumbered": {"text": "They have about %d warriors to our %d."},
    "match": {"text": "We are about as many as their warriors: %d to our %d."}

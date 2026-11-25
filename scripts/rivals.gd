@@ -629,6 +629,8 @@ func envoy_block(u: E.Unit, id: String) -> String:
 	if u.role != "": return "Busy with a contract"
 	var other = sim.unit_by_id(clans[id]["envoy"])
 	if other and not other.dead and other.role == "envoy": return "Another envoy is already on the way"
+	var tp: Dictionary = sim.weigh.trip(u, parley_spot(id)) # (weighed: there and back to a fire, the flood, beasts)
+	if not tp["ok"]: return sim.weigh.refusal(tp["why"])["reason"]
 	return ""
 
 func send_envoy(u: E.Unit, id: String) -> String:

@@ -200,6 +200,7 @@ func do_cover(u: E.Unit, j: Dictionary, dt: float) -> void:
 func start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var v = ctx.get("victim")
 	if v == null or v.dead or v.hp >= v.max_hp * float(r.get("below", 0.9)): return false
+	if sim.weigh.danger_at(v.pos) != "": return false # (not into the flood, nor up to the beast that is still there)
 	var tending: int = sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "aid" and o.job.get("victim", -1) == v.id).size()
 	if tending >= int(r.get("count", 2)): return false
 	interrupt(u, {"type": "aid", "victim": v.id, "t": 0.0, "r": r})
@@ -209,7 +210,7 @@ func start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 func do_aid(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	var v: E.Unit = sim.unit_by_id(j["victim"])
-	if v == null or v.dead or v.hp >= v.max_hp * 0.95:
+	if v == null or v.dead or v.hp >= v.max_hp * 0.95 or sim.weigh.danger_at(v.pos) != "": # (healed, or now where nobody should go)
 		sim.end_errand(u)
 		return
 	if not sim.approach(u, v.pos + Vector2(14, 6), 10, dt):
@@ -329,9 +330,14 @@ func do_firefight(u: E.Unit, j: Dictionary, dt: float) -> void:
 		if nat.burning.is_empty() and r.has("log"): sim.add_log(tr(r["log"]), "story")
 
 # ------------------------------------------------------------ warm (freezing)
+## Below `below` of their health, or at the point of no return (weigh.must_head_back: what
+## is left only just covers the way back), someone out in the cold heads for the nearest
+## fire by the way they walk.
 func _start_warm(r: Dictionary, u: E.Unit) -> bool:
-	if u.job.get("type", "") == "warm" or u.hp >= u.max_hp * float(r.get("below", 0.55)) or sim.near_warmth(u): return false
-	var fire = sim.nearest_fire(u.pos)
+	if u.job.get("type", "") == "warm" or sim.near_warmth(u): return false
+	var low := u.hp < u.max_hp * float(r.get("below", 0.55))
+	if not low and not sim.weigh.must_head_back(u): return false
+	var fire = sim.weigh.nearest_warmth(u.pos)
 	if fire == null: return false
 	var to: Vector2 = fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40))
 	var bed := false
@@ -339,14 +345,15 @@ func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 		to = u.bed_pos
 		bed = true
 	interrupt(u, {"type": "warm", "to": to, "bed": bed, "r": r})
-	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
+	if not low: sim.weigh.note_turned_back(u) # (turned back at the point of no return, still warm enough: a word, no popup)
+	elif r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
 	return true
 
 func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	var storm: bool = str(r.get("while_weather", "")) != "" and sim.hz.weather == str(r["while_weather"]) # (sheltering until the blizzard is over)
-	if not storm and (r.has("while_weather") or u.hp >= u.max_hp * float(r.get("until", 0.8)) or not sim.hz.cold_can_kill()): # (a weather's errand ends with it)
-		sim.end_errand(u) # (warm again, or the cold is over)
+	if not storm and (r.has("while_weather") or (u.hp >= u.max_hp * float(r.get("until", 0.8)) and sim.near_warmth(u)) or not sim.hz.cold_can_kill()): # (a weather's errand ends with it; the cold's once warm again by a fire)
+		sim.end_errand(u) # (warm again by the fire, or the cold is over)
 		return
 	if not sim.approach(u, j["to"], 4, dt):
 		u.act = _act(r, 0)

@@ -42,6 +42,8 @@ var audio # audio.gd (set by main; null in tests)
 var game # main.gd: save_to(), load_from() (null in tests)
 var build_btns := {}
 var modal: Control = null
+var modal_x: Button = null # the × pinned in the open dialog's title row (shown by _closer)
+var modal_close: Button = null # the open dialog's own close button: × and ESC press it
 # ---- achievement celebrations (one dialog per first, queued; see _show_feat)
 var feat_popups := true # the player can switch them off; the screenshot harness does
 var NOTICES: Dictionary = preload("res://scripts/config.gd").load_cfg("notices") # what opens a dialog, what only a banner
@@ -126,6 +128,20 @@ func _on_advice_wanted(ctx: Dictionary) -> void:
 
 func modal_open() -> bool:
 	return modal != null
+
+## ESC: close the open dialog the way its own close button does. False when there is
+## none, or the dialog asks for a decision and can't just be dismissed.
+func dismiss_modal() -> bool:
+	if modal == null or not is_instance_valid(modal_close) or modal_close.disabled: return false
+	modal_close.pressed.emit()
+	return true
+
+## Marks `b` as the open dialog's close button: the × in its title row (always in view,
+## even when the content scrolls) and ESC press it. Returns `b`.
+func _closer(b: Button) -> Button:
+	modal_close = b
+	if is_instance_valid(modal_x): modal_x.visible = true
+	return b
 
 # ------------------------------------------------------------ theme & helpers
 static func _make_theme() -> Theme:
@@ -1377,10 +1393,26 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 		sb.set_border_width_all(3)
 		p.add_theme_stylebox_override("panel", sb)
 	cc.add_child(p)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	p.add_child(outer)
+	# The title row stays put above the scrolling content, with the × to close.
+	var top := HBoxContainer.new()
+	outer.add_child(top)
+	var head := _label(title, 22, Color("#ff8a7a") if danger else COL_ACCENT)
+	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(head)
+	modal_close = null
+	modal_x = _button("×", func(): dismiss_modal(), tr("Close (Esc)"))
+	modal_x.flat = true
+	modal_x.focus_mode = Control.FOCUS_NONE
+	modal_x.add_theme_font_size_override("font_size", 24)
+	modal_x.visible = false
+	top.add_child(modal_x)
 	# Content taller than the window scrolls instead of running off the screen.
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	p.add_child(sc)
+	outer.add_child(sc)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1388,10 +1420,9 @@ func _open_modal(title: String, width := 980.0, danger := false) -> VBoxContaine
 	var fit := func():
 		if not is_instance_valid(sc): return
 		var need: Vector2 = v.get_combined_minimum_size()
-		sc.custom_minimum_size = Vector2(maxf(width - 24.0, need.x), minf(need.y, get_viewport().get_visible_rect().size.y - 80.0))
+		sc.custom_minimum_size = Vector2(maxf(width - 24.0, need.x), minf(need.y, get_viewport().get_visible_rect().size.y - 130.0))
 	v.minimum_size_changed.connect(fit)
 	fit.call()
-	v.add_child(_label(title, 22, Color("#ff8a7a") if danger else COL_ACCENT))
 	# the dialog arrives: the world dims while the panel fades in and settles
 	var tw := create_tween().set_parallel()
 	dim.color.a = 0.0
@@ -1407,6 +1438,8 @@ func _close_modal(instant := false) -> void:
 	if not modal: return
 	var m := modal
 	modal = null
+	modal_close = null
+	modal_x = null
 	last_modal_closed = Time.get_ticks_msec()
 	if instant:
 		m.queue_free()
@@ -1435,7 +1468,7 @@ LLM node: [color=#9fd0ff]%s[/color]. Open [i]LLM Settings[/i] to use DeepSeek or
 	var brief: String = D.MAP.get("brief", "")
 	if brief != "": r.text = "[color=#ffd36b]%s[/color] — %s\n\n" % [tr(D.MAP.get("name", "")), tr(brief)] + r.text
 	v.add_child(r)
-	v.add_child(_button("Begin", _close_modal))
+	v.add_child(_closer(_button("Begin", _close_modal)))
 
 ## Who to try first as contract leaders: the best builder, fighter and mystic.
 func _intro_names() -> Array:
@@ -1614,7 +1647,7 @@ func open_negotiation(leader, kind := "settle") -> void:
 	var confirm := _button("Seal the Contract", func(): _neg_confirm())
 	confirm.disabled = true
 	neg["confirm"] = confirm
-	bh.add_child(_button("Cancel", func(): _close_modal(); sim.paused = false))
+	bh.add_child(_closer(_button("Cancel", func(): _close_modal(); sim.paused = false)))
 	bh.add_child(confirm)
 	sim.paused = true
 	_neg_request("")
@@ -1803,7 +1836,7 @@ func _toast_contract_done(c) -> void:
 	v.add_child(r)
 	var was_paused: bool = sim.paused
 	sim.paused = true
-	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Continue", func(): _close_modal(); sim.paused = was_paused)))
 
 # ------------------------------------------------------------ milestone events
 var trader_wait := {} # a trader's market waiting behind a notice: {"id", "until"}
@@ -1868,7 +1901,7 @@ func _event_choose(id: String, idx: int) -> void:
 				open_negotiation(who, "war")
 				var ti: int = neg["target_ids"].find(foe)
 				if ti >= 0: neg["target"].select(ti)))
-	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = false))
+	v.add_child(_closer(_button("Continue", func(): _close_modal(); sim.paused = false)))
 
 # ------------------------------------------------------------ tech tree
 func _open_tech() -> void:
@@ -1940,7 +1973,7 @@ func _open_tech() -> void:
 				ft += "[color=#6a5a48]○ ???[/color]\n"
 		col.text = ft
 		fg.add_child(col)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 ## The burial ground: everyone laid to rest there, how they fell, and what they are remembered for.
 func open_graves(s) -> void:
@@ -1969,7 +2002,7 @@ func open_graves(s) -> void:
 		t += "\n\n"
 	body.text = t
 	v.add_child(body)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 func _abort_text(a: String) -> String:
 	if a.begins_with("hp_below_"): return tr("leader HP below %s") % a.trim_prefix("hp_below_")
@@ -2057,7 +2090,7 @@ func open_council(was_paused = null) -> void:
 			if why != "" and why != "Already the way" and why != "Already decided": b.tooltip_text += "\n" + tr(why)
 			b.focus_mode = Control.FOCUS_NONE
 			row.add_child(b)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 ## A choice's effects in words (for its tooltip).
 func _effects_tip(cd: Dictionary) -> String:
@@ -2099,7 +2132,7 @@ func _council_debate(id: String, choice: String, was_paused) -> void:
 		var err: String = P.set_choice(id, choice, "chieftain")
 		if err != "": toast(tr(err))
 		open_council(was_paused)))
-	hb.add_child(_button("Keep our ways", func(): open_council(was_paused)))
+	hb.add_child(_closer(_button("Keep our ways", func(): open_council(was_paused))))
 
 ## The save slots: numbered ones to save into, the quick save and the autosaves to load.
 func open_saves() -> void:
@@ -2144,7 +2177,7 @@ func open_saves() -> void:
 		cf.set_value("save", "autosave", b)
 		cf.save(SETTINGS_CFG))
 	v.add_child(auto)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 ## Ask before leaving: quick save and quit, quit without saving, or stay.
 func open_quit() -> void:
@@ -2163,7 +2196,7 @@ func open_quit() -> void:
 	sq.disabled = block != ""
 	hb.add_child(sq)
 	hb.add_child(_button("Quit without saving", func(): game.quit_game(false)))
-	hb.add_child(_button("Cancel", func(): _close_modal(); sim.paused = was_paused))
+	hb.add_child(_closer(_button("Cancel", func(): _close_modal(); sim.paused = was_paused)))
 
 func _open_sound() -> void:
 	if audio == null: return
@@ -2189,7 +2222,7 @@ func _open_sound() -> void:
 		sl.editable = not audio.muted
 		g.add_child(sl)
 		mute.toggled.connect(func(b): sl.editable = not b)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 func _open_settings() -> void:
 	var v := _open_modal("LLM NODE SETTINGS", 760)
@@ -2265,11 +2298,11 @@ func _open_settings() -> void:
 		result.text = "Testing…"
 		var msg: String = await llm.test_connection()
 		if is_instance_valid(result): result.text = msg))
-	h.add_child(_button("Save & close", func():
+	h.add_child(_closer(_button("Save & close", func():
 		apply.call()
 		llm.save_settings()
 		_close_modal()
-		sim.paused = was_paused))
+		sim.paused = was_paused)))
 	v.add_child(_label("Key is stored only in this machine's Godot user data folder (not in the project).", 12, Color("#8a7a60")))
 
 # ------------------------------------------------------------ diplomacy: envoys and parley
@@ -2300,7 +2333,7 @@ func open_envoy(u, clan_id: String) -> void:
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			v.add_child(b)
 	v.add_child(_label(tr("The envoy walks there; the parley begins when they reach the village. A clan in blood feud may not be gentle with the messenger."), 13, COL_DIM))
-	v.add_child(_button("Cancel", _close_modal))
+	v.add_child(_closer(_button("Cancel", _close_modal)))
 
 ## Send a trader to a clan: pick what to carry, then who carries it.
 func open_trade(clan_id: String, res := "", amt := 0) -> void:
@@ -2334,7 +2367,7 @@ func open_trade(clan_id: String, res := "", amt := 0) -> void:
 				if err != "": sim.popup(who.pos, tr(err), Color("#ff8080")))
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			v.add_child(b)
-	v.add_child(_button("Cancel", _close_modal))
+	v.add_child(_closer(_button("Cancel", _close_modal)))
 
 func _do_send_envoy(u, clan_id: String) -> void:
 	var err: String = sim.rivals.send_envoy(u, clan_id)
@@ -2415,7 +2448,7 @@ func open_parley(u, clan_id: String) -> void:
 	seal.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bh.add_child(seal)
 	par["seal"] = seal
-	bh.add_child(_button(tr("Leave the parley"), func(): _par_end(tr("%s leaves the fire of the %s without an agreement.") % [tr(u.name), tr(c["name"])])))
+	bh.add_child(_closer(_button(tr("Leave the parley"), func(): _par_end(tr("%s leaves the fire of the %s without an agreement.") % [tr(u.name), tr(c["name"])]))))
 	status.text = tr("Make an offer. %d rounds before %s grows impatient.") % [PAR_ROUNDS, tr(c["chief"])]
 
 func _par_spin(g: GridContainer, label: String, lo: int, hi: int, val: int) -> SpinBox:
@@ -2503,7 +2536,7 @@ func _par_end(text: String) -> void:
 	var txt := _rich(0, true)
 	txt.text = text
 	v.add_child(txt)
-	v.add_child(_button("Continue", func(): _close_modal(); sim.paused = false))
+	v.add_child(_closer(_button("Continue", func(): _close_modal(); sim.paused = false)))
 
 # ------------------------------------------------------------ legacy: the paths to victory
 func _open_legacy() -> void:
@@ -2521,7 +2554,7 @@ func _open_legacy() -> void:
 	s += tr("[color=#8a7a60]If every one of our people dies, the chronicle ends in defeat. After a victory you may keep playing.[/color]")
 	r.text = s
 	v.add_child(r)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
@@ -2562,7 +2595,7 @@ func open_achievements() -> void:
 		lines.append(tr("[color=#8a7a60]Day %d[/color]  [color=%s]%s[/color]  %s%s") % [e["day"], fk[1], tr(fk[0]), e["text"], who])
 	f.text = "\n".join(lines) if not lines.is_empty() else tr("[color=#8a7a60]Nothing yet. Explore, work and learn: every first is written here.[/color]")
 	v.add_child(f)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 # ------------------------------------------------------------ achievement celebrations
 ## Each of the tribe's firsts (inv.feat) pauses the game for a dialog with a picture of the
@@ -2725,7 +2758,7 @@ func _show_feat() -> void:
 	var more := feat_queue.size()
 	var ok := _button(tr("Next (%d more)") % more if more > 0 else tr("Continue"), func(): _close_modal())
 	ok.custom_minimum_size = Vector2(160, 36)
-	row.add_child(ok)
+	row.add_child(_closer(ok))
 	v.add_child(row)
 	ok.grab_focus()
 
@@ -2768,7 +2801,7 @@ func open_heritage() -> void:
 			lines.append(line)
 		r.text = "\n".join(lines)
 		v.add_child(r)
-	v.add_child(_button("Close", func(): _close_modal(); sim.paused = was_paused))
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
 ## A victory or defeat: the storyteller's LLM node composes the saga of the game.
 func _show_ending(id: String) -> void:

@@ -329,6 +329,8 @@ func trade_block(u: E.Unit, id: String) -> String:
 	if not c["met"]: return "We have not met them yet"
 	if u.role != "": return "Busy elsewhere"
 	if sim.rivals.stance(id) in ["Hostile", "Blood feud"]: return "They would rob our trader"
+	var tp: Dictionary = sim.weigh.trip(u, sim.rivals.parley_spot(id)) # (weighed: there and back to a fire, the flood, beasts)
+	if not tp["ok"]: return sim.weigh.refusal(tp["why"])["reason"]
 	return ""
 
 func rate(id: String) -> float:
@@ -370,6 +372,12 @@ func do_trade(u: E.Unit, j: Dictionary, dt: float) -> void:
 	match j["phase"]:
 		"go":
 			u.act = "Going to trade with the " + c["name"]
+			if sim.rivals.stance(id) in ["Hostile", "Blood feud"]: # (things turned bad on the way: back with the goods)
+				j["get"] = j["give"]
+				j["phase"] = "back"
+				j["turned"] = true
+				sim.add_log(tr("The %s have turned hostile: %s turns back with the goods.") % [tr(c["name"]), tr(u.name)], "story", [u])
+				return
 			if sim.approach(u, sim.rivals.parley_spot(id), 12, dt): j["phase"] = "barter"
 		"barter":
 			u.act = "Trading with the " + c["name"]
@@ -402,7 +410,7 @@ func do_trade(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.carry_amt = 0
 			u.role = ""
 			sim.set_job(u, {})
-			if not got.is_empty():
+			if not got.is_empty() and not j.get("turned", false):
 				var res: String = j["give"].keys()[0]
 				var what := "%d %s" % [got.values()[0], tr(got.keys()[0])]
 				sim.add_log(tr("%s is back from the %s: %d %s traded for %s.") % [tr(u.name), tr(c["name"]), j["give"][res], tr(res), what], "story", [u])

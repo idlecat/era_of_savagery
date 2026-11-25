@@ -175,6 +175,9 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 		KEY_T:
 			if not hud.modal_open(): hud._open_tech()
 		KEY_ESCAPE:
+			if hud.modal_open():
+				hud.dismiss_modal() # (a decision that must be made stays open)
+				return
 			world.build_type = ""
 			world.select_only(null)
 		KEY_C:

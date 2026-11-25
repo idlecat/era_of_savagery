@@ -722,6 +722,9 @@ func forecast(bp: Variant, leader: E.Unit = null) -> Dictionary:
 		if r.is_empty() or reasons.any(func(o): return o["id"] == r["id"]): continue
 		r["score"] = clampf(float(r["score"]) * calm, 0.0, 1.0)
 		reasons.append(r)
+	if leader != null and kind != "research": # (not an abort condition: the cost of the walk in a cold that kills, weigh.gd)
+		var tp: Dictionary = sim.weigh.trip(leader, site, 0.0, "", base_of(plan))
+		if tp["why"] == "cold": reasons.append({"id": "cold", "score": clampf(float(F["cold"]["score"]) * calm, 0.0, 1.0), "text": _fc_text("cold")})
 	reasons.sort_custom(func(a, b): return a["score"] > b["score"])
 	var safe := 1.0
 	for r in reasons: safe *= 1.0 - float(r["score"])
