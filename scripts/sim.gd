@@ -2561,7 +2561,7 @@ func _update_vice(dt: float) -> void:
 	var vc: Dictionary = RULES["vice"]
 	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
-	if steward and not steward.dead and not rest_time(): # no work handed out at night
+	if steward and not steward.dead and not rest_time() and not hz.keep_in(): # no work handed out at night, nor in a blizzard
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]))
 		var pop := living().size()
 		for u in idle:

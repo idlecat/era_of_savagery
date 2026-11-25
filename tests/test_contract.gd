@@ -4253,6 +4253,17 @@ func test_freezing() -> void:
 	sim.hz.weather = "clear"
 	sim.react.do_warm(w, w.job, 0.1)
 	check(w.job.get("type", "") == "gather", "and go back to work when it has passed")
+	# while a blizzard rages the Steward sends no one out
+	var st = sim.living().filter(func(x): return x.role == "" and x != u and x != v and x != w)[0]
+	sim.appoint(st, "steward")
+	var idle_one = sim.living().filter(func(x): return x.role == "" and x != st and x != u and x != v and x != w)[0]
+	sim.set_job(idle_one, {})
+	idle_one.pos = sim.dry_spot(fire.pos + Vector2(30, 10))
+	sim.hz.weather = "blizzard"
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + D.DAY_LEN * 0.3
+	sim.vice_timer = 0.0
+	sim._update_vice(0.05)
+	check(sim.hz.keep_in() and idle_one.job.is_empty(), "in a blizzard the Steward keeps everyone by the fires")
 	sim.dispose()
 
 func test_perf() -> void:

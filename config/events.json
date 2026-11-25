@@ -23,7 +23,7 @@
 
  "weather": {
   "roll_every": [35, 60],
-  "_doc": "Effects while a weather lasts: speed, work, sight (multipliers), wet (puts out fires faster, slows their spread), dry (fires and lightning catch more easily), berries (bush yield instead of the season's), crops (multiplies building food, except crops_spare), cold/cold_hide (extra cold damage), deadly_cold (the cold can kill). era_mult: [age 1, 2, 3] multiplies the chance (a late frost and a blight grow likelier as the tribe lives by its fields).",
+  "_doc": "Effects while a weather lasts: speed, work, sight (multipliers), wet (puts out fires faster, slows their spread), dry (fires and lightning catch more easily), berries (bush yield instead of the season's), crops (multiplies building food, except crops_spare), cold/cold_hide (extra cold damage), deadly_cold (the cold can kill), keep_in (no work is handed out while it lasts), react_every (its reactions in reactions.json repeat every so many seconds: whoever walked out is sent back in). era_mult: [age 1, 2, 3] multiplies the chance (a late frost and a blight grow likelier as the tribe lives by its fields).",
   "kinds": {
    "rain": {"name": "Rain", "chance": [0.35, 0.10, 0.25, 0.0], "dur": [40, 80],
     "alert": "Rain. Work outdoors goes slower.", "level": "info",
@@ -37,7 +37,7 @@
    "blizzard": {"name": "Blizzard", "chance": [0.0, 0.0, 0.04, 0.40], "dur": [35, 65],
     "warn_ahead": 15, "warn": "The sky turns white-grey - a blizzard is coming! Get everyone to the fires.",
     "alert": "Blizzard! Anyone far from a fire will freeze.", "level": "danger", "disaster": true,
-    "speed": 0.7, "work": 0.6, "sight": 0.55, "wet": true, "cold": 0.9, "cold_hide": 0.55, "deadly_cold": true},
+    "speed": 0.7, "work": 0.6, "sight": 0.55, "wet": true, "cold": 0.9, "cold_hide": 0.55, "deadly_cold": true, "keep_in": true, "react_every": 5},
    "late_frost": {"name": "Late Frost", "chance": [0.07, 0.0, 0.0, 0.0], "era_mult": [0.5, 1.0, 1.6], "dur": [60, 110],
     "alert": "A late frost: the young crops and the berry blossom die in the night.", "level": "warn", "done": "The frost lifts. What was sown must grow again.",
     "berries": 0.0, "crops": 0.0, "crops_spare": ["aurochs_pen", "fishing_dock"], "cold": 0.3},
