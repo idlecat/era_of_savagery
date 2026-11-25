@@ -199,6 +199,7 @@ func do_cover(u: E.Unit, j: Dictionary, dt: float) -> void:
 func start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var v = ctx.get("victim")
 	if v == null or v.dead or v.hp >= v.max_hp * float(r.get("below", 0.9)): return false
+	if sim.weigh.danger_at(v.pos) != "": return false # (not into the flood, nor up to the beast that is still there)
 	var tending: int = sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "aid" and o.job.get("victim", -1) == v.id).size()
 	if tending >= int(r.get("count", 2)): return false
 	interrupt(u, {"type": "aid", "victim": v.id, "t": 0.0, "r": r})
@@ -208,7 +209,7 @@ func start_aid(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 func do_aid(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
 	var v: E.Unit = sim.unit_by_id(j["victim"])
-	if v == null or v.dead or v.hp >= v.max_hp * 0.95:
+	if v == null or v.dead or v.hp >= v.max_hp * 0.95 or sim.weigh.danger_at(v.pos) != "": # (healed, or now where nobody should go)
 		sim.end_errand(u)
 		return
 	if not sim.approach(u, v.pos + Vector2(14, 6), 10, dt):

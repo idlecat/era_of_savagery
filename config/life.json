@@ -175,6 +175,8 @@
   "too_far_cold:belligerent": ["Even I won't walk that far in this cold."],
   "turn_back": ["Back to the fire, now!", "No further. Home while I still can."],
   "turn_back:cautious": ["Far enough. The fire, before the cold takes me."],
+  "flood_wait": ["Not across that water. We wait.", "The river will drop. Then we go."],
+  "beast_clear": ["Not there. The beast is close.", "I'll keep my distance from that one."],
   "sick": ["My head burns.", "Leave me be, I'm unwell."],
   "grief": ["I miss %s.", "%s should be here with us.", "Rest well, %s."],
   "rain": ["Wet again.", "The sky is weeping."],

@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_band_hunt, test_back_to_the_kill, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -232,6 +232,107 @@ func test_weigh() -> void:
 	check(not sim.contracts.forecast(plan, u)["reasons"].any(func(r): return r["id"] == "cold"), "in summer the forecast doesn't name the cold")
 	var sm: Dictionary = sim.weigh.summary()
 	check(sm.has("out_in_cold") and sm["refused_today"] >= 0 and sm["on"], "summary() for a game master")
+	sim.dispose()
+
+func test_weigh_dangers() -> void:
+	print("\n== Weighing an errand: the flood, a tiger, the sick, envoys and traders ==")
+	var sim = _new_sim()
+	sim.time = D.DAY_LEN * 0.3 # (a summer day: no cold in it)
+	var u = sim.unit_by_name("Panshi")
+	var f: Dictionary = D.FORDS[0]
+	var home_bank: Vector2 = f["a"] if D.same_side(f["a"], D.VILLAGE) else f["b"]
+	var far_bank: Vector2 = f["b"] if home_bank == f["a"] else f["a"]
+	var across: Vector2 = far_bank + (far_bank - home_bank).normalized() * 120.0
+	# the flood: errands across or into the river don't fit, and nobody walks into it
+	sim.nat.flood_left = 30.0
+	u.pos = home_bank
+	var plan: Dictionary = sim.weigh.plan(u)
+	check(sim.weigh.why_not(plan, across) == "flood" and sim.weigh.why_not(plan, f["p"]) == "flood" and sim.weigh.fits(plan, D.VILLAGE), "in flood, the far side and the river itself are out of reach; home is not")
+	check(sim.weigh.trip(u, across)["why"] == "flood", "the appraisal says why")
+	for n in sim.nodes_of("wood"): n.amount = 0
+	var tree = sim.add_node("tree", "wood", across, 40)
+	check(sim.find_node("wood", u.pos, -1, 9000.0) == tree and sim.find_node("wood", u.pos, -1, 9000.0, [], u) == null, "a gatherer won't cross the flood for wood")
+	sim.assign_move(u, across)
+	for i in 100:
+		sim.time += 0.05
+		sim.update_unit(u, 0.05)
+	check(not D.in_river(u.pos) and D.same_side(u.pos, D.VILLAGE), "someone sent across waits on the bank (at %s)" % u.pos)
+	sim.nat.flood_left = 0.0
+	for i in 400:
+		sim.time += 0.05
+		sim.update_unit(u, 0.05)
+	check(not D.same_side(u.pos, D.VILLAGE), "and crosses once the flood is over")
+	# aid: nobody runs into the flood to tend the hurt
+	var v = sim.unit_by_name("Alie")
+	var helper = sim.unit_by_name("Linghe")
+	sim.nat.flood_left = 30.0
+	v.pos = f["p"]
+	v.hp = v.max_hp * 0.5
+	helper.pos = home_bank + (home_bank - far_bank).normalized() * 60.0
+	var hurt_r: Dictionary = sim.react.responses("hurt")[0]
+	check(not sim.react.start_aid(hurt_r, helper, {"victim": v}), "nobody runs into the flood to tend someone in it")
+	v.pos = home_bank + (home_bank - far_bank).normalized() * 30.0
+	check(sim.react.start_aid(hurt_r, helper, {"victim": v}), "on the bank they do")
+	sim.set_job(helper, {})
+	sim.nat.flood_left = 0.0
+	# a tiger: nobody goes near it alone, nor runs to tend someone beside it
+	var tiger = sim.spawn_predator(D.VILLAGE + Vector2(-400, 200))
+	tiger.kind = "tiger"
+	tiger.hp = 100.0
+	sim.reveal(tiger.pos, 200.0) # (a beast seen: one in the fog nobody knows of)
+	u.pos = D.VILLAGE
+	for n in sim.nodes_of("food"): n.amount = 0
+	var bush = sim.add_node("bush", "food", tiger.pos + Vector2(60, 0), 30)
+	check(sim.find_node("food", D.VILLAGE, -1, 9000.0) == bush and sim.find_node("food", D.VILLAGE, -1, 9000.0, [], u) == null, "nobody gathers beside a hunting tiger")
+	v.pos = tiger.pos + Vector2(30, 0)
+	check(sim.weigh.danger_at(v.pos) == "beast" and not sim.react.start_aid(hurt_r, helper, {"victim": v}), "nor runs to tend someone beside it")
+	tiger.dead = true
+	sim.predators.erase(tiger)
+	v.hp = v.max_hp
+	# the Steward lets the sick and the badly hurt rest
+	sim.vice["steward"] = -1
+	check(sim.appoint(u, "steward"), "Panshi becomes Steward")
+	for o in sim.living(): sim.set_job(o, {})
+	var sick = sim.unit_by_name("Alie")
+	sick.pos = sick.home
+	sick.sick = 20.0
+	helper.pos = helper.home
+	helper.hp = helper.max_hp * 0.3
+	for n in sim.nodes_of("food"): n.amount = 30
+	sim.vice_timer = 0.0
+	sim._update_vice(0.1)
+	check(sick.job.is_empty() and helper.job.is_empty(), "the Steward leaves the sick and the badly hurt to rest")
+	check(sim.living().any(func(o): return o != u and o != sick and o != helper and not o.job.is_empty()), "and puts the others to work")
+	sick.sick = 0.0
+	helper.hp = helper.max_hp
+	# envoys and traders: not on a journey they can't come back from; a trader turns back from a clan turned hostile
+	var id: String = sim.rivals.clans.keys()[0]
+	sim.rivals.clans[id]["met"] = true
+	sim.rivals.clans[id]["relation"] = 10.0
+	var envoy = sim.unit_by_name("Linghe")
+	sim.set_job(envoy, {})
+	envoy.pos = D.VILLAGE
+	check(sim.rivals.envoy_block(envoy, id) == "", "an envoy may go in summer")
+	sim.hz.level = "normal"
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + D.DAY_LEN * 0.25
+	sim.hz.set_weather("blizzard")
+	var far_clan: bool = sim.rivals.parley_spot(id).distance_to(D.VILLAGE) > 1200.0
+	if far_clan:
+		check(sim.rivals.envoy_block(envoy, id) == "Too far in this cold" and sim.folk.trade_block(envoy, id) == "Too far in this cold", "not to a far clan in a blizzard")
+	sim.hz.set_weather("clear")
+	sim.hz.level = "off"
+	sim.time = D.DAY_LEN * 0.3
+	sim.rivals.clans[id]["relation"] = 10.0
+	if sim.folk.trade_block(envoy, id) == "":
+		sim.stock["wood"] = 100.0
+		check(sim.folk.send_trader(envoy, id, "wood", 10) == "", "a trader sets out")
+		var wood: float = sim.stock["wood"]
+		sim.rivals.clans[id]["relation"] = -100.0
+		sim.update_unit(envoy, 0.05)
+		check(envoy.job.get("phase", "") == "back", "the clan turns hostile: the trader turns back")
+		envoy.pos = envoy.home
+		sim.update_unit(envoy, 0.05)
+		check(sim.stock["wood"] >= wood + 10.0 and envoy.role == "", "with the goods (wood %d -> %d)" % [wood, sim.stock["wood"]])
 	sim.dispose()
 
 func test_rest_at_nearest_fire() -> void:
@@ -460,7 +561,7 @@ func test_translations() -> void:
 	# culture packs carry their own Chinese (zh.json)
 	for id in Cultures.ids():
 		for k in Cultures.missing_zh(Cultures.by_id(id)): missing.append("[%s] %s" % [id, k])
-	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons", "challenges", "careers"]: # the rule configs' texts
+	for cfg in ["events", "reactions", "dilemmas", "rivals", "rules", "legacy", "policies", "emergency", "director", "lands", "roads", "discovery", "life", "structures", "ranks", "contract_log", "hunt", "weapons", "challenges", "careers", "weigh"]: # the rule configs' texts
 		for k in preload("res://scripts/config.gd").texts(preload("res://scripts/config.gd").load_cfg(cfg)):
 			if not ZH.STRINGS.has(k) or ZH.STRINGS[k] == "": missing.append("[config/%s] %s" % [cfg, k])
 			elif ZH.STRINGS[k].count("%") != k.count("%"): missing.append("[config/%s] placeholders: %s" % [cfg, k])

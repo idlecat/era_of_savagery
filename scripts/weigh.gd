@@ -22,6 +22,7 @@ var day_seen := -1
 var refused := 0     # errands turned down today for the cold
 var turned_back := 0 # people who headed back in time today
 var _cache_check := {} # unit id -> sim.time of the next point-of-no-return check
+var _cache_flood_said := {} # unit id -> when they may next say they wait for the flood
 
 func _init(s) -> void:
 	sim = s
@@ -99,12 +100,20 @@ func _warm_d(fires: Array, p: Vector2) -> float:
 	for f in fires: best = minf(best, p.distance_to(f))
 	return maxf(0.0, best - sim.warm_reach())
 
-## The nearest fire of ours by the way people walk (over fords), or null.
+## The nearest fire of ours by the way people walk (over fords), or null. While the river is
+## in flood, a fire on p's own side of it first.
 func nearest_warmth(p: Vector2) -> E.Structure:
+	if sim.nat.flooding():
+		var mine := _nearest_fire_by_route(p, true)
+		if mine: return mine
+	return _nearest_fire_by_route(p, false)
+
+func _nearest_fire_by_route(p: Vector2, same_side: bool) -> E.Structure:
 	var best: E.Structure = null
 	var best_d := INF
 	for s in sim.structures:
 		if not s.built or not sim.ours(s) or s.type != "bonfire": continue
+		if same_side and not D.same_side(p, s.pos): continue
 		if p.distance_to(s.pos) >= best_d: continue # (a route is never shorter than the line)
 		var d := D.route_len(p, s.pos)
 		if d < best_d:
@@ -127,8 +136,12 @@ func plan(u: E.Unit, res := "", kind := "gather") -> Dictionary:
 	if _deadly_within(segs, float(C["horizon"])):
 		ctx = {"segs": segs, "budget": budget(u, res), "fires": warm_points(), "speed": maxf(1.0, sim.unit_speed(u)),
 			"from": u.pos, "work": float(C["work"].get(kind, 0.0)), "detour": float(C["detour"])}
+	if sim.nat.flooding(): # (the river in flood: nobody crosses it or works in it)
+		var side: int = D.region_at(u.pos)
+		ctx["flood_side"] = side if side >= 0 else D.region_at(u.home)
 	var bc: Dictionary = C["beasts"]
-	var beasts: Array = sim.predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.clan == "" and sim.is_explored(p.pos)).map(func(p): return p.pos)
+	var hunting: Array = sim.predators.filter(func(p): return not p.dead and not p.fled and not p.fleeing and p.clan == "" and sim.is_explored(p.pos))
+	var beasts: Array = hunting.map(func(p): return p.pos)
 	var dens: Array = sim.landmarks.filter(func(l): return l["found"] and l["kind"] == "den").map(func(l): return l["pos"])
 	if not beasts.is_empty() or not dens.is_empty():
 		ctx["beasts"] = beasts
@@ -136,6 +149,10 @@ func plan(u: E.Unit, res := "", kind := "gather") -> Dictionary:
 		ctx["reach"] = float(bc["reach"])
 		ctx["den_reach"] = float(bc["den_reach"])
 		ctx["penalty"] = float(bc["penalty"])
+	var deadly: Array = hunting.filter(func(p): return not sim.hunt.rules_for(p.kind).is_empty()).map(func(p): return p.pos) # (the beasts with band tactics: nobody goes near one alone)
+	if not deadly.is_empty():
+		ctx["avoid"] = deadly
+		ctx["avoid_r"] = float(bc["avoid_reach"])
 	return ctx
 
 ## The cold health a trip to p (and `work` seconds there, -1 = the plan's) costs, and its seconds.
@@ -144,10 +161,34 @@ func cost(ctx: Dictionary, p: Vector2, work := -1.0) -> Vector2:
 	var secs: float = (ctx["from"].distance_to(p) + _warm_d(ctx["fires"], p)) * float(ctx["detour"]) / float(ctx["speed"]) + (float(ctx["work"]) if work < 0.0 else work)
 	return Vector2(exposure(ctx["segs"], secs), secs)
 
-## Does a trip to p fit the plan's budget?
+## Does a trip to p fit the plan (why_not() is "")?
 func fits(ctx: Dictionary, p: Vector2, work := -1.0) -> bool:
-	if not ctx.has("segs"): return true
-	return cost(ctx, p, work).x <= float(ctx["budget"])
+	if ctx.is_empty(): return true
+	return why_not(ctx, p, work) == ""
+
+## Why a trip to p doesn't fit the plan: "flood" (across the river in flood, or in it),
+## "beast" (within `avoid_reach` of a hunting beast nobody faces alone), "cold" (the way
+## back to a fire costs more than they can spare), or "" when it fits.
+func why_not(ctx: Dictionary, p: Vector2, work := -1.0) -> String:
+	if ctx.has("flood_side") and (D.in_river(p) or D.region_at(p) != int(ctx["flood_side"])): return "flood"
+	if ctx.has("avoid"):
+		var r: float = ctx["avoid_r"]
+		for b in ctx["avoid"]:
+			if p.distance_to(b) < r: return "beast"
+	if ctx.has("segs") and cost(ctx, p, work).x > float(ctx["budget"]): return "cold"
+	return ""
+
+## What makes the place p dangerous to go to right now: "flood" (in the river while it is
+## in flood), "beast" (a hunting beast nobody faces alone within `avoid_reach`), or "".
+func danger_at(p: Vector2) -> String:
+	if sim.nat.flooding() and D.in_river(p): return "flood"
+	var r: float = float(C["beasts"]["avoid_reach"])
+	for b in sim.active_predators_near(p, r):
+		if b.clan == "" and not sim.hunt.rules_for(b.kind).is_empty(): return "beast"
+	return ""
+
+## The texts of a refusal for `why` ({act, popup}), from weigh.json "refuse".
+func refusal(why: String) -> Dictionary: return C["refuse"].get(why, C["refuse"]["cold"])
 
 ## The extra score of p in a choice of where to go (as if that much further): beasts, dens.
 func penalty(ctx: Dictionary, p: Vector2) -> float:
@@ -169,10 +210,13 @@ func trip(u: E.Unit, to: Vector2, work := 0.0, res := "", from: Variant = null) 
 	var hurt := exposure(cold_ahead(u), secs) if on() else 0.0
 	var b := budget(u, res)
 	var near: int = sim.active_predators_near(to, float(C["beasts"]["reach"])).filter(func(p): return p.clan == "").size()
-	var ok := hurt <= b
+	var why := "" if hurt <= b else "cold"
+	if on() and sim.nat.flooding() and (D.in_river(to) or not D.same_side(start, to)): why = "flood"
+	elif on() and danger_at(to) == "beast": why = "beast"
+	var ok := why == ""
 	return {"secs": snappedf(secs, 0.1), "cold_per_s": snappedf(hurt / maxf(0.1, secs), 0.01), "cold_hp": snappedf(hurt * float(C["safety"]), 0.1),
 		"budget_hp": snappedf(b * float(C["safety"]), 0.1), "hp_after": snappedf(u.hp - hurt, 0.1), "beasts": near,
-		"ok": ok, "why": "" if ok else "cold"}
+		"ok": ok, "why": why}
 
 ## A game master's appraisal of a trip for a person (by id) to (x, y): trip() or {} for junk.
 func appraise(unit_id: Variant, x: Variant, y: Variant, work: Variant = 0.0, res: Variant = "") -> Dictionary:
@@ -197,11 +241,20 @@ func must_head_back(u: E.Unit) -> bool:
 	var need: float = exposure(cold_ahead(u), secs) * float(C["safety"])
 	return u.hp - need <= float(C["back_floor"]) * u.max_hp
 
-## Someone turned an errand down for the cold (counted; they say so).
-func note_refused(u: E.Unit) -> void:
+## Someone turned an errand down (`why`: cold, flood, beast; counted; they say so).
+func note_refused(u: E.Unit, why := "cold") -> void:
 	_new_day()
 	refused += 1
-	sim.life.say(u, "too_far_cold")
+	sim.life.say(u, str(refusal(why).get("talk_as", "too_far_cold")))
+
+## The river is in flood and u's next step would take them into it: they wait on the bank
+## (sim.step_move asks; a popup now and then says so).
+func hold_at_flood(u: E.Unit, next: Vector2) -> bool:
+	if not on() or not sim.nat.flooding() or D.in_river(u.pos) or not D.in_river(next): return false
+	if sim.time >= float(_cache_flood_said.get(u.id, -1.0)):
+		_cache_flood_said[u.id] = sim.time + float(C["flood_say_every"])
+		sim.popup(u.pos + Vector2(0, -30), tr(refusal("flood")["popup"]), Color("#a8d8ff"))
+	return true
 
 ## Someone headed back to a fire in time.
 func note_turned_back(u: E.Unit) -> void:

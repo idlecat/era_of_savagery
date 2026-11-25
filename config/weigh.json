@@ -1,5 +1,5 @@
 {
- "_doc": "How people weigh an errand before they commit to it, and again while it lasts (weigh.gd, docs/weigh.md). Cost: the time out there (the walk there, `work` seconds at it, the walk back to the nearest fire; straight-line distances count `detour` times). Risk: the health that time costs in a cold that can kill (by day, and by night once the trip runs into the dark; an announced weather from when it comes), counted `safety` times over; nothing is weighed while the cold can't kill within `horizon` seconds. An errand fits when it leaves at least `floor` of the person's health. `traits` scale the floor (cautious people keep more in hand); `need`: while a store holds less than `per_head` a head, people keep `mult` less in hand for it (hunger drives them further). While out in a deadly cold, someone heads back to the nearest fire as soon as what they have above `back_floor` only just covers the way there (counted `safety` times), checked every `check_every` seconds. Gathering weighs its node again every `recheck` seconds. `beasts`: places within `reach` of a hunting beast or a known den count `penalty` more in the choice of where to work (as if that much further).",
+ "_doc": "How people weigh an errand before they commit to it, and again while it lasts (weigh.gd, docs/weigh.md). Cost: the time out there (the walk there, `work` seconds at it, the walk back to the nearest fire; straight-line distances count `detour` times). Risk: the health that time costs in a cold that can kill (by day, and by night once the trip runs into the dark; an announced weather from when it comes), counted `safety` times over; nothing is weighed for the cold while it can't kill within `horizon` seconds. An errand fits when it leaves at least `floor` of the person's health. `traits` scale the floor (cautious people keep more in hand); `need`: while a store holds less than `per_head` a head, people keep `mult` less in hand for it (hunger drives them further). While out in a deadly cold, someone heads back to the nearest fire as soon as what they have above `back_floor` only just covers the way there (counted `safety` times), checked every `check_every` seconds. Gathering weighs its node again every `recheck` seconds. While the river is in flood nobody goes across it or into it: errands there don't fit, and walkers wait on the bank (a popup at most every `flood_say_every` s). `beasts`: places within `reach` of a hunting beast or a known den count `penalty` more in the choice of where to work (as if that much further); within `avoid_reach` of a hunting beast with band tactics (hunt.json kinds) nobody goes, and nobody runs there to tend someone hurt. `refuse`: per reason (cold, flood, beast) the person's activity while refusing (`act`), the popup, the life.json talk situation they speak in (`talk_as`), and the `reason` an envoy or a trader can't be sent (rivals.envoy_block, folk.trade_block).",
  "on": true,
  "detour": 1.2,
  "safety": 1.4,
@@ -8,10 +8,16 @@
  "check_every": 1.0,
  "horizon": 120,
  "recheck": 4.0,
+ "flood_say_every": 8.0,
  "work": {"gather": 12, "seek": 30, "explore": 0},
  "traits": {"cautious": 1.3, "belligerent": 0.7, "lazy": 1.1},
  "need": {
   "food": {"per_head": 2, "mult": 1.6}
  },
- "beasts": {"reach": 280, "den_reach": 450, "penalty": 700}
+ "beasts": {"reach": 280, "den_reach": 450, "penalty": 700, "avoid_reach": 320},
+ "refuse": {
+  "cold": {"act": "Too cold to go so far", "popup": "Too cold to go so far", "talk_as": "too_far_cold", "reason": "Too far in this cold"},
+  "flood": {"act": "Waiting for the flood to pass", "popup": "Waits for the flood to pass", "talk_as": "flood_wait", "reason": "The river is in flood"},
+  "beast": {"act": "Keeping clear of the beast", "popup": "Keeps clear of the beast", "talk_as": "beast_clear", "reason": "A dangerous beast is there"}
+ }
 }

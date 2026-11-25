@@ -99,6 +99,30 @@ Hooks:
 
 People stay nearer the fires in winter, and food barely suffers. The baseline was rewritten.
 
+## 6. Other dangers, weighed the same way
+
+A review of everything else that sends people somewhere found the same fault in five places:
+
+1. **Fords in flood.** While the river is in flood, standing in it costs 3 hp/s, and a ford is in
+   the river; routes used the fords regardless. Now places across or in the river don't fit
+   (`why_not` "flood"), and `sim.step_move` holds a walker on the bank (`weigh.hold_at_flood`)
+   until it passes. A freezing person heads for a fire on their own side while it lasts.
+2. **Aid into danger.** The `hurt` reaction sent helpers to a flood victim still in the water.
+   Aid now isn't started, and stops, while the victim is where nobody should go
+   (`weigh.danger_at`: the river in flood, a hunting beast with band tactics within `avoid_reach`).
+3. **The sick put to work.** The Steward now leaves the sick and those below `rest_below` of their
+   health (rules.json vice.steward) to rest, as careers and reactions already did.
+4. **Envoys and traders.** `rivals.envoy_block` and `folk.trade_block` weigh the journey (cold,
+   flood, beast: the `reason` texts), and a trader whose clan turns hostile on the way comes back
+   with the goods instead of walking into a robbery.
+5. **Tigers.** A place within `avoid_reach` of a hunting beast with band tactics (hunt.json kinds)
+   no longer fits at all; other beasts and dens still only count against a place.
+
+8 seeded games each (`--runs=4 --days=8`, steward and feaster): deaths 4.2 / 2.8 with weighing
+off, 1.8 / 1.2 with it on. Kills left unbutchered rose for the steward (0.25 -> 1.0 a game):
+nobody goes back to a carcass beside a hunting tiger.
+
 Not done (next): a freezing person could shelter in a nearer hut rather than only at a fire; a
 crew far out could light a camp fire; contracts could pause their gathering in a blizzard rather
-than just stop for want of a safe place to gather.
+than just stop for want of a safe place to gather; an envoy still walks into a blood feud (the
+beating is a known price of seeking peace, but the chieftain isn't told the odds).

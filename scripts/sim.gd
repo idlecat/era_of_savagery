@@ -717,11 +717,13 @@ func step_move(e, dt: float, spd: float) -> bool:
 	var d: float = e.pos.distance_to(wp)
 	var step := sp * dt
 	if d <= step:
+		if e is E.Unit and weigh.hold_at_flood(e, wp): return false
 		if e is E.Unit: e.walked += d * (1.5 if e.carry_amt > 0 else 1.0)
 		e.pos = wp
 		e.path.pop_front()
 		return e.path.is_empty()
 	var np: Vector2 = e.pos + (wp - e.pos) / d * step
+	if e is E.Unit and weigh.hold_at_flood(e, np): return false # (the river is in flood: wait on the bank)
 	if D.is_water(np) and not D.is_water(e.pos): # slide along the bank
 		var sh := D.shore(np, 1.0)
 		var info := D.river_info(e.pos)
@@ -993,9 +995,11 @@ func update_unit(u: E.Unit, dt: float) -> void:
 				tgt = explore_target(u)
 				if tgt == null:
 					set_job(u, {})
-					if explore_target(u, false) != null: # (there is land to see, but not within a safe walk)
-						weigh.note_refused(u)
-						popup(u.pos + Vector2(0, -30), tr("Too cold to scout further"), Color("#a8d8ff"))
+					var unsafe = explore_target(u, false) # (there is land to see, but not within a safe walk)
+					if unsafe != null:
+						var why := weigh.why_not(weigh.plan(u, "", "explore"), unsafe)
+						weigh.note_refused(u, why if why != "" else "cold")
+						popup(u.pos + Vector2(0, -30), tr("Too cold to scout further") if why in ["", "cold"] else tr(weigh.refusal(why)["popup"]), Color("#a8d8ff"))
 					else: popup(u.pos + Vector2(0, -30), tr("Nothing left to explore"), Color("#9fd0ff"))
 					return
 				j["to"] = tgt
@@ -1054,10 +1058,11 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			if u.carry_amt > 0:
 				j["phase"] = "deliver"
 				return
-			var too_cold := find_node(j["res"], from, j["bank"], j["area_r"]) != null # (there is some, but not within a safe walk)
-			u.act = "Too cold to go so far" if too_cold else "No %s nearby" % j["res"]
-			if too_cold and u.role == "" and u.job_key == "": # (an ordinary person gives it up; a crew waits for its leader)
-				weigh.note_refused(u)
+			var some := find_node(j["res"], from, j["bank"], j["area_r"]) # (there is some, but not within a safe walk: why not?)
+			var why := weigh.why_not(weigh.plan(u, j["res"]), some.pos) if some else ""
+			u.act = str(weigh.refusal(why)["act"]) if why != "" else "No %s nearby" % j["res"]
+			if why != "" and u.role == "" and u.job_key == "": # (an ordinary person gives it up; a crew waits for its leader)
+				weigh.note_refused(u, why)
 				set_job(u, {})
 			return
 		j["node_id"] = n.id
@@ -2219,7 +2224,10 @@ func _steward_instead(u: E.Unit, res: String, unbuilt, reach: float) -> String:
 	for other in ["food", "wood"]:
 		if other != res and find_node(other, u.home, D.region_at(u.home), reach, [], u) != null: return other
 	if unbuilt: return "build"
-	if find_node(res, u.home, D.region_at(u.home), reach) != null: weigh.note_refused(u)
+	var some := find_node(res, u.home, D.region_at(u.home), reach)
+	if some != null:
+		var why := weigh.why_not(weigh.plan(u, res), some.pos)
+		weigh.note_refused(u, why if why != "" else "cold")
 	return ""
 
 ## Relieve the holder of a Vice-Chieftain role, freeing the slot. Returns false if nobody holds it.
@@ -2310,7 +2318,9 @@ func _update_vice(dt: float) -> void:
 	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time(): # no work handed out at night
-		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]))
+		var rest_below := float(vc["steward"].get("rest_below", 0.0))
+		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
+			and u.sick <= 0.0 and u.hp >= u.max_hp * rest_below) # (the sick and the badly hurt are left to rest)
 		var pop := living().size()
 		for u in idle:
 			var unbuilt = null
