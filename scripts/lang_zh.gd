@@ -2669,6 +2669,8 @@ const STRINGS := {
 	"Knows every berry patch and root ground": "熟知每一片浆果丛与块根地",
 	"Fisher": "渔人",
 	"Farmer": "农人",
+	"So the people of %s have grown into a town.": "原来%s的人已经发展成一座城镇了。",
+	"Your city of %s casts a long shadow over the land.": "你们的城邑%s，在这片土地上投下了长长的影子。",
 	"Late Frost": "倒春寒",
 	"A late frost: the young crops and the berry blossom die in the night.": "倒春寒：一夜之间，幼苗和浆果花都冻死了。",
 	"The frost lifts. What was sown must grow again.": "霜冻退去。播下的种子只能重新生长。",

@@ -769,7 +769,8 @@ func parley_ctx(envoy: E.Unit, id: String, offer: Dictionary, message: String, h
 			"temper": tr(temper(id).get("word", "")), "what_passed_between_us": ledger_lines(id, 6), "bring_up": quote(id),
 			"people": c["pop"], "warriors": c["warriors"], "season": tr(sim.hz.season()) if sim.hz.on() else ""},
 		"envoy": {"name": tr(envoy.name), "epithet": tr(envoy.epithet), "traits": trs, "lore": envoy.lv("lore"), "combat": envoy.lv("combat")},
-		"their_tribe": {"people": sim.living().size(), "food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"])},
+		"their_tribe": {"people": sim.living().size(), "food": roundi(sim.stock["food"]), "wood": roundi(sim.stock["wood"]), "stone": roundi(sim.stock["stone"]),
+			"home": sim.settlement_name(D.VILLAGE), "home_is_a": tr(sim.tier_row(sim.tier_of(D.VILLAGE)).get("name", ""))},
 		"offer": offer, "offer_text": terms_text(offer), "envoy_says": message, "history": history,
 		"you_could_teach": teachable(id).map(func(tid): return {"id": tid, "name": tr(sim.evo.tech_def(tid)["name"])}),
 		"inclination": inclination(v),
@@ -783,6 +784,8 @@ func chief_reply(ctx: Dictionary, envoy: E.Unit) -> Dictionary:
 	var v: float = ctx["value"]
 	var offer: Dictionary = ctx["offer"]
 	var said: String = (str(ctx.get("chief", {}).get("bring_up", "")) + " ") if int(ctx.get("round", 0)) == 0 and str(ctx.get("chief", {}).get("bring_up", "")) != "" else ""
+	var tw: String = str(C.get("tier_words", {}).get(sim.tier_of(D.VILLAGE), "")) # (how a chief speaks of a town or a city)
+	if int(ctx.get("round", 0)) == 0 and tw != "": said = (tr(tw) % sim.settlement_name(D.VILLAGE)) + " " + said
 	var r := _chief_answer(ctx, envoy, c, martial, v, offer)
 	r["speech"] = said + str(r["speech"])
 	return r

@@ -1486,7 +1486,8 @@ func tier_of(at: Vector2) -> String:
 		if tier_lacks(at, t).is_empty(): best = str(t["id"])
 	return best
 
-func _tier_row(id: String) -> Dictionary:
+## The rules.json tiers row of tier `id` ({} if none).
+func tier_row(id: String) -> Dictionary:
 	for t in RULES["tiers"]["list"]:
 		if str(t["id"]) == id: return t
 	return {}
@@ -1512,7 +1513,7 @@ func _tiers(dt: float) -> void:
 		if _tier_index(now) <= _tier_index(str(pl["tier"])): continue
 		pl["tier"] = now
 		pl["day"] = day()
-		var tname: String = tr(_tier_row(now)["name"])
+		var tname: String = tr(tier_row(now)["name"])
 		if str(pl["name"]) == "":
 			var used: Array = places.values().map(func(x): return x["name"])
 			var free: Array = tc["names"].filter(func(n): return not n in used)
@@ -1531,7 +1532,7 @@ func places_summary() -> Array:
 		var nxt: Dictionary = l[mini(_tier_index(tier) + 1, l.size() - 1)]
 		var beds := 0
 		for s in buildings_of(at): beds += int(D.STRUCTURES[s.type].get("cap", 0))
-		out.append({"name": settlement_name(at), "tier": tr(_tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
+		out.append({"name": settlement_name(at), "tier": tr(tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
 			"next": tr(nxt["name"]) if str(nxt["id"]) != tier else "", "lacks": tier_lacks(at, nxt) if str(nxt["id"]) != tier else []})
 	return out
 

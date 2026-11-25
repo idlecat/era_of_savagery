@@ -21,6 +21,7 @@
    "trusted": 50
   }
  },
+ "tier_words": {"_doc": "How a chief opens a parley (the offline chief) once our home has grown: per tier id, %s is its name.", "town": "So the people of %s have grown into a town.", "city": "Your city of %s casts a long shadow over the land."},
  "people": {
   "hunter": {
    "hp": 32,
