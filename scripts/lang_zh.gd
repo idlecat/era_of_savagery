@@ -2669,6 +2669,7 @@ const STRINGS := {
 	"Knows every berry patch and root ground": "熟知每一片浆果丛与块根地",
 	"Fisher": "渔人",
 	"Farmer": "农人",
+	"the village has grown past its fires: people must keep warm.": "村子长得比篝火多了：人们得有地方取暖。",
 	"%s (%s): %d people, %d beds": "%s（%s）：%d 人，%d 个床位",
 	"a %s needs %s": "成为%s还需：%s",
 	"%s still has %d beds free": "%s 还有 %d 个空床位",

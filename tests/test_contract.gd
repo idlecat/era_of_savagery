@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4199,6 +4199,31 @@ func test_tiers() -> void:
 	check(not sim.director.allow("clan_raid") and sim.director.stacking("clan_raid"), "not while three are sick")
 	sim.hz.level = "off"
 	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
+func test_freezing() -> void:
+	print("\n== Freezing, they go to the nearer warmth: a fire, or their bed under a roof ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var u = sim.living().filter(func(x): return x.role == "")[0]
+	var fire = sim.nearest_fire(D.VILLAGE)
+	var far: Vector2 = sim.dry_spot(fire.pos + Vector2(-700, 300))
+	var hut = sim.add_structure("hut", sim.dry_spot(far + Vector2(60, 0)))
+	sim.complete_structure(hut, null)
+	u.pos = far
+	u.bed_id = hut.id
+	u.bed_pos = hut.pos
+	u.hp = u.max_hp * 0.3
+	sim.hz.level = "normal"
+	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + D.DAY_LEN * 0.4
+	sim.hz.set_weather("blizzard")
+	check(sim.hz.cold_can_kill(), "a winter blizzard: the cold can kill")
+	check(sim.react._start_warm({"below": 0.55, "until": 0.8}, u), "cold and hurt, they seek warmth")
+	check(u.job.get("type", "") == "warm" and u.job.get("bed", false) and u.job["to"] == hut.pos, "their hut is nearer than the fire: they go in there")
+	for k in 200:
+		sim.react.do_warm(u, u.job, 0.1)
+		if sim.in_hut(u): break
+	check(sim.in_hut(u) and sim.near_warmth(u), "under the roof, they are warm")
 	sim.dispose()
 
 func test_weapons() -> void:

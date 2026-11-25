@@ -332,7 +332,12 @@ func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 	if u.job.get("type", "") == "warm" or u.hp >= u.max_hp * float(r.get("below", 0.55)) or sim.near_warmth(u): return false
 	var fire = sim.nearest_fire(u.pos)
 	if fire == null: return false
-	interrupt(u, {"type": "warm", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "r": r})
+	var to: Vector2 = fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40))
+	var bed := false
+	if u.bed_id >= 0 and u.bed_pos != null and u.pos.distance_to(u.bed_pos) < u.pos.distance_to(fire.pos): # (their bed under a roof is nearer than a fire: in there, not through the snow)
+		to = u.bed_pos
+		bed = true
+	interrupt(u, {"type": "warm", "to": to, "bed": bed, "r": r})
 	if r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
 	return true
 
@@ -344,6 +349,7 @@ func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	if not sim.approach(u, j["to"], 4, dt):
 		u.act = _act(r, 0)
 		return
+	if j.get("bed", false): u.sleeping = true # (under the roof: a hut is warmth, even on a night of alarm)
 	u.act = _act(r, 1)
 
 # ------------------------------------------------------------ shelter (panic)
