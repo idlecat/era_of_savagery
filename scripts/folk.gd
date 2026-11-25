@@ -103,7 +103,8 @@ func make_child(nm: String, parent: E.Unit) -> E.Unit:
 	var u: E.Unit = sim.make_unit({"name": nm, "epithet": "Child", "traits": [sim.evo.birth_trait()],
 		"color": Color(D.BIRTH_COLORS.pick_random()), "hp": 18, "atk": 1, "def": 1, "spd": randf_range(0.9, 1.05),
 		"skills": {"forage": 0, "craft": 0, "combat": 0, "lore": 0}},
-		D.VILLAGE + Vector2(randf_range(-30, 30), randf_range(20, 50)))
+		(parent.home if parent else D.VILLAGE) + Vector2(randf_range(-30, 30), randf_range(20, 50)))
+	if parent: u.home = parent.home # (born at the parent's settlement)
 	u.role = "child"
 	u.born_t = sim.time
 	u.parent_id = parent.id if parent else -1

@@ -46,6 +46,13 @@ func active() -> Array:
 func is_running(c: E.Contract) -> bool:
 	return c.status not in ["done", "abandoned", "failed"]
 
+## Whether a running contract still builds `s` (its own site): the Steward leaves it to the
+## crew. Once the contract is over, its buildings are the settlement's to rebuild.
+func works_on(s: E.Structure) -> bool:
+	if not s.owner.begins_with("contract:"): return false
+	var c := by_id(int(s.owner.trim_prefix("contract:")))
+	return c != null and is_running(c)
+
 # ------------------------------------------------------------ context for the LLM
 ## Who can join a Task Contract: free grown-ups at one of our settlements (sim.at_settlement);
 ## with `at`, only those on the same land as `at` (a leader's crew comes from where they stand).

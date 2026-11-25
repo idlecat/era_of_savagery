@@ -1156,6 +1156,11 @@ func test_settling() -> void:
 	sim.time = D.DAY_LEN * 1 + 10.0
 	sim.resettle_t = 0.0
 	sim.tick(0.05)
+	check(sim.residents_of(D.SITES[0]).is_empty(), "nobody moves to a settlement without a fire")
+	var fire = sim.add_structure("bonfire", D.SITES[0] + Vector2(0, 40), true, "contract:%d" % c.id)
+	check(sim.warm_at(D.SITES[0]), "(a fire burns at the settlement)")
+	sim.resettle_t = 0.0
+	sim.tick(0.05)
 	var movers: Array = sim.residents_of(D.SITES[0])
 	check(movers.size() == 1 and movers[0].job.get("type", "") == "move", "someone moves to the settlement across the river")
 	check(sim.log_lines.any(func(e): return sim.settlement_name(c.site) in e["text"] and not "test_outpost" in e["text"]), "and the chronicle tells of it, by the settlement's name")
@@ -1163,6 +1168,30 @@ func test_settling() -> void:
 		sim.resettle_t = 0.0
 		sim.tick(0.05)
 	check(sim.residents_of(D.SITES[0]).size() <= sim.beds_at(D.SITES[0]), "but never more than its beds")
+	# a finished contract's damaged building is its settlement's to rebuild
+	var hut2 = sim.structures.filter(func(st): return st.type == "hut" and st.owner == "contract:%d" % c.id)[0]
+	var settler = sim.residents_of(D.SITES[0])[0]
+	hut2.built = false
+	hut2.progress = hut2.work * 0.5
+	check(sim.site_for(settler) == hut2, "an outpost's people rebuild its damaged hut, though a contract raised it")
+	c.status = "executing"
+	check(sim.site_for(settler) != hut2, "but not while the contract's own crew still works on it")
+	c.status = "done"
+	var villager = sim.residents_of(D.VILLAGE)[0]
+	check(sim.site_for(villager) != hut2, "the village's people keep to the village's sites")
+	sim.structures.erase(hut2) # (one hut: three beds)
+	for u in sim.residents_of(D.SITES[0]).slice(3): u.home = D.VILLAGE
+	# a crowded village gives its crowded outpost a home, and a fireless outpost its fire first
+	var I = sim.improve
+	while sim.residents_of(D.SITES[0]).size() < sim.beds_at(D.SITES[0]):
+		var u = sim.residents_of(D.VILLAGE).filter(func(o): return o.title == "" and o.role == "")[0]
+		u.home = D.SITES[0]
+	check(I.outpost_to_grow() == D.SITES[0], "a full outpost with a fire is the one to grow (%d people, %d beds; the village %d)" % [sim.residents_of(D.SITES[0]).size(), sim.beds_at(D.SITES[0]), sim.residents_of(D.VILLAGE).size()])
+	check(I.site_for({"structure": "hut", "at": "outpost"}).distance_to(D.SITES[0]) < 230, "its new home is laid out there")
+	sim.structures.erase(fire)
+	sim.buildings_changed()
+	check(I.outpost_to_grow() == Vector2.INF, "an outpost without a fire doesn't grow")
+	check(I.outpost_without("bonfire") == D.SITES[0], "it gets a fire first")
 
 func test_folk() -> void:
 	print("\n== Village life ==")
