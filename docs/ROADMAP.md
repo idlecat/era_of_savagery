@@ -136,14 +136,14 @@ step where they belong and two small items in front.
 
 ### 3.1 The city, step by step (city_proposal.md §4)
 
-| # | Step | Folds in from make_it_fun | Measure |
-|---|------|---------------------------|---------|
-| 1 | Worked fields, `farmer` career, `fewer` per pop, `store` key, cached `food_cap()`, era-2/3 buildings in the Steward's plan, the longhouse alias fix, plan per settlement | I3's food reserve beside `wood_reserve` | food days > 10 through a winter; wood < 1,500 at day 60; near-misses back in the 60–90% band |
-| 2 | Births per family lines, crowding taper, `max_sites` by tier, career `max` per pop, migration | | pop 150+ at day 60, ~500 at day 120 |
-| 3 | Tiers and names, settlement HUD, overpop gating, the director's `while` list | I5 (it *is* this step); dilemma spacing (`min_gap`), since a town poses more | no ghost outposts |
-| 4 | Spatial hash, LOD, perf test | | < 25 ms/tick at 1,000 working people |
-| 5 | Challenges that grow: rivals per our pop, coalitions, urban fire, raids on what's outside | I2's raid targeting and fire spread (the town tier's fires and field raids *are* them); the director's `bored()` for the long game; C2's peaceful escalation | real threat on 40–70% of days at 120 days |
-| 6 | City victory, personas, chronicle | the temple's part in rites and festivals | a campaign to 1,000 in 2–3 hours at 2x–4x |
+| # | Step | Folds in from make_it_fun | Measure | Status (§5) |
+|---|------|---------------------------|---------|---|
+| 1 | Worked fields, `farmer` career, `fewer` per pop, `store` key, cached `food_cap()`, era-2/3 buildings in the Steward's plan, the longhouse alias fix, plan per settlement | I3's food reserve beside `wood_reserve` | food days > 10 through a winter; wood < 1,500 at day 60; near-misses back in the 60–90% band | built, measured |
+| 2 | Births per family lines, crowding taper, `max_sites` by tier, career `max` per pop, migration | | pop 150+ at day 60, ~500 at day 120 | built, measured |
+| 3 | Tiers and names, settlement HUD, overpop gating, the director's `while` list | I5 (it *is* this step); dilemma spacing (`min_gap`), since a town poses more | no ghost outposts | built (no per-settlement plans) |
+| 4 | Spatial hash, LOD, perf test | | < 25 ms/tick at 1,000 working people | built |
+| 5 | Challenges that grow: rivals per our pop, coalitions, urban fire, raids on what's outside | I2's raid targeting and fire spread (the town tier's fires and field raids *are* them); the director's `bored()` for the long game; C2's peaceful escalation | real threat on 40–70% of days at 120 days | most built |
+| 6 | City victory, personas, chronicle | the temple's part in rites and festivals | a campaign to 1,000 in 2–3 hours at 2x–4x | built |
 
 Two things carry through every step:
 
@@ -230,3 +230,24 @@ Two things carry through every step:
   the longhouse added beds no one could sleep in (`SHELTERS` is now every type with a
   `cap`). Not yet: per-settlement Steward plans and festivals, the overpop dilemma's
   "grow the village" option.
+- **Winter, measured and fixed** (60-day runs): with 80+ people one blizzard night
+  killed 15 (seed 2, 794 food in store). The Steward laid out one bonfire ever, and a
+  freezing person walked to the nearest fire 300-500 paces through the snow. Now a
+  bonfire per ~25 people, and freezing people go to the nearer warmth (the fire, or
+  their own bed under a roof, warm even on a night of alarm). The harvest rush (in
+  autumn food before wood until the stores are 90% full) and 0.08 fields per head
+  took winter stores at day 55 from 0-350 to 790-810, and the tribe to 154-173 by day
+  60 (3 seeds).
+- **Step 4 built:** the tick went from 44 to 20 ms at 500 working people
+  (`tools/perf.gd`): a grid for "people near", kin and friends without scanning
+  everyone, bonds with at most `max_near` others, per-tick indexes of buildings and
+  node claims, cached rank gates, and level of detail (`rules.json` lod: people out
+  of danger update every other tick). `test_perf` guards 200 people.
+- **Step 5 built:** clans grow toward a share of our size and war bands with our
+  numbers; the director's cap grows past 40 people; walled villages are raided at
+  what lies outside (fields put to the torch); house fires leap between packed
+  buildings (`nat.set_alight`); winter fuel burns wood per head (no wood, no warm
+  fires). Not yet: rival coalitions, civil strife, blight, plague by density.
+- **Step 6 built:** the City victory (a city-tier settlement, a thousand held through
+  a whole winter, a Grand Altar). Not yet: roads linking every settlement as a
+  condition, the chronicle's words for the town and the city.
