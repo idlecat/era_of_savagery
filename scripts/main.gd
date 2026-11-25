@@ -184,12 +184,6 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 			if not hud.modal_open(): hud._start_contract_for_selected()
 		KEY_X:
 			if not hud.modal_open(): world.scout_selected()
-		KEY_F7: # (choosing a selection look, live)
-			world.sel_b_style = (world.sel_b_style + 1) % world.SEL_B_STYLES.size()
-			hud.toast("Picked building: %s (F7)" % world.SEL_B_STYLES[world.sel_b_style])
-		KEY_F8:
-			world.sel_p_style = (world.sel_p_style + 1) % world.SEL_P_STYLES.size()
-			hud.toast("Picked person: %s (F8)" % world.SEL_P_STYLES[world.sel_p_style])
 		KEY_F5:
 			if not hud.modal_open():
 				var err := save_to(str(SAVE_CFG.get("quick_slot", "quicksave")))
@@ -634,8 +628,6 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "0.9")), float(args.get("zoom", "0.9")))
 			world.focus_on(sim.D.VILLAGE + Vector2(0, 60))
-			world.sel_b_style = int(args.get("sel_b", "0")) # (--sel_b / --sel_p: the selection looks, as F7 / F8 cycle them)
-			world.sel_p_style = int(args.get("sel_p", "0"))
 			if args.has("select"): world.select_only(sim.unit_by_name(args["select"])) # (--select=Name: a picked person)
 			if args.has("pick"): # (--pick=longhouse: a picked building, the camera on it)
 				for st in sim.structures:
