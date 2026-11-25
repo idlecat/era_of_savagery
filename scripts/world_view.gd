@@ -877,6 +877,7 @@ func draw_glow() -> void:
 		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.22 + 0.4 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
 	for u in sim.units:
 		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
+	_draw_fireflies()
 
 func _halo(c: Vector2, r: float, a: float) -> void:
 	ci.draw_texture_rect(light_tex, Rect2(c - Vector2(r, r * 0.75), Vector2(r * 2, r * 1.5)), false, Color(1.0, 0.62, 0.3, a))
@@ -899,7 +900,9 @@ func draw_ghost() -> void:
 	_draw_structure(g)
 
 func draw_overlay() -> void:
+	_draw_embers()
 	_draw_weather()
+	_draw_ambient()
 	_draw_nature()
 	if clean: return
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
@@ -1106,6 +1109,106 @@ func _draw_weather() -> void:
 			var y := view.position.y + fmod(i * 91.37 + t * (140.0 if w == "blizzard" else 45.0), view.size.y)
 			ci.draw_circle(Vector2(x, y), 1.6 + fmod(i * 0.37, 1.6), Color(1, 1, 1, 0.75))
 		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+
+# ------------------------------------------------------------ ambient life
+## A cheap repeatable hash in 0..1 (positions and phases of ambient particles, so nothing
+## needs storing and the game's RNG is untouched).
+static func _h(i: int, salt: int) -> float:
+	return fposmod(sin(float(i) * 12.9898 + float(salt) * 78.233) * 43758.5453, 1.0)
+
+## Sparks rising from the fires (in the Overlay, so the fire's own glow doesn't wash them out).
+func _draw_embers() -> void:
+	var night: float = sim.night_amt
+	for st in sim.structures:
+		if not st.built or not _in_view(st.pos) or not sim.is_visible(st.pos): continue
+		var n := 0
+		match st.type:
+			"bonfire": n = 9
+			"council_ring": n = 5
+			"smelter": n = 6
+		if n == 0: continue
+		var b := iso(st.pos) - Vector2(0, 8)
+		for i in n:
+			var life := 1.6 + 1.2 * _h(i, st.id)
+			var k := fposmod(t / life + _h(i, st.id + 3), 1.0)
+			var rise := 46.0 + 40.0 * _h(i, st.id + 5)
+			var drift := (wind_k() * 40.0 + 6.0) * k + sin(t * 3.0 + i * 1.7) * 3.0 * k
+			var at := b + Vector2(drift + (_h(i, st.id + 9) - 0.5) * 14.0, -rise * k)
+			var a := (1.0 - k * k) * (0.55 + 0.45 * night)
+			ci.draw_circle(at, 1.5 + (1.0 - k) * 1.0, Color(1.0, 0.38 + 0.4 * (1.0 - k), 0.08, a))
+
+## Fireflies over the grass on warm dusks and nights (additive): they hang about a spot,
+## wander a little and blink. Not in winter, rain or snow, nor over water or unseen land.
+func _draw_fireflies() -> void:
+	if sim.hz.on() and (sim.hz.season_idx() == 3 or sim.hz.weather != "clear" or sim.hz.snow > 0.2): return
+	var dusk := sin(_part_k("dusk") * PI) if sim.is_day_part("dusk") else 0.0
+	var k := maxf(dusk, sim.night_amt)
+	if k < 0.15: return
+	var cell := 160.0 # one firefly per cell of the screen at most, fixed to the ground
+	var x0 := floori(view.position.x / cell)
+	var y0 := floori(view.position.y / cell)
+	for gy in range(y0, y0 + ceili(view.size.y / cell) + 1):
+		for gx in range(x0, x0 + ceili(view.size.x / cell) + 1):
+			var id := gx * 7919 + gy * 104729
+			if _h(id, 1) > 0.55: continue
+			var home := Vector2((gx + _h(id, 2)) * cell, (gy + _h(id, 3)) * cell)
+			var wp := uniso(home)
+			if not sim.is_visible(wp) or D.in_river(wp): continue
+			var at := home + Vector2(sin(t * 0.7 + id) * 14.0, cos(t * 0.53 + id * 0.3) * 8.0 - 10.0)
+			var blink := clampf(sin(t * (1.3 + _h(id, 4)) + id) * 1.6 - 0.4, 0.0, 1.0)
+			if blink <= 0.0: continue
+			var a := blink * k
+			ci.draw_circle(at, 5.0, Color(0.75, 1.0, 0.35, 0.12 * a))
+			ci.draw_circle(at, 1.6, Color(0.9, 1.0, 0.55, 0.9 * a))
+
+## Things in the air by day: seeds and pollen drifting in spring and summer, falling leaves
+## in autumn (and in any gale), and now and then a flock of birds crossing with its shadow.
+func _draw_ambient() -> void:
+	var season: int = sim.hz.season_idx() if sim.hz.on() else 1
+	var w: String = sim.hz.weather if sim.hz.on() else "clear"
+	var day_k: float = 1.0 - sim.night_amt
+	if day_k < 0.2 or w == "blizzard": return
+	var wind := wind_k()
+	var leaves := season == 2 or w == "storm"
+	if season != 3 and w != "rain":
+		var n := 46 if leaves else 30
+		for i in n:
+			var sp := 18.0 + 50.0 * wind + 10.0 * _h(i, 11)
+			var x := view.position.x + fposmod(_h(i, 12) * view.size.x + t * sp, view.size.x)
+			var y := view.position.y + fposmod(_h(i, 13) * view.size.y + sin(t * 0.8 + i) * 18.0 + t * (14.0 if leaves else 3.0), view.size.y)
+			var at := Vector2(x, y)
+			if not sim.is_explored(uniso(at)): continue
+			if leaves:
+				var spin := t * (2.0 + 2.0 * _h(i, 14)) + i
+				var c: Color = [Color("#c8742a"), Color("#a8521e"), Color("#d6a338"), Color("#8a5a2a")][i % 4]
+				c.a = 0.85 * day_k
+				var dx := Vector2(cos(spin), sin(spin) * 0.45) * 3.2
+				ci.draw_line(at - dx, at + dx, c, 2.4)
+			else:
+				ci.draw_circle(at, 1.1 + _h(i, 15) * 0.8, Color(1.0, 0.98, 0.88, 0.45 * day_k))
+	if w in ["rain", "storm"]: return
+	# a flock: one crossing every BIRD_EVERY seconds, the slot's direction and height hashed
+	var slot := floori(t / BIRD_EVERY)
+	var k := (t - slot * BIRD_EVERY) / BIRD_CROSS
+	if k > 1.0: return
+	var dir := Vector2(1, 0).rotated((_h(slot, 21) - 0.5) * 1.2)
+	if _h(slot, 22) > 0.5: dir = -dir
+	var mid := view.get_center() + Vector2(0, (_h(slot, 23) - 0.5) * view.size.y * 0.6)
+	var span := view.size.length() * 0.6
+	var lead := mid + dir * span * (k * 2.0 - 1.0)
+	var side := Vector2(-dir.y, dir.x)
+	var flock := 5 + int(_h(slot, 24) * 5)
+	for i in flock:
+		var row := (i + 1) / 2
+		var at := lead - dir * row * 16.0 + side * row * 13.0 * (1 if i % 2 == 0 else -1)
+		at += Vector2(sin(t * 1.3 + i) * 3.0, cos(t * 1.1 + i * 2.0) * 2.0)
+		ci.draw_circle(at + Vector2(46, 92), 2.4, Color(0, 0, 0, 0.12 * day_k)) # its shadow on the ground
+		var flap := sin(t * 11.0 + i * 1.9) * 3.0
+		var col := Color(0.12, 0.1, 0.09, 0.85 * day_k)
+		ci.draw_polyline(PackedVector2Array([at + Vector2(-8, -flap), at + Vector2(-3, 0.5), at + Vector2(0, 1.5), at + Vector2(3, 0.5), at + Vector2(8, -flap)]), col, 1.8)
+
+const BIRD_EVERY := 45.0 # seconds between flocks crossing the view
+const BIRD_CROSS := 14.0 # how long a flock takes to cross
 
 ## Lightning bolts and flashes, falling ash, the swollen spring river.
 func _draw_nature() -> void:
