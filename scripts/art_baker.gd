@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 24
+const ART_VERSION := 26
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -418,6 +418,7 @@ func _jobs() -> Array:
 		jobs.append({"key": "wall_stone" + sfx, "size": 64, "lift": 8.0, "build": _wall_stone.bind(snowy)})
 		jobs.append({"key": "wall_tower" + sfx, "size": 96, "lift": 18.0, "build": _wall_tower.bind(snowy)})
 		jobs.append({"key": "trading_post" + sfx, "size": 160, "lift": 12.0, "build": _trading_post.bind(snowy)})
+		jobs.append({"key": "warehouse" + sfx, "size": 256, "lift": 18.0, "build": _warehouse.bind(snowy)})
 		jobs.append({"key": "aurochs_pen" + sfx, "size": 192, "lift": 6.0, "build": _pen.bind(snowy)})
 		jobs.append({"key": "den" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(true, snowy)})
 		jobs.append({"key": "cave" + sfx, "size": 224, "lift": 14.0, "build": _mound.bind(false, snowy)})
@@ -1343,6 +1344,42 @@ func _trading_post(snowy: bool) -> Node3D:
 	for i in 3: mi(root, lumpy(sph(3.2, 10, 6), 0.4, 1300 + i, 0.5), fur, Vector3(-16 + i * 3, 2.4, -4 + i * 2), Vector3.ZERO, Vector3(1.3, 0.7, 1))
 	mi(root, lumpy(box(Vector3(6, 5, 5)), 0.3, 1310, 0.3), mat(Color("#c4a26a"), "coarse", 0.3), Vector3(16, 2.5, -3)) # a bundle
 	return root
+
+## The warehouse: a long timber storehouse raised on stilts over stone footings (dry and out
+## of the mice's reach), plank walls, a pitched thatch roof, a ramp to its door, and sacks
+## and jars stacked beside it.
+func _warehouse(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var wood := mat(Color("#6e4b2a"), "streak", 0.2, Vector3(1, 4, 1), 0.5, sn * 0.4)
+	var plank := mat(Color("#8a6238"), "streak", 0.22, Vector3(4, 1, 1), 0.5, sn * 0.3)
+	var stone := mat(Color("#7d776c"), "coarse", 0.25, Vector3.ONE, 0.5, sn)
+	for x in [-16.0, -5.5, 5.5, 16.0]: # stilts on footing stones
+		for z in [-8.0, 8.0]:
+			boulder(root, Vector3(x, 0.8, z), 2.0, stone, 1400 + int(x * 3 + z))
+			mi(root, cyl(1.0, 1.1, 6, 6), wood, Vector3(x, 3.5, z))
+	mi(root, box(Vector3(38, 1.4, 20)), plank, Vector3(0, 7, 0)) # the floor
+	mi(root, box(Vector3(36, 11, 18)), plank, Vector3(0, 13, 0)) # the walls
+	var post := mat(Color("#5a3a20"), "streak", 0.3, Vector3(1, 4, 1))
+	for x in [-18.0, 18.0]:
+		for z in [-9.0, 9.0]: mi(root, box(Vector3(1.6, 12, 1.6)), post, Vector3(x, 13, z))
+	var thatch := mat(Color("#a7703f"), "streak", 0.16, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0)
+	for side in [-1.0, 1.0]: # the pitched roof, eaves overhanging
+		mi(root, box(Vector3(42, 1.6, 14.5)), thatch, Vector3(0, 23.5, side * 5.6), Vector3(side * 38.0, 0, 0))
+	mi(root, box(Vector3(42, 1.2, 1.6)), mat(Color("#5a3a20"), "streak", 0.3, Vector3(4, 1, 1)), Vector3(0, 27.6, 0)) # the ridge
+	mi(root, box(Vector3(6, 8, 0.8)), mat(Color("#2a1a0e"), "fine"), Vector3(0, 12, 9.2)) # the door
+	segment(root, Vector3(-2.5, 0, 22), Vector3(-2.5, 7, 10), 0.5, wood) # the ramp
+	segment(root, Vector3(2.5, 0, 22), Vector3(2.5, 7, 10), 0.5, wood)
+	for i in 5: mi(root, box(Vector3(5.6, 0.5, 1.6)), plank, Vector3(0, 1.4 + i * 1.4, 20 - i * 2.4), Vector3(-30, 0, 0))
+	var sack := mat(Color("#c8b083"), "coarse", 0.3, Vector3.ONE, 0.5, sn * 0.5)
+	for i in 4: mi(root, lumpy(sph(2.6, 10, 6), 0.35, 1450 + i, 0.4), sack, Vector3(-14 + (i % 2) * 4.5, 2.0 + int(i / 2) * 3.2, 14 + (i % 2)), Vector3.ZERO, Vector3(1.2, 0.8, 1))
+	_pot(root, Vector3(12, 0, 14), 0.9)
+	_pot(root, Vector3(16, 0, 12), 0.7)
+	_pot(root, Vector3(14.5, 0, 16.5), 0.6)
+	root.scale = Vector3.ONE * 1.35 # (it holds five granaries' worth: it should look it)
+	var holder := Node3D.new()
+	holder.add_child(root)
+	return holder
 
 func _rack(snowy: bool) -> Node3D:
 	var root := Node3D.new()

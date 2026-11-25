@@ -323,6 +323,7 @@
     "near": "farm_plot",
     "reason": "the stores are nearly full and food would rot."
    },
+   {"structure": "warehouse", "when": {"era": 2, "pop": 60, "store_below": {"base": 0, "per_pop": 8}, "fewer": {"warehouse": {"base": 1, "per_pop": 0.012}}}, "near": "granary", "reason": "the town's stores could not hold what a winter eats."},
    {"structure": "granary", "when": {"store_below": {"base": 0, "per_pop": 8}, "fewer": {"granary": {"base": 2, "per_pop": 0.1}}}, "near": "farm_plot", "reason": "the stores could not hold what a winter eats."},
    {
     "upgrade": "large_hut",

@@ -4405,6 +4405,20 @@ func test_worked_fields() -> void:
 	var gr = sim.add_structure("granary", sim.dry_spot(D.VILLAGE + Vector2(160, 160)))
 	sim.complete_structure(gr, null)
 	check(sim.food_cap() == c0 + int(D.STRUCTURES["granary"]["store"]), "a granary adds its store (%d -> %d)" % [c0, sim.food_cap()])
+	# a town's winter: from the second age the Steward raises warehouses, five granaries' worth each
+	sim.stock["lore"] = 999.0
+	for tk in ["fire", "pottery"]: sim.research(tk) # (pottery needs fire first)
+	sim.evo.era = 2
+	while sim.living().size() < 70: sim.folk.add_family(6)
+	sim.stock["wood"] = 500.0
+	sim.stock["stone"] = 50.0
+	var wanted: Array = sim.improve.wanted().map(func(r): return r["structure"])
+	check("warehouse" in wanted and wanted.find("warehouse") < wanted.rfind("granary") if wanted.has("granary") else "warehouse" in wanted, "short of a winter's stores in a town, a warehouse is wanted before more granaries (%s)" % str(wanted))
+	var c1: int = sim.food_cap()
+	var wh = sim.add_structure("warehouse", sim.dry_spot(D.VILLAGE + Vector2(-200, 260)))
+	sim.complete_structure(wh, null)
+	check(sim.food_cap() == c1 + 500, "a warehouse keeps 500 more")
+	sim.evo.era = 1
 	# a contract may build a longhouse once the second age has come; before that, a large hut
 	var ld = folk[1]
 	var bp := {"steps": [{"action": "build", "structure": "longhouse", "count": 1}]}

@@ -27,10 +27,12 @@
    "wood": 10, "stone": 40, "work": 90.0, "r": 100.0, "ring": true, "era": 3, "inside_def": 6, "stakes": "stone", "tower_every": 8, "hazards": ["quake"], "drift": {"martial": 3}},
   "trading_post": {"name": "Trading Post", "desc": "Racks, a shelter and a place to lay out goods: the clans' traders come half again as often and pay a quarter more. Best by the road or the ford they come by.",
    "wood": 30, "stone": 10, "work": 50.0, "r": 18.0, "era": 3, "effects": [{"stat": "trade_every", "mul": 0.65}, {"stat": "trade_rate", "mul": 1.25}], "hazards": ["lightning", "wildfire", "flood", "quake"], "drift": {"ranked": 2}},
+  "warehouse": {"name": "Warehouse", "desc": "A long storehouse raised on stilts: keeps 500 more food, dry and out of the mice's reach. A town lives through the winter on what its warehouses hold, and losing one to a fire is a hard blow.",
+   "wood": 50, "stone": 10, "work": 70.0, "r": 32.0, "store": 500, "tech": "pottery", "era": 2, "hazards": ["lightning", "wildfire", "flood", "quake"], "drift": {"settled": 4}},
   "roadworks": {"name": "Road works", "desc": "A road being laid, stretch by stretch.", "wood": 0, "work": 1.0, "r": 12.0, "hazards": ["wildfire", "flood", "quake"]},
   "burial_ground": {"name": "Burial Ground", "desc": "Where the tribe lays its dead to rest.", "wood": 0, "work": 1.0, "r": 40.0, "hazards": ["flood"], "open": true}
  },
- "build_menu": ["hut", "palisade", "bonfire", "totem_shrine", "lookout_tower", "smokehouse", "farm_plot", "granary", "aurochs_pen", "smelter", "council_ring", "trading_post", "grand_altar"],
+ "build_menu": ["hut", "palisade", "bonfire", "totem_shrine", "lookout_tower", "smokehouse", "farm_plot", "granary", "warehouse", "aurochs_pen", "smelter", "council_ring", "trading_post", "grand_altar"],
  "contract_builds": ["hut", "large_hut", "longhouse", "palisade", "fishing_dock", "bonfire", "weapon_rack", "totem_shrine", "farm_plot", "granary"],
  "aliases": {"wooden_palisade": "palisade", "wall": "palisade", "walls": "palisade", "fence": "palisade", "dock": "fishing_dock", "fishing_pier": "fishing_dock", "pier": "fishing_dock", "big_hut": "large_hut", "long_house": "longhouse", "hall": "longhouse", "grand_hut": "large_hut", "fire": "bonfire", "grand_bonfire": "bonfire", "campfire": "bonfire", "rack": "weapon_rack", "weapons_rack": "weapon_rack", "shrine": "totem_shrine", "totem": "totem_shrine", "farm": "farm_plot", "field": "farm_plot", "crop_plot": "farm_plot"}
 }
