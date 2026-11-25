@@ -108,9 +108,21 @@ func _upgrade_target(r: Dictionary):
 	var best = null
 	for s in sim.structures:
 		if s.type != from or not sim.ours(s) or s.pos.distance_to(D.VILLAGE) > reach(): continue
+		if not room_to_grow(s, to): continue # (in the flood band, or too tight beside its neighbours for the bigger building)
 		for o in sim.upgrades_for(s):
 			if o["to"] == to and o["why"] == "" and sim.stock["wood"] >= o["wood"] + reserve and (best == null or s.pos.distance_to(D.VILLAGE) < best.pos.distance_to(D.VILLAGE)): best = s
 	return best
+
+## Whether building `s` can become a `to` where it stands: a home clear of the spring flood
+## (nat.flood_band()), and the bigger footprint keeping the planner's gap from its neighbours.
+func room_to_grow(s: E.Structure, to: String) -> bool:
+	var r := float(D.STRUCTURES[to]["r"])
+	if int(D.STRUCTURES[to].get("cap", 0)) > 0 and D.river_dist(s.pos) < maxf(sim.wet_reach(), sim.nat.flood_band()) + r: return false
+	var gap := float(C.get("gap", 14))
+	for o in sim.structures:
+		if o == s or D.STRUCTURES[o.type].get("ring", false): continue
+		if o.pos.distance_to(s.pos) < r + sim.struct_r(o) + gap * 0.5: return false
+	return true
 
 func _rule(st: String) -> Dictionary:
 	for r in C.get("list", []):

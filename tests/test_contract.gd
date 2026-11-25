@@ -4707,6 +4707,24 @@ func test_flood_homes() -> void:
 		spots.append(p)
 		sim.add_structure("hut", p, true)
 	check(not spots.is_empty() and spots.all(func(p): return D.river_dist(p) >= band + float(D.STRUCTURES["hut"]["r"]) - 0.5), "every hut the Steward lays out stands beyond it (%d laid out)" % spots.size())
+	# an outpost's own huts, raised by its contract, keep clear of the flood and of each other
+	var c = E.Contract.new()
+	c.id = 9998
+	c.site = _by_river(400, band * 0.6)
+	var placed: Array = []
+	for i in 6:
+		var p: Vector2 = sim.contracts._slot_for(c, "hut")
+		placed.append(p)
+		sim.add_structure("hut", p, true)
+	check(placed.all(func(p): return D.river_dist(p) >= band + float(D.STRUCTURES["hut"]["r"]) - 0.5), "an outpost by the river builds its huts beyond the flood")
+	var tight := false
+	for i in placed.size():
+		for j in range(i + 1, placed.size()):
+			if placed[i].distance_to(placed[j]) < float(D.STRUCTURES["hut"]["r"]) * 2.0: tight = true
+	check(not tight, "and not on top of each other")
+	# no upgrading a home where it would stand in the flood or crowd its neighbours
+	var wet = sim.add_structure("hut", _by_river(-300, band * 0.7), true)
+	check(not sim.improve.room_to_grow(wet, "longhouse"), "a hut in the flood band is not made a longhouse")
 	sim.dispose()
 
 func test_weapons() -> void:

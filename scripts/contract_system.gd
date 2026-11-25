@@ -1345,6 +1345,10 @@ func _slot_for(c: E.Contract, type: String) -> Vector2:
 		return info["c"] + info["n"] * (D.RIVER_HALF + 14) if info["d"] < INF else c.site + Vector2(140, 60)
 	var p: Vector2 = c.site + SLOTS[c.slot_idx % SLOTS.size()] * (1.0 + 0.6 * (c.slot_idx / SLOTS.size()))
 	c.slot_idx += 1
+	var near := float(sim.improve.C.get("outpost_reach", 220))
+	for far in [near, near * 2.0]: # (the planner's own search: a gap between buildings, homes clear of the flood)
+		var free: Vector2 = sim.improve.spot(type, "village", c.site, far)
+		if free != Vector2.INF: return free
 	return p
 
 func deposit(c: E.Contract, res: String, amt: int, u: E.Unit) -> void:
