@@ -359,6 +359,25 @@ func outside_target(c: Dictionary):
 		if best == null or s.pos.distance_to(c["pos"]) < best.pos.distance_to(c["pos"]): best = s
 	return best
 
+## Against a big tribe the clans band together (rivals.json raids.coalition): another clan
+## that hates us as much sends a share of its warriors with the raid, to the same target.
+func _coalition(c: Dictionary, target: Vector2, aim) -> void:
+	var co: Dictionary = C["raids"].get("coalition", {})
+	if co.is_empty() or sim.living().size() < int(co["min_pop"]): return
+	for id in clans:
+		var o: Dictionary = clans[id]
+		if id == c["id"] or not o["met"] or at_peace(id) or float(o["relation"]) > float(co["relation"]) or int(o["warriors"]) < 2: continue
+		var n := maxi(1, int(int(o["warriors"]) * float(co["share"])))
+		for i in n:
+			var w := _spawn(o, "warrior", target + Vector2(randf_range(-60, 60), randf_range(-50, 50)))
+			w.raid = true
+			w.raid_t = float(C["raids"]["give_up_s"])
+			w.aim_id = aim.id if aim else -1
+		o["warriors"] = maxi(0, int(o["warriors"]) - n)
+		note(id, "raided")
+		sim.alert(_txt(co["alert"], o, {"with": tr(c["name"]), "n": n}), o["pos"], "danger")
+		return # (one clan joins: a coalition, not the whole world at once)
+
 func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
 	var hostility := _hostility(c)
@@ -379,6 +398,7 @@ func launch_raid(c: Dictionary) -> void:
 		w.aim_id = aim.id if aim else -1
 	c["warriors"] = maxi(0, c["warriors"] - size)
 	note(c["id"], "raided")
+	_coalition(c, target, aim)
 	if not c["met"]:
 		c["met"] = true # strangers attack: contact by force
 		pending.append("contact_" + c["id"])

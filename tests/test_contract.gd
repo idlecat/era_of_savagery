@@ -4333,6 +4333,22 @@ func test_outside_first() -> void:
 	sim.rivals.steal(w)
 	check(not plot.built and plot.progress > 0.0 and w.loot, "they put the field to the torch and make off with food")
 	check(c["ledger"].any(func(e): return e["kind"] == "torched"), "the clan remembers it")
+	# against a big tribe, another clan that hates us joins the raid
+	var ids: Array = sim.rivals.clans.keys()
+	var o: Dictionary = sim.rivals.clans[ids[1]]
+	for cl in [c, o]:
+		cl["met"] = true
+		cl["relation"] = -30.0
+		cl["warriors"] = 6
+		cl["pop"] = 14
+	sim.predators.clear()
+	sim.rivals.launch_raid(c)
+	check(not sim.predators.any(func(p): return p.clan == ids[1]), "a small tribe is raided by one clan at a time")
+	while sim.living().size() < int(sim.rivals.C["raids"]["coalition"]["min_pop"]): sim.folk.add_family(6)
+	c["warriors"] = 6
+	sim.predators.clear()
+	sim.rivals.launch_raid(c)
+	check(sim.predators.any(func(p): return p.clan == ids[1] and p.raid) and sim.predators.any(func(p): return p.clan == cid and p.raid), "a big one: the clans band together (%d raiders)" % sim.predators.size())
 	sim.dispose()
 
 func test_house_fire() -> void:
