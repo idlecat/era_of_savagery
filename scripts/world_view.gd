@@ -598,10 +598,12 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 func _input(ev: InputEvent) -> void:
 	var k := ev as InputEventKey
 	if k and not k.pressed: pan_held.erase(k.keycode)
+	if k and k.keycode == KEY_ALT: alt_held = k.pressed # (Alt held: every name)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		pan_held.clear()
+		alt_held = false
 
 const PAN_SPEED := 800.0
 var pan_vel := Vector2.ZERO # the camera's actual pan velocity, eased toward the input
@@ -861,8 +863,18 @@ func draw_overlay() -> void:
 				ci.draw_arc(Vector2.ZERO, sim.struct_r(s) * 1.06, 0, TAU, 48, Color(1, 1, 1, 0.35), 1.5)
 				ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 			_draw_structure_overlay(s)
+	_label_rects.clear()
+	var every := show_all_names()
+	var later: Array = [] # ordinary names: drawn after the popups, where they still fit
+	var first: Array = [] # [priority, unit]
 	for u in sim.units:
-		if _in_view(u.pos): _draw_unit_overlay(u)
+		if u.dead or sim.in_hut(u) or not _in_view(u.pos): continue
+		_draw_unit_bar(u)
+		var pr := name_priority(u)
+		if pr > 0: first.append([pr, u])
+		elif every: later.append(u)
+	first.sort_custom(func(x, y): return x[0] > y[0])
+	for e in first: _draw_unit_name(e[1], e[0] >= NAME_ALWAYS)
 	var abed := {} # hut id -> sleepers inside
 	for u in sim.units:
 		if sim.in_hut(u): abed[u.bed_id] = abed.get(u.bed_id, 0) + 1
@@ -891,7 +903,10 @@ func draw_overlay() -> void:
 		var a: float = 1.0 - pow(p["t"] / p["life"], 2)
 		var col: Color = p["color"]
 		col.a = a
-		_draw_label(iso(p["pos"]) - Vector2(0, 26), p["text"], 17 if p["big"] else 13, col, true)
+		var at: Vector2 = iso(p["pos"]) - Vector2(0, 26)
+		var size: int = 17 if p["big"] else 13
+		if _label_room(at, p["text"], size, p["big"]): _draw_label(at, p["text"], size, col, true)
+	for u in later: _draw_unit_name(u, false)
 	if not clean: # speech marks last, above names and popups
 		for u in sim.units:
 			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
@@ -2330,14 +2345,53 @@ func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
 	ci.draw_line(q + Vector2(9 * f, -14), q + Vector2(13 * f, -17), Color("#e8dcc0"), 1.3)
 	ci.draw_rect(Rect2(q.x - 5, q.y - 18, 10, 5), Color("#8a5a32"))
 
-func _draw_unit_overlay(u) -> void:
-	if u.dead or sim.in_hut(u): return
+## Name labels. A crowd at the fire would be a heap of names, so by default only the people a
+## player is looking for are named (name_priority() > 0); everyone is when show_all_names().
+## A label that would cover one already drawn this frame is left out (_label_room), so the
+## more important ones go first: picked and hovered people, title holders, the hurt and those
+## fighting, then the big popups, the small popups, and ordinary names last.
+const NAMES_ZOOM := 1.9 # zoomed in at least this far, everyone is named
+const NAME_ALWAYS := 3 # priority from which a name is drawn even over another label
+var names_all := false # the player's "Always show names" setting (hud.gd)
+var alt_held := false # Alt held over the map: every name, as long as it is held
+var _label_rects: Array[Rect2] = [] # the labels drawn this frame (_label_room)
+
+## Whether every person is named now: the setting, Alt held, or zoomed in close.
+func show_all_names() -> bool:
+	return names_all or alt_held or cam.zoom.x >= NAMES_ZOOM
+
+## How much a person's name matters on the map: 4 picked or under the cursor, 3 a title
+## holder, 2 hurt or fighting, 0 anyone else (named only when show_all_names()).
+func name_priority(u) -> int:
+	if u.id in selected or u.id == hover_unit: return 4
+	if u.title != "": return 3
+	if u.hp < u.max_hp - 0.5 or u.doing == "fight": return 2
+	return 0
+
+## Whether a label at `p` has room (it covers none drawn this frame); if so, or `force`,
+## it is counted as drawn.
+func _label_room(p: Vector2, text: String, size: int, force := false) -> bool:
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var r := Rect2(p.x - w / 2 - 2, p.y - size, w + 4, size + 4)
+	if not force:
+		for o in _label_rects:
+			if o.intersects(r): return false
+	_label_rects.append(r)
+	return true
+
+func _unit_base(u) -> Vector2:
 	var b := iso(u.pos) * 1.0
 	if u.role == "child": b += Vector2(0, 14) # (smaller figure, lower label)
-	var sel: bool = u.id in selected
+	return b
+
+func _draw_unit_name(u, force: bool) -> void:
+	var at := _unit_base(u) + Vector2(0, -46)
 	var title: String = ("★ " if u.title != "" else "") + tr(u.name)
-	_draw_label(b + Vector2(0, -46), title, 14, Color("#fff4d6") if not sel else Color("#ffe066"), true)
-	if u.hp < u.max_hp - 0.5: _bar(b + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
+	if not _label_room(at, title, 14, force): return
+	_draw_label(at, title, 14, Color("#ffe066") if u.id in selected else Color("#fff4d6"), true)
+
+func _draw_unit_bar(u) -> void:
+	if u.hp < u.max_hp - 0.5: _bar(_unit_base(u) + Vector2(0, 6), 24, u.hp / u.max_hp, Color("#e05050") if u.hp < u.max_hp * 0.35 else Color("#6fd06f"))
 
 ## Speech situations that have a bubble icon (life.gd talk kinds).
 const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief", "quarrel"]
