@@ -1454,6 +1454,9 @@ func settlement_name(p: Vector2) -> String:
 # ------------------------------------------------------------------ settlement tiers
 func _place_key(p: Vector2) -> String: return "%d,%d" % [roundi(p.x), roundi(p.y)]
 
+## What is known of settlement `at`: {"name", "tier", "day"} ({} before its first look).
+func place_of(at: Vector2) -> Dictionary: return places.get(_place_key(at), {})
+
 ## Our people whose home is settlement `at` (one of settlements()).
 func people_of(at: Vector2) -> Array:
 	return living().filter(func(u): return settlement_of(u.home).distance_to(at) < 1.0)
