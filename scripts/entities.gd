@@ -136,6 +136,7 @@ class ResNode:
 	var wander_t: float = 0.0
 	var bank: int = -1 # the stretch of land (D.region_at) a deer keeps to
 	var from_deer: bool = false
+	var dead_t: float = -1.0 # (a carcass) when the beast fell: it keeps a while, then rots away
 	var sz: float = 1.0
 
 class Structure:

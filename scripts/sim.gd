@@ -1191,6 +1191,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		if n.kind == "deer": # the hunt
 			evo.practice(u, "hunt", 3.0)
 			n.kind = "carcass"
+			n.dead_t = time
 			n.from_deer = true
 			n.vel = Vector2.ZERO
 			gain_xp(u, "forage", 3)
@@ -1234,10 +1235,25 @@ func _deplete(n: E.ResNode) -> void:
 		n.kind = "stump"
 		n.regrow_t = 140
 	elif n.kind == "carcass" or n.kind == "boulder" or (D.FINDS.has(n.kind) and D.FINDS[n.kind]["regrow"] <= 0.0):
-		nodes.erase(n) # (a worked-out seam is gone; plants grow back)
-		if n.from_deer and not hz.winter(): # no new herds arrive in winter; how many do depends on the hunt
-			var hm := inv.mul("herd")
-			for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
+		_node_gone(n) # (a worked-out seam is gone; plants grow back)
+
+## A node is used up (a butchered or rotted carcass, a worked-out seam): it leaves the map,
+## and a deer taken brings the herds back in time (no new herds arrive in winter).
+func _node_gone(n: E.ResNode) -> void:
+	nodes.erase(n)
+	if n.from_deer and not hz.winter(): # how many come depends on the hunt
+		var hm := inv.mul("herd")
+		for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
+
+## A carcass keeps carcass_fresh seconds, then its meat rots at carcass_rot a second (cold
+## slows it: carcass_winter); rotted away, it is gone (rules.json gathering).
+func _rot(n: E.ResNode, dt: float, winter: bool) -> void:
+	if n.amount < 1.0: return # (already gone: the list of live nodes is refreshed once a second)
+	if n.dead_t < 0.0: n.dead_t = time # (an old save's kill: fresh from now)
+	var g: Dictionary = RULES["gathering"]
+	if time - n.dead_t < float(g["carcass_fresh"]): return
+	n.amount -= float(g["carcass_rot"]) * dt * (float(g["carcass_winter"]) if winter else 1.0)
+	if n.amount < 1.0: _node_gone(n)
 
 func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	gain_xp(u, "forage", amt * 0.45)
@@ -2195,7 +2211,9 @@ func damage_pred(p: E.Predator, dmg: float, u: E.Unit, crit: bool) -> void:
 				react.trigger("beast_slain", {"at": p.pos, "victim": u})
 			evo.drift("martial", 4.0)
 		if p.clan != "": rivals.on_rival_killed(p, u)
-		else: add_node("carcass", "food", p.pos, 35)
+		else:
+			var kill := add_node("carcass", "food", p.pos, 35)
+			kill.dead_t = time
 	elif (p.kind == "hunter" or p.kind == "trader") and not p.fleeing: # attacked hunters run home and tell their clan
 		p.fleeing = true
 		rivals.on_hunter_attacked(p)
@@ -2396,6 +2414,7 @@ func _tick(dt: float) -> void:
 			if float(fd["regrow"]) > 0.0 and (fd["winter"] or not winter): n.amount = minf(n.max_amount, n.amount + float(fd["regrow"]) * dt)
 			continue
 		match n.kind:
+			"carcass": _rot(n, dt, winter)
 			"bush":
 				n.amount = minf(n.max_amount, n.amount + n.regrow * dt * berry_k)
 			"stump", "burnt":

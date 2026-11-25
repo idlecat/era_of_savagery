@@ -185,6 +185,7 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
 
 ## Distance and settlements
 
+- **Kills don't keep:** a hunter goes back to a half-butchered kill after hauling a load home, but meat left out keeps only about a day, then rots away (slower in the cold). A deer taken, eaten or rotted, brings the herds back in time (`config/rules.json` gathering).
 - **Distance costs:** every step burns food, half again while carrying a load (`WALK_HUNGER`): a villager walking all day gets about 70% hungrier. Loads also slow the walk home (−15%, or −5% with a pack ox). Gatherers weigh distance more heavily when choosing a tree, bush or seam.
 - **Drop-off points:** loads go to the nearest of our settlements, and food also to a Granary, so building near the work pays off.
 - **Settlements:** every finished settlement contract becomes a home. Its crew live there, take local jobs from the Steward, and sleep in its huts. When a settlement is crowded (four in five of its beds taken) and another has room, someone moves across (one at a time, by day), and the chronicle records it. People sleep in a bed near their own home first. No new outpost can be founded while one of ours still has three beds or more to spare: the people go there first.

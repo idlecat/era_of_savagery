@@ -66,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4216,6 +4216,37 @@ func test_find_data() -> void:
 
 ## A band against a saber-tooth: it musters out of reach, charges together, rings the
 ## beast (flank blows hit harder) and lets its badly hurt fall back (config/hunt.json).
+func test_carcass_rots() -> void:
+	print("\n== A kill left out rots away ==")
+	var sim = _new_sim()
+	var g: Dictionary = sim.RULES["gathering"]
+	var kill = sim.add_node("carcass", "food", sim.dry_spot(D.VILLAGE + Vector2(500, 300)), 35)
+	kill.dead_t = sim.time
+	kill.from_deer = true
+	var deer0: int = sim.nodes.filter(func(n): return n.kind == "deer").size()
+	for k in int(float(g["carcass_fresh"])) - 5:
+		sim.time += 1.0
+		sim._rot(kill, 1.0, false)
+	check(kill.amount == 35.0 and kill in sim.nodes, "fresh for a day")
+	var t := 0
+	while kill in sim.nodes and t < 2000:
+		sim.time += 1.0
+		sim._rot(kill, 1.0, false)
+		t += 1
+	check(not kill in sim.nodes, "then it rots away and is gone (%d s later)" % t)
+	check(sim.nodes.filter(func(n): return n.kind == "deer").size() > deer0, "and a deer taken still brings the herds back")
+	var n1: int = sim.nodes.size()
+	sim._rot(kill, 1.0, false)
+	check(sim.nodes.size() == n1, "a rotted kill is gone once, not twice")
+	var cold = sim.add_node("carcass", "food", sim.dry_spot(D.VILLAGE + Vector2(-500, 300)), 35)
+	cold.dead_t = sim.time - float(g["carcass_fresh"]) - 1.0
+	var warm = sim.add_node("carcass", "food", sim.dry_spot(D.VILLAGE + Vector2(-520, 340)), 35)
+	warm.dead_t = cold.dead_t
+	sim._rot(cold, 10.0, true)
+	sim._rot(warm, 10.0, false)
+	check(cold.amount > warm.amount, "the cold keeps meat longer (%.1f vs %.1f)" % [cold.amount, warm.amount])
+	sim.dispose()
+
 func test_worked_fields() -> void:
 	print("\n== Worked fields: labour becomes food (city_proposal step 1) ==")
 	var sim = _new_sim()
