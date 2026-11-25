@@ -849,15 +849,8 @@ func draw_overlay() -> void:
 		if lm["found"] and _in_view(lm["pos"]):
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
 	for id in sim.rivals.clans: _draw_clan_banner(sim.rivals.clans[id])
-	var sst = sim.struct_by_id(selected_struct) if selected_struct >= 0 else null
-	if sst: # the same mark as a picked person, round the building's footprint
-		_sel_mark(iso(sst.pos), (sim.struct_r(sst) + 10.0) * 1.25, false, not D.STRUCTURES[sst.type].get("ring", false)) # (round the whole footprint, long houses too)
 	for s in sim.structures:
 		if _in_view(s.pos):
-			if s.id == hover_struct and s.id != selected_struct and s.built: # a faint ring: this can be picked
-				ci.draw_set_transform(iso(s.pos), 0.0, Vector2(1.0, 0.5))
-				ci.draw_arc(Vector2.ZERO, sim.struct_r(s) * 1.06, 0, TAU, 48, Color(1, 1, 1, 0.35), 1.5)
-				ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 			_draw_structure_overlay(s)
 	_label_rects.clear()
 	var every := show_all_names()
@@ -1919,33 +1912,15 @@ func _draw_site_ring(c) -> void:
 		var k: float = fposmod(t * 0.5, 1.0)
 		ci.draw_arc(c.site, 30 + 110 * k, 0, TAU, 48, Color(col, 0.7 * (1.0 - k)), 3)
 
-const SEL_COL := Color("#ffe066")
+const SEL_COL := Color("#ffe9a0")
 
-## The "selected" mark on the ground: a gold ellipse lying flat on the iso ground (2:1),
-## breathing gently, with a faint ring pulsing outward. Under a person a soft glow too
-## (`glow`, drawn before the sprite). On a building it is drawn over the sprite, so the half
-## behind it is faint (`behind`): it reads as round the base, not across the roof.
-func _sel_mark(c: Vector2, rx: float, glow := true, behind := false) -> void:
-	var ry := rx * 0.5
-	var breathe := 0.82 + 0.18 * sin(t * 3.2)
-	if glow: _ell(c, rx * 0.92, ry * 0.92, Color(SEL_COL, 0.24), 28)
-	var under := Color(0, 0, 0, 0.35) # (a dark under-stroke: the gold reads on sunlit ground too)
-	var k: float = fposmod(t * 0.7, 1.0) # (the pulse, once in ~1.4 s)
-	var pr := 1.0 + 0.28 * k
-	var pc := Color(SEL_COL, 0.32 * (1.0 - k))
-	if behind:
-		_ell_line(c, rx, ry, Color(SEL_COL, 0.28 * breathe), 1.5, PI, TAU) # (the far side, behind the building)
-		_ell_line(c, rx * pr, ry * pr, pc, 1.2, 0.0, PI)
-		_ell_line(c, rx, ry, under, 4.0, 0.0, PI)
-		_ell_line(c, rx, ry, Color(SEL_COL, 0.95 * breathe), 2.2, 0.0, PI) # (the near side, in front)
-	else:
-		_ell_line(c, rx * pr, ry * pr, pc, 1.2)
-		_ell_line(c, rx, ry, under, 3.5)
-		_ell_line(c, rx, ry, Color(SEL_COL, 0.95 * breathe), 2.0)
-
-## A picked figure's mark (see _sel_mark): reads as "selected" at a glance, and is never
-## mistaken for a danger or a mission marker.
-func _sel_ring(b: Vector2, r: float) -> void: _sel_mark(b, r - 2.0)
+## A picked person's mark: one thin ellipse at their feet, flat on the iso ground (2:1),
+## with a faint glow inside: quiet, and never mistaken for a danger or a mission marker.
+## (A picked building lights up itself: _pick_glow.)
+func _sel_ring(b: Vector2, r: float) -> void:
+	var rx := r - 3.0
+	_ell(b, rx, rx * 0.5, Color(SEL_COL, 0.18), 24)
+	_ell_line(b, rx, rx * 0.5, Color(SEL_COL, 0.9), 1.5)
 
 ## Who and what is under the cursor (rings only; the HUD tooltip uses hover_info).
 func _update_hover() -> void:
@@ -2998,6 +2973,7 @@ func _sync_items() -> void:
 				seen[key] = true
 				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
+				it.modulate = _pick_glow(st)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type == "roadworks": pass # (drawn on the ground: _draw_ground_part)
 		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
@@ -3009,6 +2985,7 @@ func _sync_items() -> void:
 			var it := _item(key, 1, st, iso(st.pos), anim)
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
+			it.modulate = _pick_glow(st)
 			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
@@ -3028,6 +3005,15 @@ func _sync_items() -> void:
 		if not seen.has(key):
 			items[key].queue_free()
 			items.erase(key)
+
+## How a building shows that it is picked: it lights up a little, warmly, breathing slowly
+## (a hovered one a touch brighter). No ring drawn across the ground or the roof.
+func _pick_glow(st) -> Color:
+	if st.id == selected_struct:
+		var k := 0.75 + 0.25 * sin(t * 3.0)
+		return Color(1.0 + 0.30 * k, 1.0 + 0.24 * k, 1.0 + 0.08 * k)
+	if st.id == hover_struct and st.built: return Color(1.12, 1.12, 1.12)
+	return Color.WHITE
 
 func _touch(it: Item, sig: int) -> void:
 	if it.dynamic:
