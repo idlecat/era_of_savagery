@@ -4473,7 +4473,7 @@ func test_freezing() -> void:
 	var sim = _new_sim()
 	for p in sim.predators: p.fled = true
 	var u = sim.living().filter(func(x): return x.role == "")[0]
-	var fire = sim.nearest_fire(D.VILLAGE)
+	var fire = sim.nearest_serving("warmth", D.VILLAGE)
 	var far: Vector2 = sim.dry_spot(fire.pos + Vector2(-700, 300))
 	var hut = sim.add_structure("hut", sim.dry_spot(far + Vector2(60, 0)))
 	sim.complete_structure(hut, null)

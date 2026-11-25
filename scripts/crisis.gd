@@ -147,11 +147,11 @@ func order_block(id: String) -> String:
 func _scared(o: Dictionary) -> Array:
 	return sim.active_predators_near(cur["at"], float(o.get("scare_radius", 260))).filter(func(p): return o.get("of", "") != "beasts" or p.clan == "")
 
-## The nearest bonfire of ours within the order's reach of the crisis (or null).
+## The nearest of our havens (structures.json serves: haven, the bonfire) within the order's reach of the crisis (or null).
 func _fire_for(o: Dictionary) -> Variant:
 	var fire = null
-	for s in sim.structures:
-		if s.built and sim.ours(s) and s.type == "bonfire" and s.pos.distance_to(cur["at"]) < float(o.get("reach", 900)) and (fire == null or s.pos.distance_to(cur["at"]) < fire.pos.distance_to(cur["at"])): fire = s
+	for s in sim.serving("haven"):
+		if s.pos.distance_to(cur["at"]) < float(o.get("reach", 900)) and (fire == null or s.pos.distance_to(cur["at"]) < fire.pos.distance_to(cur["at"])): fire = s
 	return fire
 
 ## The badly hurt people of the crisis.

@@ -89,8 +89,7 @@ func budget(u: E.Unit, res := "") -> float:
 ## Where warmth is: our built fires (the village if there are none).
 func warm_points() -> Array:
 	var out: Array = []
-	for s in sim.structures:
-		if s.built and sim.ours(s) and s.type == "bonfire": out.append(s.pos)
+	for s in sim.serving("warmth"): out.append(s.pos)
 	if out.is_empty(): out.append(D.VILLAGE)
 	return out
 
@@ -111,8 +110,7 @@ func nearest_warmth(p: Vector2) -> E.Structure:
 func _nearest_fire_by_route(p: Vector2, same_side: bool) -> E.Structure:
 	var best: E.Structure = null
 	var best_d := INF
-	for s in sim.structures:
-		if not s.built or not sim.ours(s) or s.type != "bonfire": continue
+	for s in sim.serving("warmth"):
 		if same_side and not D.same_side(p, s.pos): continue
 		if p.distance_to(s.pos) >= best_d: continue # (a route is never shorter than the line)
 		var d := D.route_len(p, s.pos)
