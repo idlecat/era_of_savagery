@@ -41,6 +41,9 @@ var night: CanvasModulate
 var grade_mat: ShaderMaterial # full-screen seasonal colour grade (grade.gdshader)
 var grade_sat := 1.0
 var grade_con := 1.0
+var grade_bloom := 0.22
+var grade_bloom_from := 0.74
+var grade_tone := 0.45
 var lights := {} # structure id -> PointLight2D
 var light_tex: GradientTexture2D
 var font: Font
@@ -48,6 +51,8 @@ var terrain_tex: ImageTexture
 var minimap_tex: ImageTexture
 var fog_tex: ImageTexture
 var fog_img: Image
+var fog: Node2D # draws the fog of war (fog.gdshader)
+var fog_mat: ShaderMaterial
 var fog_refresh := 0.0
 var wear_tex: ImageTexture
 var mask_tex: ImageTexture # where the soil, forest floor and meadows are (terrain.gdshader)
@@ -121,6 +126,9 @@ func setup(s) -> void:
 	grade_mat = ShaderMaterial.new()
 	grade_mat.shader = load("res://shaders/grade.gdshader")
 	grade_rect.material = grade_mat
+	var bbc := BackBufferCopy.new() # (a fresh copy of the screen: the fog read one of its own)
+	bbc.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	grade_layer.add_child(bbc)
 	grade_layer.add_child(grade_rect)
 	add_child(grade_layer)
 	var vig := CanvasLayer.new()
@@ -179,6 +187,14 @@ func setup(s) -> void:
 	ghost = Ghost.new() # above the world, below fog and labels
 	ghost.wv = self
 	add_child(ghost)
+	fog = Fog.new() # fog of war (fog.gdshader): remembered land faded, the unknown a mist bank
+	fog.wv = self
+	fog_mat = ShaderMaterial.new()
+	fog_mat.shader = load("res://shaders/fog.gdshader")
+	fog_mat.set_shader_parameter("noise_tex", gm.get_shader_parameter("grass_tex"))
+	fog_mat.set_shader_parameter("fog_world", Vector2(sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL))
+	fog.material = fog_mat
+	add_child(fog)
 	overlay = Overlay.new()
 	overlay.wv = self
 	add_child(overlay)
@@ -348,6 +364,8 @@ func _process(delta: float) -> void:
 	glow.queue_redraw()
 	overlay.queue_redraw()
 	ghost.queue_redraw()
+	fog.queue_redraw()
+	fog_mat.set_shader_parameter("night_tint", Vector3(night.color.r, night.color.g, night.color.b))
 	for u in sim.units:
 		var uk := "u%d" % u.id
 		_track(uk, u.pos)
@@ -567,11 +585,30 @@ func _grade_step(delta: float) -> void:
 		"blizzard":
 			sat -= 0.2
 	sat -= sim.night_amt * 0.12
+	# bloom: a soft sheen on bright days, fires and torches glowing out into the dark;
+	# split toning strongest in the low sun of dusk and dawn, weakest under gray skies
+	var nk: float = sim.night_amt
+	var low_sun := 0.0
+	if sim.is_day_part("dusk"): low_sun = sin(_part_k("dusk") * PI)
+	elif sim.is_day_part("dawn"): low_sun = sin(_part_k("dawn") * PI)
+	var bl := lerpf(0.15, 0.42, nk)
+	var bl_from := lerpf(0.76, 0.6, nk)
+	var tk := 0.45 + 0.4 * low_sun
+	bl_from = lerpf(bl_from, 0.86, clampf(sim.hz.snow, 0.0, 1.0)) # (no glare off a snowfield)
+	match sim.hz.weather:
+		"rain", "storm", "blizzard": tk *= 0.4
 	var k := minf(1.0, delta * 0.5)
 	grade_sat = lerpf(grade_sat, sat, k)
 	grade_con = lerpf(grade_con, con, k)
+	grade_bloom = lerpf(grade_bloom, bl, minf(1.0, delta * 2.0)) # (follows the night closely)
+	grade_bloom_from = lerpf(grade_bloom_from, bl_from, minf(1.0, delta * 2.0))
+	grade_tone = lerpf(grade_tone, tk, k)
 	grade_mat.set_shader_parameter("saturation", grade_sat)
 	grade_mat.set_shader_parameter("contrast", grade_con)
+	grade_mat.set_shader_parameter("bloom", grade_bloom)
+	grade_mat.set_shader_parameter("bloom_from", grade_bloom_from)
+	grade_mat.set_shader_parameter("tone_k", grade_tone)
+	grade_mat.set_shader_parameter("moon", nk * 0.8)
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -823,12 +860,6 @@ func draw_ghost() -> void:
 	_draw_structure(g)
 
 func draw_overlay() -> void:
-	# ---- fog of war over everything in the world (labels below stay readable)
-	if sim.fog_enabled:
-		ci.draw_set_transform_matrix(GROUND)
-		ci.draw_texture_rect(fog_tex, Rect2(0, 0, sim.fog_w * D.FOG_CELL, sim.fog_h * D.FOG_CELL), false)
-		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-
 	_draw_weather()
 	_draw_nature()
 	if clean: return
@@ -2874,6 +2905,14 @@ class Ghost extends Node2D:
 		wv.ci = self
 		wv.draw_ghost()
 		wv.ci = wv
+
+## Fog of war over everything in the world (labels, drawn by the Overlay above, stay readable).
+class Fog extends Node2D:
+	var wv
+	func _draw() -> void:
+		if not wv.sim.fog_enabled: return
+		draw_set_transform_matrix(wv.GROUND)
+		draw_texture_rect(wv.fog_tex, Rect2(0, 0, wv.sim.fog_w * D.FOG_CELL, wv.sim.fog_h * D.FOG_CELL), false)
 
 class Overlay extends Node2D:
 	var wv

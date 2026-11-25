@@ -37,9 +37,27 @@ uniform float clouds = 0.16;     // how dark the drifting cloud shadows get
 uniform float use_photo = 1.0;
 uniform float dryness = 0.0;     // the land (config/lands.json): 0 green parkland or wetter, 1 dry steppe
 uniform vec3 sun_tint = vec3(1.2, 1.17, 0.9);   // land in the sun
-uniform vec3 shade_tint = vec3(0.78, 0.88, 0.76); // land in shade   // 0: the old procedural ground (no textures loaded)
+uniform vec3 shade_tint = vec3(0.78, 0.88, 0.76); // land in shade
+uniform float relief = 0.8;     // how strongly the gentle rise and fall of the land is shaded   // 0: the old procedural ground (no textures loaded)
 
 // A texture sampled twice (two scales, rotated) so its tiling doesn't show.
+// The lie of the land: a low rolling height field (world units), for shading only.
+float height(vec2 wp) {
+	return texture(grass_tex, wp / 900.0 + vec2(0.21, 0.63)).r * 40.0
+		+ texture(grass_tex, wp / 380.0 + vec2(0.71, 0.17)).r * 6.0;
+}
+
+// Slopes facing the sun (the baked sprites' sun: from the upper left of the screen,
+// world -x and a little -y) are brighter, the far sides of rises a little darker.
+float hillshade(vec2 wp) {
+	float e = 18.0;
+	float hx = height(wp + vec2(e, 0.0)) - height(wp - vec2(e, 0.0));
+	float hy = height(wp + vec2(0.0, e)) - height(wp - vec2(0.0, e));
+	vec3 n = normalize(vec3(-hx, -hy, 2.0 * e));
+	vec3 sun = normalize(vec3(-0.85, -0.3, 0.75));
+	return dot(n, sun) - dot(vec3(0.0, 0.0, 1.0), sun);
+}
+
 vec3 photo(sampler2D t, vec2 wp, float s) {
 	vec2 a = wp / (tile * s);
 	vec2 b = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * wp / (tile * s * 1.37) + vec2(0.31, 0.77);
@@ -130,6 +148,7 @@ void fragment() {
 	float edge = smoothstep(0.30, 0.42, m.a) * (1.0 - smoothstep(0.42, 0.5, m.a)); // foam at the bank
 	waterc = mix(waterc, vec3(0.85, 0.9, 0.88), edge * (0.35 + 0.4 * g3));
 
+	landc *= 1.0 + relief * hillshade(wp) * vec3(1.0, 0.98, 0.92);
 	vec3 outc = landc * land + sandc * sand + waterc * water;
 	// ---- cloud shadows drifting over everything
 	float cl = texture(grass_tex, wp / 2600.0 + vec2(TIME * 0.0035, TIME * 0.0016)).r;
