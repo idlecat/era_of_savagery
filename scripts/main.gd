@@ -603,6 +603,28 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "1.6")), float(args.get("zoom", "1.6")))
 			world.focus_on(sim.D.VILLAGE + Vector2(0, 30))
+		"town": # debug: the village grown into a named village (--people=N), with fields and longhouses
+			hud._close_modal()
+			sim.research("farming")
+			sim.stock["wood"] = 4000.0
+			var n := int(args.get("people", "40"))
+			var k := 0
+			while sim.pop_cap() < n + 6 and k < 60:
+				var h = sim.add_structure("longhouse" if k % 2 == 0 else "large_hut", sim.dry_spot(sim.D.VILLAGE + Vector2.from_angle(k * 0.9) * (150.0 + k * 9.0)))
+				sim.complete_structure(h, null)
+				k += 1
+			for j in 3:
+				var f = sim.add_structure("farm_plot", sim.dry_spot(sim.D.VILLAGE + Vector2(-330 + j * 80, 300)))
+				sim.complete_structure(f, null)
+			while sim.living().size() < n: sim.folk.add_family(6)
+			sim.tier_t = 0.0
+			for i in int(float(args.get("secs", "6")) / STEP):
+				sim.tick(STEP)
+				if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+				sim.paused = false
+			hud._close_modal()
+			world.cam.zoom = Vector2(float(args.get("zoom", "0.9")), float(args.get("zoom", "0.9")))
+			world.focus_on(sim.D.VILLAGE + Vector2(0, 60))
 		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
 			hud._close_modal()
 			sim.fog_enabled = false

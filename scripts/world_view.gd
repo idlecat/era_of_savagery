@@ -840,8 +840,8 @@ func draw_overlay() -> void:
 	for at in sim.settlements(): # our settlements by the names they have earned (rules.json tiers)
 		var pl: Dictionary = sim.place_of(at)
 		if str(pl.get("name", "")) != "" and _in_view(at):
-			_draw_label(iso(at) + Vector2(0, -150), tr(pl["name"]).to_upper(), 18, Color("#ffe9b8"), true)
-			_draw_label(iso(at) + Vector2(0, -132), tr(sim.tier_row(str(pl["tier"])).get("name", "")), 12, Color(1, 0.95, 0.85, 0.8), true)
+			_draw_label(iso(at) + Vector2(0, -215), tr(pl["name"]).to_upper(), 26, Color("#ffe9b8"), true)
+			_draw_label(iso(at) + Vector2(0, -192), tr(sim.tier_row(str(pl["tier"])).get("name", "")), 15, Color(1, 0.95, 0.85, 0.85), true)
 	for lm in sim.landmarks:
 		if lm["found"] and _in_view(lm["pos"]):
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
