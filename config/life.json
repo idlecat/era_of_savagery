@@ -93,13 +93,14 @@
  },
 
  "bonds": {
-  "_doc": "Bonds between two families, -100..100: friends at friend_at and above (close at close_at), rivals at rival_at and below. A child starts at `kin` with the family it came from. At the start each family has `start` friends and maybe a rival. Bonds grow per second working within `near` of each other, fighting the same foe, dancing at a festival, and per chat (a quarrel instead costs quarrel.loss). Friends working nearby speed work (work_bonus each, up to work_bonus_max); rivals nearby slow it. A death grieves those bonded at grieve_at or more (kin always): grief = grief + grief_per x bond.",
+  "_doc": "Bonds between two families, -100..100: friends at friend_at and above (close at close_at), rivals at rival_at and below. A child starts at `kin` with the family it came from. At the start each family has `start` friends and maybe a rival. Bonds grow per second working within `near` of each other (each with at most `max_near` of the others near: in a crowd one works beside a few), fighting the same foe, dancing at a festival, and per chat (a quarrel instead costs quarrel.loss). Friends working nearby speed work (work_bonus each, up to work_bonus_max); rivals nearby slow it. A death grieves those bonded at grieve_at or more (kin always): grief = grief + grief_per x bond.",
   "friend_at": 30,
   "close_at": 60,
   "rival_at": -30,
   "kin": 45,
   "start": {"friends": 1, "friend": [30, 55], "rival_chance": 0.3, "rival": [-50, -30]},
   "near": 150,
+  "max_near": 8,
   "work": 0.03,
   "fight": 0.4,
   "festival": 0.15,

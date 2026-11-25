@@ -427,6 +427,7 @@ func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 	return u
 
 func add_structure(type: String, p: Vector2, built := false, owner := "village", paid := false) -> E.Structure:
+	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
 	var s := E.Structure.new()
 	s.id = uid(); s.type = type; s.pos = p; s.built = built
 	s.work = D.STRUCTURES[type]["work"]; s.progress = s.work if built else 0.0
@@ -474,6 +475,48 @@ func struct_exists(type: String) -> bool:
 		if s.built and ours(s) and s.type == type: return true
 	return false
 func living() -> Array: return units.filter(func(u): return not u.dead)
+
+## Level of detail (rules.json lod): people out of danger are updated every `every`-th tick
+## with that many times the step; those in a fight, fleeing, reacting, in an emergency or
+## lately hurt are updated every tick. lod_on = false (tests that count ticks) runs everyone every tick.
+var lod_on := true
+var _cache_tick_n := 0
+func hot(u: E.Unit) -> bool:
+	if u.dead: return false
+	var j := u.job
+	if j.get("type", "") == "attack" or j.get("flee", false) or j.get("react", false) or j.get("crisis", false): return true
+	return time - u.last_hit_t < float(RULES["lod"]["hot_secs"])
+
+# A spatial grid of the living, rebuilt at most once per tick (lazily, when someone asks):
+# "who is near" without looking at everyone. Not saved (a _cache), it rebuilds itself.
+const GRID := 128.0
+var _cache_grid := {}
+var _cache_grid_t := -1.0
+
+func _grid() -> Dictionary:
+	if _cache_grid_t != time:
+		_cache_grid_t = time
+		_cache_grid = {}
+		for u in units:
+			if u.dead: continue
+			var k := Vector2i(floori(u.pos.x / GRID), floori(u.pos.y / GRID))
+			if _cache_grid.has(k): _cache_grid[k].append(u)
+			else: _cache_grid[k] = [u]
+	return _cache_grid
+
+## The living within `r` of `p` (positions as of this tick's start), from the grid.
+func units_near(p: Vector2, r: float) -> Array:
+	var g := _grid()
+	var out: Array = []
+	var x0 := floori((p.x - r) / GRID)
+	var x1 := floori((p.x + r) / GRID)
+	var y0 := floori((p.y - r) / GRID)
+	var y1 := floori((p.y + r) / GRID)
+	for x in range(x0, x1 + 1):
+		for y in range(y0, y1 + 1):
+			for u in g.get(Vector2i(x, y), []):
+				if not u.dead and u.pos.distance_to(p) <= r: out.append(u)
+	return out
 
 ## A person by id, through a lookup table (people are only ever added: the dead stay in `units`).
 var _cache_units := {}
@@ -544,17 +587,33 @@ func pop_cap() -> int:
 		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("cap", 0))
 	return c
 
+## Our built buildings of `type`, indexed once a tick (people ask this every tick:
+## the fires, the fields; never a loop over every structure per person). A _cache.
+var _cache_built := {}
+var _cache_built_t := -1.0
+## A building was lost or changed outside the usual paths: built_of() looks again.
+func buildings_changed() -> void: _cache_built_t = -1.0
+func built_of(type: String) -> Array:
+	if _cache_built_t != time:
+		_cache_built_t = time
+		_cache_built = {}
+		for s in structures:
+			if not s.built or not ours(s): continue
+			if _cache_built.has(s.type): _cache_built[s.type].append(s)
+			else: _cache_built[s.type] = [s]
+	return _cache_built.get(type, [])
+
 func nearest_fire(p: Vector2) -> E.Structure:
 	var best: E.Structure = null
-	for s in structures:
-		if s.built and ours(s) and s.type == "bonfire" and (best == null or s.pos.distance_to(p) < best.pos.distance_to(p)): best = s
+	for s in built_of("bonfire"):
+		if best == null or s.pos.distance_to(p) < best.pos.distance_to(p): best = s
 	return best
 
 func near_warmth(u: E.Unit) -> bool:
 	if in_hut(u): return true
 	var r := 110.0 * (2.0 if has_tech("fire") else 1.0)
-	for s in structures:
-		if s.built and ours(s) and s.type == "bonfire" and s.pos.distance_to(u.pos) < r: return true
+	for s in built_of("bonfire"):
+		if s.pos.distance_to(u.pos) < r: return true
 	return false
 
 ## A building's radius: a wall's chosen one, else its type's.
@@ -773,12 +832,22 @@ func assign_experiment(u: E.Unit, p: Vector2, label: String, key := "") -> void:
 func assign_explore(u: E.Unit) -> void: set_job(u, {"type": "explore", "to": null})
 
 ## `kinds`: only nodes of these kinds (a career's trade); [] = any.
+## Node id -> how many people are working it: counted once a tick (a _cache), and kept up
+## as find_node() hands nodes out within the tick.
+var _cache_claims := {}
+var _cache_claims_t := -1.0
+func node_claims() -> Dictionary:
+	if _cache_claims_t != time:
+		_cache_claims_t = time
+		_cache_claims = {}
+		for u in units:
+			if not u.dead and u.job.has("node_id"): _cache_claims[u.job["node_id"]] = _cache_claims.get(u.job["node_id"], 0) + 1
+	return _cache_claims
+
 func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Array = []) -> E.ResNode:
 	var best: E.ResNode = null
 	var best_score := INF
-	var claims_of := {} # node id -> people already working it (counted once, not per node)
-	for u in units:
-		if not u.dead and u.job.has("node_id"): claims_of[u.job["node_id"]] = claims_of.get(u.job["node_id"], 0) + 1
+	var claims_of := node_claims() # node id -> people already working it
 	var prefer := {} # kind -> the ways' preference (looked up once per kind)
 	for n in nodes_of(res):
 		if n.amount < 1 or (not kinds.is_empty() and not n.kind in kinds): continue
@@ -1024,8 +1093,8 @@ func _dropoff_point(j: Dictionary, u: E.Unit) -> Vector2:
 	for p in settlements():
 		if p.distance_to(u.pos) < best.distance_to(u.pos): best = p
 	if j["res"] == "food":
-		for s in structures:
-			if s.built and ours(s) and s.type == "granary" and s.pos.distance_to(u.pos) < best.distance_to(u.pos): best = s.pos
+		for s in built_of("granary"):
+			if s.pos.distance_to(u.pos) < best.distance_to(u.pos): best = s.pos
 	return best
 
 func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
@@ -1053,6 +1122,8 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.act = "No %s nearby" % j["res"]
 			return
 		j["node_id"] = n.id
+		var cl := node_claims()
+		cl[n.id] = int(cl.get(n.id, 0)) + 1 # (the next to look this tick sees it taken)
 	if n.kind == "boulder" and not has_tech("tools"):
 		set_job(u, {})
 		popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools"), Color("#ff9b7a"))
@@ -1131,6 +1202,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
+	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
 	if s.type == "roadworks": # a finished road is part of the ground, not a building
 		s.progress = s.work
 		roads.progress(s)
@@ -1478,7 +1550,7 @@ var CARE_DECAY: float = 100.0 / (D.DAY_LEN * float(RULES["herds"]["care_days"]))
 var TEND_TIME: float = float(RULES["herds"]["tend_time"])
 
 func pens() -> Array:
-	return structures.filter(func(s): return s.built and ours(s) and s.type == "aurochs_pen")
+	return built_of("aurochs_pen")
 
 func ox_cap() -> int: return pens().size() * (OX_PER_PEN + int(ranks.amount("big_pens", "add", 0.0))) # (a Master forager: bigger pens)
 func oxen_working() -> bool: return oxen > 0 and ox_care > 0.0
@@ -2049,8 +2121,8 @@ func update_predator(p: E.Predator, dt: float) -> void:
 		return
 	var prey = null
 	var best := 280.0
-	for u in units:
-		if u.dead or p.kind == "hunter" or p.kind == "trader" or in_hut(u): continue
+	for u in (units_near(p.pos, best) if p.kind != "hunter" and p.kind != "trader" else []): # (the grid: only those within reach)
+		if in_hut(u): continue
 		var d: float = u.pos.distance_to(p.pos)
 		if p.kind == "wolf" and not _wolf_target(u): continue
 		if d < best and D.same_side(u.pos, p.pos) and (p.den == null or p.raid or u.pos.distance_to(p.den) < 380):
@@ -2158,7 +2230,15 @@ func _update_guardian(dt: float) -> void:
 		step_move(g, dt, 80)
 
 # ------------------------------------------------------------------ world tick
+var _cache_in_tick := false
+## Whether tick() is running (per-tick caches may be used; outside it, look fresh).
+func in_tick() -> bool: return _cache_in_tick
 func tick(dt: float) -> void:
+	_cache_in_tick = true
+	_tick(dt)
+	_cache_in_tick = false
+
+func _tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	story.tick(dt)
@@ -2230,7 +2310,12 @@ func tick(dt: float) -> void:
 	_tiers(dt)
 	_finds_tick(dt)
 	hunt.update(dt)
-	for u in units: update_unit(u, dt)
+	_cache_tick_n += 1
+	var lod := int(RULES["lod"]["every"]) if lod_on else 1
+	for u in units:
+		if lod > 1 and not hot(u): # (level of detail: out of danger, every lod-th tick with lod times the step)
+			if (u.id + _cache_tick_n) % lod == 0: update_unit(u, dt * lod)
+		else: update_unit(u, dt)
 	fog_t -= dt
 	if fog_t <= 0:
 		fog_t = 0.2
@@ -2653,6 +2738,7 @@ func demolish_block(s: E.Structure) -> String:
 
 ## Pull a building down (a building site is cancelled): part of its wood and stone back.
 func demolish(id: int) -> String:
+	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
 	var s := struct_by_id(id)
 	var why := demolish_block(s)
 	if why != "": return why
@@ -2825,6 +2911,7 @@ func flood_strike() -> void:
 	for s in structures:
 		if ours(s) and s.built and hit_by(s, "flood") and D.river_dist(s.pos) < float(gf["building_radius"]):
 			s.built = false
+			buildings_changed()
 			s.progress = s.work * float(gf["rebuild"])
 	add_log(tr("The Great Flood strikes! %d food washed away, %d hurt, riverside structures damaged.") % [lost, hurt], "danger")
 	flags["flood_active"] = time

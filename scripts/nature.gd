@@ -180,6 +180,7 @@ func strike() -> void:
 			var s: E.Structure = targets.pick_random()
 			_flash(s.pos)
 			s.built = false
+			sim.buildings_changed()
 			s.progress = s.work * 0.5
 			sim.alert(tr(cl["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
 			_sky_fire(s.pos)
@@ -280,6 +281,7 @@ func _fire_tick(dt: float) -> void:
 				if s.built and sim.ours(s) and not scorched.has(s.id) and sim.hit_by(s, "wildfire") and s.pos.distance_to(n.pos) < float(cw["building_radius"]):
 					scorched[s.id] = true
 					s.built = false
+					sim.buildings_changed()
 					s.progress = s.work * 0.4
 					sim.alert(tr(cw["building_alert"]) % tr(D.STRUCTURES[s.type]["name"]), s.pos, "danger")
 	if burning.is_empty():
@@ -327,6 +329,7 @@ func _flood_strike() -> void:
 	for s in sim.structures:
 		if sim.ours(s) and s.built and sim.hit_by(s, "flood") and D.river_dist(s.pos) < float(cf["building_radius"]):
 			s.built = false
+			sim.buildings_changed()
 			s.progress = s.work * 0.5
 			damaged.append(tr(D.STRUCTURES[s.type]["name"]))
 	for n in sim.nodes:
@@ -436,6 +439,7 @@ func quake() -> void:
 	var fallen: Array = []
 	for s in cands.slice(0, randi_range(int(cq["collapse"][0]), int(cq["collapse"][1]))):
 		s.built = false
+		sim.buildings_changed()
 		s.progress = s.work * 0.5
 		fallen.append(tr(D.STRUCTURES[s.type]["name"]))
 		for u in sim.living():
