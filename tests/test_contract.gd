@@ -4216,7 +4216,7 @@ func test_freezing() -> void:
 	u.hp = u.max_hp * 0.3
 	sim.hz.level = "normal"
 	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + D.DAY_LEN * 0.4
-	sim.hz.set_weather("blizzard")
+	sim.hz.weather = "blizzard" # (set directly: set_weather would also send everyone in, tested below)
 	check(sim.hz.cold_can_kill(), "a winter blizzard: the cold can kill")
 	check(sim.react._start_warm({"below": 0.55, "until": 0.8}, u), "cold and hurt, they seek warmth")
 	check(u.job.get("type", "") == "warm" and u.job.get("bed", false) and u.job["to"] == hut.pos, "their hut is nearer than the fire: they go in there")
@@ -4233,6 +4233,15 @@ func test_freezing() -> void:
 	check(sim.stock["wood"] < 50.0, "the woodpile goes down")
 	sim.stock["wood"] = 0.0
 	check(sim.out_of_fuel() and not sim.near_warmth(v), "with no wood the fire is cold")
+	# a blizzard sends those out in the open in
+	sim.stock["wood"] = 50.0
+	var w = sim.living().filter(func(x): return x.role == "" and x != u and x != v)[0]
+	w.pos = sim.dry_spot(fire.pos + Vector2(600, -200))
+	w.bed_id = -1
+	w.bed_pos = null
+	sim.assign_gather(w, "wood")
+	sim.react.trigger("blizzard", {"at": D.VILLAGE})
+	check(w.job.get("type", "") == "warm" and w.resume_job.get("type", "") == "gather", "a blizzard sends a woodcutter far out to the fire, the work set aside (%s)" % w.job.get("type", ""))
 	sim.dispose()
 
 func test_perf() -> void:

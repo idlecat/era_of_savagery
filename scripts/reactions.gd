@@ -26,7 +26,7 @@ const E = preload("res://scripts/entities.gd")
 const Config = preload("res://scripts/config.gd")
 
 const VERBS := ["cover", "aid", "flee", "firefight", "defend", "warm", "shelter", "look", "startle"]
-const WHO := ["all", "able", "victim", "near", "river", "helpers"]
+const WHO := ["all", "able", "victim", "near", "river", "helpers", "exposed"]
 
 var C: Dictionary = Config.load_cfg("reactions")
 var sim
@@ -110,6 +110,7 @@ func _pick(r: Dictionary, ctx: Dictionary) -> Array:
 		"river": out = sim.living().filter(func(u): return D.river_dist(u.pos) < reach)
 		"able": out = sim.living().filter(func(u): return able(u) and u.pos.distance_to(at) < reach)
 		"helpers": out = _helpers(r, ctx)
+		"exposed": out = sim.living().filter(func(u): return not sim.in_hut(u) and not sim.near_warmth(u)) # (out in the open, away from any warmth)
 		_: out = sim.living()
 	return out.filter(func(u): return _fits(r, u))
 
