@@ -634,9 +634,21 @@ func housing(bp: Dictionary) -> int:
 ## offline persona proposes one. Either way it goes through sanitize(). `terms` are the
 ## chieftain's terms (crew_size, capacity_target, focus / target, objective / tech / group).
 ## Returns {ok, contract, notes}.
+## Why no new outpost can be founded now ("" = it can): while one of ours still has
+## rules.json contracts.settle_room beds or more to spare, people should go there first.
+func settle_block() -> String:
+	var room := int(sim.RULES["contracts"].get("settle_room", 3))
+	for p in sim.settlements():
+		if p == D.VILLAGE: continue
+		var free: int = sim.beds_at(p) - sim.residents_of(p).size()
+		if free >= room: return tr("%s still has %d beds free") % [sim.settlement_name(p), free]
+	return ""
+
 func seal(leader: E.Unit, kind := "settle", directive := "", terms := {}, reply: Variant = null) -> Dictionary:
 	if leader == null or leader.dead or leader.role != "" or not kind in ["settle", "research", "war", "seek"]:
 		return {"ok": false, "contract": null, "notes": [tr("No one free to lead it")]}
+	if kind == "settle" and settle_block() != "":
+		return {"ok": false, "contract": null, "notes": [settle_block()]}
 	if kind == "war" and not sim.ranks.may(leader, "lead_war"):
 		return {"ok": false, "contract": null, "notes": [sim.ranks.block("lead_war", leader)]}
 	var raw: Variant = reply

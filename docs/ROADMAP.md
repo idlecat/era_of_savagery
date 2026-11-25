@@ -212,3 +212,21 @@ Two things carry through every step:
 - Not yet in step 1: the plan per settlement (it needs settlement-scoped conditions,
   which step 3's tiers define, so it moves there), cached `food_cap()`/`pop_cap()`
   (step 4), the Steward placing docks on the shore.
+- **Step 2 measured** (3 seeds x 60 days, The Ford, normal; pacing.gd): 133–136 people
+  at day 60 (38 after step 1 alone, 13 before it; target 150+), 1–9 deaths in all.
+  The bed rule was the last wall: huts waited for someone homeless, and births need a
+  free bed, so the Steward now builds while fewer than {2 + 0.08 per head} beds are
+  free (`beds_free_below`). Winter is now a real pinch: the stores fall to 0–90 on
+  winter days 40 and 55 with ~130 mouths, and wood still piles to 5,000–9,000. Next
+  tuning: more fields per head and autumn storage (the step-1 measure "food days > 10
+  through winter" is not met yet). 12-day metrics after step 1 (8 seeds): steward
+  deaths 4.4 → 1.0, famine 13% → 0%, near-miss 88% → 75% (in band); walking share
+  ~65% → ~58%.
+- **Step 3 built:** tiers per settlement with names and feats (`rules.json` tiers,
+  `sim.tier_of()`, `places_summary()` in `evo.world_ctx()` and the top bar's
+  tooltip), no new outpost while one has free beds (`contracts.settle_block()`),
+  families move to an outpost as soon as home is crowded (past `crowd_at`), the
+  director's `hold_while`, the careers context capped (`words_max`). Fixed on the way:
+  the longhouse added beds no one could sleep in (`SHELTERS` is now every type with a
+  `cap`). Not yet: per-settlement Steward plans and festivals, the overpop dilemma's
+  "grow the village" option.

@@ -271,4 +271,5 @@ func world_ctx() -> Dictionary:
 		"the_ways_the_tribe_lives_by": sim.policy.in_words() if sim.policy else [],
 		"the_land": "%s: %s" % [tr(D.LAND.get("name", "")), tr(D.LAND.get("desc", ""))] if D.LAND.has("name") else "",
 		"trades_people_live_by": sim.careers.in_words() if sim.careers else {},
+		"our_settlements": sim.places_summary().slice(0, 6),
 	}.merged(sim.cult.ctx())

@@ -53,11 +53,23 @@ func mercy() -> bool: return distress or sim.time < mercy_until
 ## the tribe is in distress: then the mercy cap holds.
 func allow(kind: String) -> bool:
 	if not active() or weight(kind) <= 0.0: return true
+	if stacking(kind):
+		held.append({"kind": kind, "t": sim.time})
+		if held.size() > 20: held.pop_front()
+		return false
 	if sim.hz.signature(kind) and not mercy(): return true # (the director chose this winter: its own hardship comes, unless the tribe is broken)
 	if tension + weight(kind) <= cap() or (tension <= 0.0 and not mercy()): return true
 	held.append({"kind": kind, "t": sim.time})
 	if held.size() > 20: held.pop_front()
 	return false
+
+## Whether `kind` would stack on a trouble already under way (director.json hold_while):
+## a sickness wave or a famine holds back a raid, so one bad day can't erase ten.
+func stacking(kind: String) -> bool:
+	var hw: Dictionary = C.get("hold_while", {}).get(kind, {})
+	if hw.is_empty(): return false
+	if hw.has("sick") and sim.living().filter(func(u): return u.sick > 0).size() >= int(hw["sick"]): return true
+	return hw.has("hungry_hours") and sim.hz.hungry_hours() >= float(hw["hungry_hours"])
 
 ## allow() and, if so, note it (for hardships that don't report themselves).
 func take(kind: String) -> bool:

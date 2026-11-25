@@ -75,6 +75,8 @@ var alarm_until := -1.0
 var was_rest_time := false
 var bury_t := 0.0
 var resettle_t := 4.0
+var places := {} # "x,y" of a settlement -> {"name": its own name ("" until it has one), "tier": tier id, "day": since}
+var tier_t := 0.0
 var rot_warn_day := 0
 var oxen := 0 # the tribe's pack oxen, kept in Aurochs Pens
 var ox_care := 100.0 # 0 = neglected: they won't carry, and wander off
@@ -1352,11 +1354,97 @@ func residents_of(p: Vector2) -> Array:
 	return units.filter(func(u): return not u.dead and u.home.distance_to(p) < 60)
 
 func settlement_name(p: Vector2) -> String:
+	var pl: Dictionary = places.get(_place_key(p), {})
+	if str(pl.get("name", "")) != "": return tr(pl["name"])
 	for c in contracts.list:
 		if c.kind == "settle" and c.site == p: return contracts.settlement_label(c)
 	return tr("the village")
 
-## A crowded village sends someone to a settlement with empty beds (one at a time, by day).
+# ------------------------------------------------------------------ settlement tiers
+func _place_key(p: Vector2) -> String: return "%d,%d" % [roundi(p.x), roundi(p.y)]
+
+## Our people whose home is settlement `at` (one of settlements()).
+func people_of(at: Vector2) -> Array:
+	return living().filter(func(u): return settlement_of(u.home).distance_to(at) < 1.0)
+
+## Built buildings of ours belonging to settlement `at`.
+func buildings_of(at: Vector2) -> Array:
+	return structures.filter(func(s): return s.built and ours(s) and settlement_of(s.pos).distance_to(at) < 1.0)
+
+## What settlement `at` still lacks for tier row `t` (rules.json tiers), in words; [] = it is one.
+func tier_lacks(at: Vector2, t: Dictionary) -> Array:
+	var out: Array = []
+	var ppl := people_of(at).size()
+	if ppl < int(t.get("pop", 0)): out.append(tr("%d people (has %d)") % [int(t["pop"]), ppl])
+	var bs := buildings_of(at)
+	var beds := 0
+	for s in bs: beds += int(D.STRUCTURES[s.type].get("cap", 0))
+	if beds < int(t.get("beds", 0)): out.append(tr("%d beds (has %d)") % [int(t["beds"]), beds])
+	for need in t.get("built", []):
+		var any: Array = need if need is Array else [need]
+		if not bs.any(func(s): return s.type in any): out.append(" / ".join(any.map(func(k): return tr(D.STRUCTURES[k]["name"]) if D.STRUCTURES.has(k) else str(k))))
+	if food_cap() < int(t.get("store", 0)): out.append(tr("food stores for %d") % int(t["store"]))
+	if evo.era < int(t.get("era", 1)): out.append(tr(D.ERA_NAMES.get(int(t["era"]), "")))
+	return out
+
+## The tier settlement `at` has reached (rules.json tiers: the last row it meets) — the
+## game master's query.
+func tier_of(at: Vector2) -> String:
+	var best := "camp"
+	for t in RULES["tiers"]["list"]:
+		if tier_lacks(at, t).is_empty(): best = str(t["id"])
+	return best
+
+func _tier_row(id: String) -> Dictionary:
+	for t in RULES["tiers"]["list"]:
+		if str(t["id"]) == id: return t
+	return {}
+
+func _tier_index(id: String) -> int:
+	var l: Array = RULES["tiers"]["list"]
+	for i in l.size():
+		if str(l[i]["id"]) == id: return i
+	return 0
+
+## Every few seconds: a settlement that has grown into a new tier is named and celebrated.
+## (A tier is never lost: the name and the feat were earned.)
+func _tiers(dt: float) -> void:
+	tier_t -= dt
+	if tier_t > 0: return
+	var tc: Dictionary = RULES["tiers"]
+	tier_t = float(tc["every"])
+	for at in settlements():
+		var key := _place_key(at)
+		if not places.has(key): places[key] = {"name": "", "tier": "camp", "day": day()}
+		var pl: Dictionary = places[key]
+		var now := tier_of(at)
+		if _tier_index(now) <= _tier_index(str(pl["tier"])): continue
+		pl["tier"] = now
+		pl["day"] = day()
+		var tname: String = tr(_tier_row(now)["name"])
+		if str(pl["name"]) == "":
+			var used: Array = places.values().map(func(x): return x["name"])
+			var free: Array = tc["names"].filter(func(n): return not n in used)
+			pl["name"] = free[0] if not free.is_empty() else "%s %d" % [tc["names"][0], places.size()]
+			add_log(tr(tc["named"]) % tr(pl["name"]), "story")
+		add_log(tr(tc["log"]) % [tr(pl["name"]), tname], "story")
+		inv.feat("settlement", tr(tc["feat"]) % [tr(pl["name"]), tname], null, {"at": at})
+
+## Our settlements for a game master and the personas: name, tier, people, beds, and what
+## the next tier still needs.
+func places_summary() -> Array:
+	var out: Array = []
+	var l: Array = RULES["tiers"]["list"]
+	for at in settlements():
+		var tier := tier_of(at)
+		var nxt: Dictionary = l[mini(_tier_index(tier) + 1, l.size() - 1)]
+		var beds := 0
+		for s in buildings_of(at): beds += int(D.STRUCTURES[s.type].get("cap", 0))
+		out.append({"name": settlement_name(at), "tier": tr(_tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
+			"next": tr(nxt["name"]) if str(nxt["id"]) != tier else "", "lacks": tier_lacks(at, nxt) if str(nxt["id"]) != tier else []})
+	return out
+
+## A crowded settlement (past beds.crowd_at) sends someone to one with room (one at a time, by day).
 func _resettle(dt: float) -> void:
 	resettle_t -= dt
 	if resettle_t > 0: return
@@ -1364,10 +1452,11 @@ func _resettle(dt: float) -> void:
 	if rest_time(): return
 	var homes := settlements()
 	if homes.size() < 2: return
-	var crowded: Array = homes.filter(func(p): return residents_of(p).size() > beds_at(p))
+	var at := float(RULES["beds"]["crowd_at"]) # (crowded past this share of its beds: the same threshold births and sickness read)
+	var crowded: Array = homes.filter(func(p): return residents_of(p).size() > beds_at(p) * at)
 	if crowded.is_empty(): return
 	for p in homes:
-		if p in crowded or residents_of(p).size() >= beds_at(p): continue
+		if p in crowded or residents_of(p).size() + 1 > beds_at(p) * at: continue
 		for from in crowded:
 			var movers: Array = residents_of(from).filter(func(u): return u.title == "" and spare_hand(u) >= 0)
 			if movers.is_empty(): continue
@@ -1633,7 +1722,7 @@ func end_errand(u: E.Unit) -> void:
 		set_job(u, {})
 
 # ------------------------------------------------------------------ night rest
-const SHELTERS := ["hut", "large_hut", "granary"] # everything that houses people
+var SHELTERS: Array = D.STRUCTURES.keys().filter(func(k): return int(D.STRUCTURES[k].get("cap", 0)) > 0) # everything that houses people (structures.json `cap`: huts, the longhouse, the granary)
 var BED_FAR: float = float(RULES["beds"]["far"]) # further than this from a bed, people camp where they are
 
 ## Sleeping hours: a little inside the dark part of the day.
@@ -2138,6 +2227,7 @@ func tick(dt: float) -> void:
 	_burials(dt)
 	_herd(dt)
 	_resettle(dt)
+	_tiers(dt)
 	_finds_tick(dt)
 	hunt.update(dt)
 	for u in units: update_unit(u, dt)

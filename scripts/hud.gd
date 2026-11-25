@@ -676,7 +676,7 @@ func _refresh_top() -> void:
 	top_stats.text = tr("[color=#ffd36b]Day %d[/color] %s · [color=#e6c890]%s[/color]\n[color=%s]Food %d/%d[/color]   [color=#d8b483]Wood %d[/color]   [color=#c8c8d0]Stone %d[/color]   [color=#c8a8ff]Lore %d[/color]   Pop %d/%d   [color=#ffb0e0]Devotion %d%%[/color]   [color=#b6f28a]Explored %d%%[/color]   [color=#9fd0ff]LLM calls: %d[/color]") % [
 		sim.day(), phase, tr(D.ERA_NAMES[sim.evo.era]), "#ff6b6b" if sim.stock["food"] > sim.food_cap() else "#f0a07a", sim.stock["food"], sim.food_cap(), sim.stock["wood"], sim.stock["stone"], sim.stock["lore"], sim.living().size(), sim.pop_cap(),
 		sim.devotion, sim.explored_pct(), sim.llm_calls]
-	top_stats.tooltip_text = tr("LLM node: %s") % llm.label() + "\n" + tr("Mood: %s (%d). Work goes %d%% faster or slower with it. Festivals, art, painted homes and treasures lift it; hunger, sickness and deaths lower it.") % [sim.folk.mood_word(), roundi(sim.folk.mood), roundi(absf(sim.folk.work_mult() - 1.0) * 100)] + "\n" + tr("Food %d of %d storage: the village holds %d, each Granary %d more. Food over the limit rots fast.") % [sim.stock["food"], sim.food_cap(), sim.FOOD_STORE_BASE, int(D.STRUCTURES["granary"].get("store", 0))]
+	top_stats.tooltip_text = tr("LLM node: %s") % llm.label() + "\n" + tr("Mood: %s (%d). Work goes %d%% faster or slower with it. Festivals, art, painted homes and treasures lift it; hunger, sickness and deaths lower it.") % [sim.folk.mood_word(), roundi(sim.folk.mood), roundi(absf(sim.folk.work_mult() - 1.0) * 100)] + "\n" + tr("Food %d of %d storage: the village holds %d, each Granary %d more. Food over the limit rots fast.") % [sim.stock["food"], sim.food_cap(), sim.FOOD_STORE_BASE, int(D.STRUCTURES["granary"].get("store", 0))] + _places_tip()
 	var extra: Array = [] # stocks that exist once their find is known
 	var mc: String = "#b6f28a" if sim.folk.mood >= 60 else ("#ffd36b" if sim.folk.mood >= 40 else "#ff8a7a")
 	extra.append("[color=%s]%s[/color]" % [mc, tr("Mood %d") % roundi(sim.folk.mood)])
@@ -1008,7 +1008,8 @@ func _refresh_left_content() -> void:
 	var child: bool = u.role == "child"
 	if child: sheet_text.text = (tr("[color=#ffd6f0]A child of the tribe: plays, watches and learns. Comes of age in %d days.[/color]\n") % sim.folk.days_to_grow(u)) + sheet_text.text
 	var lead_why := _lead_block(u)
-	_why_button(sheet_contract_btn, tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…"), "" if on_contract else lead_why, on_contract)
+	var settle_why: String = lead_why if lead_why != "" else sim.contracts.settle_block()
+	_why_button(sheet_contract_btn, tr("On contract — executing blueprint") if on_contract else tr("Assign Task Contract…"), "" if on_contract else settle_why, on_contract)
 	sheet_scout_btn.disabled = on_contract or child
 	var wisdom_why: String = lead_why if lead_why != "" or not sim.evo.candidates().is_empty() else tr("nothing new within reach")
 	_why_button(sheet_research_btn, tr("Seek new wisdom…"), wisdom_why)
@@ -2801,3 +2802,12 @@ func _show_ending(id: String) -> void:
 	var r: Dictionary = await llm.saga(ctx, L.saga_offline(ctx))
 	if modal == null or modal_token != token: return
 	saga.text = tr("[color=#e6b8ff][b]%s:[/b][/color] %s\n[color=#8a9aa8](%s)[/color]") % [teller.get("name", tr("An elder")), r["saga"], r.get("source", "")]
+
+
+## The settlements for the top bar's tooltip: name, tier, people and beds, and what the next tier needs.
+func _places_tip() -> String:
+	var out := ""
+	for p in sim.places_summary():
+		out += "\n" + tr("%s (%s): %d people, %d beds") % [p["name"], p["tier"], p["people"], p["beds"]]
+		if p["next"] != "": out += " — " + tr("a %s needs %s") % [p["next"], ", ".join(p["lacks"])]
+	return out

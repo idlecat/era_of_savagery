@@ -133,7 +133,7 @@ func _at(where: Variant, c, vars: Dictionary = {}) -> Vector2:
 ## configs in config/ may use them all).
 const ACTIONS := ["event", "log", "arg", "kind", "alert", "at", "level", "spawn", "offsets", "give", "reveal", "r", "flag",
 	"mood", "devotion", "insight", "culture", "invent", "boon", "remember", "who", "impact", "xp", "panic", "weather",
-	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "guests",
+	"react", "feat", "tale", "join", "great_flood", "open", "hurt", "chosen", "festival", "births", "newcomers", "from", "guests",
 	"relation", "reason", "clan", "raid", "raid_delay_days", "vassal", "relation_min", "relation_max", "clear_treaties",
 	"grudge", "peace_days", "clan_pop", "sound", "morale", "bond", "with", "say", "depart", "prepare", "slaughter", "ledger", "wield", "arms_xp", "merge", "career"]
 

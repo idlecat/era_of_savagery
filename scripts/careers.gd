@@ -261,8 +261,23 @@ func summary() -> Dictionary:
 	return {"held": hold, "rising": rising, "open": open, "places": places(), "used": held()}
 
 ## Who lives by which trade, in words ({name: career name}): for the LLM prompts (evo.world_ctx).
+## The trades people live by, for the personas (evo.world_ctx): each holder by name while
+## the tribe is small; past C["words_max"] holders, how many live by each trade and its
+## most skilled holder, so a city's prompt stays short.
 func in_words() -> Dictionary:
 	var out := {}
-	for u in adults():
-		if u.career != "": out[tr(u.name)] = tr(title(u))
+	var holders: Array = adults().filter(func(u): return u.career != "")
+	if holders.size() <= int(C.get("words_max", 12)):
+		for u in holders: out[tr(u.name)] = tr(title(u))
+		return out
+	for u in holders:
+		var k: String = tr(str(def(u.career)["plural"]))
+		var d: Dictionary = out.get(k, {"count": 0, "best": "", "_lv": -1})
+		d["count"] += 1
+		var lv: int = u.lv(str(def(u.career)["skill"]))
+		if lv > int(d["_lv"]):
+			d["_lv"] = lv
+			d["best"] = tr(u.name)
+		out[k] = d
+	for k in out: out[k].erase("_lv")
 	return out

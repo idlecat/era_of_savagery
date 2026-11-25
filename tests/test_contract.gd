@@ -65,7 +65,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_band_hunt, test_back_to_the_kill, test_worked_fields, test_shifts, test_growth, test_tiers, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4139,6 +4139,65 @@ func test_growth() -> void:
 		var view: Dictionary = sim.event_def("wanderers")
 		sim.resolve_event("wanderers", 0)
 		check(view.get("options", []).size() == 3 and sim.living().size() == n1 + w, "welcomed, they join (%d)" % w)
+	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
+func test_tiers() -> void:
+	print("\n== Settlements grow a tier and a name (city_proposal step 3) ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	check("longhouse" in sim.SHELTERS and "granary" in sim.SHELTERS and not "bonfire" in sim.SHELTERS, "everything with beds shelters people, the longhouse too")
+	check(sim.tier_of(D.VILLAGE) == "camp", "the tribe starts as a camp")
+	var ps: Array = sim.places_summary()
+	check(ps.size() == 1 and ps[0]["next"] != "" and not ps[0]["lacks"].is_empty(), "places_summary() says what the next tier lacks (%s)" % str(ps[0]["lacks"]))
+	sim.research("farming")
+	for i in 4:
+		var h = sim.add_structure("large_hut", sim.dry_spot(D.VILLAGE + Vector2(-260 + i * 70, 220)))
+		sim.complete_structure(h, null)
+	var f = sim.add_structure("farm_plot", sim.dry_spot(D.VILLAGE + Vector2(200, 240)))
+	sim.complete_structure(f, null)
+	sim.folk.add_family(6)
+	sim.folk.add_family(6)
+	var n0: int = sim.inv.feats.size()
+	sim.tier_t = 0.0
+	sim._tiers(0.05)
+	check(sim.tier_of(D.VILLAGE) == "village", "with 20 people, beds and a field it is a village (%s)" % str(sim.tier_lacks(D.VILLAGE, sim.RULES["tiers"]["list"][1])))
+	check(sim.inv.feats.size() == n0 + 1 and sim.inv.feats[-1]["kind"] == "settlement", "rising a tier is an achievement")
+	var nm: String = sim.settlement_name(D.VILLAGE)
+	check(nm == sim.RULES["tiers"]["names"][0], "and the settlement takes a name (%s)" % nm)
+	sim.tier_t = 0.0
+	sim._tiers(0.05)
+	check(sim.inv.feats.size() == n0 + 1, "once")
+	check(sim.evo.world_ctx()["our_settlements"][0]["name"] == nm, "the personas hear of it by name")
+	# careers in the personas' words stay short in a big tribe
+	sim.careers.on = true
+	var grown: Array = sim.living().filter(func(u): return u.role == "")
+	for u in grown: u.career = "woodcutter"
+	var words: Dictionary = sim.careers.in_words()
+	check(words.size() == 1 and words.values()[0]["count"] == grown.size(), "past words_max holders, counts per trade (%s)" % str(words.keys()))
+	for u in grown: u.career = ""
+	# no new outpost while one of ours stands half empty
+	var c = E.Contract.new()
+	c.id = 9999
+	c.kind = "settle"
+	c.status = "done"
+	c.site = sim.dry_spot(D.VILLAGE + Vector2(1400, 0))
+	c.leader_id = grown[0].id
+	sim.contracts.list.append(c)
+	for i in 2:
+		var h = sim.add_structure("hut", sim.dry_spot(c.site + Vector2(i * 50, 0)))
+		sim.complete_structure(h, null)
+	check(sim.contracts.settle_block() != "", "an outpost with empty beds holds back the next one (%s)" % sim.contracts.settle_block())
+	var sealed: Dictionary = sim.contracts.seal(grown[1], "settle")
+	check(not sealed["ok"], "so a settle contract can't be sealed")
+	# the director holds a raid back while a sickness wave is on
+	sim.director.on = true
+	sim.hz.level = "normal"
+	sim.director.tension = 0.0
+	check(sim.director.allow("clan_raid"), "a raid may come on a quiet day")
+	for u in grown.slice(0, 3): u.sick = 1.0
+	check(not sim.director.allow("clan_raid") and sim.director.stacking("clan_raid"), "not while three are sick")
+	sim.hz.level = "off"
 	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
 	sim.dispose()
 

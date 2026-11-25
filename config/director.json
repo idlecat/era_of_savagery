@@ -16,6 +16,7 @@
  "winter": {"repeat": 0.3, "rich_food_at": 0.6,
   "mercy": {"mild": 3.0, "white": 0.5, "lean": 0.5},
   "rich": {"white": 1.5, "lean": 1.5, "wolf": 1.3}},
+ "hold_while": {"_doc": "Hardships held back while another trouble is on, so they don't stack into a day that erases ten (director.allow): per kind, held while at least `sick` people are ill or the camp has gone hungry `hungry_hours` game hours.", "clan_raid": {"sick": 3, "hungry_hours": 3}, "tiger_raid": {"sick": 3, "hungry_hours": 3}, "wolves": {"sick": 4}},
  "same_secs": 30,
  "retry": 30,
  "distress": {"food_per_head": 0.5, "deaths": 2, "death_days": 2, "mood": 20, "check_every": 5},

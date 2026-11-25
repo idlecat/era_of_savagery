@@ -66,6 +66,20 @@
   "low_mood": 35,
   "low_mood_mult": 0.6
  },
+ "tiers": {
+  "_doc": "Settlement tiers (sim.tier_of(at), checked every `every` s for each of our settlements): the last row of `list` whose needs a settlement meets. Its people are those whose home is there; `pop`: at least this many; `beds`: at least this many beds; `built`: building types it must have (a list in the list: any one of them); `store`: the tribe's food storage at least; `era`: the age. A settlement rising to a tier other than the first is named (the next free name of `names`) and celebrated (an achievement, `feat`); `log` tells the chronicle (the place, the tier), `named` when it takes its name.",
+  "every": 5,
+  "list": [
+   {"id": "camp", "name": "Camp"},
+   {"id": "village", "name": "Village", "pop": 20, "beds": 16, "built": ["farm_plot", ["bonfire", "council_ring"]]},
+   {"id": "town", "name": "Town", "pop": 150, "beds": 140, "built": ["longhouse", "granary", ["totem_shrine", "temple", "grand_altar"]], "era": 2},
+   {"id": "city", "name": "City", "pop": 500, "beds": 480, "built": [["temple", "grand_altar"], "stone_wall", "trading_post"], "store": 3000, "era": 3}
+  ],
+  "names": ["Willow Ford", "Ash Hollow", "Redbank", "Elk Meadow", "Stonebrook", "Heron Bend", "Oak Rise", "Bear Crossing", "Long Reeds", "Lark Field", "Fox Hill", "Deep Pool"],
+  "feat": "%s becomes a %s",
+  "log": "%s has grown into a %s.",
+  "named": "The people give their settlement a name: %s."
+ },
  "migration": {
   "_doc": "Families who come to live with the tribe (folk.add_family, the story action newcomers). Each day a family may move to us from an ally or a vassal (clan_chance) while we have free_beds and the clan keeps more than clan_keeps people. Wanderers: on a morning, with at least min_pop people, the mood at mood or better and free_beds beds free, with chance `chance`, count [min, max] wanderers ask to stay (dilemma 'wanderers'). Newcomers have skills up to skill_max and lift the mood by `mood`; at most most_at_once in one go.",
   "clan_chance": 0.35,
@@ -407,7 +421,8 @@
   }
  },
  "contracts": {
-  "_doc": "Task Contracts. titles: the name players read for a contract of each kind (plan_id is an internal id the leader picks, never shown); %s is the leader (settle), the wisdom sought (research), the enemy clan (war) or what is sought (seek). Read by contracts.title().",
+  "_doc": "Task Contracts. settle_room: no new outpost while one of ours has this many beds or more to spare (contracts.settle_block()). titles: the name players read for a contract of each kind (plan_id is an internal id the leader picks, never shown); %s is the leader (settle), the wisdom sought (research), the enemy clan (war) or what is sought (seek). Read by contracts.title().",
+  "settle_room": 3,
   "titles": {
    "settle": "%s's Outpost",
    "research": "Seeking %s",

@@ -112,7 +112,7 @@ When a beast or raider strikes one of your people, the game drops into **emergen
 
 ## The director (`director.gd`)
 
-The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death) raises a tension score that eases day by day, and a new storm, raid, sickness or quake waits while the tribe is still reeling from the last ones: Normal lets about two hardships pile up, Harsh nearly twice that. A tribe in distress (out of food, losing people, in despair) gets a breath, and now and then a hand: a friendly clan sends food. The numbers are in `config/director.json`; `tools/pacing.gd` plays headless games and reports the rhythm.
+The hardships are paced. Everything that goes wrong (a blizzard, a raid, a death) raises a tension score that eases day by day, and a new storm, raid, sickness or quake waits while the tribe is still reeling from the last ones: Normal lets about two hardships pile up, Harsh nearly twice that. A tribe in distress (out of food, losing people, in despair) gets a breath, and now and then a hand: a friendly clan sends food. Raids, tiger raids and wolf packs also wait while a sickness wave or a famine is on, so troubles don't stack into one day that erases ten (`hold_while`). The numbers are in `config/director.json`; `tools/pacing.gd` plays headless games and reports the rhythm.
 
 ## Saving
 
@@ -186,8 +186,9 @@ Every sound is made in code from a recipe in `config/audio.json`; there are no s
 
 - **Distance costs:** every step burns food, half again while carrying a load (`WALK_HUNGER`): a villager walking all day gets about 70% hungrier. Loads also slow the walk home (−15%, or −5% with a pack ox). Gatherers weigh distance more heavily when choosing a tree, bush or seam.
 - **Drop-off points:** loads go to the nearest of our settlements, and food also to a Granary, so building near the work pays off.
-- **Settlements:** every finished settlement contract becomes a home. Its crew live there, take local jobs from the Steward, and sleep in its huts. When the village has more people than beds and a settlement has empty ones, someone moves across (one at a time, by day, never past its beds), and the chronicle records it. People sleep in a bed near their own home first.
-- **Shelters:** huts, large huts and granaries all hold sleepers up to their housing size. Whoever doesn't fit sleeps on a hide bedroll by the fire.
+- **Settlements:** every finished settlement contract becomes a home. Its crew live there, take local jobs from the Steward, and sleep in its huts. When a settlement is crowded (four in five of its beds taken) and another has room, someone moves across (one at a time, by day), and the chronicle records it. People sleep in a bed near their own home first. No new outpost can be founded while one of ours still has three beds or more to spare: the people go there first.
+- **Camp, village, town, city:** each settlement grows through tiers by its people, beds and buildings: a **village** has 20 people, 16 beds, a field and a fire; a **town** 150 people, a longhouse, a granary and a shrine in the second age; a **city** 500 people, a temple, a stone wall and a trading post in the third. The first time a settlement rises a tier it takes a name of its own (Willow Ford, Ash Hollow...) and it is an achievement; the clans' and leaders' words use the name. The top bar's tooltip lists the settlements and what each still needs (`config/rules.json` tiers).
+- **Shelters:** huts, large huts, longhouses and granaries all hold sleepers up to their housing size. Whoever doesn't fit sleeps on a hide bedroll by the fire.
 
 ## The dead
 
