@@ -2648,7 +2648,7 @@ func _update_vice(dt: float) -> void:
 			elif want != "": choice = want
 			elif stock["food"] >= food_cap() * float(sw["full"]) and steward_policy != "lore": choice = "wood" # the stores are full
 			elif stock["food"] < pop * float(sw["food_per_head"]) or steward_policy == "food" or (hz.season_idx() == hz.AUTUMN and stock["food"] < food_cap() * float(sw.get("autumn_fill", 0.0))): choice = "food" # (autumn: the harvest rush fills the stores for winter)
-			elif steward_policy == "wood" or stock["wood"] < float(sw["low_wood"]): choice = "wood"
+			elif steward_policy == "wood" or stock["wood"] < story.count(sw["low_wood"]): choice = "wood"
 			elif steward_policy == "lore": choice = "lore"
 			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
 			else: choice = "food" if randf() < 0.5 else "wood"
