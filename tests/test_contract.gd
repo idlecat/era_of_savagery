@@ -596,6 +596,14 @@ func test_translations() -> void:
 		if k != "" and not ZH.STRINGS.has(k) and k not in missing: missing.append(k)
 	for k in missing: print("   missing: ", k)
 	check(missing.is_empty(), "all %d-ish UI/game strings have Chinese text (%d missing)" % [ZH.STRINGS.size(), missing.size()])
+	# GDScript % is positional: a translation must keep its placeholders' kinds in the same order
+	var ph := RegEx.create_from_string("%[-+0-9.]*([dsf%])")
+	var order := func(t: String) -> String: return "".join(ph.search_all(t).map(func(m): return m.get_string(1)))
+	var swapped: Array = []
+	for k in ZH.STRINGS:
+		if order.call(k) != order.call(str(ZH.STRINGS[k])): swapped.append(k)
+	for k in swapped: print("   placeholder order: ", k)
+	check(swapped.is_empty(), "every translation keeps its placeholders in the same order (%d out of order)" % swapped.size())
 	I18N.setup("zh")
 	check(I18N.t("Wooden Palisade") == "木栅栏", "TranslationServer switches to Chinese")
 	check(I18N.act("Building Hut") == "建造小屋", "activity strings translate for display")

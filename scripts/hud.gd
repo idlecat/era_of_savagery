@@ -384,7 +384,8 @@ func _build_top(root: Control) -> void:
 		h.add_child(b)
 	h.add_child(_button("Council", open_council, "P: the tribe's standing policies (way of life, the forest, the hunt, the spirits, what to seek, the clans)"))
 	h.add_child(_button("Wisdom & Culture", _open_tech, "T: what the tribe knows, how it is learning, and who it is becoming"))
-	h.add_child(_button("Legacy", _open_legacy, "The three paths to victory: conquest, unity and wisdom"))
+	h.add_child(_button("Legacy", _open_legacy, "The paths to victory: conquest, unity, wisdom and the city"))
+	h.add_child(_button("Settlements", open_settlements, "Our camp, villages, towns and city: their people, beds and what each still needs"))
 	h.add_child(_button("Achievements", open_achievements, "The tribe's inventions and everything it did first"))
 	if sim.cult.on(): h.add_child(_button("Heritage", open_heritage, "Your people's history and legends: tools, foods, people, happenings and folk tales"))
 	h.add_child(_button("LLM Settings", _open_settings))
@@ -2564,9 +2565,29 @@ func _open_legacy() -> void:
 	v.add_child(r)
 	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
 
+## Our settlements: each one's name and tier, people and beds, what the next tier still
+## needs, and a button that takes the camera there (sim.places_summary(), as a game master reads it).
+func open_settlements() -> void:
+	var was_paused: bool = sim.paused
+	sim.paused = true
+	var v := _open_modal(tr("SETTLEMENTS · Day %d") % sim.day(), 700)
+	for p in sim.places_summary():
+		var row := HBoxContainer.new()
+		var r := _rich(0, true)
+		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var s := tr("[color=#ffd36b][b]%s[/b][/color] — %s · %d people, %d beds") % [p["name"], p["tier"], p["people"], p["beds"]]
+		if p["next"] != "": s += "\n" + tr("[color=#a89878]To become a %s: %s[/color]") % [p["next"], ", ".join(p["lacks"])]
+		else: s += "\n" + tr("[color=#b6f28a]It has grown as great as a settlement can.[/color]")
+		r.text = s
+		row.add_child(r)
+		var at: Vector2 = Vector2(p["at"][0], p["at"][1])
+		row.add_child(_button("Show", func(): _close_modal(); sim.paused = was_paused; world.focus_on(at)))
+		v.add_child(row)
+	v.add_child(_closer(_button("Close", func(): _close_modal(); sim.paused = was_paused)))
+
 const FEAT_KINDS := {"invention": ["Invention", "#9ff0c8"], "wisdom": ["Wisdom", "#c8a8ff"], "find": ["Find", "#ffd36b"],
 	"landmark": ["Landmark", "#ffe6a8"], "contact": ["Clan", "#9fd0ff"], "tradition": ["Tradition", "#ffd6a0"],
-	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"], "challenge": ["Challenge", "#ffd36b"], "career": ["Trade", "#bfe39a"],
+	"era": ["Age", "#ffb36b"], "masterpiece": ["Masterpiece", "#f0b8e0"], "rank": ["Rank", "#ffd36b"], "outpost": ["Outpost", "#b6f28a"], "feud": ["Feud", "#ff9b7a"], "challenge": ["Challenge", "#ffd36b"], "career": ["Trade", "#bfe39a"], "settlement": ["Settlement", "#b6f28a"],
 	"story": ["Happening", "#e8c8a0"], "tale": ["Tale", "#e8c070"], "hero": ["Hero", "#ffd36b"]}
 
 ## The tribe's achievements: everyday inventions (known, and hints of those still to come)

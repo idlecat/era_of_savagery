@@ -124,6 +124,7 @@ func saga_ctx(path: String) -> Dictionary:
 		"neighbours": clans, "great_deeds": deeds,
 		"treasures": sim.folk.treasures.map(func(t): return tr(t["name"]) + " (" + tr(t["maker"]) + ")"),
 		"mood_of_the_tribe": sim.folk.mood_word(),
+		"our_settlements": sim.places_summary().slice(0, 6).map(func(p): return {"name": p["name"], "is_a": p["tier"], "people": p["people"]}),
 		"storyteller": {"name": tr(teller.name), "epithet": tr(teller.epithet), "fallen": teller.dead} if teller else {},
 	}.merged(sim.cult.ctx()) # (the culture, its tales and great ones, if the game has one)
 
@@ -133,6 +134,12 @@ func saga_offline(ctx: Dictionary) -> String:
 	var pd: Dictionary = ending(str(ctx["path"]))
 	var opening: String = tr(pd["opening"])
 	lines.append(opening)
+	var homes: Array = ctx.get("our_settlements", [])
+	if not homes.is_empty() and str(sim.place_of(D.VILLAGE).get("name", "")) != "": # (a home that earned its name is named)
+		var h: Dictionary = homes[0]
+		var line: String = tr(C["home_line"]) % [h["name"], str(h["is_a"]).to_lower(), int(h["people"])]
+		if homes.size() > 1: line += " " + tr(C["places_line"]) % (homes.size() - 1)
+		lines.append(line)
 	for d in ctx["great_deeds"].slice(0, 6):
 		lines.append(tr("%s %s.") % [d["who"], d["deed"]])
 	var fates: Array = ctx["neighbours"].map(func(n): return tr("the %s (%s)") % [n["clan"], n["fate"]])

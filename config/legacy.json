@@ -1,5 +1,5 @@
 {
- "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id) or a settlement of a tier (tier: rules.json tiers id), or every settlement joined to the village by road (roads_linked: the share of the way paved with `road` or better). count people / held_winter (the most kept alive through a whole winter) against `of`. text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
+ "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id) or a settlement of a tier (tier: rules.json tiers id), or every settlement joined to the village by road (roads_linked: the share of the way paved with `road` or better). count people / held_winter (the most kept alive through a whole winter) against `of`. text: the event, opening: the first line of the offline saga. See docs/CONFIG.md. home_line / places_line: the offline saga's words for the tribe's home (its name, tier, people) and its other settlements.",
  "paths": {
   "conquest": {
    "title": "Victory by Conquest",
@@ -143,5 +143,7 @@
    "desc": "Start a new chronicle.",
    "result": "A new tribe gathers around a new fire."
   }
- }
+ },
+ "home_line": "They raised %s, a %s of %d souls.",
+ "places_line": "Beyond it stood %d other settlements of theirs."
 }

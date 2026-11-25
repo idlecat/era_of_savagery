@@ -1640,7 +1640,7 @@ func places_summary() -> Array:
 		var nxt: Dictionary = l[mini(_tier_index(tier) + 1, l.size() - 1)]
 		var beds := 0
 		for s in buildings_of(at): beds += int(D.STRUCTURES[s.type].get("cap", 0))
-		out.append({"index": i, "name": settlement_name(at), "tier": tr(tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds,
+		out.append({"index": i, "name": settlement_name(at), "tier": tr(tier_row(tier)["name"]), "people": people_of(at).size(), "beds": beds, "at": [roundi(at.x), roundi(at.y)],
 			"next": tr(nxt["name"]) if str(nxt["id"]) != tier else "", "lacks": tier_lacks(at, nxt) if str(nxt["id"]) != tier else []})
 	return out
 

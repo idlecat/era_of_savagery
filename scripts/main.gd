@@ -644,6 +644,7 @@ func _debug_shot(args: Dictionary) -> void:
 			world.cam.zoom = Vector2(float(args.get("zoom", "0.9")), float(args.get("zoom", "0.9")))
 			world.focus_on(sim.D.VILLAGE + Vector2(0, 60))
 			if args.has("select"): world.select_only(sim.unit_by_name(args["select"])) # (--select=Name: a picked person)
+			if args.has("panel"): hud.open_settlements() # (--panel: the Settlements panel open)
 			if args.has("pick"): # (--pick=longhouse: a picked building, the camera on it)
 				for st in sim.structures:
 					if st.type == args["pick"] and st.built:
