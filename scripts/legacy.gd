@@ -41,6 +41,9 @@ func progress() -> Array:
 ## (at least n), {built: structure} or {tier: a settlement tier}.
 func _cond(c: Dictionary) -> Dictionary:
 	if c.has("built"): return {"text": sim.story.text(c["text"]), "done": sim.struct_exists(c["built"])}
+	if c.has("roads_linked"): # every settlement of ours joined to the village by road (that share of the way paved)
+		var lk: Array = sim.roads.linked(float(c["roads_linked"]), str(c.get("road", "packed")))
+		return {"text": sim.story.text(c["text"], {"n": lk[0], "of": lk[1]}), "done": lk[0] == lk[1]}
 	if c.has("tier"): # a settlement of ours of this tier (rules.json tiers)
 		return {"text": sim.story.text(c["text"]), "done": sim.settlements().any(func(p): return sim.tier_of(p) == str(c["tier"]))}
 	var R = sim.rivals

@@ -4685,7 +4685,7 @@ func test_city_path() -> void:
 	print("\n== The city's victory: a thousand held through a winter (city_proposal step 6) ==")
 	var sim = _new_sim()
 	var city: Array = sim.legacy.progress().filter(func(p): return p["path"] == "city")
-	check(city.size() == 1 and city[0]["conds"].size() == 3 and not city[0]["conds"].any(func(c): return c["done"]), "the city path is listed, nothing done yet")
+	check(city.size() == 1 and city[0]["conds"].size() == 4 and not city[0]["conds"].any(func(c): return c["done"] and not c["text"].contains("road")), "the city path is listed, nothing done yet")
 	sim.hz.level = "normal"
 	var n: int = sim.living().size()
 	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 3 + 5.0 # (winter)
@@ -4699,6 +4699,18 @@ func test_city_path() -> void:
 	check(sim.legacy.held_winter == n, "spring: the tribe held %d through the winter" % sim.legacy.held_winter)
 	var conds: Array = sim.legacy.progress().filter(func(p): return p["path"] == "city")[0]["conds"]
 	check(conds[1]["text"].contains(str(n)) and not conds[1]["done"], "the condition counts them against a thousand (%s)" % conds[1]["text"])
+	# every settlement joined to the city by road
+	var c = E.Contract.new()
+	c.id = 9997
+	c.kind = "settle"
+	c.status = "done"
+	c.site = sim.dry_spot(D.VILLAGE + Vector2(900, 300))
+	sim.contracts.list.append(c)
+	check(sim.roads.linked(0.8) == [0, 1], "an outpost with no road to it is not joined")
+	for k in sim.roads.plan(D.VILLAGE, c.site, 2): sim.roads.level[k] = 2
+	check(sim.roads.share_paved(D.VILLAGE, c.site) >= 0.8 and sim.roads.linked(0.8) == [1, 1], "a packed road along the way joins it (%.0f%% paved)" % (sim.roads.share_paved(D.VILLAGE, c.site) * 100.0))
+	var rc: Dictionary = sim.legacy.progress().filter(func(p): return p["path"] == "city")[0]["conds"][3]
+	check(rc["done"] and rc["text"].contains("1 / 1"), "and the city path's road condition is met (%s)" % rc["text"])
 	sim.dispose()
 
 func test_outside_first() -> void:

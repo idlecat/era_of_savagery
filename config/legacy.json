@@ -1,5 +1,5 @@
 {
- "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id) or a settlement of a tier (tier: rules.json tiers id). count people / held_winter (the most kept alive through a whole winter) against `of`. text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
+ "_doc": "The endgames: ways to win (all conditions of a path met) and the defeat. A condition counts something against all of it (count: vassals | allies | techs, text [key, 'n', 'of']) or needs a building (built: structure id) or a settlement of a tier (tier: rules.json tiers id), or every settlement joined to the village by road (roads_linked: the share of the way paved with `road` or better). count people / held_winter (the most kept alive through a whole winter) against `of`. text: the event, opening: the first line of the offline saga. See docs/CONFIG.md.",
  "paths": {
   "conquest": {
    "title": "Victory by Conquest",
@@ -59,7 +59,7 @@
   },
   "city": {
    "title": "Victory of the City",
-   "desc": "A thousand kept warm through the hungry dark.",
+   "desc": "A thousand kept warm through the hungry dark, and every settlement joined by road.",
    "conds": [
     {
      "tier": "city",
@@ -77,6 +77,15 @@
     {
      "built": "grand_altar",
      "text": "A Grand Altar raised"
+    },
+    {
+     "roads_linked": 0.8,
+     "road": "packed",
+     "text": [
+      "Settlements joined to the city by road: %d / %d",
+      "n",
+      "of"
+     ]
     }
    ],
    "text": "The snow lies on a thousand roofs, and under every one a fire. What began as a bonfire by the ford is a city now, and it has seen the hungry dark through.",

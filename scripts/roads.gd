@@ -166,6 +166,32 @@ func busiest_trails(at: Vector2, reach: float, n: int, below: int) -> Array:
 	return ks
 
 ## For a game master: how much of each level there is.
+## How much of the way from `a` to `b` (the route people walk, over the fords) is road of
+## level `min_lv` or better: 0..1. River crossings count as on the road (no road is laid in
+## the water). The victory paths' "roads_linked" and a game master read it.
+func share_paved(a: Vector2, b: Vector2, min_lv: int = 2) -> float:
+	if level.is_empty(): return 0.0
+	var pts: Array = [a] + D.route(a, b)
+	var on := 0
+	var all := 0
+	for i in pts.size() - 1:
+		var p0: Vector2 = pts[i]
+		var p1: Vector2 = pts[i + 1]
+		var steps := maxi(1, int(p0.distance_to(p1) / (sim.WEAR_CELL * 0.5)))
+		for s in steps + 1:
+			var p: Vector2 = p0.lerp(p1, float(s) / steps)
+			all += 1
+			if D.in_river(p) or level_at(p) >= min_lv: on += 1
+	return float(on) / maxf(1.0, float(all))
+
+## Our settlements joined to the village by road (share_paved() at least `share`, of level
+## `lv_id`): [joined, of the others].
+func linked(share: float, lv_id := "packed") -> Array:
+	var lv := maxi(1, index_of(lv_id))
+	var others: Array = sim.settlements().filter(func(p): return p != D.VILLAGE)
+	var n := others.filter(func(p): return share_paved(D.VILLAGE, p, lv) >= share).size()
+	return [n, others.size()]
+
 func summary() -> Dictionary:
 	var counts := {}
 	for k in level.size():
