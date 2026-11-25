@@ -878,6 +878,7 @@ func draw_glow() -> void:
 	for u in sim.units:
 		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
 	_draw_fireflies()
+	_draw_hearths()
 
 func _halo(c: Vector2, r: float, a: float) -> void:
 	ci.draw_texture_rect(light_tex, Rect2(c - Vector2(r, r * 0.75), Vector2(r * 2, r * 1.5)), false, Color(1.0, 0.62, 0.3, a))
@@ -1111,6 +1112,46 @@ func _draw_weather() -> void:
 		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
 
 # ------------------------------------------------------------ ambient life
+## Where firelight shows through a home's door (and an era-3 longhouse's windows), on the
+## screen, from the baked models (art_baker.gd: model +z faces world +y, which is down-left
+## on screen): [door, ground in front of it, windows...]. A sprite pixel is about a world unit.
+func _door_lights(s) -> Array:
+	var big: bool = s.type == "large_hut"
+	var r := 27.0 if big else 20.0
+	var b := iso(s.pos)
+	match clampi(s.style, 1, 3):
+		1:
+			var d := iso(s.pos + Vector2(0, r * 0.8)) - Vector2(0, 5)
+			return [d, d + Vector2(-6, 5)]
+		2:
+			var d := iso(s.pos + Vector2(1, 1).normalized() * (r + 0.5)) - Vector2(0, 5)
+			return [d, d + Vector2(0, 7)]
+		_:
+			var d := iso(s.pos + Vector2(0, r * 0.62)) - Vector2(0, 9)
+			var along := (iso(s.pos + Vector2(r * 0.55, r * 0.62)) - iso(s.pos + Vector2(0, r * 0.62)))
+			return [d, d + Vector2(-5, 9), d + along - Vector2(0, 3), d - along - Vector2(0, 3)]
+	return [b]
+
+## Homes lit from within at dusk and at night while their people are in (additive, Glow layer):
+## a warm flickering doorway, a pool of light on the ground before it, era-3 windows.
+func _draw_hearths() -> void:
+	if not sim.has_tech("fire"): return
+	var dusk := sin(_part_k("dusk") * PI) if sim.is_day_part("dusk") else 0.0
+	var k := maxf(dusk * 0.7, sim.night_amt)
+	if k < 0.1: return
+	var home := {} # hut id -> someone inside
+	for u in sim.units:
+		if sim.in_hut(u): home[u.bed_id] = true
+	for s in sim.structures:
+		if not s.built or not (s.type in ["hut", "large_hut"]) or not _in_view(s.pos) or not sim.is_visible(s.pos): continue
+		if not home.has(s.id) and sim.night_amt > 0.5: continue # (a dark, empty home)
+		var f := k * (0.85 + 0.15 * sin(t * 7.0 + s.id * 1.3) * sin(t * 3.1 + s.id))
+		var pts := _door_lights(s)
+		ci.draw_texture_rect(light_tex, Rect2(pts[1] - Vector2(26, 13), Vector2(52, 26)), false, Color(1.0, 0.55, 0.22, 0.55 * f))
+		ci.draw_texture_rect(light_tex, Rect2(pts[0] - Vector2(9, 11), Vector2(18, 22)), false, Color(1.0, 0.7, 0.35, 0.9 * f))
+		for i in range(2, pts.size()):
+			ci.draw_texture_rect(light_tex, Rect2(pts[i] - Vector2(6, 5), Vector2(12, 10)), false, Color(1.0, 0.72, 0.4, 0.6 * f))
+
 ## A cheap repeatable hash in 0..1 (positions and phases of ambient particles, so nothing
 ## needs storing and the game's RNG is untouched).
 static func _h(i: int, salt: int) -> float:
@@ -1995,10 +2036,18 @@ func _longhouse(c: Vector2, r: float) -> void:
 	var door := iso(c + Vector2(0, hd)) - Vector2(0, 5)
 	ci.draw_colored_polygon(PackedVector2Array([door + Vector2(-5, 0), door + Vector2(-5, -11), door + Vector2(5, -11), door + Vector2(5, 0)]), Color("#2a1a0e"))
 
+## A thread of smoke from a smoke hole: puffs that rise, swell, lean with the wind and fade.
+## Thicker at the cooking hours (dusk and morning) and in the cold, thin in the heat of the day.
 func _smoke(p: Vector2, seed_id: int) -> void:
-	for i in 3:
-		var k := fmod(t * 0.35 + i / 3.0 + seed_id * 0.13, 1.0)
-		ci.draw_circle(p + Vector2(sin(t * 1.3 + i + seed_id) * 3 + 6 * k, -24 * k), 2.0 + 4.0 * k, Color(0.75, 0.75, 0.75, 0.32 * (1.0 - k)))
+	var busy := 0.6
+	if sim.is_day_part("dusk") or sim.is_day_part("dawn") or sim.is_day_part("morning"): busy = 1.0
+	if sim.hz.on() and (sim.hz.season_idx() == 3 or sim.hz.snow > 0.3): busy = 1.0
+	var lean := 10.0 + 60.0 * wind_k()
+	for i in 6:
+		var k := fmod(t * 0.22 + i / 6.0 + seed_id * 0.13, 1.0)
+		var q := p + Vector2(sin(t * 1.1 + i * 1.7 + seed_id) * 2.5 * (1.0 + k) + lean * k * k, -50.0 * k)
+		var g := 0.78 - 0.1 * k
+		ci.draw_circle(q, 2.0 + 7.0 * k, Color(g, g, g * 1.02, 0.3 * busy * (1.0 - k) * minf(1.0, k * 6.0)))
 
 func _scaffold(b: Vector2, r: float) -> void:
 	for x in [-r * 0.9, r * 0.9]:
