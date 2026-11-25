@@ -43,6 +43,7 @@ func update(dt: float) -> void:
 	if timer > 0: return
 	timer = float(C.get("every", 15))
 	if not on or sim.rest_time() or planner() == null: return
+	if retire_one(): return
 	if open_sites() >= maxi(1, sim.story.count(C.get("max_sites", 1))): return # (a number, or {base, per_pop}: a bigger tribe raises more at once)
 	var opts := wanted()
 	if opts.is_empty(): return
@@ -56,6 +57,43 @@ func update(dt: float) -> void:
 ## How far from the village the planner builds (rules.json improvements.reach: a number,
 ## or {base, per_pop}: a growing village spreads out).
 func reach() -> float: return float(maxi(1, sim.story.count(C.get("reach", 450))))
+
+# ------------------------------------------------------------ outdated buildings (structures.json obsolete)
+## Puts out one outdated building of ours by the village whose every role others cover
+## (covered()); the one at the village's centre stays (an upgrade path makes it something
+## else). Returns whether one was.
+func retire_one() -> bool:
+	for s in sim.structures:
+		if not s.built or s.reno or not sim.ours(s) or not sim.obsolete(s.type): continue
+		var d: float = s.pos.distance_to(D.VILLAGE)
+		if d < 1.0 or d > reach() or sim.settlement_of(s.pos).distance_to(D.VILLAGE) > 1.0 or not covered(s): continue # (an outpost keeps its fire)
+		return retire(s.id) == ""
+	return false
+
+## Whether other buildings, not outdated, do all that `s` does (structures.json serves): its
+## warmth within their own warm reach, its other roles within its obsolete `cover`.
+func covered(s: E.Structure) -> bool:
+	var cover := float(D.STRUCTURES[s.type].get("obsolete", {}).get("cover", 600))
+	for role in D.STRUCTURES[s.type].get("serves", {}):
+		var ok := false
+		for o in sim.serving(role):
+			if o == s or sim.obsolete(o.type): continue
+			var far: float = sim.warm_reach() * sim.serves(o, role) if role == "warmth" else cover
+			if o.pos.distance_to(s.pos) < far:
+				ok = true
+				break
+		if not ok: return false
+	return true
+
+## Put out outdated building `id` (pulled down, part of its wood back): the planner's and a
+## game master's operation. "" or why not.
+func retire(id: int) -> String:
+	var s: E.Structure = sim.struct_by_id(id)
+	if s == null or not sim.ours(s) or not sim.obsolete(s.type): return "Not outdated"
+	var st: String = s.type
+	var err: String = sim.demolish(id)
+	if err == "": last = {"structure": st, "reason": "retired", "by": "", "day": sim.day()}
+	return err
 
 ## The planner's building sites not finished yet.
 func open_sites() -> int:
@@ -78,6 +116,7 @@ func wanted() -> Array:
 		if not D.STRUCTURES.has(st) or not st in D.VILLAGE_BUILDS: continue
 		var sd: Dictionary = D.STRUCTURES[st]
 		if sim.struct_block(st) != "": continue
+		if str(r.get("at", "village")) == "village" and sim.obsolete(st): continue # (outdated: outposts still get theirs)
 		if sim.stock["wood"] < sd["wood"] + reserve or sim.stock["stone"] < sd.get("stone", 0): continue
 		if sim.structures.any(func(s): return not s.built and s.type == st and sim.ours(s)): continue # one at a time
 		if not sim.story.holds(r.get("when", {})): continue
@@ -419,4 +458,5 @@ func _free(p: Vector2, r: float, structs: Array, obstacles: Array, dry := 0.0, g
 func summary() -> Dictionary:
 	return {"on": on, "planner": planner().name if planner() else "", "open_sites": open_sites(),
 		"wanted": wanted().map(func(r): return r["structure"]), "asking": asking.get("options", []), "last": last,
-		"layout": {"homes": placing("hut", D.VILLAGE), "fields_toward": roundi(rad_to_deg(fields_dir(D.VILLAGE)))}}
+		"layout": {"homes": placing("hut", D.VILLAGE), "fields_toward": roundi(rad_to_deg(fields_dir(D.VILLAGE)))},
+		"outdated": D.STRUCTURES.keys().filter(func(t): return sim.obsolete(t))}

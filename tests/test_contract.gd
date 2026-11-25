@@ -66,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -2191,6 +2191,41 @@ func test_layout() -> void:
 			if placed[i][1].distance_to(placed[j][1]) < D.STRUCTURES[placed[i][0]]["r"] + D.STRUCTURES[placed[j][0]]["r"]: clash = true
 	check(not clash, "no two buildings overlap")
 	check(imp.summary()["layout"]["homes"] == "grid" and imp.plans.size() >= 1, "a game master can read the layout (%s)" % str(imp.summary()["layout"]))
+
+func test_campfire_retires() -> void:
+	print("\n== The campfire grows into the council fire; the extra fires go out ==")
+	var sim = _new_sim()
+	var imp = sim.improve
+	sim.time = D.DAY_LEN * 0.3 # (by day)
+	sim.stock["wood"] = 500.0
+	sim.stock["stone"] = 100.0
+	var centre = sim.nearest_serving("warmth", D.VILLAGE)
+	var extra = sim.add_structure("bonfire", D.VILLAGE + Vector2(330, -260), true)
+	var lone = sim.add_structure("bonfire", D.VILLAGE + Vector2(-300, 330), true)
+	check(not sim.obsolete("bonfire") and not imp.retire_one(), "a campfire is not outdated before there is a council fire")
+	check(imp.retire(extra.id) != "", "nor can it be retired")
+	while sim.living().size() < 26: sim.folk.add_family(6)
+	sim.techs["code"] = true
+	sim.techs["fire"] = true # (a hearth warms twice as far)
+	var up := {}
+	for r in imp.wanted():
+		if r.get("upgrade", "") == "bonfire": up = r
+	check(not up.is_empty() and imp._upgrade_target(up) == centre, "with Tribal Code and a grown village, the first fire is the one to become a council ring")
+	check(sim.upgrade(centre.id, "council_ring") == "", "the upgrade starts")
+	centre.reno = false
+	centre.type = "council_ring"
+	sim.buildings_changed()
+	check(sim.obsolete("bonfire") and "bonfire" in imp.summary()["outdated"], "now campfires are outdated (structures.json obsolete)")
+	check(sim.nearest_serving("gather", D.VILLAGE + Vector2(20, 0)) == centre and sim.nearest_serving("haven", D.VILLAGE) == centre, "the council fire gathers and shelters the village")
+	check(not imp.wanted().any(func(r): return r["structure"] == "bonfire" and str(r.get("at", "village")) == "village"), "the planner lays out no more campfires at the village")
+	check(not imp.covered(extra), "a fire with no other warmth near it is not put out")
+	var lh = sim.add_structure("longhouse", extra.pos + Vector2(80, 0), true)
+	sim.buildings_changed()
+	check(imp.covered(extra) and not imp.covered(lone), "a longhouse hearth beside it covers its warmth")
+	var n0: int = sim.built_of("bonfire").size()
+	check(imp.retire_one() and sim.struct_by_id(extra.id) == null and sim.struct_by_id(lone.id) != null and sim.built_of("bonfire").size() == n0 - 1, "the planner puts out the covered fire, and only that one")
+	check(not imp.retire_one(), "one at a time, and none left to put out")
+	check(sim.struct_by_id(lh.id) != null and sim.struct_by_id(centre.id) != null, "the council fire and the longhouse stand")
 
 func test_improvements() -> void:
 	print("\n== The village lays out improvements ==")

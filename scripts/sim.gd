@@ -637,6 +637,12 @@ func serving(role: String) -> Array:
 func serves(s: E.Structure, role: String) -> float:
 	return float(D.STRUCTURES[s.type].get("serves", {}).get(role, 0.0))
 
+## Whether buildings of `type` are outdated now (structures.json obsolete.when holds): the
+## planner builds no more of them at the village and puts out those others cover (improve.gd).
+func obsolete(type: String) -> bool:
+	var o = D.STRUCTURES.get(type, {}).get("obsolete", {})
+	return o is Dictionary and not o.is_empty() and story.holds(o.get("when", {}))
+
 ## The nearest of our buildings serving `role` to `p` (any side of the water), or null.
 func nearest_serving(role: String, p: Vector2) -> E.Structure:
 	var best: E.Structure = null

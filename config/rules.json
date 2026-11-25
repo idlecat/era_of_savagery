@@ -341,6 +341,7 @@
     },
     "reason": "the beds are nearly all taken: a hut can be made bigger."
    },
+   {"upgrade": "bonfire", "structure": "council_ring", "when": {"pop": 25}, "reason": "the village has outgrown its campfire: the first fire gets a ring of stones and becomes the council fire."},
    {
     "structure": "bonfire",
     "when": {
@@ -456,7 +457,8 @@
     {
      "to": "grand_altar"
     }
-   ]
+   ],
+   "bonfire": [{"to": "council_ring"}]
   },
   "upgrade_cost": 1.0,
   "min_wood": 4,

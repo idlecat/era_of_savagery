@@ -612,6 +612,11 @@ func _debug_shot(args: Dictionary) -> void:
 			sim.stock["wood"] = 4000.0
 			var n := int(args.get("people", "40"))
 			while sim.living().size() < n: sim.folk.add_family(6)
+			if args.has("council"): # (--council: the first fire has become the council ring, extra fires go out)
+				sim.techs["code"] = true
+				var fire = sim.nearest_serving("gather", sim.D.VILLAGE)
+				fire.type = "council_ring"
+				sim.buildings_changed()
 			for k in 300: # (laid out where the planner would: improve.spot(), rising tiers and all)
 				var ppl: int = sim.living().size()
 				var want := ""
