@@ -1438,7 +1438,7 @@ func at_settlement(p: Vector2) -> bool:
 func beds_at(p: Vector2) -> int:
 	var n := 0
 	for s in structures:
-		if s.built and ours(s) and s.type in SHELTERS and s.pos.distance_to(p) < 450: n += int(D.STRUCTURES[s.type]["cap"])
+		if s.built and ours(s) and s.type in SHELTERS and settlement_of(s.pos).distance_to(p) < 1.0: n += int(D.STRUCTURES[s.type]["cap"]) # (the settlement's own beds, however far it has spread)
 	return n
 
 func residents_of(p: Vector2) -> Array:

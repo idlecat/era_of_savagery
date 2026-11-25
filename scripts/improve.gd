@@ -52,6 +52,10 @@ func update(dt: float) -> void:
 	quiet_until = sim.time + float(C.get("ask_every", 90))
 	sim.advice_wanted.emit(advice_ctx())
 
+## How far from the village the planner builds (rules.json improvements.reach: a number,
+## or {base, per_pop}: a growing village spreads out).
+func reach() -> float: return float(maxi(1, sim.story.count(C.get("reach", 450))))
+
 ## The planner's building sites not finished yet.
 func open_sites() -> int:
 	sites = sites.filter(func(id): return sim.structures.any(func(s): return s.id == id and (not s.built or s.reno)))
@@ -87,7 +91,7 @@ func _road_cells(r: Dictionary) -> Array:
 	var R = sim.roads
 	var lv: int = R.index_of(str(r["road"]))
 	if R.build_block(lv) != "" or sim.structures.any(func(s): return s.type == "roadworks"): return []
-	var cells: Array = R.busiest_trails(D.VILLAGE, float(C.get("reach", 450)) * 1.5, int(r.get("cells", 40)), lv)
+	var cells: Array = R.busiest_trails(D.VILLAGE, reach() * 1.5, int(r.get("cells", 40)), lv)
 	if cells.size() < int(r.get("min_cells", 8)): return []
 	var c: Dictionary = R.cost(cells, lv)
 	for k in c:
@@ -103,7 +107,7 @@ func _upgrade_target(r: Dictionary):
 	var reserve := float(C.get("wood_reserve", 10))
 	var best = null
 	for s in sim.structures:
-		if s.type != from or not sim.ours(s) or s.pos.distance_to(D.VILLAGE) > float(C.get("reach", 450)): continue
+		if s.type != from or not sim.ours(s) or s.pos.distance_to(D.VILLAGE) > reach(): continue
 		for o in sim.upgrades_for(s):
 			if o["to"] == to and o["why"] == "" and sim.stock["wood"] >= o["wood"] + reserve and (best == null or s.pos.distance_to(D.VILLAGE) < best.pos.distance_to(D.VILLAGE)): best = s
 	return best
@@ -221,20 +225,20 @@ func spot(st: String, near: String) -> Vector2:
 		var best = null
 		for s in sim.structures:
 			if s.built and sim.ours(s) and s.type == near and (best == null or s.pos.distance_to(D.VILLAGE) < best.pos.distance_to(D.VILLAGE)): best = s
-		if best and best.pos.distance_to(D.VILLAGE) < float(C.get("reach", 450)): anchor = best.pos
+		if best and best.pos.distance_to(D.VILLAGE) < reach(): anchor = best.pos
 	var r: float = D.STRUCTURES[st]["r"]
 	var step := float(C.get("ring_step", 35))
 	var region = D.region_at(D.VILLAGE)
-	var reach := float(C.get("reach", 450))
-	var near_structs: Array = sim.structures.filter(func(s): return s.pos.distance_to(anchor) < reach + 200)
-	var near_nodes: Array = sim.nodes.filter(func(n): return (n.kind in ["tree", "bush", "boulder"] or n.kind in D.FINDS) and n.pos.distance_to(anchor) < reach + 60)
+	var far := reach()
+	var near_structs: Array = sim.structures.filter(func(s): return s.pos.distance_to(anchor) < far + 200)
+	var near_nodes: Array = sim.nodes.filter(func(n): return (n.kind in ["tree", "bush", "boulder"] or n.kind in D.FINDS) and n.pos.distance_to(anchor) < far + 60)
 	var d := step * 1.5
-	while d <= reach:
+	while d <= far:
 		var n := maxi(8, int(TAU * d / step))
 		var a0 := float(sim.structures.size()) * 0.7 # (varies between sites, deterministic)
 		for i in n:
 			var p: Vector2 = anchor + Vector2.from_angle(a0 + TAU * i / n) * d
-			if p.distance_to(D.VILLAGE) < reach and D.region_at(p) == region and _free(p, r, near_structs, near_nodes): return p
+			if p.distance_to(D.VILLAGE) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes): return p
 		d += step
 	return Vector2.INF
 
