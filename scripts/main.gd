@@ -628,6 +628,13 @@ func _debug_shot(args: Dictionary) -> void:
 			hud._close_modal()
 			world.cam.zoom = Vector2(float(args.get("zoom", "0.9")), float(args.get("zoom", "0.9")))
 			world.focus_on(sim.D.VILLAGE + Vector2(0, 60))
+			if args.has("select"): world.select_only(sim.unit_by_name(args["select"])) # (--select=Name: a picked person)
+			if args.has("pick"): # (--pick=longhouse: a picked building, the camera on it)
+				for st in sim.structures:
+					if st.type == args["pick"] and st.built:
+						world.selected_struct = st.id
+						world.focus_on(st.pos)
+						break
 		"overview": # the whole land, no fog: rivers, fords, clans, landmarks
 			hud._close_modal()
 			sim.fog_enabled = false

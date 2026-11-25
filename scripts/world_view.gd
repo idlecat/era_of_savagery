@@ -838,7 +838,8 @@ func draw_overlay() -> void:
 		if sim.is_explored(ford_lbl): _draw_label(iso(ford_lbl) + Vector2(0, 14), tr("FORD"), 13, Color(1, 1, 1, 0.65), true)
 	for lb in D.LABELS: # the scenario's own names for places
 		if sim.is_explored(lb["pos"]): _draw_label(iso(lb["pos"]), tr(lb["text"]), int(lb.get("size", 20)), Color(1, 1, 1, 0.4), true)
-	_draw_label(iso(D.VILLAGE + Vector2(-220, -300)), tr("TRIBAL LANDS"), 20, Color(1, 1, 1, 0.4), true)
+	if str(sim.place_of(D.VILLAGE).get("name", "")) == "": # (once the village has a name of its own, that is the label)
+		_draw_label(iso(D.VILLAGE + Vector2(-220, -300)), tr("TRIBAL LANDS"), 20, Color(1, 1, 1, 0.4), true)
 	for at in sim.settlements(): # our settlements by the names they have earned (rules.json tiers)
 		var pl: Dictionary = sim.place_of(at)
 		if str(pl.get("name", "")) != "" and _in_view(at):
@@ -849,13 +850,8 @@ func draw_overlay() -> void:
 			_draw_label(iso(lm["pos"]) + Vector2(0, 22), tr(lm["name"]), 13, Color("#ffe6a8") if lm["kind"] != "den" else Color("#ff9b8a"), true)
 	for id in sim.rivals.clans: _draw_clan_banner(sim.rivals.clans[id])
 	var sst = sim.struct_by_id(selected_struct) if selected_struct >= 0 else null
-	if sst:
-		var sr: float = sim.struct_r(sst) + 6.0
-		ci.draw_set_transform(iso(sst.pos), 0.0, Vector2(1.0, 0.5))
-		for i in 12: # the same rotating dashes as a picked person
-			var a0 := float(i) / 12 * TAU + t * 1.6
-			ci.draw_arc(Vector2.ZERO, sr * 1.06, a0, a0 + TAU / 36, 6, Color("#ffe066"), 2.5 / 0.75)
-		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	if sst: # the same mark as a picked person, round the building's footprint
+		_sel_mark(iso(sst.pos), (sim.struct_r(sst) + 10.0) * 1.25, false, not D.STRUCTURES[sst.type].get("ring", false)) # (round the whole footprint, long houses too)
 	for s in sim.structures:
 		if _in_view(s.pos):
 			if s.id == hover_struct and s.id != selected_struct and s.built: # a faint ring: this can be picked
@@ -1923,12 +1919,33 @@ func _draw_site_ring(c) -> void:
 		var k: float = fposmod(t * 0.5, 1.0)
 		ci.draw_arc(c.site, 30 + 110 * k, 0, TAU, 48, Color(col, 0.7 * (1.0 - k)), 3)
 
-## Rotating dashed ring around a picked figure — reads as "selected" at a glance,
-## and never mistaken for a danger or a mission marker.
-func _sel_ring(b: Vector2, r: float) -> void:
-	for i in 10:
-		var a0 := float(i) / 10 * TAU + t * 1.6
-		ci.draw_arc(b, r, a0, a0 + TAU / 30, 6, Color("#ffe066"), 2.0)
+const SEL_COL := Color("#ffe066")
+
+## The "selected" mark on the ground: a gold ellipse lying flat on the iso ground (2:1),
+## breathing gently, with a faint ring pulsing outward. Under a person a soft glow too
+## (`glow`, drawn before the sprite). On a building it is drawn over the sprite, so the half
+## behind it is faint (`behind`): it reads as round the base, not across the roof.
+func _sel_mark(c: Vector2, rx: float, glow := true, behind := false) -> void:
+	var ry := rx * 0.5
+	var breathe := 0.82 + 0.18 * sin(t * 3.2)
+	if glow: _ell(c, rx * 0.92, ry * 0.92, Color(SEL_COL, 0.24), 28)
+	var under := Color(0, 0, 0, 0.35) # (a dark under-stroke: the gold reads on sunlit ground too)
+	var k: float = fposmod(t * 0.7, 1.0) # (the pulse, once in ~1.4 s)
+	var pr := 1.0 + 0.28 * k
+	var pc := Color(SEL_COL, 0.32 * (1.0 - k))
+	if behind:
+		_ell_line(c, rx, ry, Color(SEL_COL, 0.28 * breathe), 1.5, PI, TAU) # (the far side, behind the building)
+		_ell_line(c, rx * pr, ry * pr, pc, 1.2, 0.0, PI)
+		_ell_line(c, rx, ry, under, 4.0, 0.0, PI)
+		_ell_line(c, rx, ry, Color(SEL_COL, 0.95 * breathe), 2.2, 0.0, PI) # (the near side, in front)
+	else:
+		_ell_line(c, rx * pr, ry * pr, pc, 1.2)
+		_ell_line(c, rx, ry, under, 3.5)
+		_ell_line(c, rx, ry, Color(SEL_COL, 0.95 * breathe), 2.0)
+
+## A picked figure's mark (see _sel_mark): reads as "selected" at a glance, and is never
+## mistaken for a danger or a mission marker.
+func _sel_ring(b: Vector2, r: float) -> void: _sel_mark(b, r - 2.0)
 
 ## Who and what is under the cursor (rings only; the HUD tooltip uses hover_info).
 func _update_hover() -> void:
@@ -2025,7 +2042,7 @@ func _draw_unit(u) -> void:
 	_ell(b + Vector2(2, 0), 9, 4, SHADOW)
 	if u.hero: _ell(b, 15 + sin(t * 4) * 1.5, 7.5, Color(1, 0.85, 0.3, 0.3))
 	if sel: _sel_ring(b, 14)
-	elif u.id == hover_unit: _ell_line(b, 14, 7, Color(1, 1, 1, 0.45), 1.5)
+	elif u.id == hover_unit: _ell_line(b, 16, 8, Color(1, 1, 1, 0.45), 1.5)
 	if u.role == "contract": _ell_line(b, 11, 5.5, Color(0.55, 0.8, 1.0, 0.8), 1.5)
 	var busy: bool = DOING_ANIM.has(u.doing)
 	if art and art.has("man_idle_0_0"):
