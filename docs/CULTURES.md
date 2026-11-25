@@ -222,7 +222,7 @@ An option the tribe can't pay for is greyed out. Each event happens once.
 
 All conditions must hold. `time` (seconds), `day`, `pop` (living, at least), `era`, `tech`,
 `invention`, `find` (known), `season` (`Spring`…`Winter`), `built` (a structure type),
-`devotion`, `mood` (at least), `deaths` (at least), `food_frac` (food at least this share of the storage), `homeless` (people without a bed, at least), `beds_free_below` (fewer beds to spare than this count: build ahead of the births), `can_settle` (true: a new outpost may be founded, none of ours stands half empty), `wood` (at least), `fewer` (`{"granary": 3}`: fewer of ours, building sites included; a count may grow with the tribe: `{"farm_plot": {"base": 1, "per_pop": 0.05}}` = fewer than 1 + one per 20 people), `culture` (`{"martial": 20}` at least,
+`devotion`, `mood` (at least), `deaths` (at least), `food_frac` (food at least this share of the storage), `homeless` (people without a bed, at least), `village_full` (at least this share of the village's beds taken), `beds_free_below` (fewer beds to spare than this count: build ahead of the births), `can_settle` (true: a new outpost may be founded, none of ours stands half empty), `wood` (at least), `fewer` (`{"granary": 3}`: fewer of ours, building sites included; a count may grow with the tribe: `{"farm_plot": {"base": 1, "per_pop": 0.05}}` = fewer than 1 + one per 20 people), `culture` (`{"martial": 20}` at least,
 `{"martial": -20}` at most), `found` (landmark id), `met` (clan id), `flag`, and the
 culture's own: `told` (tale id), `joined` (person id), `happened` (event id of this pack),
 `after` (something that has happened in the game: `drought`, `rain`, `blizzard`, `storm`,

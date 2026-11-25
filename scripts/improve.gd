@@ -80,7 +80,7 @@ func wanted() -> Array:
 		if sim.stock["wood"] < sd["wood"] + reserve or sim.stock["stone"] < sd.get("stone", 0): continue
 		if sim.structures.any(func(s): return not s.built and s.type == st and sim.ours(s)): continue # one at a time
 		if not sim.story.holds(r.get("when", {})): continue
-		if spot(st, str(r.get("near", "village"))) == Vector2.INF: continue
+		if site_for(r) == Vector2.INF: continue
 		out.append(r)
 	return out
 
@@ -152,9 +152,13 @@ func choose(structure: String, speech: String, by := "") -> void:
 		if speech != "": _say(speech)
 		return
 	var st: String = structure if structure in opts else opts[0]
-	var r := _rule(st)
-	if r.is_empty() or not wanted().any(func(w): return w["structure"] == st): # (things changed meanwhile)
-		var now := wanted()
+	var now := wanted()
+	var r := {}
+	for w in now: # (the first entry for it still wanted: a hut may be for the village or an outpost)
+		if w["structure"] == st:
+			r = w
+			break
+	if r.is_empty(): # (things changed meanwhile)
 		if now.is_empty(): return
 		r = now[0]
 		speech = ""
@@ -188,7 +192,7 @@ func _build(r: Dictionary, speech: String, by: String) -> void:
 		sites.append(t.id)
 		_note(st, str(r.get("reason", "")), speech, by, r["upgrade"])
 		return
-	var p := spot(st, str(r.get("near", "village")))
+	var p := site_for(r)
 	if p == Vector2.INF or sim.can_place(st, p) != "": return
 	_place(st, p, str(r.get("reason", "")), speech, by)
 
@@ -216,20 +220,56 @@ func _say(speech: String) -> void:
 	var who := planner()
 	if who: sim.add_log("%s: \"%s\"" % [sim.tr(who.name), speech.left(200)], "vice", [who])
 
+## Where an entry would build now: by the village, or (`"at": "outpost"`) within
+## `outpost_reach` of the outpost that should grow next (outpost_to_grow()). INF if nowhere.
+func site_for(r: Dictionary) -> Vector2:
+	var st: String = r["structure"]
+	if str(r.get("at", "village")) == "outpost":
+		var o := outpost_without(st) if bool(r.get("missing", false)) else outpost_to_grow()
+		if o == Vector2.INF: return Vector2.INF
+		return spot(st, str(r.get("near", "village")), o, float(C.get("outpost_reach", 220)))
+	return spot(st, str(r.get("near", "village")))
+
+## The outpost to give the next home: of those crowded (beds.crowd_at) and with fewer people than
+## `outpost_share` of the village's, the one with the fewest. Vector2.INF if none.
+func outpost_to_grow() -> Vector2:
+	var homes: Array = sim.settlements()
+	var most := float(sim.residents_of(D.VILLAGE).size()) * float(C.get("outpost_share", 0.5))
+	var best := Vector2.INF
+	for i in range(1, homes.size()):
+		var p: Vector2 = homes[i]
+		var n: int = sim.residents_of(p).size()
+		if sim.fullness(p) < float(sim.RULES["beds"]["crowd_at"]) or n >= most or not sim.warm_at(p): continue # (room left: people move in first)
+		if best == Vector2.INF or n < sim.residents_of(best).size(): best = p
+	return best
+
 # ------------------------------------------------------------ where to build
+## The outpost with people and no `st` of ours (built or a site) within `outpost_reach`,
+## the one with the most people. Vector2.INF if none.
+func outpost_without(st: String) -> Vector2:
+	var homes: Array = sim.settlements()
+	var far := float(C.get("outpost_reach", 220))
+	var best := Vector2.INF
+	for i in range(1, homes.size()):
+		var p: Vector2 = homes[i]
+		var n: int = sim.residents_of(p).size()
+		if n == 0 or sim.structures.any(func(s): return s.type == st and sim.ours(s) and s.pos.distance_to(p) < far): continue
+		if best == Vector2.INF or n > sim.residents_of(best).size(): best = p
+	return best
+
 ## A free spot for `st` near `near` ("village", or a structure type: the one of ours
 ## nearest the village), on the village's side of the water. Vector2.INF if none.
-func spot(st: String, near: String) -> Vector2:
-	var anchor: Vector2 = D.VILLAGE
+func spot(st: String, near: String, center: Vector2 = D.VILLAGE, far := -1.0) -> Vector2:
+	if far < 0.0: far = reach()
+	var anchor: Vector2 = center
 	if near != "village":
 		var best = null
 		for s in sim.structures:
-			if s.built and sim.ours(s) and s.type == near and (best == null or s.pos.distance_to(D.VILLAGE) < best.pos.distance_to(D.VILLAGE)): best = s
-		if best and best.pos.distance_to(D.VILLAGE) < reach(): anchor = best.pos
+			if s.built and sim.ours(s) and s.type == near and (best == null or s.pos.distance_to(center) < best.pos.distance_to(center)): best = s
+		if best and best.pos.distance_to(center) < far: anchor = best.pos
 	var r: float = D.STRUCTURES[st]["r"]
 	var step := float(C.get("ring_step", 35))
-	var region = D.region_at(D.VILLAGE)
-	var far := reach()
+	var region = D.region_at(center)
 	var near_structs: Array = sim.structures.filter(func(s): return s.pos.distance_to(anchor) < far + 200)
 	var near_nodes: Array = sim.nodes.filter(func(n): return (n.kind in ["tree", "bush", "boulder"] or n.kind in D.FINDS) and n.pos.distance_to(anchor) < far + 60)
 	var d := step * 1.5
@@ -238,7 +278,7 @@ func spot(st: String, near: String) -> Vector2:
 		var a0 := float(sim.structures.size()) * 0.7 # (varies between sites, deterministic)
 		for i in n:
 			var p: Vector2 = anchor + Vector2.from_angle(a0 + TAU * i / n) * d
-			if p.distance_to(D.VILLAGE) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes): return p
+			if p.distance_to(center) < far and D.region_at(p) == region and _free(p, r, near_structs, near_nodes): return p
 		d += step
 	return Vector2.INF
 

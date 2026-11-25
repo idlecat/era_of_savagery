@@ -122,10 +122,11 @@
   "dig": 5
  },
  "beds": {
-  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings). crowd_at: past this share of the beds taken the camp is crowded (sickness spreads more, births taper by crowd_k).",
+  "_doc": "Night rest (sim._night_rest): further than `far` from a bed, people camp where they are. Work given after night falls keeps people up, except the kinds in day_only, which wait for the morning whenever they were ordered (renovate: renovating and upgrading buildings). crowd_at: past this share of the beds taken the camp is crowded (sickness spreads more, births taper by crowd_k; a crowded settlement sends a family to one with a free bed and a fire of ours within fire_reach).",
   "far": 700,
   "crowd_at": 0.8,
   "crowd_k": 2,
+  "fire_reach": 250,
   "day_only": ["renovate", "field"]
  },
  "vice": {
@@ -277,6 +278,8 @@
   "max_sites": {"base": 1, "per_pop": 0.015},
   "wood_reserve": 10,
   "reach": {"base": 450, "per_pop": 0.6},
+  "outpost_reach": 220,
+  "outpost_share": 0.5,
   "ring_step": 35,
   "gap": 14,
   "ask": true,
@@ -322,6 +325,29 @@
     "reason": "the beds are nearly all taken: a hut can be made bigger."
    },
    {
+    "structure": "bonfire",
+    "when": {
+     "fewer": {
+      "bonfire": {"base": 1, "per_pop": 0.04}
+     }
+    },
+    "reason": "the village has grown past its fires: people must keep warm."
+   },
+   {
+    "structure": "bonfire",
+    "at": "outpost",
+    "missing": true,
+    "reason": "an outpost has no fire to keep warm by."
+   },
+   {
+    "structure": "hut",
+    "at": "outpost",
+    "when": {
+     "village_full": 0.8
+    },
+    "reason": "the village is crowded: an outpost needs a home for those who will move there."
+   },
+   {
     "structure": "hut",
     "when": {
      "beds_free_below": {"base": 2, "per_pop": 0.08},
@@ -330,15 +356,6 @@
      }
     },
     "reason": "the beds are nearly all taken: the tribe needs room to grow."
-   },
-   {
-    "structure": "bonfire",
-    "when": {
-     "fewer": {
-      "bonfire": {"base": 1, "per_pop": 0.04}
-     }
-    },
-    "reason": "the village has grown past its fires: people must keep warm."
    },
    {
     "structure": "farm_plot",

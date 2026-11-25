@@ -2734,6 +2734,8 @@ const STRINGS := {
 	"%d beds (has %d)": "%d 个床位（现有 %d）",
 	"food stores for %d": "可存 %d 食物的仓储",
 	"the beds are nearly all taken: the tribe needs room to grow.": "床位几乎住满了：部落需要地方来壮大。",
+	"the village is crowded: an outpost needs a home for those who will move there.": "村子太挤了：前哨要为迁去的人盖一间屋。",
+	"an outpost has no fire to keep warm by.": "有个前哨没有可以取暖的火堆。",
 	"the beds are nearly all taken: a hut can be made bigger.": "床位几乎住满了：可以把小屋扩建得更大。",
 	"the beds are nearly all taken: a large hut can become a longhouse.": "床位几乎住满了：可以把大屋扩建成长屋。",
 	"came from the %s to live with the tribe on Day %d": "从%s迁来，与部落同住（第%d天）",

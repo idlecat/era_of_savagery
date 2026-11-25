@@ -1441,6 +1441,18 @@ func beds_at(p: Vector2) -> int:
 		if s.built and ours(s) and s.type in SHELTERS and settlement_of(s.pos).distance_to(p) < 1.0: n += int(D.STRUCTURES[s.type]["cap"]) # (the settlement's own beds, however far it has spread)
 	return n
 
+## Whether a fire of ours burns at the settlement at `p` (within rules.json beds.fire_reach,
+## on its side of the water): a family only moves where it can keep warm and eat.
+func warm_at(p: Vector2) -> bool:
+	var f := nearest_fire(p)
+	return f != null and D.same_side(f.pos, p) and f.pos.distance_to(p) < float(RULES["beds"]["fire_reach"])
+
+## How full the settlement at `p` is: its people over its beds (people and no beds: INF).
+func fullness(p: Vector2) -> float:
+	var b := beds_at(p)
+	var n := residents_of(p).size()
+	return float(n) / float(b) if b > 0 else (INF if n > 0 else 0.0)
+
 func residents_of(p: Vector2) -> Array:
 	return units.filter(func(u): return not u.dead and u.home.distance_to(p) < 60)
 
@@ -1539,6 +1551,19 @@ func places_summary() -> Array:
 			"next": tr(nxt["name"]) if str(nxt["id"]) != tier else "", "lacks": tier_lacks(at, nxt) if str(nxt["id"]) != tier else []})
 	return out
 
+## The building site the Steward would send `u` to, or null: first one of their own
+## settlement (a new building, a damaged one to rebuild, whoever founded it, once no
+## running contract still works on it, or an old home being renovated), else, for the
+## village's people, any new site of the village's.
+func site_for(u: E.Unit):
+	var home := settlement_of(u.home)
+	var far = null
+	for s in structures:
+		if not s.paid or not ours(s) or (s.built and not s.reno): continue
+		if settlement_of(s.pos) == home and (s.reno or not contracts.works_on(s)): return s
+		if far == null and not s.built and s.owner == "village" and home == D.VILLAGE: far = s
+	return far
+
 ## A crowded settlement (past beds.crowd_at) sends someone to one with room (one at a time, by day).
 func _resettle(dt: float) -> void:
 	resettle_t -= dt
@@ -1551,7 +1576,7 @@ func _resettle(dt: float) -> void:
 	var crowded: Array = homes.filter(func(p): return residents_of(p).size() > beds_at(p) * at)
 	if crowded.is_empty(): return
 	for p in homes:
-		if p in crowded or residents_of(p).size() + 1 > beds_at(p) * at: continue
+		if p in crowded or residents_of(p).size() >= beds_at(p) or not warm_at(p): continue # (a free bed and a fire, in a place not crowded: nobody moves back)
 		for from in crowded:
 			var movers: Array = residents_of(from).filter(func(u): return u.title == "" and spare_hand(u) >= 0)
 			if movers.is_empty(): continue
@@ -2422,7 +2447,8 @@ func _update_births(dt: float) -> void:
 			birth_timer = 0
 			stock["food"] -= float(cb["cost"])
 			var nm := new_name()
-			var parents: Array = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
+			var parents: Array = living().filter(func(o): return o.role == "" and residents_of(settlement_of(o.home)).size() < beds_at(settlement_of(o.home))) # (born where there is a bed)
+			if parents.is_empty(): parents = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
 			var u: E.Unit = folk.make_child(nm, parents.pick_random() if not parents.is_empty() else null)
 			remember(u, tr("was born beside the tribal bonfire on Day %d") % day(), 5)
 			folk.lift(float(cb["mood"]))
@@ -2565,12 +2591,7 @@ func _update_vice(dt: float) -> void:
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]))
 		var pop := living().size()
 		for u in idle:
-			var unbuilt = null
-			var settler: bool = u.home.distance_to(D.VILLAGE) > 50
-			for s in structures: # a site near home: the village's new buildings, or any old home being renovated
-				if s.paid and ((not s.built and s.owner == "village" and not settler) or (s.reno and ours(s) and settlement_of(s.pos) == settlement_of(u.home))):
-					unbuilt = s
-					break
+			var unbuilt = site_for(u)
 			var sw: Dictionary = vc["steward"]
 			if careers.on and stock["food"] >= pop * float(careers.C["steward_food_per_head"]) and careers.go_work(u): continue # (those with a trade are left to it while the stores are healthy)
 			var choice: String
