@@ -193,6 +193,7 @@ func go_work(u: E.Unit) -> bool:
 	var w: Dictionary = def(u.career).get("work", {})
 	if w.has("gather"):
 		var res := str(w["gather"])
+		if res == "wood" and sim.stock["wood"] >= sim.story.count(sim.RULES["vice"]["steward"].get("wood_enough", 1e9)): return false # (the woodpile is high enough: the Steward finds them other work)
 		var n = sim.find_node(res, u.home, D.region_at(u.home), float(C["reach"]), w.get("kinds", []), u)
 		if n == null: return false
 		sim.assign_gather(u, res, {"node_id": n.id, "bank": D.region_at(u.home), "area": u.home, "area_r": float(C["reach"])})

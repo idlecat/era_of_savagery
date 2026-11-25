@@ -4289,6 +4289,14 @@ func test_worked_fields() -> void:
 	folk[0].career = "farmer"
 	for i in range(1, hands): sim.set_job(folk[i], {})
 	check(sim.careers.go_work(folk[0]) and folk[0].job.get("type", "") == "field", "a farmer's trade is the field (work_at)")
+	var wc = folk[1]
+	sim.set_job(wc, {})
+	wc.career = "woodcutter"
+	sim.stock["wood"] = 99999.0
+	check(not sim.careers.go_work(wc) and wc.job.is_empty(), "a woodcutter doesn't add to a woodpile that is high enough")
+	sim.stock["wood"] = 0.0
+	check(sim.careers.go_work(wc) and wc.job.get("res", "") == "wood", "but goes chopping when wood is wanted")
+	wc.career = ""
 	check(sim.careers.def("builder")["max"] is Dictionary and sim.story.count({"base": 3, "per_pop": 0.03}) == 3 + int(0.03 * sim.living().size()), "career places can grow with the tribe")
 	# fewer than a count that grows with the tribe
 	var n: int = sim.living().size()
