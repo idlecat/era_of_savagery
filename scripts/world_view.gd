@@ -25,6 +25,12 @@ var sprite_dirs: Array = [] # screen direction each of the 8 baked facings looks
 var selected: Array = [] # unit ids
 const PALISADE_GAP := 8.0 # clearance between a wall's stakes and a building on its line
 var selected_struct := -1 # a building picked for the building panel (units unselected)
+# How a pick shows (to choose between, live: F7 cycles the building's, F8 the person's).
+const SEL_B_STYLES := ["outline", "brackets", "glow and light pool", "floating marker"]
+const SEL_P_STYLES := ["bold ring", "ring and outline", "ring and chevron", "pulsing ring"]
+var sel_b_style := 0
+var sel_p_style := 0
+var _outline_mat: ShaderMaterial = null
 var hover_unit := -1 # unit under the cursor: a faint white ring invites a click
 var hover_struct := -1 # building under the cursor, likewise
 var zoom_target := 1.25 # eased zoom: _zoom_by moves the target, _zoom_step glides there
@@ -852,6 +858,7 @@ func draw_overlay() -> void:
 	for s in sim.structures:
 		if _in_view(s.pos):
 			_draw_structure_overlay(s)
+	_draw_pick_marks()
 	_label_rects.clear()
 	var every := show_all_names()
 	var later: Array = [] # ordinary names: drawn after the popups, where they still fit
@@ -1555,6 +1562,11 @@ func _draw_site_stage(s, b: Vector2) -> bool:
 
 func _draw_structure(s) -> void:
 	var b := iso(s.pos)
+	if s.id == selected_struct and sel_b_style == 2: # a soft pool of light on the ground under the pick
+		var pr: float = (sim.struct_r(s) + 14.0) * 1.15
+		var k := 0.85 + 0.15 * sin(t * 3.0)
+		_ell(b, pr * 1.35, pr * 0.67, Color(SEL_COL, 0.10 * k), 36)
+		_ell(b, pr, pr * 0.5, Color(SEL_COL, 0.22 * k), 36)
 	var frac: float = s.progress / s.work
 	var a := 1.0 if s.built else 0.55
 	if not s.built and _draw_site_stage(s, b): return
@@ -1919,8 +1931,20 @@ const SEL_COL := Color("#ffe9a0")
 ## (A picked building lights up itself: _pick_glow.)
 func _sel_ring(b: Vector2, r: float) -> void:
 	var rx := r - 3.0
-	_ell(b, rx, rx * 0.5, Color(SEL_COL, 0.18), 24)
-	_ell_line(b, rx, rx * 0.5, Color(SEL_COL, 0.9), 1.5)
+	match sel_p_style:
+		0: # bold: a thick gold ring on a dark hairline, a soft glow inside
+			rx = r
+			_ell(b, rx * 0.95, rx * 0.47, Color(SEL_COL, 0.28), 24)
+			_ell_line(b, rx, rx * 0.5, Color(0, 0, 0, 0.45), 5.0)
+			_ell_line(b, rx, rx * 0.5, SEL_COL, 3.0)
+		3: # a ring that ripples outward
+			var k: float = fposmod(t * 1.1, 1.0)
+			_ell(b, rx, rx * 0.5, Color(SEL_COL, 0.2), 24)
+			_ell_line(b, rx, rx * 0.5, Color(SEL_COL, 0.95), 2.0)
+			_ell_line(b, rx * (1.0 + 0.8 * k), rx * 0.5 * (1.0 + 0.8 * k), Color(SEL_COL, 0.7 * (1.0 - k)), 2.0)
+		_: # thin (with the outline, or the chevron)
+			_ell(b, rx, rx * 0.5, Color(SEL_COL, 0.18), 24)
+			_ell_line(b, rx, rx * 0.5, Color(SEL_COL, 0.9), 1.5)
 
 ## Who and what is under the cursor (rings only; the HUD tooltip uses hover_info).
 func _update_hover() -> void:
@@ -2974,6 +2998,7 @@ func _sync_items() -> void:
 				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				it.modulate = _pick_glow(st)
+				_pick_outline(it, st.id == selected_struct and sel_b_style == 0)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type == "roadworks": pass # (drawn on the ground: _draw_ground_part)
 		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
@@ -2986,11 +3011,15 @@ func _sync_items() -> void:
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
 			it.modulate = _pick_glow(st)
+			_pick_outline(it, st.id == selected_struct and sel_b_style == 0)
+			if st.id == selected_struct and not it.dynamic: it.dynamic = true # (the pick breathes)
 			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true
-		_touch(_item(key, 2, u, iso(u.pos), true), 0)
+		var ui := _item(key, 2, u, iso(u.pos), true)
+		_pick_outline(ui, sel_p_style == 1 and u.id in selected)
+		_touch(ui, 0)
 	for p in sim.predators:
 		var key := "p%d" % p.id
 		seen[key] = true
@@ -3006,14 +3035,61 @@ func _sync_items() -> void:
 			items[key].queue_free()
 			items.erase(key)
 
-## How a building shows that it is picked: it lights up a little, warmly, breathing slowly
-## (a hovered one a touch brighter). No ring drawn across the ground or the roof.
+## A picked building's light (sel_b_style "glow and light pool": a strong warm brightening,
+## breathing; the other styles a touch only). A hovered one a touch brighter.
 func _pick_glow(st) -> Color:
 	if st.id == selected_struct:
 		var k := 0.75 + 0.25 * sin(t * 3.0)
-		return Color(1.0 + 0.30 * k, 1.0 + 0.24 * k, 1.0 + 0.08 * k)
+		var g := 1.0 if sel_b_style == 2 else 0.35
+		return Color(1.0 + 0.45 * g * k, 1.0 + 0.36 * g * k, 1.0 + 0.10 * g * k)
 	if st.id == hover_struct and st.built: return Color(1.12, 1.12, 1.12)
 	return Color.WHITE
+
+## The outline shader (shaders/outline.gdshader) on a picked thing's item, breathing; off otherwise.
+func _pick_outline(it: Node2D, on: bool) -> void:
+	if not on:
+		if it.material != null: it.material = null
+		return
+	if _outline_mat == null:
+		_outline_mat = ShaderMaterial.new()
+		_outline_mat.shader = load("res://shaders/outline.gdshader")
+	_outline_mat.set_shader_parameter("pulse", 0.6 + 0.4 * sin(t * 3.0))
+	if it.material != _outline_mat: it.material = _outline_mat
+
+## Marks drawn over the scene for the pick: a building's corner brackets or floating marker,
+## a person's chevron (see SEL_B_STYLES, SEL_P_STYLES).
+func _draw_pick_marks() -> void:
+	var st = sim.struct_by_id(selected_struct) if selected_struct >= 0 else null
+	if st and _in_view(st.pos):
+		var r: float = sim.struct_r(st) + 8.0
+		if sel_b_style == 1: # corner brackets, flat on the ground, breathing out and in
+			var k := 1.0 + 0.06 * sin(t * 3.0)
+			for c in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+				var corner: Vector2 = st.pos + c * r * k
+				var arm := r * 0.35
+				var a1 := iso(corner)
+				var a2 := iso(corner - Vector2(c.x, 0) * arm)
+				var a3 := iso(corner - Vector2(0, c.y) * arm)
+				for w in [[5.0, Color(0, 0, 0, 0.35)], [2.5, SEL_COL]]:
+					ci.draw_polyline(PackedVector2Array([a2, a1, a3]), w[1], w[0])
+		elif sel_b_style == 2: # the light pool on the ground (under the glow)
+			pass
+		elif sel_b_style == 3: # a marker bobbing above the roof
+			var top := iso(st.pos) + Vector2(0, -r * 1.7 - 22.0 + sin(t * 3.0) * 5.0)
+			_diamond(top, 9.0)
+	if sel_p_style == 2: # a chevron bobbing over each picked person
+		for id in selected:
+			var u = sim.unit_by_id(id)
+			if u == null or u.dead or sim.in_hut(u) or not _in_view(u.pos): continue
+			var p := iso(u.pos) + Vector2(0, -64 + sin(t * 4.0 + u.id) * 3.0)
+			for w in [[5.0, Color(0, 0, 0, 0.4)], [2.6, SEL_COL]]:
+				ci.draw_polyline(PackedVector2Array([p + Vector2(-7, -5), p, p + Vector2(7, -5)]), w[1], w[0])
+
+func _diamond(c: Vector2, r: float) -> void:
+	var pts := PackedVector2Array([c + Vector2(0, -r * 1.3), c + Vector2(r, 0), c + Vector2(0, r * 1.3), c + Vector2(-r, 0)])
+	ci.draw_colored_polygon(pts, SEL_COL)
+	pts.append(pts[0])
+	ci.draw_polyline(pts, Color(0.25, 0.16, 0.05, 0.8), 1.5)
 
 func _touch(it: Item, sig: int) -> void:
 	if it.dynamic:
