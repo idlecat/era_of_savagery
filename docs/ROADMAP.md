@@ -297,3 +297,17 @@ Two things carry through every step:
   the stores hold less than a meal each, those weak from hunger are sent for food too
   (the sick still rest). The winter shortfall itself is what 4417d1c (fields 0.12 a
   head, granaries for 8 food a head) addresses; three 150-day runs are measuring it.
+- **Three 150-day games on 4417d1c** (seeds 1-3; the wood and winter-food fixes,
+  before the famine fix): 640–690 people at day 150 (326–414 before), 143–155 at
+  day 60, 319–338 at 100, 438–462 at 120, near the plan's curve (~500 at 120).
+  10–38 deaths each; winters mostly keep 30–1,000 food (seed 1 touched 0 once,
+  which the famine fix answers); wood steady at 8,000–9,000.
+- **Step 4 gaps closed:** the Warehouse (second age, 500 food, five granaries'
+  worth; a new baked model; the Steward raises it before granaries in a town
+  short of a winter's stores), the City victory's roads (every settlement joined to
+  the village by a packed road, 80% of the way: `roads.share_paved()`), and speed:
+  1,000 working people 51.6 → 37.4 ms a tick (warmth by grid, calmer meals and
+  pastimes every 4th tick, fog revealed once per cell; on a busy machine). Still
+  above the 25 ms target: people's updates are ~22 ms (walking gatherers the most),
+  everyday life ~4.6 ms; the next levers are level of detail by distance from the
+  camera and a cheaper life tick.
