@@ -179,10 +179,12 @@ Becomes:
   shares than the calculator predicts). Ties go to the nearest work. Each choice maps to
   its assignment verb (`assign_field`, `assign_gather`, `assign_build`, `assign_craft`,
   `assign_heal`...).
-- The **channel values** V come from `society.json values`, scaled by the Steward's
-  policy (`steward.policy` today: "food first" becomes a higher value on food's channels).
-- **What it replaces**: the `needs` targets and weights of `vice.steward`, the `autumn`
-  food target (food's horizon term does it), `leisure_below` (a need covered has 0 weight;
+- The **channel values** V come from `society.json values`, scaled by the Council's way
+  (`steward.policy`, which since 90fbad3 already scales a need's weight, not its target:
+  "food first" becomes a higher value on food's channels).
+- **What it replaces**: the `needs` targets and weights of `vice.steward` (food's target
+  is "the granaries full", `of_store`, since 90fbad3: food's horizon term does that job),
+  `leisure_below` (a need covered has 0 weight;
   with every weight 0, people rest or take an idle act), the art/lore fallback.
 - **Careers** keep their part: a holder goes to their trade while its need has a weight
   (`careers.go_work`: "while its resource is needed" becomes "while its need's weight is
