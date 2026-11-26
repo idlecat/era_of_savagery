@@ -565,6 +565,29 @@ func _build_right(root: Control) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
+	# The Steward's standing orders, above the tabs.
+	var ph := HBoxContainer.new()
+	v.add_child(ph)
+	var pl := _label("Steward policy:", 14, COL_DIM)
+	pl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	ph.add_child(pl)
+	policy_opt = OptionButton.new()
+	for pol in ["balanced", "food", "wood", "stone", "lore"]: policy_opt.add_item(pol)
+	policy_opt.item_selected.connect(func(i): sim.steward_policy = policy_opt.get_item_text(i))
+	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ph.add_child(policy_opt)
+	var auto := CheckBox.new()
+	auto.text = "Steward lays out improvements" # (an English key: Godot re-translates it when the language changes)
+	auto.tooltip_text = ("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
+	auto.button_pressed = sim.improve.on
+	auto.toggled.connect(func(b): sim.improve.on = b)
+	v.add_child(auto)
+	var routine := CheckBox.new()
+	routine.text = "Steward decides routine matters"
+	routine.tooltip_text = "Routine questions, like whether to hold a festival this season, are decided by the Steward and only reported. Without a Steward they are asked."
+	routine.button_pressed = sim.steward_routine
+	routine.toggled.connect(func(b): sim.steward_routine = b)
+	v.add_child(routine)
 	challenge_text = _rich(0, true)
 	v.add_child(challenge_text)
 	v.add_child(_header("NEIGHBORING CLANS"))
@@ -609,28 +632,6 @@ func _build_right(root: Control) -> void:
 	reno_btn.visible = false
 	reno_btn.clip_text = true
 	bv.add_child(reno_btn)
-	var ph := HBoxContainer.new()
-	bv.add_child(ph)
-	var pl := _label("Steward policy:", 14, COL_DIM)
-	pl.autowrap_mode = TextServer.AUTOWRAP_OFF
-	ph.add_child(pl)
-	policy_opt = OptionButton.new()
-	for pol in ["balanced", "food", "wood", "stone", "lore"]: policy_opt.add_item(pol)
-	policy_opt.item_selected.connect(func(i): sim.steward_policy = policy_opt.get_item_text(i))
-	policy_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ph.add_child(policy_opt)
-	var auto := CheckBox.new()
-	auto.text = "Steward lays out improvements" # (an English key: Godot re-translates it when the language changes)
-	auto.tooltip_text = ("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
-	auto.button_pressed = sim.improve.on
-	auto.toggled.connect(func(b): sim.improve.on = b)
-	bv.add_child(auto)
-	var routine := CheckBox.new()
-	routine.text = "Steward decides routine matters"
-	routine.tooltip_text = "Routine questions, like whether to hold a festival this season, are decided by the Steward and only reported. Without a Steward they are asked."
-	routine.button_pressed = sim.steward_routine
-	routine.toggled.connect(func(b): sim.steward_routine = b)
-	bv.add_child(routine)
 	log_text = _rich(0)
 	log_text.name = "Chronicle"
 	log_text.meta_clicked.connect(_on_log_link)
