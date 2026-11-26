@@ -3,7 +3,7 @@
 Draft 5, 2026-11-26. A model to get right before any code. Draft 1 (`economy.md`)
 modelled the food economy; draft 2 made food one case of a general model; drafts 3 and 4
 fixed its units and double counting after two reviews; draft 5 is a two-model brainstorm
-(claude and pi on GLM-5.3, three rounds): R as the food share, a budget that multiplies
+(claude and pi, three rounds): R as the food share, a budget that multiplies
 to ×3, order's two thresholds, a growth channel, food's two-window allocation weight,
 health's climb as care. §13 lists what is settled and what is open.
 
@@ -218,10 +218,11 @@ Nine needs, each with the same parts:
      horizon`: what is there to eat until the next harvest. It is an **anticipation signal
      only**: it drives no channel and no hardship — it enters food's allocation weight as
      the horizon window's term (§8) and sets the food security that births need (§10).
-     The **harvest window** is the last season in which the food sources yield before a
-     season in which they don't (autumn, with the seasons as they are). The horizon
-     rolls: from now to the start of the next harvest window (inside one, the next
-     year's), clamped to half a year (4 days). Through spring and summer the window
+     The **harvest window** is the last season in which the fields and the wild yield
+     before one in which they don't (autumn, with the seasons as they are; the hunt,
+     fishing and the pens yield through the winter, which is what makes them the
+     winter's sources, §8). The horizon rolls: from now to the start of the next harvest
+     window (inside one, the next year's), clamped to half a year (4 days). Through spring and summer the window
      ends at the coming harvest, so C_horizon holds near 1; when the harvest window opens
      the horizon rolls past it to next year's and the winter comes in — C_horizon falls,
      and the autumn rush, the harvest worked hard, fills the stores before the cold. A
@@ -354,7 +355,7 @@ healer's method (its sick rest and recover or die, coverage near 0, its cost pai
 mortality), and **care per case** is a level's want like comfort's (a band expects rest
 by the fire, a town a healer's days). So health's demand is
 `incidence(density, crowding) × N × care_per_case(level)`, and care per case rises ~×5
-band → town. This keeps density mild, as the third review found, and puts health's climb
+band → town. This keeps density mild, as the brainstorm found, and puts health's climb
 where it belongs: in what the tribe has learned to do for its sick. The mortality
 channel's rate is fitted so the band's near-zero coverage is a slow cost in lives, not a
 collapse — its sick mostly rest and recover — and the share table's 1% is the gathering
@@ -459,10 +460,12 @@ security, and the winter's mortality, discounted by how far off it is: `δ^(days
 δ fitted). `weight_food = N × (V_now × ΔB_now + V_horizon × ΔB_horizon)`, and each
 channel's value is used once. The horizon term's mortality is **anticipation, not a
 second firing**: the channel itself fires once, later, on C_now, when the shortfall
-arrives; the horizon weight only forecasts it, and **days ahead** is the horizon's
-remaining length (as the window rolls toward the crunch the discount lifts and the pull
-strengthens). Births are a rate, not a death, so growth enters undiscounted. Consumption
-and losses sit in neither V: they act through c, the margin m and the stores, not
+arrives; the horizon weight only forecasts it, and **days ahead** is the days until the
+forecast's stores first run dry — the horizon's end if they never do (a shortfall that
+never empties the stores is a ration, not a famine). As the run-out day nears, the
+discount lifts and the pull strengthens. Births are a rate, not a death, so growth
+enters undiscounted. Consumption and
+losses sit in neither V: they act through c, the margin m and the stores, not
 through either window's ΔB.
 
 **The expected supply inside C_horizon is a persistence forecast**: the food hands
@@ -571,7 +574,9 @@ Without a rule of their own:
 |---|---|---|
 | c, child eating, d | food a day (grown-up; child 0.6 of c); adult-equivalent mouths per worker | 3; 0.6; d ≈ 1.25 (children ~25%) |
 | m, the food margin | spoilage and the store's buffer: the R ↔ share conversion (§3.2) | 0.06 to start (0.05-0.1) |
+| the shelter margin | beds above N (guests, growth) | ~0.1 |
 | the time budget: rest, meals, life; trips, distance, speed | h | from the day's parts; the walk from geometry |
+| settled area ∝ N^0.7 (the density assumption) | health's density; the walk's settlement term | N^0.7 to start (open #4) |
 | base(method) per kind of work, per level | the steps | from each level's R band |
 | productivity budget shares | each source's part of the climb | §3 |
 | known (unknown method) | learning | 0.5 |
@@ -581,9 +586,10 @@ Without a rule of their own:
 | order demand and supply: a_c, spans, N₁, the Code's multiplier | order's two terms (§6) | a_c fitted to the camp's 2%; N₁ = 150; the Code ×~1.4; spans to 5% / 9% |
 | l per need, per level | labour cost of a unit (methods lower it) | from the share table |
 | B(C), C_floor per need | concavity; where hardships start | `1 - (1 - C)²`; C_floor ≈ 0.6 |
-| food horizon, food safety buffer | anticipation; when food is "secure" | to the next harvest window, ≤ 4 days; buffer to be set |
+| food horizon, food safety buffer | anticipation; when food is "secure" | to the next harvest window, ≤ 4 days; buffer ~1.2 over the horizon to start (open #2) |
 | δ, the horizon's daily discount | how much less a death ahead weighs than one today (§8) | fitted, ~0.7 to start (open #6) |
 | vigilance floor per head | safety's minimum demand | to be set |
+| the expected threat at each size | safety's demand beyond the vigilance floor | fitted to the share table's safety column; the game reads `rivals.gd`'s threat query |
 | channel values | what the tribe values | mortality > labour, losses > contentment; fitted by the calculator; shifted by the Council's policies |
 | wants per level (comfort, spirit; health's care per case) | the standard's bar, and health's care (§6) | 1.0 at the band, rising; comfort + spirit fitted to 4% → 27%, care per case to health's 1% → 9% |
 | birth response to the standard | more people vs better lives | moderate |
@@ -627,7 +633,8 @@ section named; `git log -p -- docs/society.md` has the argument):
   health, trade into exchange and prices, law into order.
 - **Six channels**: mortality, growth, labour, consumption, losses, contentment (§5).
   Growth (births, leavers, comers) is its own channel; its value is fitted so births
-  clear deaths by a little while the ceiling is far and sit level with them at it.
+  clear deaths by a little while the ceiling is far and sit level with them at it; a
+  culture that values numbers raises it, a leaning like §3's culture factor.
 - **One communal store first**; households later.
 
 **Units and counting**
@@ -679,8 +686,8 @@ section named; `git log -p -- docs/society.md` has the argument):
 
 - **A periodic year**, season by season with stores carried over, reporting year-averaged
   and per-season shares, active-season R, ceilings, the largest single-need intake and
-  the forecast's drift (§12). Channel values, wants per level, care per case, δ and the
-  spans are its fitted knobs.
+  the forecast's drift (§12). Channel values, wants per level, care per case, δ, the
+  spans, a_c and the threat at each size are its fitted knobs.
 
 **Still open:**
 
@@ -698,6 +705,7 @@ section named; `git log -p -- docs/society.md` has the argument):
    (and the harvest a labour peak). **Recommendation**: leave it out of the first cut and
    decide after the calculator, on whether the year's rhythm reads in play without it.
 6. **The horizon's discount δ** (§8): its value (~0.7 a day to start). Days ahead is the
-   horizon's remaining length, so δ is how much less a death at the window's end weighs
-   than one today. If V_horizon cannot fill the stores in one autumn at a sane δ, the
-   Council's policies are the lever, not a steeper δ.
+   days until the forecast's stores run dry (the horizon's end if they never do), so δ
+   is how much less a death at the run-out day weighs than one today. If V_horizon
+   cannot fill the stores in one autumn at a sane δ, the Council's policies are the
+   lever, not a steeper δ.
