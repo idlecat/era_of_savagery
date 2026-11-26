@@ -38,7 +38,9 @@ uniform float use_photo = 1.0;
 uniform float dryness = 0.0;     // the land (config/lands.json): 0 green parkland or wetter, 1 dry steppe
 uniform vec3 sun_tint = vec3(1.2, 1.17, 0.9);   // land in the sun
 uniform vec3 shade_tint = vec3(0.78, 0.88, 0.76); // land in shade
-uniform float relief = 0.8;     // how strongly the gentle rise and fall of the land is shaded   // 0: the old procedural ground (no textures loaded)
+uniform float relief = 0.8;
+uniform vec3 sky_col = vec3(0.62, 0.74, 0.84);  // what the water mirrors (world_view eases it by time and weather)
+uniform vec3 glint_col = vec3(0.55, 0.52, 0.42); // sun or moon glints on the ripples     // how strongly the gentle rise and fall of the land is shaded   // 0: the old procedural ground (no textures loaded)
 
 // A texture sampled twice (two scales, rotated) so its tiling doesn't show.
 // The lie of the land: a low rolling height field (world units), for shading only.
@@ -79,7 +81,8 @@ void fragment() {
 	float g2 = texture(grass_tex, wp / 41.0 + vec2(0.37, 0.11)).r;
 	float g3 = texture(grain_tex, wp / 11.0).r;
 	float g4 = texture(grain_tex, wp / 4.3 + vec2(0.5, 0.2)).r;
-	float land = smoothstep(0.7, 0.95, m.a);
+	float bank_jag = (g2 - 0.5) * 0.24 + (g3 - 0.5) * 0.08; // (a ragged, natural edge, not the texels' steps)
+	float land = smoothstep(0.7 + bank_jag, 0.9 + bank_jag, m.a);
 	float water = 1.0 - smoothstep(0.32, 0.46, m.a);
 	float sand = (1.0 - land) * (1.0 - water);
 	vec3 col = m.rgb;
@@ -139,14 +142,32 @@ void fragment() {
 	sandc += vec3(0.07) * smoothstep(0.72, 0.95, g4);
 	sandc -= vec3(0.08, 0.07, 0.05) * step(g3, 0.16);
 
-	// ---- water: two scrolling noise layers interfere into ripples and glints
-	float r1 = texture(grass_tex, wp / 95.0 + vec2(TIME * 0.018, TIME * 0.032)).r;
-	float r2 = texture(grass_tex, wp / 52.0 - vec2(TIME * 0.027, TIME * 0.012)).r;
-	float rip = r1 * r2;
-	vec3 waterc = col * (0.82 + 0.4 * rip);
-	waterc += vec3(0.30, 0.34, 0.32) * smoothstep(0.40, 0.58, rip);
+	// ---- water: depth from the map's alpha (deep mid-river, shallow at the banks and fords),
+	// the riverbed showing through the shallows, ripples that run with the current (the mask
+	// holds each river pixel's flow direction; two phases of a flow map, cross-faded, so the
+	// pattern never stretches), the sky mirrored on top, and sun glints on the ripple crests.
+	float depth = 1.0 - smoothstep(0.1, 0.38, m.a);
+	vec4 fm = texture(mask_tex, UV);
+	vec2 flow = fm.b > 0.5 ? normalize(fm.rg * 2.0 - 1.0 + vec2(0.0001)) : vec2(0.7, 0.7);
+	float ph0 = fract(TIME * 0.07);
+	float ph1 = fract(TIME * 0.07 + 0.5);
+	float wgt = abs(ph0 * 2.0 - 1.0); // (weight of the second phase: the first is reset when it is 0)
+	vec2 o0 = flow * ph0 * 200.0;
+	vec2 o1 = flow * ph1 * 200.0;
+	float ra = mix(texture(grass_tex, (wp - o0) / 95.0).r, texture(grass_tex, (wp - o1) / 95.0 + vec2(0.5)).r, wgt);
+	float rb = mix(texture(grass_tex, (wp - o0 * 1.4) / 46.0 + vec2(0.3, 0.1)).r, texture(grass_tex, (wp - o1 * 1.4) / 46.0 + vec2(0.8, 0.6)).r, wgt);
+	float rip = ra * rb;
+	vec3 bed = mix(vec3(0.42, 0.44, 0.34), vec3(0.34, 0.38, 0.30), g2) * (0.85 + 0.3 * g3);
+	vec3 deepc = vec3(0.07, 0.25, 0.38);
+	vec3 waterc = mix(mix(bed, col, 0.6), deepc, pow(depth, 0.8) * 0.85);
+	waterc *= 0.78 + 0.55 * rip;
+	waterc += vec3(0.16, 0.19, 0.2) * smoothstep(0.36, 0.55, rip); // (crests catching the light)
+	float sky_n = texture(grass_tex, wp / 1900.0 + vec2(TIME * 0.0035, TIME * 0.0016)).r;
+	waterc = mix(waterc, sky_col * (0.8 + 0.4 * sky_n), 0.1 + 0.1 * depth);
+	float spark = texture(grain_tex, (wp - o0 * 0.6) / 13.0).r * (1.0 - wgt) + texture(grain_tex, (wp - o1 * 0.6) / 13.0 + vec2(0.4)).r * wgt;
+	waterc += glint_col * smoothstep(0.62, 0.8, spark * rip * 1.9) * (0.4 + 0.6 * depth);
 	float edge = smoothstep(0.30, 0.42, m.a) * (1.0 - smoothstep(0.42, 0.5, m.a)); // foam at the bank
-	waterc = mix(waterc, vec3(0.85, 0.9, 0.88), edge * (0.35 + 0.4 * g3));
+	waterc = mix(waterc, vec3(0.85, 0.9, 0.88), edge * (0.3 + 0.45 * smoothstep(0.35, 0.7, ra)));
 
 	landc *= 1.0 + relief * hillshade(wp) * vec3(1.0, 0.98, 0.92);
 	vec3 outc = landc * land + sandc * sand + waterc * water;

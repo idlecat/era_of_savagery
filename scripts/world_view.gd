@@ -8,6 +8,7 @@ extends Node2D
 const D = preload("res://scripts/data.gd")
 const E = preload("res://scripts/entities.gd")
 const I = preload("res://scripts/i18n.gd")
+const ArtBaker = preload("res://scripts/art_baker.gd") # (its WALL_DIRS and YARD_PROPS)
 
 signal selection_changed()
 signal structure_clicked(s) # a click on a building with something to show (the burial ground)
@@ -52,6 +53,8 @@ var minimap_tex: ImageTexture
 var fog_tex: ImageTexture
 var fog_img: Image
 var fog: Node2D # draws the fog of war (fog.gdshader)
+var plaza_layer: Node2D # the flagstone plazas of towns (draw_plazas), redrawn when plaza_sig changes
+var plaza_sig := -1
 var fog_mat: ShaderMaterial
 var fog_refresh := 0.0
 var wear_tex: ImageTexture
@@ -170,6 +173,9 @@ func setup(s) -> void:
 	_ground_photos(gm)
 	ground.material = gm
 	add_child(ground)
+	plaza_layer = PlazaLayer.new()
+	plaza_layer.wv = self
+	add_child(plaza_layer)
 	ground_fx = GroundFX.new()
 	ground_fx.wv = self
 	add_child(ground_fx)
@@ -252,6 +258,8 @@ func _build_terrain() -> void:
 				var k := dx / D.RIVER_HALF
 				c = deep.lerp(shallow, k * k)
 				c.a = 0.08 + 0.3 * k
+				var fl: Vector2 = water_flow[j * w + i] # (the water shader reads the flow from the mask)
+				mask.set_pixel(i, j, Color(0.5 + 0.5 * fl.x, 0.5 + 0.5 * fl.y, 1.0))
 				if D.is_ford_at(p):
 					c = ford.lerp(shallow, 0.3 * k).lerp(Color("#9a9682"), 0.35 * f)
 					c.a = 0.4
@@ -307,10 +315,15 @@ func _offset_line(pts: PackedVector2Array, off: float) -> PackedVector2Array:
 
 ## Distance to the nearest river centreline for each terrain pixel (up to `reach`, else INF):
 ## each river segment stamps the pixels around it, much cheaper than asking per pixel.
+## Also fills `water_flow` (per pixel: the direction of the nearest river segment, the way
+## its polyline runs) for the water shader's flow-aligned ripples.
+var water_flow := PackedVector2Array()
 func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	out.resize(w * h)
 	out.fill(INF)
+	water_flow.resize(w * h)
+	water_flow.fill(Vector2.ZERO)
 	var sc := float(TEX_SCALE)
 	for pts in D.RIVERS:
 		for k in pts.size() - 1:
@@ -322,11 +335,14 @@ func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 			var y1 := mini(h - 1, int((maxf(a.y, b.y) + reach) / sc))
 			var ab := b - a
 			var l2 := maxf(ab.length_squared(), 0.0001)
+			var dir := ab.normalized()
 			for j in range(y0, y1 + 1):
 				for i in range(x0, x1 + 1):
 					var p := Vector2(i * sc + 1.5, j * sc + 1.5)
 					var d := p.distance_to(a + ab * clampf((p - a).dot(ab) / l2, 0.0, 1.0))
-					if d < out[j * w + i]: out[j * w + i] = d
+					if d < out[j * w + i]:
+						out[j * w + i] = d
+						water_flow[j * w + i] = dir
 	return out
 
 # ------------------------------------------------------------ frame
@@ -342,6 +358,7 @@ func _process(delta: float) -> void:
 		cam.offset = Vector2.ZERO
 	night.color = _sky_tint()
 	_grade_step(delta)
+	_water_step(delta)
 	_wet_step(delta)
 	_zoom_step(delta)
 	_update_hover()
@@ -353,6 +370,10 @@ func _process(delta: float) -> void:
 	if wear_refresh <= 0:
 		wear_refresh = 1.0
 		_refresh_wear()
+		var psig := _plaza_sig()
+		if psig != plaza_sig:
+			plaza_sig = psig
+			plaza_layer.queue_redraw()
 	fog_refresh -= delta
 	if fog_refresh <= 0:
 		fog_refresh = 0.1
@@ -610,6 +631,34 @@ func _grade_step(delta: float) -> void:
 	grade_mat.set_shader_parameter("tone_k", grade_tone)
 	grade_mat.set_shader_parameter("moon", nk * 0.8)
 
+## What the water mirrors and how it glints: a pale blue sky by day, gold at dusk, rose at
+## dawn, gray under rain, a dim blue moonlit sky at night (terrain.gdshader sky_col, glint_col).
+var water_sky := Color(0.62, 0.74, 0.84)
+var water_glint := Color(0.55, 0.52, 0.42)
+func _water_step(delta: float) -> void:
+	var sky := Color(0.62, 0.74, 0.84)
+	var gl := Color(0.55, 0.52, 0.42)
+	if sim.is_day_part("dusk"):
+		var k := sin(_part_k("dusk") * PI)
+		sky = sky.lerp(Color(0.95, 0.68, 0.45), k)
+		gl = gl.lerp(Color(0.9, 0.6, 0.3), k)
+	elif sim.is_day_part("dawn"):
+		var k := sin(_part_k("dawn") * PI)
+		sky = sky.lerp(Color(0.92, 0.72, 0.74), k * 0.8)
+		gl = gl.lerp(Color(0.8, 0.6, 0.55), k * 0.8)
+	match sim.hz.weather:
+		"rain", "storm", "blizzard":
+			sky = sky.lerp(Color(0.5, 0.56, 0.62), 0.45)
+			gl *= 0.35
+	sky = sky.lerp(Color(0.3, 0.38, 0.6), sim.night_amt)
+	gl = gl.lerp(Color(0.35, 0.42, 0.6), sim.night_amt * 0.7)
+	var k2 := minf(1.0, delta * 1.5)
+	water_sky = water_sky.lerp(sky, k2)
+	water_glint = water_glint.lerp(gl, k2)
+	var gm: ShaderMaterial = ground.material
+	gm.set_shader_parameter("sky_col", Vector3(water_sky.r, water_sky.g, water_sky.b))
+	gm.set_shader_parameter("glint_col", Vector3(water_glint.r, water_glint.g, water_glint.b))
+
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
 	if last_pos.has(key):
@@ -838,6 +887,8 @@ func draw_glow() -> void:
 		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.22 + 0.4 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
 	for u in sim.units:
 		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
+	_draw_fireflies()
+	_draw_hearths()
 
 func _halo(c: Vector2, r: float, a: float) -> void:
 	ci.draw_texture_rect(light_tex, Rect2(c - Vector2(r, r * 0.75), Vector2(r * 2, r * 1.5)), false, Color(1.0, 0.62, 0.3, a))
@@ -860,7 +911,9 @@ func draw_ghost() -> void:
 	_draw_structure(g)
 
 func draw_overlay() -> void:
+	_draw_embers()
 	_draw_weather()
+	_draw_ambient()
 	_draw_nature()
 	if clean: return
 	# ---- overlay pass: labels, bars, flags (never hidden behind objects)
@@ -919,19 +972,39 @@ func draw_overlay() -> void:
 		var ahead := a.lerp(b, minf(1.0, k + 0.08)) - Vector2(0, sin(PI * minf(1.0, k + 0.08)) * lift)
 		if s["weapon"] == "bow": ci.draw_line(at - (ahead - at).normalized() * 9.0, at, Color("#f3e2c0"), 1.5)
 		else: ci.draw_circle(at, 2.2, Color("#9a9184"))
-	for p in sim.popups:
-		if not sim.is_explored(p["pos"]): continue
+	if not clean: # speech marks: after the important names, before popups and ordinary names (which give way)
+		var talk: Array = [] # [rank, unit]: picked/hovered first, then those nearest the middle of the view
+		var mid := uniso(cam.get_screen_center_position())
+		for u in sim.units:
+			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
+				var pick: bool = u.id in selected or u.id == hover_unit
+				talk.append([-1.0 if pick else u.pos.distance_squared_to(mid), u])
+		talk.sort_custom(func(x, y): return x[0] < y[0])
+		var words_left := SPEECH_CAP
+		for e in talk:
+			var u = e[1]
+			var words: bool = words_left > 0 or e[0] < 0.0
+			if words: words_left -= 1
+			_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u, u.say_until - sim.time, words, e[0] < 0.0)
+	var small_left := POPUP_CAP
+	for i in range(sim.popups.size() - 1, -1, -1): # (newest first: they win the room)
+		var p: Dictionary = sim.popups[i]
+		if not sim.is_explored(p["pos"]) or not _in_view(p["pos"]): continue
+		if not p["big"]:
+			if small_left <= 0: continue
+			small_left -= 1
 		var a: float = 1.0 - pow(p["t"] / p["life"], 2)
 		var col: Color = p["color"]
 		col.a = a
 		var at: Vector2 = iso(p["pos"]) - Vector2(0, 26)
-		var size: int = 17 if p["big"] else 13
+		var size: int = 17 if p["big"] else 12
+		if not p["big"]: col.a *= 0.8
 		if _label_room(at, p["text"], size, p["big"]): _draw_label(at, p["text"], size, col, true)
+	if not (names_all or alt_held) and later.size() > NAME_CAP: # zoomed in: only those near the cursor
+		var m := uniso(get_global_mouse_position())
+		later.sort_custom(func(x, y): return x.pos.distance_squared_to(m) < y.pos.distance_squared_to(m))
+		later.resize(NAME_CAP)
 	for u in later: _draw_unit_name(u, false)
-	if not clean: # speech marks last, above names and popups
-		for u in sim.units:
-			if u.say_until > sim.time and u.say != "" and not u.dead and not sim.in_hut(u) and _in_view(u.pos):
-				_speech(iso(u.pos) + Vector2(0, -66 if u.role != "child" else -52), u, u.say_until - sim.time)
 	if drag_start != null and wall_center == null: # (a box select, not a wall being sized)
 		var m := get_global_mouse_position()
 		var r := Rect2(drag_start, m - drag_start).abs()
@@ -1047,6 +1120,146 @@ func _draw_weather() -> void:
 			var y := view.position.y + fmod(i * 91.37 + t * (140.0 if w == "blizzard" else 45.0), view.size.y)
 			ci.draw_circle(Vector2(x, y), 1.6 + fmod(i * 0.37, 1.6), Color(1, 1, 1, 0.75))
 		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+
+# ------------------------------------------------------------ ambient life
+## Where firelight shows through a home's door (and an era-3 longhouse's windows), on the
+## screen, from the baked models (art_baker.gd: model +z faces world +y, which is down-left
+## on screen): [door, ground in front of it, windows...]. A sprite pixel is about a world unit.
+func _door_lights(s) -> Array:
+	var big: bool = s.type == "large_hut"
+	var r := 27.0 if big else 20.0
+	var b := iso(s.pos)
+	match clampi(s.style, 1, 3):
+		1:
+			var d := iso(s.pos + Vector2(0, r * 0.8)) - Vector2(0, 5)
+			return [d, d + Vector2(-6, 5)]
+		2:
+			var d := iso(s.pos + Vector2(1, 1).normalized() * (r + 0.5)) - Vector2(0, 5)
+			return [d, d + Vector2(0, 7)]
+		_:
+			var d := iso(s.pos + Vector2(0, r * 0.62)) - Vector2(0, 9)
+			var along := (iso(s.pos + Vector2(r * 0.55, r * 0.62)) - iso(s.pos + Vector2(0, r * 0.62)))
+			return [d, d + Vector2(-5, 9), d + along - Vector2(0, 3), d - along - Vector2(0, 3)]
+	return [b]
+
+## Homes lit from within at dusk and at night while their people are in (additive, Glow layer):
+## a warm flickering doorway, a pool of light on the ground before it, era-3 windows.
+func _draw_hearths() -> void:
+	if not sim.has_tech("fire"): return
+	var dusk := sin(_part_k("dusk") * PI) if sim.is_day_part("dusk") else 0.0
+	var k := maxf(dusk * 0.7, sim.night_amt)
+	if k < 0.1: return
+	var home := {} # hut id -> someone inside
+	for u in sim.units:
+		if sim.in_hut(u): home[u.bed_id] = true
+	for s in sim.structures:
+		if not s.built or not (s.type in ["hut", "large_hut"]) or not _in_view(s.pos) or not sim.is_visible(s.pos): continue
+		if not home.has(s.id) and sim.night_amt > 0.5: continue # (a dark, empty home)
+		var f := k * (0.85 + 0.15 * sin(t * 7.0 + s.id * 1.3) * sin(t * 3.1 + s.id))
+		var pts := _door_lights(s)
+		ci.draw_texture_rect(light_tex, Rect2(pts[1] - Vector2(26, 13), Vector2(52, 26)), false, Color(1.0, 0.55, 0.22, 0.55 * f))
+		ci.draw_texture_rect(light_tex, Rect2(pts[0] - Vector2(9, 11), Vector2(18, 22)), false, Color(1.0, 0.7, 0.35, 0.9 * f))
+		for i in range(2, pts.size()):
+			ci.draw_texture_rect(light_tex, Rect2(pts[i] - Vector2(6, 5), Vector2(12, 10)), false, Color(1.0, 0.72, 0.4, 0.6 * f))
+
+## A cheap repeatable hash in 0..1 (positions and phases of ambient particles, so nothing
+## needs storing and the game's RNG is untouched).
+static func _h(i: int, salt: int) -> float:
+	return fposmod(sin(float(i) * 12.9898 + float(salt) * 78.233) * 43758.5453, 1.0)
+
+## Sparks rising from the fires (in the Overlay, so the fire's own glow doesn't wash them out).
+func _draw_embers() -> void:
+	var night: float = sim.night_amt
+	for st in sim.structures:
+		if not st.built or not _in_view(st.pos) or not sim.is_visible(st.pos): continue
+		var n := 0
+		match st.type:
+			"bonfire": n = 9
+			"council_ring": n = 5
+			"smelter": n = 6
+		if n == 0: continue
+		var b := iso(st.pos) - Vector2(0, 8)
+		for i in n:
+			var life := 1.6 + 1.2 * _h(i, st.id)
+			var k := fposmod(t / life + _h(i, st.id + 3), 1.0)
+			var rise := 46.0 + 40.0 * _h(i, st.id + 5)
+			var drift := (wind_k() * 40.0 + 6.0) * k + sin(t * 3.0 + i * 1.7) * 3.0 * k
+			var at := b + Vector2(drift + (_h(i, st.id + 9) - 0.5) * 14.0, -rise * k)
+			var a := (1.0 - k * k) * (0.55 + 0.45 * night)
+			ci.draw_circle(at, 1.5 + (1.0 - k) * 1.0, Color(1.0, 0.38 + 0.4 * (1.0 - k), 0.08, a))
+
+## Fireflies over the grass on warm dusks and nights (additive): they hang about a spot,
+## wander a little and blink. Not in winter, rain or snow, nor over water or unseen land.
+func _draw_fireflies() -> void:
+	if sim.hz.on() and (sim.hz.season_idx() == 3 or sim.hz.weather != "clear" or sim.hz.snow > 0.2): return
+	var dusk := sin(_part_k("dusk") * PI) if sim.is_day_part("dusk") else 0.0
+	var k := maxf(dusk, sim.night_amt)
+	if k < 0.15 or cam.zoom.x < 0.6: return # (zoomed far out they'd be specks: not worth the cells)
+	var cell := 160.0 # one firefly per cell of the screen at most, fixed to the ground
+	var x0 := floori(view.position.x / cell)
+	var y0 := floori(view.position.y / cell)
+	for gy in range(y0, y0 + ceili(view.size.y / cell) + 1):
+		for gx in range(x0, x0 + ceili(view.size.x / cell) + 1):
+			var id := gx * 7919 + gy * 104729
+			if _h(id, 1) > 0.55: continue
+			var home := Vector2((gx + _h(id, 2)) * cell, (gy + _h(id, 3)) * cell)
+			var wp := uniso(home)
+			if not sim.is_visible(wp) or D.in_river(wp): continue
+			var at := home + Vector2(sin(t * 0.7 + id) * 14.0, cos(t * 0.53 + id * 0.3) * 8.0 - 10.0)
+			var blink := clampf(sin(t * (1.3 + _h(id, 4)) + id) * 1.6 - 0.4, 0.0, 1.0)
+			if blink <= 0.0: continue
+			var a := blink * k
+			ci.draw_circle(at, 5.0, Color(0.75, 1.0, 0.35, 0.12 * a))
+			ci.draw_circle(at, 1.6, Color(0.9, 1.0, 0.55, 0.9 * a))
+
+## Things in the air by day: seeds and pollen drifting in spring and summer, falling leaves
+## in autumn (and in any gale), and now and then a flock of birds crossing with its shadow.
+func _draw_ambient() -> void:
+	var season: int = sim.hz.season_idx() if sim.hz.on() else 1
+	var w: String = sim.hz.weather if sim.hz.on() else "clear"
+	var day_k: float = 1.0 - sim.night_amt
+	if day_k < 0.2 or w == "blizzard": return
+	var wind := wind_k()
+	var leaves := season == 2 or w == "storm"
+	if season != 3 and w != "rain":
+		var n := 46 if leaves else 30
+		for i in n:
+			var sp := 18.0 + 50.0 * wind + 10.0 * _h(i, 11)
+			var x := view.position.x + fposmod(_h(i, 12) * view.size.x + t * sp, view.size.x)
+			var y := view.position.y + fposmod(_h(i, 13) * view.size.y + sin(t * 0.8 + i) * 18.0 + t * (14.0 if leaves else 3.0), view.size.y)
+			var at := Vector2(x, y)
+			if not sim.is_explored(uniso(at)): continue
+			if leaves:
+				var spin := t * (2.0 + 2.0 * _h(i, 14)) + i
+				var c: Color = [Color("#c8742a"), Color("#a8521e"), Color("#d6a338"), Color("#8a5a2a")][i % 4]
+				c.a = 0.85 * day_k
+				var dx := Vector2(cos(spin), sin(spin) * 0.45) * 3.2
+				ci.draw_line(at - dx, at + dx, c, 2.4)
+			else:
+				ci.draw_circle(at, 1.1 + _h(i, 15) * 0.8, Color(1.0, 0.98, 0.88, 0.45 * day_k))
+	if w in ["rain", "storm"]: return
+	# a flock: one crossing every BIRD_EVERY seconds, the slot's direction and height hashed
+	var slot := floori(t / BIRD_EVERY)
+	var k := (t - slot * BIRD_EVERY) / BIRD_CROSS
+	if k > 1.0: return
+	var dir := Vector2(1, 0).rotated((_h(slot, 21) - 0.5) * 1.2)
+	if _h(slot, 22) > 0.5: dir = -dir
+	var mid := view.get_center() + Vector2(0, (_h(slot, 23) - 0.5) * view.size.y * 0.6)
+	var span := view.size.length() * 0.6
+	var lead := mid + dir * span * (k * 2.0 - 1.0)
+	var side := Vector2(-dir.y, dir.x)
+	var flock := 5 + int(_h(slot, 24) * 5)
+	for i in flock:
+		var row := (i + 1) / 2
+		var at := lead - dir * row * 16.0 + side * row * 13.0 * (1 if i % 2 == 0 else -1)
+		at += Vector2(sin(t * 1.3 + i) * 3.0, cos(t * 1.1 + i * 2.0) * 2.0)
+		ci.draw_circle(at + Vector2(46, 92), 2.4, Color(0, 0, 0, 0.12 * day_k)) # its shadow on the ground
+		var flap := sin(t * 11.0 + i * 1.9) * 3.0
+		var col := Color(0.12, 0.1, 0.09, 0.85 * day_k)
+		ci.draw_polyline(PackedVector2Array([at + Vector2(-8, -flap), at + Vector2(-3, 0.5), at + Vector2(0, 1.5), at + Vector2(3, 0.5), at + Vector2(8, -flap)]), col, 1.8)
+
+const BIRD_EVERY := 45.0 # seconds between flocks crossing the view
+const BIRD_CROSS := 14.0 # how long a flock takes to cross
 
 ## Lightning bolts and flashes, falling ash, the swollen spring river.
 func _draw_nature() -> void:
@@ -1244,7 +1457,7 @@ func _draw_water_fx() -> void:
 			var tg: Vector2 = (pts[k + 1] - pts[k]).normalized()
 			var p: Vector2 = a + Vector2(-tg.y, tg.x) * sin(i * 12.3) * D.RIVER_HALF * 0.6
 			if D.is_ford_at(p) or not _in_view(p): continue
-			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.35), 2)
+			ci.draw_line(p, p + tg * 14.0 + Vector2(-tg.y, tg.x) * 3.0, Color(0.75, 0.9, 1.0, 0.2), 1.5)
 	# foam curls where the water worries the bank, crawling slowly downstream
 	for bk in river_banks:
 		for line in bk:
@@ -1256,6 +1469,13 @@ func _draw_water_fx() -> void:
 				var q: Vector2 = line[k].lerp(line[k + 1], s - k)
 				if not _in_view(q): continue
 				ci.draw_circle(q + Vector2(0, -1), 1.8 + sin(i * 3.1) * 0.6, Color(0.95, 0.98, 1.0, 0.3))
+	# rings round anyone wading (people at a ford, beasts at the water), a wake when they move
+	for u in sim.units:
+		if not u.dead and not sim.in_hut(u) and _in_view(u.pos) and sim.is_visible(u.pos) and D.in_river(u.pos):
+			_wade(u.pos, u.id, moving.get("u%d" % u.id, false))
+	for pr in sim.predators:
+		if not pr.dead and not pr.fled and _in_view(pr.pos) and sim.is_visible(pr.pos) and D.in_river(pr.pos):
+			_wade(pr.pos, pr.id + 7919, moving.get("p%d" % pr.id, false))
 	# low sun and moonlight scatter on the water: twinkling glints
 	var glow_amt := 0.0
 	if sim.is_day_part("dusk"): glow_amt = sin(_part_k("dusk") * PI)
@@ -1272,6 +1492,14 @@ func _draw_water_fx() -> void:
 				var tw: float = sin(t * 3.0 + i * 2.7)
 				if tw < 0.55: continue
 				ci.draw_circle(p, 1.6, Color(1.0, 0.95, 0.8, (tw - 0.55) * glow_amt * 0.9))
+
+## Two rings spreading from someone standing in the water (drawn under the GROUND transform,
+## so circles lie flat), quicker and closer together while they move.
+func _wade(p: Vector2, seed_id: int, walking: bool) -> void:
+	var period := 0.9 if walking else 1.8
+	for i in 2:
+		var ph := fposmod((t + seed_id * 0.37) / period + i * 0.5, 1.0)
+		ci.draw_arc(p, 5.0 + 16.0 * ph, 0, TAU, 20, Color(0.9, 0.96, 1.0, 0.45 * (1.0 - ph)), 1.6)
 
 func _draw_decor(d: Dictionary) -> void:
 	var p := iso(d["p"])
@@ -1394,12 +1622,12 @@ func _round_house(b: Vector2, r: float, wall_h: float, roof_h: float, wall: Colo
 	ci.draw_line(apex, apex + Vector2(-3, -5), Color("#5a3d22"), 2)
 	ci.draw_line(apex, apex + Vector2(3, -5), Color("#5a3d22"), 2)
 
-func _draw_post(b: Vector2, shown: bool, built: bool, style := 2, stone := false, tower := false) -> void:
+func _draw_post(b: Vector2, shown: bool, built: bool, style := 2, stone := false, tower := false, dir := 0) -> void:
 	if not shown:
 		ci.draw_circle(b, 2, Color(0.5, 0.4, 0.3, 0.35))
 		return
 	if stone: # a stone wall's block, or one of its towers
-		if _sprite(("wall_tower" if tower else "wall_stone") + _snowy(), b): return
+		if _sprite(("wall_tower" if tower else "wall_stone_%d" % dir) + _snowy(), b): return
 		var h := 30.0 if tower else 14.0
 		var w := 9.0 if tower else 7.0
 		ci.draw_rect(Rect2(b.x - w, b.y - h, w * 2, h), Color("#8f8b82"))
@@ -1568,6 +1796,47 @@ func _draw_ground_part(s) -> void:
 			for i in 20:
 				ci.draw_circle(p + Vector2.from_angle(i * TAU / 20) * 46, 3.0, Color(0.62, 0.6, 0.55, 0.95))
 
+## The plazas: every fire of a settlement grown to a town or city stands on laid flagstones.
+## Drawn by the PlazaLayer (between the ground and GroundFX), redrawn only when what it shows
+## changes (_plaza_sig(), looked at once a second).
+func draw_plazas() -> void:
+	ci.draw_set_transform_matrix(GROUND)
+	for s in sim.structures:
+		if s.type == "bonfire" and s.built and sim.ours(s):
+			var k := _tier_k(s.pos)
+			if k >= 2: _plaza(s.pos, s.id, k)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _plaza_sig() -> int:
+	var sig := 0
+	for s in sim.structures:
+		if s.type == "bonfire" and s.built and sim.ours(s): sig = sig * 31 + s.id * 4 + _tier_k(s.pos)
+	return sig + (1 if sim.hz.snow > 0.5 else 0)
+
+## A plaza of irregular flagstones in rings round a fire (a city's wider), with dark joints;
+## toward the edge more stones are missing and the grass comes through.
+func _plaza(c: Vector2, seed_id: int, tier: int) -> void:
+	var rings := 12 if tier >= 3 else 9
+	var snow: bool = sim.hz.snow > 0.5
+	for ring in rings:
+		var rr := 18.0 + ring * 15.0
+		var n := int(rr * TAU / 15.0)
+		for i in n:
+			var id := seed_id * 977 + ring * 131 + i
+			if _h(id, 1) < 0.04 + 0.6 * pow(float(ring) / rings, 2.5): continue # (the edge frays into grass)
+			var ang := (i + 0.5 * (ring % 2)) * TAU / n
+			var q := c + Vector2.from_angle(ang) * (rr + (_h(id, 2) - 0.5) * 3.0)
+			var g := 0.5 + 0.12 * _h(id, 3)
+			var col := Color(g + 0.05, g + 0.01, g - 0.06) if not snow else Color(0.86, 0.88, 0.92)
+			var w := 6.4 + _h(id, 4) * 1.6
+			var pts := PackedVector2Array()
+			for k in 6:
+				var a2 := ang + k * TAU / 6 + _h(id, 5)
+				pts.append(q + Vector2.from_angle(a2) * w * (0.82 + 0.25 * _h(id, 6 + k)))
+			ci.draw_colored_polygon(pts, Color(0.22, 0.19, 0.15, 0.55)) # (the joint: the stone's own shadow, a little larger)
+			for k in pts.size(): pts[k] = q + (pts[k] - q) * 0.84
+			ci.draw_colored_polygon(pts, col)
+
 ## Construction sprite for an unbuilt structure: footprint shape and size by type
 ## (homes follow the current era), stage by progress. False if not baked.
 const SITE_SHAPES := {
@@ -1625,6 +1894,7 @@ func _draw_structure(s) -> void:
 			var home_key := "%shome%d%s" % ["large_" if big else "", clampi(s.style, 1, 3), _snowy()]
 			if s.built and spr_shadow.call(home_key, r) and _sprite(home_key, b):
 				if s.decor > 0: _decor(s, b, r)
+				_yard_props(s, r)
 				if sim.has_tech("fire"): _smoke(b - Vector2(0, (32 if s.style == 1 else 36) + (6 if big else 0)), s.id)
 				if s.reno: _scaffold(b, r)
 				return
@@ -1818,10 +2088,18 @@ func _longhouse(c: Vector2, r: float) -> void:
 	var door := iso(c + Vector2(0, hd)) - Vector2(0, 5)
 	ci.draw_colored_polygon(PackedVector2Array([door + Vector2(-5, 0), door + Vector2(-5, -11), door + Vector2(5, -11), door + Vector2(5, 0)]), Color("#2a1a0e"))
 
+## A thread of smoke from a smoke hole: puffs that rise, swell, lean with the wind and fade.
+## Thicker at the cooking hours (dusk and morning) and in the cold, thin in the heat of the day.
 func _smoke(p: Vector2, seed_id: int) -> void:
-	for i in 3:
-		var k := fmod(t * 0.35 + i / 3.0 + seed_id * 0.13, 1.0)
-		ci.draw_circle(p + Vector2(sin(t * 1.3 + i + seed_id) * 3 + 6 * k, -24 * k), 2.0 + 4.0 * k, Color(0.75, 0.75, 0.75, 0.32 * (1.0 - k)))
+	var busy := 0.6
+	if sim.is_day_part("dusk") or sim.is_day_part("dawn") or sim.is_day_part("morning"): busy = 1.0
+	if sim.hz.on() and (sim.hz.season_idx() == 3 or sim.hz.snow > 0.3): busy = 1.0
+	var lean := 10.0 + 60.0 * wind_k()
+	for i in 6:
+		var k := fmod(t * 0.22 + i / 6.0 + seed_id * 0.13, 1.0)
+		var q := p + Vector2(sin(t * 1.1 + i * 1.7 + seed_id) * 2.5 * (1.0 + k) + lean * k * k, -50.0 * k)
+		var g := 0.78 - 0.1 * k
+		ci.draw_circle(q, 2.0 + 7.0 * k, Color(g, g, g * 1.02, 0.3 * busy * (1.0 - k) * minf(1.0, k * 6.0)))
 
 func _scaffold(b: Vector2, r: float) -> void:
 	for x in [-r * 0.9, r * 0.9]:
@@ -1914,6 +2192,35 @@ func _era_dressing(s, b: Vector2) -> void:
 					_pennant(b + Vector2(cos(ang) * 18, sin(ang) * 9), 26, s.id + i)
 		"totem_shrine", "grand_altar", "temple":
 			if era >= 3: _pennant(b + Vector2(-26, 6), 46, s.id)
+
+## How far the settlement round `p` has grown: 0 camp, 1 village, 2 town, 3 city (the
+## index of its tier in rules.json "tiers").
+func _tier_k(p: Vector2) -> int:
+	var tier := str(sim.place_of(sim.settlement_of(p)).get("tier", "camp"))
+	var l: Array = sim.RULES["tiers"]["list"]
+	for i in l.size():
+		if str(l[i]["id"]) == tier: return i
+	return 0
+
+## A lived-in yard: as the settlement grows from camp to city, each home gathers up to three
+## things before it (ArtBaker.YARD_PROPS: woodpile, pots, hide rack, baskets, chopping block),
+## picked and placed by its id, on the front side so they draw over the home (one canvas
+## item), clear of the door.
+func _yard_props(s, r: float) -> void:
+	var n := mini(_tier_k(s.pos), 3)
+	if n == 0 or not s.built: return
+	var door := 90.0 if clampi(s.style, 1, 3) != 2 else 45.0 # (world degrees: where the door faces)
+	var spots := [-30.0, 0.0, 20.0, 125.0, 150.0, 65.0, 110.0]
+	var kinds: Array = ArtBaker.YARD_PROPS
+	var placed := 0
+	for i in spots.size():
+		if placed >= n: break
+		var ang: float = spots[(i + s.id) % spots.size()]
+		if absf(ang - door) < 28.0: continue
+		var kind: String = kinds[(s.id * 7 + placed * 3) % kinds.size()]
+		var at: Vector2 = s.pos + Vector2.from_angle(deg_to_rad(ang)) * (r + 9.0 + 4.0 * _h(s.id, placed))
+		_sprite("yard_%s%s" % [kind, _snowy()], iso(at))
+		placed += 1
 
 ## A tall pole with a fluttering pennant: the cloth leans with the wind.
 func _pennant(b: Vector2, h: float, seed_id: int) -> void:
@@ -2378,8 +2685,12 @@ func _pack_ox(q: Vector2, f: float, walk: bool) -> void:
 ## player is looking for are named (name_priority() > 0); everyone is when show_all_names().
 ## A label that would cover one already drawn this frame is left out (_label_room), so the
 ## more important ones go first: picked and hovered people, title holders, the hurt and those
-## fighting, then the big popups, the small popups, and ordinary names last.
-const NAMES_ZOOM := 1.9 # zoomed in at least this far, everyone is named
+## fighting, then speech (SPEECH_CAP in words, the rest as icons), the big popups, the newest
+## small popups (POPUP_CAP), and ordinary names last (NAME_CAP nearest the cursor when zoomed in).
+const NAMES_ZOOM := 1.9 # zoomed in at least this far, ordinary names appear (up to NAME_CAP)
+const NAME_CAP := 10 # zoomed in, the ordinary names drawn: those nearest the cursor (all with the setting or Alt)
+const SPEECH_CAP := 3 # speech in words at once; the rest speak in icon bubbles
+const POPUP_CAP := 4 # small popups (+1 XP...) at once, the newest
 const NAME_ALWAYS := 3 # priority from which a name is drawn even over another label
 var names_all := false # the player's "Always show names" setting (hud.gd)
 var alt_held := false # Alt held over the map: every name, as long as it is held
@@ -2427,15 +2738,19 @@ const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief
 
 ## A speech mark: out at map zoom, a small icon bubble a player can read at a glance;
 ## up close (or for freeform lines from a game master), the words themselves.
-func _speech(at: Vector2, u, left: float) -> void:
-	if cam.zoom.x < 1.2 and u.say_kind in SAY_ICONS:
-		_icon_bubble(at, u.say_kind, left)
+## Only a few speak in words at once (`words`, SPEECH_CAP); the others show their icon, or
+## nothing when the line has none. A bubble that would cover another is left out unless `force`.
+func _speech(at: Vector2, u, left: float, words := true, force := false) -> void:
+	if (cam.zoom.x < 1.2 or not words) and u.say_kind in SAY_ICONS:
+		if _bubble_room(Rect2(at.x - 11, at.y - 25, 22, 22), force): _icon_bubble(at, u.say_kind, left)
 		return
+	if not words: return
 	var text: String = u.say
 	var a := clampf(left / 0.4, 0.0, 1.0)
 	var size := 12
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 12.0
 	var r := Rect2(at.x - w / 2, at.y - 17, w, 19)
+	if not _bubble_room(r, force): return
 	var bg := Color(0.98, 0.95, 0.86, 0.92 * a)
 	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-5, 1), at + Vector2(5, 1), at + Vector2(0, 8)]), bg)
 	var sb := StyleBoxFlat.new()
@@ -2445,6 +2760,14 @@ func _speech(at: Vector2, u, left: float) -> void:
 	sb.set_border_width_all(1)
 	ci.draw_style_box(sb, r)
 	ci.draw_string(font, Vector2(r.position.x + 6, r.position.y + 14), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.22, 0.15, 0.08, a))
+
+## Like _label_room() for a speech bubble's box.
+func _bubble_room(r: Rect2, force: bool) -> bool:
+	if not force:
+		for o in _label_rects:
+			if o.intersects(r): return false
+	_label_rects.append(r)
+	return true
 
 ## A round speech bubble with one small pictogram inside, fading out at the end.
 func _icon_bubble(at: Vector2, kind: String, left: float) -> void:
@@ -2885,6 +3208,13 @@ class Ground extends Node2D:
 		wv.draw_terrain()
 		wv.ci = wv
 
+class PlazaLayer extends Node2D:
+	var wv
+	func _draw() -> void:
+		wv.ci = self
+		wv.draw_plazas()
+		wv.ci = wv
+
 class GroundFX extends Node2D:
 	var wv
 	func _draw() -> void:
@@ -2928,7 +3258,7 @@ func draw_item(kind: int, obj) -> void:
 		2: _draw_unit(obj)
 		3: _draw_pred(obj)
 		4: _draw_guardian(obj)
-		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3], obj[4] if obj.size() > 4 else false, obj[5] if obj.size() > 5 else false)
+		5: _draw_post(iso(obj[0]), obj[1], obj[2], obj[3], obj[4] if obj.size() > 4 else false, obj[5] if obj.size() > 5 else false, obj[6] if obj.size() > 6 else 0)
 		6: _draw_landmark(obj)
 		7:
 			for d in obj: _draw_decor(d)
@@ -3016,7 +3346,10 @@ func _sync_items() -> void:
 				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
 				var key := "s%d_%d" % [st.id, i]
 				seen[key] = true
-				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0], iso(pp), false)
+				# a stone block turned along the ring: its tangent's world angle, as one of the baked turns
+				var tang := float(i) / cnt * TAU + PI / 2.0
+				var dir := posmod(roundi(fposmod(-tang, PI) / (PI / ArtBaker.WALL_DIRS)), ArtBaker.WALL_DIRS)
+				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0, dir], iso(pp), false)
 				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
 				it.modulate = _pick_glow(st)
 				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
@@ -3031,7 +3364,7 @@ func _sync_items() -> void:
 			if it.dynamic != anim: it.dynamic = anim
 			it.visible = exp
 			it.modulate = _pick_glow(st)
-			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0))
+			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0) + (_tier_k(st.pos) * 100000000 if st.type in ["hut", "large_hut"] else 0))
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true

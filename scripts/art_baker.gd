@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 26
+const ART_VERSION := 27
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -415,7 +415,9 @@ func _jobs() -> Array:
 		jobs.append({"key": "smokehouse" + sfx, "size": 160, "lift": 10.0, "build": _smokehouse.bind(snowy)})
 		jobs.append({"key": "longhouse" + sfx, "size": 288, "lift": 16.0, "build": _longhall.bind(snowy)})
 		jobs.append({"key": "temple" + sfx, "size": 192, "lift": 22.0, "build": _temple.bind(snowy)})
-		jobs.append({"key": "wall_stone" + sfx, "size": 64, "lift": 8.0, "build": _wall_stone.bind(snowy)})
+		for d in WALL_DIRS: # (a block turned to follow its ring: d * 180/WALL_DIRS degrees)
+			jobs.append({"key": "wall_stone_%d%s" % [d, sfx], "size": 64, "lift": 8.0, "build": _wall_stone.bind(snowy, d * 180.0 / WALL_DIRS)})
+		for kind in YARD_PROPS: jobs.append({"key": "yard_%s%s" % [kind, sfx], "size": 64, "lift": 4.0, "build": _yard.bind(kind, snowy)})
 		jobs.append({"key": "wall_tower" + sfx, "size": 96, "lift": 18.0, "build": _wall_tower.bind(snowy)})
 		jobs.append({"key": "trading_post" + sfx, "size": 160, "lift": 12.0, "build": _trading_post.bind(snowy)})
 		jobs.append({"key": "warehouse" + sfx, "size": 256, "lift": 18.0, "build": _warehouse.bind(snowy)})
@@ -1297,9 +1299,19 @@ func _temple(snowy: bool) -> Node3D:
 	root.add_child(t)
 	return root
 
-## One block of a stone wall: fitted stones in courses, a coping of flat stones.
-func _wall_stone(snowy: bool) -> Node3D:
+## How many turns a stone wall block is baked in (over half a circle: a block is the same
+## either way round), so a ring of them follows its curve. world_view picks the nearest.
+const WALL_DIRS := 8
+## The things in a home's yard, more of them as the settlement grows (world_view._yard_props).
+const YARD_PROPS := ["wood", "pots", "rack", "baskets", "block"]
+
+## One block of a stone wall: fitted stones in courses, a coping of flat stones. `yaw` turns
+## it (its length runs along model x, which is world (cos yaw, -sin yaw)).
+func _wall_stone(snowy: bool, yaw := 0.0) -> Node3D:
+	var holder := Node3D.new()
 	var root := Node3D.new()
+	root.rotation_degrees.y = yaw
+	holder.add_child(root)
 	var sn := 0.6 if snowy else 0.0
 	var s1 := mat(Color("#8f8b82"), "coarse", 0.2, Vector3.ONE, 0.6, sn * 0.4)
 	var s2 := mat(Color("#7a766e"), "coarse", 0.2, Vector3.ONE, 0.6, sn * 0.4)
@@ -1308,6 +1320,35 @@ func _wall_stone(snowy: bool) -> Node3D:
 			var x := -6.0 + i * 6.0 + (3.0 if course % 2 == 1 else 0.0) - 1.5
 			mi(root, lumpy(box(Vector3(5.6, 4.2, 6)), 0.35, 1100 + course * 7 + i, 0.3, true), s1 if (i + course) % 2 == 0 else s2, Vector3(x, 2.1 + course * 4.2, 0))
 	mi(root, box(Vector3(17, 1.6, 7.4)), mat(Color("#9a968c"), "coarse", 0.2, Vector3.ONE, 0.55, sn), Vector3(0, 13.4, 0))
+	return holder
+
+## A yard prop by a home: a woodpile, pots, a hide on a drying frame, baskets of grain, a
+## chopping block with its axe.
+func _yard(kind: String, snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	match kind:
+		"wood": _woodpile(root, Vector3.ZERO, 30.0)
+		"pots":
+			_pot(root, Vector3(-2.2, 0, 0.5), 1.0)
+			_pot(root, Vector3(2.0, 0, -0.8), 0.8)
+			_pot(root, Vector3(0.6, 0, 2.6), 0.65)
+		"rack": _drying_rack(root, Vector3.ZERO, 20.0)
+		"baskets":
+			var weave := mat(Color("#a8844e"), "streak", 0.3, Vector3(1, 3, 1), 0.5, sn * 0.5)
+			var grain := mat(Color("#d8b860"), "coarse", 0.5, Vector3.ONE, 0.4, sn)
+			for i in 3:
+				var q := Vector3(-3.0 + i * 3.0, 0, (i % 2) * 2.0 - 1.0)
+				var h := 3.6 - (i % 2) * 0.8
+				mi(root, cyl(1.7, 1.3, h, 9), weave, q + Vector3(0, h / 2, 0))
+				mi(root, sph(1.5, 8, 4), grain, q + Vector3(0, h, 0), Vector3.ZERO, Vector3(1, 0.45, 1))
+		"block":
+			var wood := mat(Color("#7a5530"), "streak", 0.25, Vector3(1, 3, 1), 0.5, sn * 0.5)
+			mi(root, cyl(2.4, 2.6, 3.2, 10), wood, Vector3(0, 1.6, 0))
+			mi(root, cyl(2.3, 2.3, 0.15, 10), mat(Color("#c8a070"), "fine", 0.4, Vector3.ONE, 0.3, sn), Vector3(0, 3.25, 0))
+			segment(root, Vector3(0.3, 3.3, 0), Vector3(3.6, 6.4, 0.8), 0.3, mat(Color("#5c3f22"), "streak", 0.2))
+			mi(root, box(Vector3(1.8, 1.4, 0.4)), mat(Color("#8a877e"), "fine", 0.3), Vector3(0.6, 3.6, 0.2), Vector3(0, 0, 40))
+			for i in 3: mi(root, cyl(0.7, 0.7, 4.5, 6), mat(Color("#6e4b2a"), "streak", 0.25), Vector3(-3.6 + i * 0.4, 0.7, 1.6 - i * 1.2), Vector3(90, 20 * i, 0))
 	return root
 
 ## A tower in a stone wall: a round stone drum with a wooden fighting platform and a

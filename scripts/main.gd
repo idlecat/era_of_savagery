@@ -609,6 +609,15 @@ func _debug_shot(args: Dictionary) -> void:
 		"town": # debug: the village grown into a named village (--people=N), with fields and longhouses
 			hud._close_modal()
 			sim.research("farming")
+			if args.has("era"): # (--era=2|3: the tribe's knowledge for that age, so the town can rise past a village)
+				sim.stock["lore"] = 2000
+				sim.stock["stone"] = 500
+				for f in sim.D.FINDS: sim.known_finds[f] = 1
+				sim.stock["copper"] = 50
+				sim.stock["tin"] = 50
+				for id in ["fire", "tools", "hide", "pottery", "domestication", "farming", "bronze", "totems", "code"].slice(0, {1: 3, 2: 6, 3: 9}[clampi(int(args["era"]), 1, 3)]): sim.research(id)
+				sim.pending_event = ""
+				sim.paused = false
 			sim.stock["wood"] = 4000.0
 			var n := int(args.get("people", "40"))
 			while sim.living().size() < n: sim.folk.add_family(6)
@@ -635,6 +644,10 @@ func _debug_shot(args: Dictionary) -> void:
 				sim.tick(STEP)
 				if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
 				sim.paused = false
+			if args.has("wall"): # (--wall=R: a finished stone wall of radius R round the village)
+				var w = sim.add_structure("stone_wall", sim.D.VILLAGE)
+				w.size = float(args["wall"])
+				sim.complete_structure(w, null)
 			sim.tier_t = 0.0
 			for i in int(float(args.get("secs", "6")) / STEP):
 				sim.tick(STEP)
