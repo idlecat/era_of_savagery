@@ -217,10 +217,13 @@ Nine needs, each with the same parts:
    - **C_horizon** = `(stores + expected supply over the horizon) / demand over the
      horizon`: what is there to eat until the next harvest. It is an **anticipation signal
      only**: it drives no channel and no hardship — it enters food's allocation weight as
-     the horizon window's term (§8) and sets the food security that births need (§10). The horizon rolls: from now to the start of the next harvest window,
-     clamped to half a year (4 days). So C_horizon falls in late summer when the winter
-     comes into it, and the autumn push starts before the cold. A fixed window would miss
-     an early frost or over-react in spring.
+     the horizon window's term (§8) and sets the food security that births need (§10). The horizon rolls: from now to the start of the next harvest window (inside one, the
+     next year's), clamped to half a year (4 days). Through spring and summer the window
+     ends at the coming harvest, so C_horizon holds near 1; when the harvest window opens
+     the horizon rolls past it to next year's and the winter comes in — C_horizon falls,
+     and the autumn rush, the harvest worked hard, fills the stores before the cold. A
+     fixed window would miss an early frost or pull the coming winter's hunger in before
+     the harvest that must fill the stores.
 6. **Benefit B(C) = 1 - (1 - C)²** for C < 1, 1 above: concave, the first healer matters
    most. **Each channel the need feeds takes the shortfall `1 - B(C)` smoothly**: no
    cliff anywhere in the rules.
@@ -244,7 +247,7 @@ Nine needs, each with the same parts:
 | **Warmth** | flow, seasonal | warm person-hours / day in the cold | N × hours of cold exposure × cloth (cloth lowers exposure) | warm places of fires and hearths × hours; fuel | wood per warm hour / wood rate | mortality (freezing), labour (the cold slows) |
 | **Health** | flow | care-days / day | cases (incidence × N, raised by density, crowding, hunger, cold) × care per case (a level's want, §6) | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
 | **Safety** | stock against a pressure | defence strength (the same unit as a war band's strength) | max(vigilance, expected threat): the strength of the band likely to come over the horizon (`rivals.gd`'s threat query), and never below a vigilance floor per head | strength standing: guards on hand × arms × skill × walls (a multiplier), decaying (training lapses, walls age) | 1 / strength a person-day trains and keeps up | losses (raids), mortality |
-| **Order** | flow | disputes / day | coordination `a_c × N` (from the first Steward) + disputes `a × max(0, N - N₀) × (N / N₀)^k` past the face-to-face limit (§6) | whole keepers × span — an informal keeper's span shrinks past N₁ ≈ 150, an institution's doesn't; the Code multiplies span (§6) | 1 / span | labour (waste), losses (strife), contentment |
+| **Order** | flow | order-work / day (disputes, coordination) | coordination `a_c × N` once a Steward exists (camp and up; the band shares the role) + disputes `a × max(0, N - N₀) × (N / N₀)^k` past the face-to-face limit (§6) | whole keepers × span — an informal keeper's span shrinks past N₁ ≈ 150, an institution's doesn't; the Code multiplies span (§6) | 1 / span | labour (waste), losses (strife), contentment |
 | **Knowledge** | flow | teaching-days / day | learners (children, newcomers, new methods × people to learn them) × days to teach, plus keepers wanted per method | teachers × pupils each; codification ends the keepers' part | 1 / pupils per teacher-day | labour (the `known` factor), losses (a method lost) |
 | **Comfort** | flow (goods wear) | wanted goods / day | N × the level's wants × wear | makers × rate | 1 / F_maker | contentment |
 | **Spirit** | flow | rite-hours / day | N × the level's wants | shamans × congregation × temple | 1 / congregation per rite | contentment (and devotion) |
@@ -335,7 +338,8 @@ different things and sit on different sides:
   needs (every hand belongs to one, §3.1): order's demand has a second, small term,
   **coordination**, `a_c × N` from the first Steward on (laying out work and sites,
   advising: the allocation's own running cost), beside the dispute term that starts at
-  N₀. At the camp coordination is all of order; past N₀ disputes take over. The Council
+  N₀. At the camp coordination is all of order; past it the dispute term grows past the
+  coordination one (where exactly is a fit). The Council
   and the Code must multiply an informal keeper's span about ×1.4 to hold the town near
   9%; without institutions the order share passes 3× the village's by N ≈ 300 and 8× by
   N ≈ 500: the ceiling.
@@ -348,7 +352,10 @@ mortality), and **care per case** is a level's want like comfort's (a band expec
 by the fire, a town a healer's days). So health's demand is
 `incidence(density, crowding) × N × care_per_case(level)`, and care per case rises ~×5
 band → town. This keeps density mild, as the third review found, and puts health's climb
-where it belongs: in what the tribe has learned to do for its sick.
+where it belongs: in what the tribe has learned to do for its sick. The mortality
+channel's rate is fitted so the band's near-zero coverage is a slow cost in lives, not a
+collapse — its sick mostly rest and recover — and the share table's 1% is the gathering
+of simples and tending.
 
 **Methods lower a (or lengthen span, or raise speed), never k.** The Code lets each
 keeper serve more; a wall makes each guard worth more; roads make each trip quicker. A
@@ -400,8 +407,8 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
   over-investing). Food sums two such terms, one per window (below).
 - **Its worth scales with the people it affects**:
   `weight = V_need × N_affected × ΔB`, where V_need is the sum of the values of the
-  channels the need feeds (per person). A need of 5 people weighs as 5 people's, so a
-  small D can't yank hands from food or safety.
+  channels the need feeds (per person; food's V splits by window, below). A need of 5
+  people weighs as 5 people's, so a small D can't yank hands from food or safety.
 - **The channel values** are what the tribe values: lives first, then output,
   contentment... The Council's policies set them (a war footing weighs losses and
   mortality from raids; a feasting tribe weighs contentment).
@@ -420,10 +427,11 @@ against another window's supply:
 `ΔB_food = [B(min(1, C_now + s_now/D_today)) - B(C_now)] + [B(min(1, C_horizon + s_horizon/D_horizon)) - B(C_horizon)]`
 
 **s_now** is what one more hand yields today (its rate × h). **s_horizon** is what
-assigning it there adds to the horizon's supply: the same food for a source that yields
-now (the harvest, the hunt), and the delayed payoff for work that pays later — a field
-sown in spring is credited with its harvest when it comes, a field in winter with
-nothing, however short the stores. The four behaviours the design asks for:
+assigning it there adds to the horizon's supply — the persistence forecast's own
+increment: the source's yield for every yielding day the hand would be held there (the
+hunt held through the winter; a field through its harvest window, nothing past it). A
+delayed payoff — work today, food months off — exists only under a crop cycle (below).
+The four behaviours the design asks for:
 
 - **A healthy winter**: both coverages ≥ 1, ΔB = 0, and the hands flow indoors (the
   winter workshop, §12) even though the flow S_today < D_today *by design* — the stores
@@ -446,7 +454,13 @@ the channels a shortfall today acts through (mortality from starving, contentmen
 **horizon** term carries what a shortfall ahead acts through (growth: births' food
 security, and the winter's mortality, discounted by how far off it is: `δ^(days ahead)`,
 δ fitted). `weight_food = N × (V_now × ΔB_now + V_horizon × ΔB_horizon)`, and each
-channel's value is used once.
+channel's value is used once. The horizon term's mortality is **anticipation, not a
+second firing**: the channel itself fires once, later, on C_now, when the shortfall
+arrives; the horizon weight only forecasts it, and **days ahead** is the horizon's
+remaining length (as the window rolls toward the crunch the discount lifts and the pull
+strengthens). Births are a rate, not a death, so growth enters undiscounted. Consumption
+and losses sit in neither V: they act through c, the margin m and the stores, not
+through either window's ΔB.
 
 **The expected supply inside C_horizon is a persistence forecast**: the food hands
 assigned now, held at their current sources to the horizon, with each source's seasonal
@@ -454,19 +468,33 @@ yield applied (fields 0 in winter). The calculator and the game both use it, so 
 needs to know its own future plan; the calculator's periodic year then checks that the
 forecast and the year it actually runs agree.
 
-**s_horizon in the first cut equals s_now.** Every food source pays as it is worked
-(fields yield per worked second, times the season), so a hand's horizon credit is the
-food it brings in today, and a field in winter gets nothing. A **crop cycle** (sow in
-spring, tend in summer, harvest in autumn, the labour credited at the harvest) is what
-s_horizon's delayed payoff is for; it is open (§13), not part of the first cut.
+**No delayed payoff in the first cut.** Every food source pays as it is worked (fields
+yield per worked second, times the season), so s_horizon is the persistence increment
+above — s times the source's yielding days left in the horizon — and nothing more: a
+field past its window, in winter, is credited nothing, however short the stores. A
+**crop cycle** (sow in spring, tend in summer, harvest in autumn, the labour credited at
+the harvest) is what a delayed payoff would be for; it is open (§13), not part of the
+first cut.
+
+> **pi:** the credit and the forecast must agree. Your persistence forecast counts a
+> newly assigned hand at its source for the whole horizon — s times its yielding days —
+> so crediting the hand with only today's s made the horizon term weaker, by that same
+> factor, than the very C_horizon it moves: the autumn rush would under-fire against the
+> daily needs' weights. s_horizon is now the forecast's own increment, which also puts
+> the two windows' per-hand credits on one scale (s × days / D_horizon ≈ s / D_today).
+> The winter workshop is safe either way — the coverage gate, not the credit, keeps the
+> hands indoors; the credit only sets how hard the hunt pulls when the horizon is short.
 
 **The next hand goes to the greatest weight, recomputed after each hand.** Not a random
 pick in proportion to the weights (today's Steward): a proportional pick never equalizes
-the hands' marginal gains, so it settles at different shares than the model's and the
-calculator would predict a different society than the game plays. Spread comes from B's
+the hands' marginal gains, so the game settles at shares the model does not predict, and
+the calculator would describe a society the game does not play. Spread comes from B's
 concavity and the recompute (each hand lowers its need's ΔB before the next is placed),
 not from chance; ties break by the nearest work. The calculator and the game use the
-same rule.
+same rule. Herding is bounded by the recompute — a need takes hands only until its ΔB
+falls level with the next-greatest weight — so a big single-day intake on one need means
+a real crisis (a correct stampede), and the calculator reports the largest intake as a
+check that it stays rare at the steady sizes.
 
 > **pi:** your dropped-when-empty storage term fixed the arithmetic but not the
 > behaviour. With the term dropped in deep winter, C_alloc fell back on the bare daily
@@ -479,8 +507,8 @@ same rule.
 > you want D_alloc back, it needs an answer for sowing.
 
 **Seasons move the allocation through s and D.** With the fields idle in winter, the
-hands flow to what yields indoors (tools, cloth, teaching, rites). C_horizon falls in late
-summer as the winter comes into the horizon, so the autumn rush begins before the cold.
+hands flow to what yields indoors (tools, cloth, teaching, rites). C_horizon falls as the
+harvest window opens and the winter enters the horizon, so the rush begins before the cold.
 No seasonal rule of its own.
 
 ## 9. Knowledge, inventions and skills, in one place
@@ -549,13 +577,14 @@ Without a rule of their own:
 | skill curve | the specialist's edge | ×1.0 → ×1.4 |
 | Y and regrowth per source; depletion and rest | carrying capacity | foraging K ~30-40 per band's reach |
 | a, k, N₀ per need | need per head; cost of scale; thresholds | §6 |
-| order supply: spans, N₁, the Code's multiplier | order's supply side (§6) | N₁ = 150; the Code ×~1.4; spans fitted to the 2% / 5% / 9% of the share table |
+| order demand and supply: a_c, spans, N₁, the Code's multiplier | order's two terms (§6) | a_c fitted to the camp's 2%; N₁ = 150; the Code ×~1.4; spans to 5% / 9% |
 | l per need, per level | labour cost of a unit (methods lower it) | from the share table |
 | B(C), C_floor per need | concavity; where hardships start | `1 - (1 - C)²`; C_floor ≈ 0.6 |
 | food horizon, food safety buffer | anticipation; when food is "secure" | to the next harvest window, ≤ 4 days; buffer to be set |
+| δ, the horizon's daily discount | how much less a death ahead weighs than one today (§8) | fitted, ~0.7 to start (open #6) |
 | vigilance floor per head | safety's minimum demand | to be set |
 | channel values | what the tribe values | mortality > labour, losses > contentment; fitted by the calculator; shifted by the Council's policies |
-| wants per level | the standard's bar | 1.0 at the band, rising; fitted so comfort + spirit ≈ 4% → 27% |
+| wants per level (comfort, spirit; health's care per case) | the standard's bar, and health's care (§6) | 1.0 at the band, rising; comfort + spirit fitted to 4% → 27%, care per case to health's 1% → 9% |
 | birth response to the standard | more people vs better lives | moderate |
 | goods wear | how much upkeep capital takes | a tool lasts a few days |
 | payback band | what a multiplying trade must earn | 1.5-3× |
@@ -573,7 +602,11 @@ at the start of spring equal those of the year before). It prints:
 - **per season**: the same, so the rhythm shows (the autumn rush, the winter workshop,
   0% field hands in winter by design, not by error);
 - **active-season R**: R in spring and summer alone, to check each food method's rate;
-- where the ceiling is: the size at which a need's coverage falls to its floor.
+- where the ceiling is: the size at which a need's coverage falls to its floor;
+- the largest single-need intake in a day (§8's herding check: with the recompute a big
+  intake is a crisis response, not a bug — it should stay rare at the steady sizes);
+- the persistence forecast's drift: where its C_horizon and the year actually run
+  disagree, season by season (§8).
 
 The share table (§6) is its first test. Growth is the game's channel, not the
 calculator's: every solve holds N fixed, and the growth value fitted in §13 is checked
@@ -624,7 +657,8 @@ get measured against it.
   C_horizon term, each pairing its own demand with its own supply. This replaces the
   second review's `D_alloc` (see §8's pi note). **s_horizon** — a hand's horizon credit,
   including delayed payoffs like spring sowing — is what would get the fields planted
-  under a crop cycle (open; in the first cut s_horizon = s_now, below).
+  under a crop cycle (open; in the first cut its credit is the persistence increment,
+  with no delayed payoff — below).
 - **d is adult-equivalent mouths per worker** (a child 0.6 of c): food's demand is
   c × d × workers, not N × c, and the worker count is counted directly (§2, §4.1).
 - **Order's supply is quantized and two-kinded** (§6): keepers are whole hands (the
@@ -642,7 +676,13 @@ get measured against it.
 - **Food's two windows carry separate channels** (claude, r2): the now term mortality
   and contentment, the horizon term growth and the winter's mortality discounted by δ,
   so food is never weighed twice; the horizon's expected supply is a persistence
-  forecast; s_horizon = s_now until a crop cycle exists.
+  forecast; no delayed payoff until a crop cycle exists.
+- **s_horizon is the persistence forecast's own increment** (pi, r2): a hand newly
+  assigned counts in the forecast for the whole horizon, so its credit is s × the
+  source's yielding days left in it, not one day's s — the credit must move the same
+  C_horizon the forecast computes, and at one day's s the autumn rush under-fires. This
+  also puts both windows' per-hand credits on one scale (s × days / D_horizon ≈
+  s / D_today).
 - **The allocation takes the greatest weight, recomputed after each hand**, in the
   calculator and the game alike (a proportional random pick settles at other shares).
 - **Order's demand has a coordination term** from the first Steward, so the camp's one
@@ -664,5 +704,6 @@ get measured against it.
 5. **A crop cycle** (§8): sow in spring, tend in summer, harvest in autumn, with the
    labour credited at the harvest through s_horizon. It would make the harvest a labour
    peak and sowing a real decision; the first cut has fields pay as worked. Worth it?
-6. **The horizon's discount δ** (§8): how much less a winter death weighs than one
+6. **The horizon's discount δ** (§8): its value — days ahead is defined as the horizon's
+   remaining length, so δ is how much less a death at the window's end weighs than one
    today, when the allocation trades stores against now.
