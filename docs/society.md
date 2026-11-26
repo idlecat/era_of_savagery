@@ -867,3 +867,27 @@ there: a town at R ~18 with ~6% of its hands on food), so that scarcity lives in
 and the walk rather than in hands. Either way the fields must out-yield the wild at the
 camp level, or farming is no step.
 
+### 14.2 Step 3, first cut: the game's gathering down to the model (2026-11-26)
+
+`config/society.json work`: food gathering ×0.25 (`gather`), one skill curve for gathering
+and fields (`skill_curve`, ×1.0 → ×1.4, instead of +10% and +5% a level); fields and docks
+lose their own yield (food only when worked); a worked field 0.07 food a second a hand
+(was 0.11).
+
+| | Before (§14.1) | After |
+|---|---|---|
+| Food a hand-day (12 days, 3 policies) | bushes 24, a kill 54, a field 15.5 | bushes 12-15, a kill 12-24, a field 5.5-9.8 |
+| R | ~6 | 3.2-4.1 |
+| Food share of hands | 43% | 46-59% |
+| The walk, of work time | 55% | 43-49% |
+| Food decisions (hoarder vs feaster gap) | "barely matter" | 0.50 |
+| 60 days (seeds 1, 2) | 141-176 people (ROADMAP §5) | 78-86 people, no deaths; 28-30 field hands on 11-12 fields by day 60 |
+
+A food hand-day fell ~40%, not to a quarter: the walk to the bushes and back is the same,
+so the cut only lengthens the stint at the bush. R is still above the model's band
+(1.3-1.6), and the Steward still puts ~21% of the hands on crafts and rites while food is
+short (the need rule's lore and crafts): step 4, the allocation by the model, is the next
+lever, before cutting rates further. The 12-day bands overshoot (near-miss 100%, as before
+this change; famine 50-100%, band 10-25%), and growth halved: both are for step 4 and the
+tuning after it. The balance baseline is rewritten.
+

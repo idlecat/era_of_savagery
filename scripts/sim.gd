@@ -766,6 +766,12 @@ func unit_speed(u: E.Unit) -> float:
 	return s * roads.speed_at(u.pos) * life.speed_mult(u) * careers.speed_mult(u) # (trails and roads; weariness, hurry; a scout at their trade)
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u)
+## How much faster a person works at a skill's level (config/society.json work.skill_curve:
+## one concave curve for every kind of work, docs/society.md §3).
+var SOC_WORK: Dictionary = preload("res://scripts/config.gd").load_cfg("society")["work"]
+func skill_mult(lv: int) -> float:
+	var c: Array = SOC_WORK["skill_curve"]
+	return float(c[clampi(lv, 0, c.size() - 1)])
 func carry_cap(u: E.Unit) -> int: return (15 if u.ox else 10) + inv.carry_bonus()
 ## Food storage: the village keeps FOOD_STORE_BASE, and each built building of ours its type's `store` (structures.json: the Granary) more;
 ## anything over that rots at FOOD_ROT per second (config/rules.json "survival").
@@ -1246,7 +1252,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
 		u.doing = {"tree": "chop", "carcass": "butcher", "boulder": "quarry"}.get(n.kind, "pick")
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
-		var rate := base * (1.0 + 0.1 * u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
+		var rate := base * float(SOC_WORK["gather"].get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
 		rate *= inv.gather_mult(n.kind, fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry"))
 		var activity: String = fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
@@ -1869,7 +1875,7 @@ func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 		return
 	u.act = str(w["act"])
 	u.doing = str(w["doing"])
-	var rate := float(w["food"]) * (1.0 + 0.05 * u.lv("forage")) * work_mul(u)
+	var rate := float(w["food"]) * skill_mult(u.lv("forage")) * work_mul(u)
 	var got: float = rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
 	stock["food"] += got
 	note_food("in", "field:" + s.type, got)
