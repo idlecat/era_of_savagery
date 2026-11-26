@@ -103,6 +103,9 @@ func _new_sim():
 	s.challenges.on = false # (nor the council's challenges; test_challenges switches them on)
 	s.careers.on = false # (nor careers taken up by themselves; test_careers switches them on)
 	s.soc.on = false # (the Steward by the old need rule; test_society_alloc and test_smoke run the model)
+	var ic: Dictionary = s.improve.C.duplicate(true)
+	ic["planner"] = "steward" # (only a Steward plans, as the older tests expect; test_improvements checks the game's "anyone")
+	s.improve.C = ic
 	s.opening = false # (nor the opening's remembered find and first-day fever; test_opening switches it on)
 	s.new_game()
 	_sims.append(s)
@@ -2261,6 +2264,8 @@ func test_improvements() -> void:
 	sim.stock["food"] = sim.food_cap()
 	imp.update(100.0)
 	check(imp.open_sites() == 0, "without a Steward nobody plans (planner steward)")
+	var game_cfg: Dictionary = preload("res://scripts/config.gd").load_cfg("rules")["improvements"]
+	check(str(game_cfg["planner"]) == "anyone" and float(game_cfg.get("anyone_every_mult", 1.0)) > 1.0, "in the game, without a Steward the tribe's best at lore plans, more slowly")
 	var st = sim.living().filter(func(u): return u.role == "")[0]
 	sim.appoint(st, "steward")
 	check(imp.wanted().size() >= 1 and imp.wanted()[0]["structure"] == "granary", "full stores make a Granary the first want (%s)" % str(imp.wanted().map(func(r): return r["structure"])))
