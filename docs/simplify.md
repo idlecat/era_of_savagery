@@ -35,6 +35,13 @@ own; with no need left, crafts and rites (leisure). The Council's policies scale
 targets (a "food first" policy doubles the food target), and a trade's holder works
 their trade while that trade's resource has a need.
 
+**Built (2026-11-25):** `rules.json vice.steward needs` (a target count and a weight per
+resource), `sim.steward_needs()`; an idle hand takes a need at random weighted by
+need² × weight, a site counting as `build`; crafts, else rites, when nothing is needed;
+trades work while their resource is needed. One addition the first test forced: a
+**weight** per resource (how vital it is), else an empty lore store pulled as many hands
+as an empty larder.
+
 What it replaces: all 13 knobs and their order, the coin flips, the woodpile
 overrides, the trades' checks. What emerges: shortages pull hands, plenty releases
 them to crafts and lore, the autumn rush comes from the food target rising before
