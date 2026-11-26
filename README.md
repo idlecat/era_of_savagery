@@ -43,7 +43,7 @@ Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates
 
 ## Design docs
 
-[docs/ROADMAP.md](docs/ROADMAP.md) reviews where the game stands and sets what comes next; [docs/make_it_fun.md](docs/make_it_fun.md) is the fun plan and the record of what landed; [docs/city_proposal.md](docs/city_proposal.md) is the next big plan (from a tribe to cities of a thousand); [docs/CONFIG.md](docs/CONFIG.md) and [docs/CULTURES.md](docs/CULTURES.md) describe the data formats.
+[docs/ROADMAP.md](docs/ROADMAP.md) reviews where the game stands and sets what comes next; [docs/make_it_fun.md](docs/make_it_fun.md) is the fun plan and the record of what landed; [docs/city_proposal.md](docs/city_proposal.md) is the plan from a tribe to cities of a thousand (largely built); [docs/society.md](docs/society.md) models the tribe as a society (needs, capital, levels: what the freed hands do), and [docs/society_plan.md](docs/society_plan.md) is its implementation plan; [docs/CONFIG.md](docs/CONFIG.md) and [docs/CULTURES.md](docs/CULTURES.md) describe the data formats.
 
 ## LLM setup (DeepSeek / GLM)
 

@@ -247,6 +247,18 @@ Finds are noticed by chance (`sim.find_chance(u, id)`, checked twice a second fo
 
 `seek`: the **search quest** (a Task Contract of kind `"seek"`): the kinds of place each group is looked for in (`forest`, `meadow`, `riverbank`, `hills`, `volcano`; the game picks up to `places` real places of those kinds, nearest first, and the leader chooses), `days` the search may last (`secs_per_day` of searching each), the `radius` the crew roams, and `crew_max`. The crew's finds are tallied on the contract (`flags.found`) and reported when it ends.
 
+## society.json
+
+The parameters of the society model ([society.md](society.md) §12): the working day's time
+budget, the walk, the people (children, the unwell), what the tribe values per channel and
+each need's `impact` on it, the food sources (season profiles, rates, which take the level's
+method factor), order's, health's and safety's laws, tools as a worn good, and per **level**
+(band, camp, village, town, city) the reference size, the productivity factors, the walk,
+spoilage, institutions, bought food, land limits (`Y`) and each other need's hands per
+head; `targets` holds the share of hands per need and the R band the model intends. Read
+only by the calculator `tools/society_calc.gd` for now (society_plan.md step 0); no
+player-visible texts.
+
 ## notices.json
 
 What interrupts the player (`hud.gd`). `feat_dialog`: the kinds of achievement that open a dialog (default: heroes and outposts; a new era and a first contact already open their dilemma); every other first is a banner notice you can click to look there. `contract_done`: `"notice"` or `"dialog"` when a Task Contract finishes. `trader`: a trader's arrival as a `"notice"` (click it to trade; after `trader_wait` game seconds the trader goes home) or a `"dialog"`. `gap`: real seconds after a dialog closes before a waiting achievement dialog opens. Dilemmas and emergencies always ask, except **routine** ones: a dilemma with `"routine": {"prefer": [option indexes]}` in `dilemmas.json` (the seasonal festival) is decided by the Steward, when one is appointed and the player lets it (the checkbox under the Steward policy, `sim.steward_routine`), and only reported.

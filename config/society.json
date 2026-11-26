@@ -1,0 +1,61 @@
+{
+ "_doc": "The society model's parameters (docs/society.md §12), read by the calculator tools/society_calc.gd (society_plan.md step 0) and later by sim.soc. No player-visible texts. Units: a day is 90 s (data.gd DAY_LEN); food in the game's food units; hands = workers. Each level is the set of methods in use at a reference size N.",
+
+ "day": {"_doc": "The working day's time budget (model §2), seconds of a 90 s day: awake time, then meals and everyday life; work is what is left after the walk.", "awake": 70, "meals_life": 15},
+ "walk": {"_doc": "speed: paces a second (mirrors sim.unit_speed's base 58); indoor: the walk share of work done at home or in a workshop (everything but food); cap: the most of a working day the walk may take.", "speed": 58, "indoor": 0.1, "cap": 0.8},
+ "people": {"_doc": "children: share of the people; unwell: share of grown-ups sick, badly hurt or away (not workers); child_eats: a child's hunger, of a grown-up's at rest (rules.json survival.child_hunger).", "children": 0.25, "unwell": 0.05, "child_eats": 0.6},
+ "margin": 0.06,
+ "spoil_free": {"_doc": "Food in store that does not spoil (sim.gd: spoilage acts only on the stock above 30).", "food": 30},
+ "tools": {"_doc": "Tools as a good that wears (model §3.1): a food hand wears out one tool in wear_days; a toolmaker makes make_per_day. Toolmakers are counted as food hands.", "wear_days": 4, "make_per_day": 2.5},
+ "c_floor": 0.6,
+ "values": {"_doc": "What the tribe values, per person (model §8): the channels' weights. Fitted knobs, ordered mortality > labour, losses > contentment.", "mortality": 10, "growth": 3, "labour": 2, "losses": 2, "consumption": 1, "contentment": 1},
+ "impact": {"_doc": "How much of each channel a need moves when it is not covered at all, against food's (model §8: V_need = sum of value x impact over the channels it feeds). Food uncovered kills everyone (mortality 1); untreated sickness kills far fewer, so health's mortality impact is small. Food has two windows: now (mortality and contentment) and the horizon (growth, and the winter's mortality discounted by delta to the stores' run-out day). Fitted knobs.",
+  "food_now": {"mortality": 1.0, "contentment": 0.5}, "food_horizon": {"growth": 1.0, "mortality": 1.0},
+  "shelter": {"growth": 0.5, "contentment": 0.5}, "warmth": {"mortality": 0.3, "labour": 0.3}, "health": {"mortality": 0.15, "labour": 0.3},
+  "safety": {"losses": 0.5, "mortality": 0.2}, "order": {"labour": 0.3, "losses": 0.2, "contentment": 0.3}, "knowledge": {"labour": 0.3, "losses": 0.2},
+  "comfort": {"contentment": 0.5}, "spirit": {"contentment": 0.5}},
+ "delta": 0.7,
+ "horizon_max": 6,
+
+ "food": {
+  "_doc": "base: food a second at work for a hand before the factors (fitted so the band's R lands in its band). Sources: season = yield per season [spring, summer, autumn, winter]; rel = rate against a field hand; method: whether the level's method factor applies (the fields' plough and irrigation do, the wild and the hunt don't; the hunt stands for all the winter sources: the hunt, fishing, the pens). A source is land-limited by the level's Y (food a day at a season factor of 1; 0 = no limit).",
+  "base": 0.15,
+  "sources": {
+   "wild": {"season": [1.5, 1.0, 1.2, 0.0], "rel": 1.0, "method": false},
+   "hunt": {"season": [0.8, 0.8, 1.0, 0.8], "rel": 0.7, "method": false},
+   "field": {"season": [1.0, 1.2, 1.5, 0.0], "rel": 1.0, "method": true}
+  }
+ },
+
+ "order": {"_doc": "Order (model §6): a_c coordination per head once a Steward exists; a_d disputes past n0, growing with exponent k; an informal keeper's span shrinks past n1; institutions (the Council, the Code) multiply span by code_mult. In hands at span 1.", "a_c": 0.01425, "a_d": 0.0185, "n0": 50, "n1": 150, "k": 0.5, "code_mult": 1.4},
+ "health": {"_doc": "Per-head incidence grows with density, density_k on N against n_ref (model §6: density ∝ N^0.3, incidence ∝ density^0.5).", "density_k": 0.15, "n_ref": 20},
+ "safety": {"_doc": "Safety's demand: max(vigilance per head, threat per head × (N / n_ref)^wealth_k) (model §4.1, §6).", "vigilance": 0.015, "wealth_k": 0.3, "n_ref": 20},
+
+ "levels": {
+  "_doc": "Per level: N (reference size), factors (the productivity budget, model §3), walk (share of a food hand's working time spent walking at N; grows as √(N / N) away from it), spoil (share of the stores lost a day: pots, granaries, the smokehouse), steward, institutions, import (share of food bought or paid in tribute), Y (land limits per source, food a day), and hands per head of each other need at full coverage (the labour cost l times the units per head: health's is care per case, safety's the threat, order's a multiplier on its formula).",
+  "band": {"N": 20, "factors": {"method": 1.0, "products": 1.0, "skill": 1.08, "techniques": 1.0, "culture": 1.0}, "walk": 0.35, "spoil": 0.2, "steward": false, "institutions": false, "import": 0.0,
+   "Y": {"wild": 200, "hunt": 120}, "sources": ["wild", "hunt"],
+   "hands": {"shelter": 0.0535, "warmth": 0.0535, "health": 0.0071, "safety": 0.036, "order": 1.0, "knowledge": 0.0214, "comfort": 0.0171, "spirit": 0.0114}},
+  "camp": {"N": 50, "factors": {"method": 1.15, "products": 1.1, "skill": 1.12, "techniques": 1.0, "culture": 1.0}, "walk": 0.3, "spoil": 0.11, "steward": true, "institutions": false, "import": 0.0,
+   "Y": {"wild": 100, "hunt": 40, "field": 0}, "sources": ["wild", "hunt", "field"],
+   "hands": {"shelter": 0.057, "warmth": 0.057, "health": 0.0186, "safety": 0.0379, "order": 1.0, "knowledge": 0.0356, "comfort": 0.0599, "spirit": 0.0399}},
+  "village": {"N": 150, "factors": {"method": 1.4, "products": 1.2, "skill": 1.2, "techniques": 1.03, "culture": 1.0}, "walk": 0.35, "spoil": 0.07, "steward": true, "institutions": false, "import": 0.0,
+   "Y": {"wild": 120, "hunt": 60, "field": 0}, "sources": ["wild", "hunt", "field"],
+   "hands": {"shelter": 0.0463, "warmth": 0.0463, "health": 0.0369, "safety": 0.039, "order": 1.0, "knowledge": 0.0499, "comfort": 0.0942, "spirit": 0.0628}},
+  "town": {"N": 500, "factors": {"method": 1.6, "products": 1.3, "skill": 1.28, "techniques": 1.05, "culture": 1.0}, "walk": 0.25, "spoil": 0.05, "steward": true, "institutions": true, "import": 0.0,
+   "Y": {"wild": 150, "hunt": 80, "field": 0}, "sources": ["wild", "hunt", "field"],
+   "hands": {"shelter": 0.0428, "warmth": 0.0428, "health": 0.0396, "safety": 0.0298, "order": 1.0, "knowledge": 0.0499, "comfort": 0.1154, "spirit": 0.0769}},
+  "city": {"N": 1000, "factors": {"method": 1.7, "products": 1.3, "skill": 1.3, "techniques": 1.05, "culture": 1.0}, "walk": 0.25, "spoil": 0.05, "steward": true, "institutions": true, "import": 0.12,
+   "Y": {"wild": 180, "hunt": 100, "field": 9000}, "sources": ["wild", "hunt", "field"],
+   "hands": {"shelter": 0.0392, "warmth": 0.0392, "health": 0.0396, "safety": 0.0264, "order": 1.0, "knowledge": 0.0499, "comfort": 0.1283, "spirit": 0.0855}}
+ },
+
+ "targets": {
+  "_doc": "The share of hands per need the design intends (model §6), and each level's R band (model §7). The calculator compares its year averages with these.",
+  "band": {"food": 0.72, "shelter_warmth": 0.15, "health": 0.01, "safety": 0.05, "order": 0.0, "knowledge": 0.03, "comfort_spirit": 0.04, "R": [1.3, 1.6], "walk": 0.35},
+  "camp": {"food": 0.53, "shelter_warmth": 0.16, "health": 0.03, "safety": 0.07, "order": 0.02, "knowledge": 0.05, "comfort_spirit": 0.14, "R": [1.8, 2.2], "walk": 0.3},
+  "village": {"food": 0.36, "shelter_warmth": 0.13, "health": 0.07, "safety": 0.1, "order": 0.05, "knowledge": 0.07, "comfort_spirit": 0.22, "R": [2.8, 3.5], "walk": 0.35},
+  "town": {"food": 0.25, "shelter_warmth": 0.12, "health": 0.09, "safety": 0.11, "order": 0.09, "knowledge": 0.07, "comfort_spirit": 0.27, "R": [4.0, 5.0], "walk": 0.25},
+  "city": {"food": 0.2, "shelter_warmth": 0.11, "health": 0.1, "safety": 0.12, "order": 0.1, "knowledge": 0.07, "comfort_spirit": 0.3, "R": [4.5, 5.5], "walk": 0.25}
+ }
+}
