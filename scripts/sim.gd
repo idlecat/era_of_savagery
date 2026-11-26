@@ -2614,8 +2614,10 @@ func birth_rate() -> float:
 	var alive := living()
 	var cap := pop_cap()
 	if alive.size() >= cap or stock["food"] < story.count(cb["min_food"]): return 0.0
+	var secure: float = soc.food_security() # (model §10: births follow food security, smoothly)
+	if secure <= 0.0: return 0.0
 	var grown := alive.filter(func(u): return u.role != "child").size()
-	var r: float = maxf(1.0, float(grown) / float(cb["per_lines"])) / float(cb["every"])
+	var r: float = maxf(1.0, float(grown) / float(cb["per_lines"])) / float(cb["every"]) * secure
 	r *= crowd_taper(float(alive.size()) / maxf(1.0, cap))
 	if hz.winter(): r *= float(cb["winter"])
 	if folk.mood < float(cb["low_mood"]): r *= float(cb["low_mood_mult"])
@@ -2737,12 +2739,18 @@ func _pick_need(needs: Dictionary, site: bool) -> String:
 ## "build" at `unbuilt`, "lore" for the rites, "art"): the Steward's verb, and anyone's who
 ## chooses their own work by the one rule (society.gd). Gathering is weighed (weigh.gd): with
 ## nothing of it within a safe walk, the other of food and wood, a site, or nothing (false).
-func set_to_work(u: E.Unit, choice: String, unbuilt = null) -> bool:
+func set_to_work(u: E.Unit, choice: String, unbuilt = null, fallback := true) -> bool:
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 	if field: choice = "field" # (food: a field or dock with a free place before the wild)
 	if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)
-		choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (weighed: nothing of it within a safe walk)
+		if not fallback: # (the one rule: the caller takes the next best by price, society.gd place())
+			var some := find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]))
+			if some != null:
+				var why := weigh.why_not(weigh.plan(u, choice), some.pos)
+				weigh.note_refused(u, why if why != "" else "cold")
+			return false
+		choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (the old rule's fallback: weighed, nothing of it within a safe walk)
 		if choice == "": return false
 	if choice == "build" and unbuilt == null: return false
 	match choice:
@@ -2750,7 +2758,13 @@ func set_to_work(u: E.Unit, choice: String, unbuilt = null) -> bool:
 		"build": assign_build(u, unbuilt)
 		"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 		"art": folk.start_art(u)
-		_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])})
+		_:
+			var opts := {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])}
+			if choice == "food" and soc.on: # (to the wild food that yields this season, as the society model credits it)
+				var ks: Array = soc.yielding_kinds(hz.season_idx())
+				var n := find_node("food", u.home, D.region_at(u.home), float(sw["area_r"]), ks, u) if not ks.is_empty() else null
+				if n: opts["node_id"] = n.id
+			assign_gather(u, choice, opts)
 	if choice != "build" and choice != "art": give_shift(u) # (gathering, fields, rites: a stint, then a new look at what is needed)
 	return true
 
@@ -2864,11 +2878,11 @@ func _update_vice(dt: float) -> void:
 		for u in idle:
 			var unbuilt = site_for(u)
 			var choice := ""
-			if soc.on: # (the one rule: each to the work their hand is worth most at, counted before the next; nothing worth a hand = rest)
-				choice = soc.pick(u, unbuilt != null)
-				if choice == "": continue
-				if choice == soc.trade_choice(u) and careers.on and careers.go_work(u, true): continue # (their own trade, by its own verb)
-				if choice == "rites": choice = "lore"
+			if soc.on: # (the one rule: each to the work their hand is worth most at, the next best if it can't be done; nothing worth a hand = rest)
+				if soc.place(u, unbuilt):
+					gain_xp(steward, "lore", float(sw["xp"]))
+					evo.practice(steward, "lead", float(sw["practice"]))
+				continue
 			elif careers.on and careers.go_work(u): continue # (the old rule: a trade is worked while its resource is needed)
 			else:
 				choice = _pick_need(needs, unbuilt != null)

@@ -970,3 +970,41 @@ so a tribe that loses its Steward stops growing.
   the impact values (`society.json impact`, the calculator's fitted knobs, open #1), not a
   rule for the stores.
 
+### 14.6 Food's price, by the principle (2026-11-26)
+
+The thin stores of §14.5 were not building's fault (lowering shelter's impact changed
+nothing: 52 hours short against 53). Measured one lever at a time, five fixes, each a price
+or a forecast made honest rather than a rule for one case:
+
+1. **Two days of eating in store** (`work.reserve_days` 2; three were no better): the hours
+   under half a day's food halved. The calculator uses the same reserve; with it the band
+   carries its winter (lowest C_now 1.00, from 0.51) and its food share lands on target (72%).
+2. **The next best by price**: when a person's best work can't be done (nothing within a
+   safe walk), they take the next best by the same rule (`soc.place()`), not the old rule's
+   "the other of food and wood", which had piled wood to ~4,300 again.
+3. **The forecast reads the game's own seasons**: each food hand yields what their work
+   yields by `events.json` (fields and docks by `yields`, bushes by `berries`, a find by its
+   winter flag, half the herds gone in winter), not a guessed 30% in winter that hid the
+   winter gap (32 starved on one seed's first spring).
+4. **...and today's weather**: a field in blight yields nothing today (`hz.food_mult`), so a
+   new food hand goes to the best food to be had today (`best_food_kind`), and the Steward
+   sends them there; in winter that is the hunt, fishing and tubers (food had dropped out
+   of the choices altogether in winter).
+5. **Births and newcomers need food security** (model §10): only while the look-ahead
+   coverage, today's food hands held, is at least the buffer (1.2). A seed whose tribe took
+   in 15 wanderers in the last days before a blighted winter lost 51.
+
+| | §14.5 | Now |
+|---|---|---|
+| Hours under half a day's food (12 days: steward, hoarder, feaster) | 53, 28, 71 | 11, 3, 19 |
+| Famine (band 10-25%) | 33%, 33%, 67% | 0%, 0%, 33% |
+| 60 days, 5 seeds | 95-105 people, 0-7 deaths (3 seeds); one later seed lost 33 to hunger | 46-60 people, 0-1 deaths, wood 371-798 |
+
+**The cost is growth, and it is a design choice.** Food security as a gate halves the
+growth (46-60 people at day 60, against ~100). A smooth ramp (births from coverage 1.0 to
+1.2) brought growth back in three seeds but let two unlucky bands breed into a hunger trap
+and die out (12 and 1 people): since step 3 a band without fields lives near subsistence,
+which is the model's band ceiling. Open #12: how fast should a tribe grow (the city plan's
+curve, ~150 by day 60, assumed the old abundance), and is the band's poverty trap a
+challenge to keep (the push to fields) or to soften (more winter food for the band)?
+

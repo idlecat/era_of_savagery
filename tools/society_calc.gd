@@ -144,7 +144,7 @@ func solve(L: Dictionary, n: float, inst = null) -> Dictionary:
 				var q := minf(step, left)
 				var best := ""
 				var bw := 1e-9
-				var c_now := (stores + s_today) / d_today
+				var c_now := (stores + s_today) / (d_today * (1.0 + float(S["work"]["reserve_days"]))) # (today's eating and a reserve in store, as the game's Steward: society.gd)
 				var c_h: float = _c_horizon(stores, keep, sup, dem, zero)[0]
 				for src in srcs:
 					var s_now := _added(src, nsrc[src], q, rate, si, L)

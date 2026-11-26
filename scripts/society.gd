@@ -123,23 +123,117 @@ func horizon() -> Array:
 	for j in n: out.append(int((d0 + j) / days_per) % 4)
 	return out
 
+## How much a food job yields in season si, by the game's own tables (events.json seasons:
+## a field's or dock's `yields`, the bushes' `berries`; a find yields in winter only if it
+## says so; half the herds leave for the winter). Field/dock: the structure type; gather: the
+## node kind.
+func food_factor(kind: String, si: int) -> float:
+	var sz: Dictionary = sim.hz.C["seasons"]
+	if sz["yields"].has(kind): return float(sz["yields"][kind][si])
+	if kind == "bush": return float(sz["berries"][si])
+	if kind in ["deer", "carcass"]: return 0.5 if si == 3 else 1.0
+	if D.FINDS.has(kind) and si == 3 and not D.FINDS[kind].get("winter", false): return 0.0
+	return 1.0
+
+## A food work's yield today: the game's live yield (weather and all: a blight stops the
+## fields, a drought thins the berries) for a field, a dock or the bushes, else its season's.
+func food_factor_now(kind: String) -> float:
+	if sim.hz.C["seasons"]["yields"].has(kind) or kind in sim.WORKED_TYPES: return sim.hz.food_mult(kind)
+	if kind == "bush": return sim.hz.berry_mult()
+	return food_factor(kind, sim.hz.season_idx())
+
+## Food security (model §10), 0 or 1: the look-ahead coverage (today's food hands held) at
+## least the buffer. Births and newcomers follow it: a tribe that won't carry its winter with
+## a margin takes in no more mouths. Looked at once a second.
+var _cache_secure := 1.0
+var _cache_secure_t := -10.0
+func food_security() -> float:
+	if not on: return 1.0
+	if sim.time - _cache_secure_t < 1.0 and sim.time >= _cache_secure_t: return _cache_secure
+	_cache_secure_t = sim.time
+	var seasons := horizon()
+	var none: Array = []
+	for j in seasons.size(): none.append(0.0)
+	var c := c_horizon(float(sim.stock["food"]), food_forecast(seasons), none, seasons)
+	var buf := float(S["work"]["food_buffer"])
+	_cache_secure = 1.0 if c >= buf else 0.0 # (a ramp from 1.0 to the buffer let thin-surplus births tip unlucky bands into a hunger trap: 2 of 5 60-day seeds died out; society.md 14.6)
+	return _cache_secure
+
+## The food work a new hand would take today: a field or dock with a free place, else the
+## wild food that yields most this season (food_factor), "" if nothing yields. The Steward
+## sends them to it (sim.set_to_work), so the forecast and the placement agree.
+func best_food_kind(si: int) -> String:
+	var reach := float(sim.RULES["vice"]["steward"]["area_r"])
+	var best := ""
+	var bf := 0.05
+	var now: bool = si == sim.hz.season_idx()
+	for t in sim.WORKED_TYPES:
+		var f := food_factor_now(t) if now else food_factor(t, si)
+		if f > bf and sim.free_field(D.VILLAGE, reach, [t]) != null:
+			bf = f
+			best = t
+	if best != "": return best
+	for k in food_kinds_near():
+		var f := food_factor_now(k) if now else food_factor(k, si)
+		if f > bf:
+			bf = f
+			best = k
+	return best
+
+## The kinds of wild food there is to gather (once a tick: a deep forest has many nodes).
+var _cache_kinds := []
+var _cache_kinds_t := -1.0
+func food_kinds_near() -> Array:
+	if _cache_kinds_t == sim.time: return _cache_kinds
+	var seen := {}
+	for n in sim.nodes_of("food"):
+		if n.amount >= 1.0 and not seen.has(n.kind) and (sim.knows_find(n.kind) or not D.FINDS.has(n.kind)): seen[n.kind] = true
+	_cache_kinds = seen.keys()
+	_cache_kinds_t = sim.time
+	return _cache_kinds
+
+## The wild food kinds worth sending a hand to today (those that yield this season).
+func yielding_kinds(si: int) -> Array:
+	return food_kinds_near().filter(func(k): return food_factor(k, si) > 0.05)
+
+## The kind of food work a job is (food_factor's key): the field's type, the node's kind.
+func food_kind(j: Dictionary) -> String:
+	if j.get("type", "") == "field":
+		var s = sim.struct_by_id(int(j.get("struct_id", -1)))
+		return s.type if s else "farm_plot"
+	var n = sim.node_by_id(int(j.get("node_id", -1)))
+	return n.kind if n else "bush"
+
 ## Food's look-ahead coverage: the worst day's (stores spoiling + supply so far) / demand so far.
-func c_horizon(stores: float, flow: float, add: float, seasons: Array) -> float:
+## sup and add: food by day of the horizon (today's food hands held where they are; a new hand).
+func c_horizon(stores: float, sup: Array, add: Array, seasons: Array) -> float:
 	var keep := 1.0 - minf(0.9, sim.spoil_rate() * D.DAY_LEN)
 	var safe := float(S["spoil_free"]["food"])
-	var prof: Array = S["work"]["food_season"]
-	var now_f: float = maxf(0.01, float(prof[seasons[0]]))
 	var have := 0.0
 	var need := 0.0
 	var worst := INF
 	var st := stores
 	for j in seasons.size():
-		var f: float = float(prof[seasons[j]]) / now_f
-		have += (flow + add * rate_of("food")) * f
+		have += float(sup[j]) + float(add[j])
 		need += food_demand(seasons[j])
 		st = safe + maxf(0.0, st - safe) * keep if st > safe else st
 		worst = minf(worst, (st + have) / maxf(1e-6, need))
 	return worst
+
+## The persistence forecast, by day of the horizon: every food hand now, held at their work,
+## yielding what their work yields in each day's season against today's.
+func food_forecast(seasons: Array) -> Array:
+	var sup: Array = []
+	for j in seasons.size(): sup.append(0.0)
+	var r := rate_of("food")
+	for u in sim.living():
+		if u.role == "child" or u.job.get("leisure", false) or job_res(u.job) != "food": continue
+		var k := food_kind(u.job)
+		var f0 := food_factor_now(k)
+		if f0 <= 0.05: continue
+		var fs := food_factor(k, seasons[0])
+		for j in seasons.size(): sup[j] += r * (1.0 if j == 0 else food_factor(k, seasons[j]) / maxf(0.05, fs)) # (today at today's yield, weather and all; later days by their season)
+	return sup
 
 # ------------------------------------------------------------------ the weights
 ## Every choice's weight for one more hand now (model §8). `site`: an unfinished site waits.
@@ -153,16 +247,27 @@ func weights(site: bool) -> Dictionary:
 	var targets: Dictionary = sim.steward_needs_targets()
 	# food: now and the horizon
 	var seasons := horizon()
-	var flow := float(hands.get("food", 0)) * rate_of("food") # (the hands on food now, held: the persistence forecast; the measured income lags a day and makes the stores swing)
+	var sup := food_forecast(seasons) # (the hands on food now, held where they are: the persistence forecast)
+	var placed_f := float(placed.get("food", 0))
 	var day_eat := food_demand(seasons[0])
 	var f_rate := rate_of("food") # (measured this season)
-	var s_now := f_rate if float(S["work"]["food_season"][seasons[0]]) > 0.05 else 0.0 # (no delayed payoff: food work that yields nothing today gains nothing)
+	var new_kind := best_food_kind(seasons[0]) # (where a new food hand would go: the best food work to be had today)
+	var f0 := food_factor_now(new_kind) if new_kind != "" else 0.0
+	var s_now := f_rate if f0 > 0.05 else 0.0 # (no delayed payoff: food work that yields nothing today gains nothing)
+	var add: Array = []
+	for j in seasons.size():
+		var fj := 1.0 if j == 0 else food_factor(new_kind, seasons[j]) / maxf(0.05, food_factor(new_kind, seasons[0]))
+		add.append(f_rate * fj)
+		sup[j] += placed_f * f_rate * fj # (the hands placed this round)
+	var flow: float = sup[0]
 	if s_now > 0.0:
 		var stores: float = sim.stock["food"]
 		var c_now := (stores + flow) / maxf(1e-6, day_eat * (1.0 + float(S["work"]["reserve_days"]))) # (today's eating, and a reserve in store: meals and births draw on the stores)
 		var buf := float(S["work"]["food_buffer"]) # (food security: births want stores in hand, model §10)
-		var ch := c_horizon(stores, flow, 0.0, seasons) / buf
-		var ch2 := c_horizon(stores, flow, 1.0, seasons) / buf
+		var none: Array = []
+		for j in seasons.size(): none.append(0.0)
+		var ch := c_horizon(stores, sup, none, seasons) / buf
+		var ch2 := c_horizon(stores, sup, add, seasons) / buf
 		var imp: Dictionary = S["impact"]["food_horizon"]
 		var v_h := float(S["values"]["growth"]) * float(imp.get("growth", 0.0)) + float(S["values"]["mortality"]) * float(imp.get("mortality", 0.0)) * pow(float(S["delta"]), seasons.size())
 		var w := n * (value("food_now") * M.gain(c_now, s_now, day_eat) + v_h * (M.benefit(ch2) - M.benefit(ch)))
@@ -232,6 +337,25 @@ func pick(u: E.Unit, site: bool) -> String:
 	if best != "": placed[best] = int(placed.get(best, 0)) + 1
 	return best
 
+## Send u to the work their hand is worth most at (the one rule), or, if it can't be done (no
+## field place, nothing of it within a safe walk), the next best by the same rule, counted
+## before the next hand; false when nothing worth a hand can be done (rest). The Steward's and
+## the self-placing idle's verb. `unbuilt`: the site waiting for builders, or null.
+func place(u: E.Unit, unbuilt) -> bool:
+	var w := weights(unbuilt != null)
+	last = w
+	while true:
+		var choice: String = best_for(u, w)[0]
+		if choice == "": return false
+		var ok := false
+		if choice == trade_choice(u) and sim.careers.on: ok = sim.careers.go_work(u, true) # (their own trade, by its own verb)
+		if not ok: ok = sim.set_to_work(u, "lore" if choice == "rites" else choice, unbuilt, false)
+		if ok:
+			placed[choice] = int(placed.get(choice, 0)) + 1
+			return true
+		w.erase(choice) # (can't be done now: the next best)
+	return false
+
 ## Whether u, a person with a trade, should go to it by themselves now: only when the one rule
 ## says their trade is their best work (careers.self_work).
 func trade_pays(u: E.Unit) -> bool:
@@ -265,13 +389,9 @@ func self_work(u: E.Unit) -> bool:
 		return false
 	if sim.time < t: return false
 	next_try.erase(u.id)
-	var unbuilt = sim.site_for(u)
-	var choice: String = best_for(u, weights(unbuilt != null))[0]
-	if choice == "":
-		next_try[u.id] = sim.time + float(S["work"]["self_secs"]) * 4.0 # (nothing worth a hand: rest, and look again later)
-		return false
-	if choice == trade_choice(u) and sim.careers.on and sim.careers.go_work(u, true): return true
-	return sim.set_to_work(u, "lore" if choice == "rites" else choice, unbuilt)
+	if place(u, sim.site_for(u)): return true
+	next_try[u.id] = sim.time + float(S["work"]["self_secs"]) * 4.0 # (nothing worth a hand can be done: rest, and look again later)
+	return false
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:

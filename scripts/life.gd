@@ -177,7 +177,7 @@ func _wanderers(alive: Array) -> void:
 	wander_day = sim.day()
 	var w: Dictionary = sim.RULES["migration"]["wanderers"]
 	if alive.size() < int(w["min_pop"]) or sim.folk.mood < float(w["mood"]) or sim.pop_cap() - alive.size() < int(w["free_beds"]): return
-	if randf() >= float(w["chance"]): return
+	if randf() >= float(w["chance"]) * sim.soc.food_security(): return # (model §10: newcomers come where the stores will carry them)
 	wanderers = clampi(randi_range(int(w["count"][0]), int(w["count"][1])), 1, sim.pop_cap() - alive.size())
 	pending = "wanderers"
 
