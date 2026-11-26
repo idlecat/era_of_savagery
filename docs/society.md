@@ -849,7 +849,18 @@ What it says:
   down, kept up only by their free yield and the bushes' limit.
 - **The walk is longer than the model's**, 55% against 35%, and h is 28 s, not 36.
 
-**Open #11 (the decision this asks for):** either the game's gathering comes down to the
+**Decided (2026-11-26): the game comes down to the model (#1 below).** The calculator,
+run at the game's productivity (`--base=0.6`, R ~6 at the band), leaves 47% of a band's
+hands idle, 41% of a camp's, 28% of a village's, and the whole climb from band to city
+frees only 15% of the hands (food 20% → 5%): there is nothing to free, and a band would
+spend its days on crafts (as the game's measured band already does: 23% on crafts and
+rites, 25% on wood and stone). At the model's numbers idle stays at 0-6% and food falls
+from 69% to 21%. Bringing gathering down to ~1/4 also puts the fields above the wild at
+the camp without touching them, and lengthens a stint at the bush, so the walk's share of
+work time falls toward the model's. The cost: slower growth and a hungry pre-pottery
+band, which step 3 tunes against the calculator and the 150-day games.
+
+**Open #11 (as it was asked):** either the game's gathering comes down to the
 model's band (×~1/4: R 1.5, most hands on food, the levels' climb visible in the share of
 hands), or the model's band moves up to the game (R ~6 at the band, the climb ×3 from
 there: a town at R ~18 with ~6% of its hands on food), so that scarcity lives in the stores
