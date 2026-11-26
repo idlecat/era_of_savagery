@@ -7,8 +7,12 @@ The detail lives in the design docs it points to:
 
 - [make_it_fun.md](make_it_fun.md): the fun plan (A–I, G). Its status table is the
   record of what landed.
-- [city_proposal.md](city_proposal.md): from a tribe of 50 to cities of 1,000. The next
-  big plan.
+- [city_proposal.md](city_proposal.md): from a tribe of 50 to cities of 1,000. Its
+  steps are largely built (§5).
+- [society.md](society.md): the model of the tribe as a society (needs, capital, levels),
+  the plan after the city; [society_plan.md](society_plan.md) is how it becomes code (§3.3).
+- [simplify.md](simplify.md): an audit for fewer, simpler rules (partly done; its
+  building-plan item is society_plan.md step 10).
 - [CONFIG.md](CONFIG.md), [CULTURES.md](CULTURES.md): data formats. [PRD.md](PRD.md):
   the original product idea.
 
@@ -166,6 +170,24 @@ Two things carry through every step:
 - **More culture packs, more eras**: the city is the depth the game lacks; breadth can
   wait.
 
+### 3.3 After the city: the society model (2026-11-26)
+
+With the city steps largely built, the open problem is what the freed hands do. The
+tribe grows to 600-700 people by day 150, but every one of them still lives by food, wood
+and beds: crafts are leisure, goods are not used, tools are a flag, and nothing says one
+town lives better than another. [society.md](society.md) models the tribe as a society so
+that the levels emerge from one set of parameters: labour in person-days, five kinds of
+capital, nine needs (food, shelter, warmth, health, safety, order, knowledge, comfort,
+spirit) that each have a demand, a supply and a coverage, a cost of scale (some demand
+grows faster than people), levels as regimes held by one binding constraint, allocation
+by marginal benefit, and wealth and the standard of living. Indoor work (crafts at home,
+then workshops) and the winter as the craft season come out of it.
+
+[society_plan.md](society_plan.md) orders the work: step 0 is a calculator that solves the
+model's year and checks its share of hands per need before any game code; steps 0-5 are
+the economy's core (one production formula, the allocation, tools and indoor work); 6-9
+recast health, order, safety and the standard; 10-11 the building plan and wealth.
+
 ## 4. Housekeeping found in this review
 
 - `city_proposal.md` dated its audit "March 2026"; it was written on 2026-11-24.
@@ -318,3 +340,13 @@ Two things carry through every step:
   send war bands of 5–6 deaths at 150–250 people and one of 14 at 589 (seed 3, day
   148). No more starvation days, though the stores still touch 0–1 once or twice a
   game at the end of a winter. The woodpile holds at 4,500–9,000.
+- **2026-11-26, the next plan: the society model.** As the tribe learns, fewer hands
+  should be needed for food and the freed hands should make it richer, healthier, safer
+  and better kept. [society.md](society.md) models that: labour in person-days and a
+  time budget, five kinds of capital and one production formula, nine needs in one shape
+  (demand, supply, coverage), the cost of scale, levels as regimes with a binding
+  constraint (band, camp, village, town, city), allocation by marginal benefit, wealth
+  and the standard of living. It replaces city_proposal's food-economy numbers (the
+  passive field trickle, farm workers at 8-10% of a city) when it lands.
+  [society_plan.md](society_plan.md) is its implementation plan; step 0 is a
+  calculator that tests the model's share of hands per need before any game code.

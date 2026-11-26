@@ -5,7 +5,8 @@ modelled the food economy; draft 2 made food one case of a general model; drafts
 fixed its units and double counting after two reviews; draft 5 is a two-model brainstorm
 (claude and pi, three rounds): R as the food share, a budget that multiplies
 to ×3, order's two thresholds, a growth channel, food's two-window allocation weight,
-health's climb as care. §13 lists what is settled and what is open.
+health's climb as care; then a pass against the other docs (walking's hunger, the City
+row, culture packs and the budget). §13 lists what is settled and what is open.
 
 The question: as the tribe learns, fewer hands are needed for food, and the freed hands
 make the tribe richer, healthier, safer, better kept. How much richer, at what cost, and
@@ -41,7 +42,7 @@ Six ideas carry it:
 1. **Labour is the one scarce input**, counted in person-days. Every need is met by
    hands, directly (a healer) or through what hands made and keep up (a hut, a tool).
 2. **A day is a time budget.** Work is what is left after rest, meals and walking; the
-   walk is the cost of distance, counted there and nowhere else (§2).
+   walk is the cost of distance, paid in time (h) and in hunger (c), and nowhere else (§2).
 3. **Every need has the same shape**, in its own unit: demand, supply, coverage, benefit
    (§4, with the unit table in §4.1).
 4. **Every effect goes through six channels**, each counted once (§5).
@@ -56,8 +57,13 @@ Six ideas carry it:
   head" in the model is per unit. Workers are the units of working age who are not sick,
   badly hurt or away; **d** is computed inside the simulation from those counts, not an
   abstract demographic multiplier.
-- **Consumption**: a grown-up eats **c ≈ 3 food a day** (hunger 0.33/s, 3 food per 30
-  hunger, a 90 s day), ×1.25 in winter; a child 0.6 of that. ~25 food a year (8 days).
+- **Consumption**: hunger falls 0.33 a second (~30 a 90 s day) and a 3-food meal fills 30,
+  or 38 once the tribe has fire, so **a grown-up at rest eats ~2.3 food a day** (~3 before
+  fire). **Walking adds hunger** (`survival.walk_hunger`, 0.004 a pace at ~58 paces a
+  second): a working grown-up who walks ~60% of their working time eats ~25% more. So the
+  working figure is **c ≈ 3 food a day** (to be measured, §12), ×1.25 in winter; a child
+  eats 0.6 of the hunger at rest. ~25 food a year (8 days). (city_proposal.md's "2.3 food
+  per person per day" is the at-rest figure.)
 - **Dependants**: children, the sick and the badly hurt eat and don't work. **d** =
   adult-equivalent mouths per worker — (grown-ups + 0.6 × children) / workers — ~1.2-1.4
   in a growing tribe (a child's mouth is 0.6, so d sits a little under people-per-worker).
@@ -129,6 +135,17 @@ The central allocation:
 Each source is capped at its share; a config whose product drifts from ×3 by more
 than ±0.3 is a config error the calculator reports. (Draft 3's ranges multiplied to
 ×2.7-4.6, ×3.6 in the middle: too loose to tune by.)
+
+**Culture packs draw on the same budget.** A pack's inventions, foods, finds, boons and
+tales change work rates through the shared effects (`docs/CULTURES.md`: `gather`,
+`yield`, `work`, `build`...), and CULTURES.md asks for 1.2-1.4× per invention. Five such
+gathering inventions would multiply to ~×3 on their own, the whole climb. So a pack's
+effects are counted in the share they belong to: an invention that is a product (§9) in
+the products share, a technique in the techniques share, a boon or a tale in culture.
+The calculator reads the pack as well as the base game and reports a pack whose effects
+push a share past its cap, as `check_culture.gd` reports a malformed one. Packs keep
+their character (a fishing people's hooks are strong) because the cap is on the share,
+not on each entry: one strong fish hook fits, five gathering bonuses don't.
 
 **known and land are not sources of the climb.** The budget assumes known = 1 (the
 level's food hands know its methods) and the land factor held constant, not depleted.
@@ -277,7 +294,10 @@ The rules that keep the model from double counting:
    effect is contentment (ornaments, decor, fine wares), so a cooked meal is not also a
    comfort.
 2. **Capital upkeep is charged to the need it serves** (§3.1).
-3. **Walking is counted once**, in h (§2).
+3. **Walking has two costs, each counted once**: the time it takes, in h (§2), and the
+   hunger it adds, in c (§2). They are different effects (a working day lost, food eaten),
+   so a road that shortens the walk pays twice, once in each. Nothing else charges for
+   distance.
 4. **A shortfall acts only through its need's listed channels** (§4.1), smoothly by
    1 - B(C), plus its hardship's event rate.
 5. **Crowding is a link, not a double cost**: shelter's shortfall raises health's
@@ -374,6 +394,10 @@ hand in exactly one need, capital upkeep included):
 | Camp (~50) | 53% | 16% | 3% | 7% | 2% | 5% | 14% | ~30% |
 | Village (~150) | 36% | 13% | 7% | 10% | 5% | 7% | 22% | ~35% (spread, before roads) |
 | Town (~500) | 25% | 12% | 9% | 11% | 9% | 7% | 27% | ~25% (roads, granaries) |
+| City (~1,000, provisional) | 20% | 11% | 10% | 12% | 10% | 7% | 30% | ~25% (outposts' fields far out, roads) |
+
+(The city's food share is below 1/R because ~10-15% of its food is bought or paid in
+tribute, §7.)
 
 The freed food hands become partly overhead (health, safety and order from 6% to 29%) and
 partly a rising standard (comfort and spirit from 4% to 27%), while the walk first grows
@@ -393,7 +417,15 @@ its floor), and the next level's methods relax it.
 | **Camp** | the winter (stored food) and food hands | an autumn rush, empty stores by late winter | pottery, granaries, smoking, the bone needle | 1.8-2.2 |
 | **Village** | the walk, as the worked land spreads; health where the beds lag | fields far out, the day spent walking; fevers once crowding sets in | healers and medicine, oxen and the plough, roads, the cookhouse | 2.8-3.5 |
 | **Town** | order (past ~150) and safety | waste, strife, raids on a rich town | the Council and the Code, walls, bronze, the warehouse, trade | 4-5 |
-| **City** | (beyond the first cut) | | | |
+| **City** (~1,000) | the land in reach (K) again, now for fields, and the winter at scale | fields far past the wall, a winter that burns ~6,000 food, fires and plague in the crowd | outposts as farmsteads, roads, warehouses, trade and tribute (food bought with surplus, `city_proposal.md` §3.1), irrigation | ~5 |
+
+The city is the game's goal (`city_proposal.md`, the City victory), so the model must
+reach it, but its row is provisional: the first cut is tuned to the town, and the city
+row is checked once the town's numbers hold. At the city the land limit returns: a
+thousand people need more fields than the village's reach holds, so food comes from
+outposts and from outside (trade, tribute), and that share is food the tribe's own hands
+don't make (R counts only the tribe's food workers; bought food lowers the food share
+without raising R).
 
 - **Growth is bounded per level**, not by a timer: under a rising ceiling for a tribe that
   learns, at a ceiling for one that doesn't.
@@ -522,7 +554,12 @@ No seasonal rule of its own.
 - **Inventions are techniques or products.** A technique is a permanent factor; a product
   (digging stick, fish hook, baskets, carrying frame, bone needle, the tools of the
   `tools` and `bronze` techs) is the know-how to make a good, whose effect comes from its
-  coverage and which wears, so its making is upkeep (§3.1).
+  coverage and which wears, so its making is upkeep (§3.1). The `kind` the game and the
+  culture packs already use (`tool`, `goods`, `medicine`, and foods) says what an
+  invention is *about*, not how it acts: a `tool` or `goods` invention is usually a
+  product, a `medicine` is a product of the health need (medicine, made from herbs) or a
+  technique (bone setting), a food (a way of preparing it) a technique. Each entry is
+  marked one or the other; the kinds stay as they are.
 - **Skills** follow one curve (×1.0 → ×1.4); a trade done all day climbs it fastest.
   Ranks cap it and open fine work (bronze needs `fine_craft`).
 
@@ -597,7 +634,8 @@ Without a rule of their own:
 | payback band | what a multiplying trade must earn | 1.5-3× |
 
 **The calculator comes first**: a small script that takes this table and, for each level
-and size (Band 20, Camp 50, Village 150, Town 500 — children ~25% at each, which sets d),
+and size (Band 20, Camp 50, Village 150, Town 500, and the provisional City 1,000 —
+children ~25% at each, which sets d),
 solves a **periodic steady state over
 the year**: it runs the 8-day year season by season (each season's yields, hunger and
 cold; the allocation of §8 within it; the tool fixed point of §3.1; the stores carried from
@@ -689,6 +727,21 @@ section named; `git log -p -- docs/society.md` has the argument):
   the forecast's drift (§12). Channel values, wants per level, care per case, δ, the
   spans, a_c and the threat at each size are its fitted knobs.
 
+**Other docs**
+
+- `city_proposal.md` is the record of the city steps as built. Where it gives the food
+  economy's numbers (fields that keep a passive trickle, ~10 food a day per field worker,
+  farm workers 8-10% of a city), the Steward's picker, births governed by beds with a
+  crowding taper, and tiers by headcount and buildings, this model replaces them when it
+  lands; its walls, its target mix of food sources, the rivals' growth and the 8-day
+  year stand, and the City row of §7 is built on them.
+- `CULTURES.md` describes the effects packs can use today; under this model their work-rate
+  effects count against the productivity budget (§3) and inventions are marked technique
+  or product (§9).
+- `simplify.md`'s need rule (§1) and targets per role (§2) are the first form of §8's
+  allocation and of the needs' capacities; `society_plan.md` says how this model becomes
+  code.
+
 **Still open:**
 
 1. **The fitted values**: the channel values and the wants per level that the calculator
@@ -709,3 +762,5 @@ section named; `git log -p -- docs/society.md` has the argument):
    is how much less a death at the run-out day weighs than one today. If V_horizon
    cannot fill the stores in one autumn at a sane δ, the Council's policies are the
    lever, not a steeper δ.
+7. **Culture packs and the budget** (§3): checked per pack against the shares, or with
+   some headroom for a pack's character (a share may run ×1.1 over its cap)?

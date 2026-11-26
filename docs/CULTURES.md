@@ -110,7 +110,13 @@ Inventions, foods, finds, boons and tales change the rules through a fixed set o
 | `steady` | add | 1: the badly hurt are not slowed |
 
 `{"stat": "gather", "of": "fish", "mul": 1.3}` · `{"stat": "mood", "add": 3}`. A `mul` must
-be in (0, 3]. Keep effects modest: base inventions give 1.2–1.4× or +2 to +5. Say in
+be in (0, 3]. Keep effects modest: base inventions give 1.2–1.4× or +2 to +5. Effects on
+work rates (`gather`, `yield`, `build`, `work`) add up: a pack with many of them on the
+same kind of work makes the tribe too productive. The planned society model
+([society.md](society.md) §3) gives every source of productivity a share of the climb
+and will check packs against it, and will mark each invention a *technique* (lasting
+know-how) or a *product* (a good that must be made and wears out); until then, give a
+pack one strong bonus per kind of work rather than several. Say in
 `desc` what an effect does, in numbers. A new kind of effect needs a code hook: add the
 stat to `D.EFFECT_STATS`, then call `inv.mul()`/`inv.add()` where the rule lives.
 

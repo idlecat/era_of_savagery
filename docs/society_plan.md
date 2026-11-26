@@ -1,6 +1,6 @@
 # Implementing the society model
 
-Draft 1, 2026-11-25. How `docs/society.md` (the model) becomes code: where each part of
+Draft 2, 2026-11-26 (brought in line with society.md draft 5: food's two-window weight, the greatest-weight rule, six channels). How `docs/society.md` (the model) becomes code: where each part of
 the model lives, what it replaces, and in what order. The model doc says *what*; this doc
 says *where and how*. Section numbers like "model §4" point into society.md.
 
@@ -10,7 +10,7 @@ says *where and how*. Section numbers like "model §4" point into society.md.
   curve, the floors, the channel values, the wants, the wear) lives in one new config,
   `config/society.json`, read by `Config.load_cfg("society")` (read-only, user override
   in `user://config/`), documented in `docs/CONFIG.md`. Texts get zh.
-- **One formula, two users.** The model's pure functions (benefit, demand, ΔB, D_alloc,
+- **One formula, two users.** The model's pure functions (benefit, demand, ΔB, the two-window food weight, the persistence forecast,
   the production formula's factor product, payback) go in a static script
   `scripts/society_model.gd` used by both the calculator and the game, so the two can't
   drift apart.
@@ -34,7 +34,7 @@ says *where and how*. Section numbers like "model §4" point into society.md.
 |---|---|---|
 | `config/society.json` | config | all the model's parameters (model §12), per level where needed |
 | `scripts/society_model.gd` | static, pure | the formulas: `benefit(c)`, `gain(c, s, d)`, `demand(a, n, n0, k)`, `alloc_demand(...)`, `factor_product(...)`, `payback(...)` |
-| `scripts/society.gd` | sim subsystem `sim.soc` | live needs: demand, supply, coverage (C_now, C_horizon, C_alloc) per need; the five channels as queries; weights for the allocation; wealth, output per head, the standard; `summary()` |
+| `scripts/society.gd` | sim subsystem `sim.soc` | live needs: demand, supply, coverage (C_now, and C_horizon for food) per need; the six channels as queries; weights for the allocation; wealth, output per head, the standard; `summary()` |
 | `tools/society_calc.gd` | tool | the calculator: the periodic year for each level and size (model §12), printing shares, h, R, K, coverage, standard, ceilings; `--fit` to fit the knobs to the share table |
 | a Society panel | HUD | needs with coverage bars, hands per need, the standard, wealth |
 
@@ -68,7 +68,7 @@ says *where and how*. Section numbers like "model §4" point into society.md.
 | Model | Now | Change |
 |---|---|---|
 | N, workers, d | `sim.living()`, `u.role == "child"`, `u.sick`, hp | counted once per recompute in `soc`; d exposed in `summary()` |
-| c | `survival.hunger_rate`, `meal`, `meal_fill`, `child_hunger`, `hz.hunger_mult()` | read, not duplicated: `society_model.c_per_day(RULES)` derives c from them |
+| c | `survival.hunger_rate`, `meal`, `meal_fill`, `meal_fill_fire`, `walk_hunger`, `child_hunger`, `hz.hunger_mult()` | read, not duplicated: `society_model.c_per_day(RULES, walked)` derives c from them, at rest (~2.3 with fire) plus the walk's hunger (model §2) |
 | the time budget, h | not measured | measured in `tools/metrics.gd` (share of grown-up seconds by state: asleep, meal, life, walking, working, by `u.doing` and path); `soc` estimates h from the same states sampled on its clock |
 | the walk | `step_move`, `weigh.trip()` | no change in step 1; its methods (roads, granaries by the fields, workshops at home) shorten it as they do now |
 
@@ -153,6 +153,7 @@ wealth): the pressure stays in `rivals.gd`, as the model says.
 | labour | `soc.work_mult(u)` in `sim.work_mul(u)`; `d` through who is sick | order's waste, warmth's chill, the `known` factor is already in `work_rate` |
 | consumption | `soc.hunger_mult()` in the hunger rate | the cookhouse's coverage lowers c |
 | losses | `soc.loss_mult(kind)` | spoilage (`sim.gd` spoil line), fire spread, raid loot, strife's damage |
+| growth | `soc.birth_mult()` in `sim.birth_rate()`; `soc.leave_chance()` in `life.gd discontent`; `soc.comers()` for wanderers | births by the standard and food security (C_horizon), gated by beds; departures and migrants by the standard (§3.8) |
 | contentment | `soc.mood_term()` in `folk.mood_target()` | the standard against the wants (model §10); replaces the decor/treasure terms in time |
 
 Crowding is a link (model §4.2): shelter's shortfall raises health's demand through
@@ -166,18 +167,22 @@ births directly (births read the standard and food security instead).
 
 Becomes:
 
-- `soc.weights()`: for every need (and for each good inside comfort and the products),
-  `V_need × N_affected × ΔB`, with ΔB from `society_model.gain(C_alloc, s, D_alloc)` and
-  s the supply one more hand of the asked-for person would add (their `work_rate` × h, in
-  the need's unit). Food reads `C_alloc = S_today / D_alloc` with the storage term
-  (model §8); the others their coverage now.
-- `_pick_need()` picks at random in proportion to the weights (as now: the spread keeps
-  people from all piling on one need), each choice mapped to its assignment verb
-  (`assign_field`, `assign_gather`, `assign_build`, `assign_craft`, `assign_heal`...).
+- `soc.weights(u)`: for every need (and for each good inside comfort and the products),
+  `V_need × N_affected × ΔB`, with ΔB from `society_model.gain(C, s, D)` and s the supply
+  this person would add (their `work_rate` × h, in the need's unit). Food sums its two
+  windows (model §8): the now term (C_now, s_now, D_today) under V_now, the horizon term
+  (C_horizon, s_horizon = the persistence forecast's increment, D_horizon) under
+  V_horizon with the δ discount to the forecast's run-out day.
+- `_pick_need()` becomes **the greatest weight, recomputed after each hand**: the Steward
+  places the idle one by one, each placement lowering its need's ΔB before the next
+  (model §8; a random pick in proportion to the weights, today's rule, settles at other
+  shares than the calculator predicts). Ties go to the nearest work. Each choice maps to
+  its assignment verb (`assign_field`, `assign_gather`, `assign_build`, `assign_craft`,
+  `assign_heal`...).
 - The **channel values** V come from `society.json values`, scaled by the Steward's
   policy (`steward.policy` today: "food first" becomes a higher value on food's channels).
 - **What it replaces**: the `needs` targets and weights of `vice.steward`, the `autumn`
-  food target (the storage term does it), `leisure_below` (a need covered has 0 weight;
+  food target (food's horizon term does it), `leisure_below` (a need covered has 0 weight;
   with every weight 0, people rest or take an idle act), the art/lore fallback.
 - **Careers** keep their part: a holder goes to their trade while its need has a weight
   (`careers.go_work`: "while its resource is needed" becomes "while its need's weight is
@@ -249,11 +254,11 @@ farmers, more makers" real. Steps 6-9 recast the other needs; 10-11 finish the m
 
 | # | Step | Changes the game? | Done when |
 |---|---|---|---|
-| 0 | **The calculator**: `society.json` (first numbers), `society_model.gd`, `tools/society_calc.gd` with the periodic year and `--fit` | no | it prints the share table (model §6) within a few points at the four sizes, with fitted channel values and wants that look sane; `test_society_model` checks the pure formulas (benefit, gain bounded and 0 at C ≥ 1, D_alloc's storage term) |
+| 0 | **The calculator**: `society.json` (first numbers), `society_model.gd`, `tools/society_calc.gd` with the periodic year and `--fit` | no | it prints the share table (model §6) within a few points at the four sizes, with fitted channel values and wants that look sane (the City row provisional); `test_society_model` checks the pure formulas (benefit, gain bounded and 0 at C ≥ 1, the two-window food weight, the persistence forecast) |
 | 1 | **Measure the game**: in `tools/metrics.gd`, the time budget (h), food per worker-day by source, hands per need (jobs mapped by `society.json jobs`), R per run | no | the numbers next to the calculator's for the same size; the gap is the tuning list |
 | 2 | **`sim.soc`, read only**: needs, coverage, channels computed but not hooked; `summary()`; the Society panel | no (reads only) | coverage finite and in range in `check_invariants()`; hands sum to the workers; `test_smoke` with it on; the panel in a `--demo` screenshot |
 | 3 | **One production formula**: `work_rate()`, the skill curve, traditions as data, the passive field yield gone, field hands' curve; tuned to the R bands | yes | R per era in its band (metrics, 8 seeds); the 12-day bands hold; canary baseline rewritten |
-| 4 | **Allocation by the model**: `soc.weights()` replaces `steward_needs()`; food's D_alloc with the storage term; the art/lore fallback gone | yes | winter stores at day 55 as good as now (150-day runs); the autumn rush starts in late summer; no need pulls more than its share at C ≥ 1 |
+| 4 | **Allocation by the model**: `soc.weights()` replaces `steward_needs()`; food's two windows; the greatest-weight pick; the art/lore fallback gone | yes | winter stores at day 55 as good as now (150-day runs); the autumn rush starts when the harvest window opens; a healthy winter sends the hands indoors; no need pulls more than its share at C ≥ 1 |
 | 5 | **Tools, the first good, and indoor work**: the `tools` resource, `craft` job, `indoors(u)`, wear and coverage, the toolmaker career, `has_tech("tools")` → coverage | yes | toolmaker payback 1.5-3× measured; field hands fall to ~0 in winter and craft hands rise; nobody indoors freezes; perf at 1,000 within `test_perf` |
 | 6 | **Health, warmth, shelter recast**: healer and `heal` job, medicine (herbs), cloth (hides; the bone needle a product), crowding as incidence, the channel hooks for mortality and labour | yes | deaths by cause no worse; sick days fall where healers stand; the near-miss band holds |
 | 7 | **Order and knowledge**: keepers and `keep_order`, span by the Steward/council/Code, order's waste on `work_mul`, the two thresholds; `teach`, the `known` factor, the elder career | yes | a town past 150 without the Code loses work and mood (measured); a method spreads in N days; an oral loss costs measurably |
@@ -271,10 +276,10 @@ since they carry the cost of scale.
 
 | Test | Checks |
 |---|---|
-| `test_society_model` | the pure formulas: B, gain bounded by 1 - B and 0 at C ≥ 1, demand with k and N₀, D_alloc's storage term in late summer, payback |
+| `test_society_model` | the pure formulas: B, gain bounded by 1 - B and 0 at C ≥ 1, demand with k and N₀, the two-window food weight (zero with both windows covered), the persistence increment, payback |
 | `test_society_needs` | a sim with known people and buildings: each need's demand and supply; hands sum to the workers; coverage in range |
 | `test_work_rate` | the factor product for a few people (known vs unknown method, skill levels, tools coverage) |
-| `test_allocation` | a covered need gets no hands; a winter field gets none; food's storage term pulls hands in autumn; a tiny need doesn't pull from food |
+| `test_allocation` | a covered need gets no hands; a winter field gets none; full granaries in winter send the hands indoors; the horizon term pulls hands in autumn; a tiny need doesn't pull from food; greatest weight with recompute spreads the idle |
 | `test_indoor` | a crafter inside is hidden, warm, ignored by a wolf, roused by a raid |
 | `test_goods_wear` | tools wear with users, coverage falls, the Steward sends a maker |
 | `test_boundaries`, `test_spend`, `test_translations` | the new actions, conditions, config texts |
@@ -286,8 +291,9 @@ since they carry the cost of scale.
 - **Balance moves a lot at steps 3-5.** Each is measured against the calculator and the
   bands before the next; the canary baseline is rewritten after each, on purpose.
 - **The Steward's rule changes twice in a week** (the need rule, 2026-11-25, then this).
-  Step 4 keeps its shape (a weighted random pick) and only derives the weights, so the
-  behaviour the need rule fixed (shortages pull hands, plenty releases them) carries over.
+  Step 4 keeps the rule's idea (a weighted gap) but derives the weights and picks the
+  greatest, recomputed after each hand, so the behaviour the need rule fixed (shortages
+  pull hands, plenty releases them) carries over without its randomness.
 - **Overlap with the building plan work** (simplify.md §2): step 10 is that work; agree on
   it before starting.
 - **The HUD gets a panel**; the top bar gets one word (the standard), no more.

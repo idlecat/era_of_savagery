@@ -1,6 +1,7 @@
 # Proposal: From Tribe to Ancient City (1000 people)
 
-Status: steps 1–6 largely built (2026-11-24; `ROADMAP.md` §5 records what landed, what
+Status: steps 1–6 largely built, its food-economy numbers superseded by
+[society.md](society.md) (below) (2026-11-24; `ROADMAP.md` §5 records what landed, what
 was found on the way and what is left); the plan (`ROADMAP.md` §3 sets its order with
 the open make_it_fun items folded in). Written after a code and data audit plus headless
 measurement runs (2026-11-24). The goal: a player can develop the settlement into one
@@ -8,6 +9,15 @@ or more thriving ancient cities of about a thousand people, with challenges that
 with the city and a good pace on the way. Code references were checked at 5e53363;
 main has since gained the era-3 **Stone Wall** and **Trading Post** (0956e11) and
 **careers** (`careers.gd`, `config/careers.json`), which this doc now builds on.
+
+**Superseded in part by [society.md](society.md)** (2026-11-26), the model of the whole
+society that comes next: its labour model replaces this doc's food-economy numbers (the
+passive field trickle, ~10 food a day per field worker, farm workers at 8-10% of a city:
+under the model a field yields only when worked and food takes ~20-25% of a city's
+hands), the Steward's farm-first picker, births governed by beds with a crowding taper,
+and tiers by headcount and buildings alone. The walls (§2), the target mix of food
+sources, the rivals' growth, performance and the 8-day year stand, and the model's City
+row is built on them. Notes below mark the superseded passages.
 
 ## 1. Where the game stands today
 
@@ -140,7 +150,9 @@ exposed as game-master operations, per `CLAUDE.md`.
 ### 3.1 Let the food economy scale (data + two small verbs)
 
 - **Worked fields (the main change).** A farm plot, dock and pen keep a small passive
-  trickle (today's number, so a camp plays as now) and can be **worked**: a person on
+  trickle (today's number, so a camp plays as now) and can be **worked** (built; under
+  society.md §3.2 the plot's and dock's trickle goes: food is work on land, so one farmer
+  on one field feeds R people): a person on
   the job adds `food_per_worker` while they work it. Labour turns into food, and the
   wood surplus becomes a choice (build vs. farm). The mechanism already exists — it
   is the aurochs pen's own pattern, generalized: `_send_herder()` sends a **spare
@@ -191,7 +203,10 @@ exposed as game-master operations, per `CLAUDE.md`.
   share of a 1000-person city is then **~25–35 plots and ~75–105 farm workers
   (≈ 8–10 % of the people)** — a field district, not a carpet. These two numbers are
   the tuning guard: per-worker too high and farming is a checkbox with idle hands
-  left over; too low and the 250-plot carpet returns. The freed hands are the arc's
+  left over; too low and the 250-plot carpet returns. (Superseded: society.md sets
+  the food share from R, ~20-25% of a city's hands with ~10-15% of its food bought, so
+  a field worker makes ~15-18 food a day, not 10 on top of a trickle; the freed hands
+  go to the overhead of health, safety and order as well as to crafts, §6 there.) The freed hands are the arc's
   point: craft, trade, roads and great works (§3.4) are what a city does with people
   who no longer dig.
 - **Winter is the storage system.** Farm ×0, dock ×0.5, pen ×0.7 in winter
@@ -267,7 +282,9 @@ second farm.
   **crowding factor** (mood and beds: a crowded, gloomy town has fewer children) and
   the winter. Config: `{"per_lines": 8, "every": 45, "crowd_at": 0.8, "crowd_k": 2}`
   (`crowd_at` shared with sickness crowding, below).
-- **The curve's governor is beds, not the birth rate.** Births already stop at
+- **The curve's governor is beds, not the birth rate** (built; under society.md §10 births
+  follow the standard, gated by beds and food security, and crowding acts through
+  sickness, not as a birth taper). Births already stop at
   `pop_cap()` (`_update_births` gates on `pop < pop_cap()` and `min_food`), so the
   raw per-mothers rate (at pop 300 that is ~75 births a day) is clipped by the bed
   gate and crowding to the ~15 the S-curve wants. Growth therefore runs at the
@@ -309,7 +326,8 @@ second farm.
 ### 3.3 Settlement tiers: camp → village → town → city (make_it_fun I5)
 
 - A rule over `sim.structures` and `sim.living()` per settlement in
-  `config/rules.json → tiers`:
+  `config/rules.json → tiers` (built; society.md adds the standard and output per head to
+  a tier's conditions, so a big tribe of foragers is a big camp, not a town):
   `camp` (an outpost: 2 huts), `village` (≥ 20 people, ≥ 8 beds, a farm),
   `town` (≥ 150, a longhouse, a granary, a shrine, a road to the village),
   `city` (≥ 500, a temple or grand altar, a stone wall, a warehouse, a trading post).

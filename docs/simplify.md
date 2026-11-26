@@ -49,6 +49,10 @@ winter, a big town keeps more wood because its fuel target is bigger.
 
 ### 2. The building plan: 16 hand-ordered entries → targets per role
 
+(2026-11-26: [society.md](society.md) generalises §1 and §2: the need rule's weights
+become marginal benefits per need, picked greatest first, and the targets per role become
+each need's capacity. [society_plan.md](society_plan.md) step 10 is this section's work.)
+
 Today (`rules.json improvements.list`): sixteen entries, each a building with its own
 conditions. The storage rows alone overlap three ways (a granary when nearly full,
 a warehouse below a winter's need, a granary below a winter's need), homes three ways

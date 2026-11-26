@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Godot 4.7 (GDScript only) prototype of `docs/PRD.md`: a pause-and-play tribe RTS where node-triggered LLM "Task Contracts" are negotiated once and then executed by a deterministic state machine. README.md documents gameplay systems in detail. `docs/ROADMAP.md` says where the work stands and what comes next (the plans: `docs/make_it_fun.md`, `docs/city_proposal.md`).
+Godot 4.7 (GDScript only) prototype of `docs/PRD.md`: a pause-and-play tribe RTS where node-triggered LLM "Task Contracts" are negotiated once and then executed by a deterministic state machine. README.md documents gameplay systems in detail. `docs/ROADMAP.md` says where the work stands and what comes next (the plans: `docs/make_it_fun.md`, `docs/city_proposal.md`, and next `docs/society.md`, the model of the tribe as a society, with `docs/society_plan.md`, its implementation plan).
 
 ## Principles
 
