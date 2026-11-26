@@ -153,7 +153,7 @@ func setup(s) -> void:
 	vig.add_child(vr)
 	add_child(vig)
 	var g := Gradient.new()
-	g.set_color(0, Color(1.0, 0.82, 0.55, 1.0))
+	g.set_color(0, Color(1.0, 0.74, 0.45, 1.0)) # (warm, never white: added over lit ground)
 	g.set_color(1, Color(1.0, 0.55, 0.25, 0.0))
 	light_tex = GradientTexture2D.new()
 	light_tex.gradient = g
@@ -612,8 +612,8 @@ func _grade_step(delta: float) -> void:
 	var low_sun := 0.0
 	if sim.is_day_part("dusk"): low_sun = sin(_part_k("dusk") * PI)
 	elif sim.is_day_part("dawn"): low_sun = sin(_part_k("dawn") * PI)
-	var bl := lerpf(0.15, 0.42, nk)
-	var bl_from := lerpf(0.76, 0.6, nk)
+	var bl := lerpf(0.15, 0.28, nk)
+	var bl_from := lerpf(0.76, 0.82, nk) # (at night only the flames themselves bloom, not the ground they light)
 	var tk := 0.45 + 0.4 * low_sun
 	bl_from = lerpf(bl_from, 0.86, clampf(sim.hz.snow, 0.0, 1.0)) # (no glare off a snowfield)
 	match sim.hz.weather:
@@ -794,7 +794,11 @@ func _sync_lights() -> void:
 		var l: PointLight2D = lights[s.id]
 		var r := 120.0 * (2.0 if sim.has_tech("fire") else 1.0)
 		l.texture_scale = r * 2.6 / 256.0
-		l.energy = (0.4 + 0.9 * sim.night_amt) * (1.0 + 0.08 * sin(t * 9 + s.id))
+		# (fires close together share the light: their pools add up, so each gives less)
+		var near := 0
+		for o in sim.structures:
+			if o != s and o.type == "bonfire" and o.built and o.pos.distance_to(s.pos) < r * 0.8: near += 1
+		l.energy = (0.3 + 0.5 * sim.night_amt) / (1.0 + 0.6 * near) * (1.0 + 0.08 * sin(t * 9 + s.id))
 	for u in sim.units:
 		if not _has_torch(u): continue
 		var key := "t%d" % u.id
@@ -884,7 +888,7 @@ func draw_glow() -> void:
 			"bonfire": r = 70.0
 			"council_ring": r = 45.0
 			"smelter": r = 38.0
-		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.22 + 0.4 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
+		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.16 + 0.2 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
 	for u in sim.units:
 		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
 	_draw_fireflies()
