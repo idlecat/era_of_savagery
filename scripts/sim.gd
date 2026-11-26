@@ -2625,16 +2625,52 @@ func appoint(u: E.Unit, role: String) -> bool:
 	add_log(tr("%s appointed as Vice-Chieftain (%s).") % [tr(u.name), tr(u.title)], "vice", [u])
 	return true
 
-## What the Steward sends `u` to gather because the tribe is short of it, whatever the
-## policy (rules.json vice "wants": res, below, share, when): "" if nothing. Only what
-## can be gathered near home now counts (the tools for stone, a known find for herbs and ore).
-func _steward_want(u: E.Unit) -> String:
-	for w in RULES["vice"].get("wants", []):
-		var res: String = str(w.get("res", ""))
-		if res == "" or stock.get(res, 0.0) >= float(w.get("below", 0)) or not story.holds(w.get("when", {})): continue
-		if randf() >= float(w.get("share", 0.0)): continue
-		if find_node(res, u.home, D.region_at(u.home), float(RULES["vice"].get("want_reach", 900)), [], u) != null: return res
-	return ""
+## The Steward's need rule (rules.json vice.steward needs): for each resource the tribe can
+## gather now, how far its stock is below its target, 0..1. Targets are counts that grow
+## with the tribe; food's rises in autumn to the winter's eating ahead and never asks more than
+## the stores hold; the Council's way scales them (steward.policy). Only what can be gathered
+## near home counts (the tools for stone, a known find for herbs and ore). A game master
+## reads it too.
+var _cache_needs := {}
+var _cache_needs_t := -1.0
+func steward_needs() -> Dictionary:
+	if _cache_needs_t == time and _cache_in_tick: return _cache_needs # (asked by every trade's holder: once a tick)
+	var sw: Dictionary = RULES["vice"]["steward"]
+	var mult: Dictionary = sw.get("policy", {}).get(steward_policy, {})
+	var out := {}
+	for res in sw["needs"]:
+		var nd: Dictionary = sw["needs"][res]
+		if not story.holds(nd.get("when", {})): continue
+		var t := float(story.count(nd["autumn"] if res == "food" and nd.has("autumn") and hz.season_idx() == hz.AUTUMN else nd["target"]))
+		t *= float(mult.get(res, 1.0))
+		if res == "food": t = minf(t, food_cap() * 0.95) # (the stores can't hold more)
+		if res != "lore" and res != "food" and find_node(res, D.VILLAGE, D.region_at(D.VILLAGE), float(sw["area_r"])) == null: continue # (nothing of it to gather near home)
+		out[res] = clampf(1.0 - float(stock.get(res, 0.0)) / maxf(1.0, t), 0.0, 1.0)
+	_cache_needs = out
+	_cache_needs_t = time
+	return out
+
+## How much the tribe needs `res` now (steward_needs(), 0 if not at all): a trade is worked
+## while its resource is needed.
+func need_of(res: String) -> float: return float(steward_needs().get(res, 0.0))
+
+## The work an idle hand takes: a need at random, weighted by its square times how vital it
+## is (needs.<res>.weight: the greatest and most vital most often), a building site counting as steward.build; "" when nothing is needed above
+## leisure_below (crafts and rites then).
+func _pick_need(needs: Dictionary, site: bool) -> String:
+	var sw: Dictionary = RULES["vice"]["steward"]
+	var w := {}
+	for res in needs:
+		if float(needs[res]) > float(sw["leisure_below"]): w[res] = pow(float(needs[res]), 2.0) * float(sw["needs"][res].get("weight", 1.0)) # (the greater and the more vital)
+	if site: w["build"] = pow(float(sw["build"]), 2.0)
+	var total := 0.0
+	for k in w: total += float(w[k])
+	if total <= 0.0: return ""
+	var r := randf() * total
+	for k in w:
+		r -= float(w[k])
+		if r <= 0.0: return k
+	return w.keys()[-1]
 
 ## What the Steward gives `u` instead of gathering `res` when no place for it is a safe walk
 ## away (weigh.gd): the other of food and wood if it is, a building site, else "" (nothing).
@@ -2736,30 +2772,18 @@ func _update_vice(dt: float) -> void:
 	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
 	if steward and not steward.dead and not rest_time(): # no work handed out at night (in a deadly cold, weigh keeps errands within reach of a fire)
-		var rest_below := float(vc["steward"].get("rest_below", 0.0))
-		var famine: bool = stock["food"] < living().size() # (less than a meal each in the stores)
-		var eat_below := float(RULES["survival"]["eat_below"])
+		var sw: Dictionary = vc["steward"]
+		var rest_below := float(sw.get("rest_below", 0.0))
+		var needs := steward_needs()
+		var starving: bool = float(needs.get("food", 0.0)) >= float(sw["starving"]) # (rest cures no hunger)
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
-			and u.sick <= 0.0 and (u.hp >= u.max_hp * rest_below or (famine and u.hunger < eat_below))) # (the sick and the badly hurt are left to rest; but in a famine, rest cures no hunger: the weak from it go for food too)
-		var pop := living().size()
+			and u.sick <= 0.0 and (u.hp >= u.max_hp * rest_below or starving)) # (the sick and the badly hurt are left to rest, unless the tribe is starving)
 		for u in idle:
 			var unbuilt = site_for(u)
-			var sw: Dictionary = vc["steward"]
-			if careers.on and stock["food"] >= pop * float(careers.C["steward_food_per_head"]) and careers.go_work(u): continue # (those with a trade are left to it while the stores are healthy)
-			var choice: String
-			var want := _steward_want(u) if stock["food"] >= pop * float(sw["food_per_head"]) and steward_policy != "lore" else "" # (short of stone, herbs, ore...)
-			if unbuilt and randf() < float(sw["build_chance"]): choice = "build"
-			elif stock["food"] >= pop * float(sw["food_per_head_art"]) and stock["wood"] >= float(sw["art_wood"]) and randf() < float(sw["art_chance"]): choice = "art" # (stores are healthy: time for crafts)
-			elif want != "": choice = want
-			elif stock["food"] >= food_cap() * float(sw["full"]) and steward_policy != "lore": choice = "wood" # the stores are full
-			elif stock["food"] < pop * float(sw["food_per_head"]) or steward_policy == "food" or (hz.season_idx() == hz.AUTUMN and stock["food"] < food_cap() * float(sw.get("autumn_fill", 0.0))): choice = "food" # (autumn: the harvest rush fills the stores for winter)
-			elif steward_policy == "wood" or stock["wood"] < story.count(sw["low_wood"]): choice = "wood"
-			elif steward_policy == "lore": choice = "lore"
-			elif steward_policy == "stone" and has_tech("tools"): choice = "stone"
-			else: choice = "food" if randf() < 0.5 else "wood"
-			if choice == "wood" and steward_policy != "wood" and stock["wood"] >= story.count(sw.get("wood_enough", 1e9)): # (the woodpile is high enough: hands go where they are wanted)
-				choice = "food" if stock["food"] < food_cap() * float(sw["full"]) else "lore"
-			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" and bool(sw.get("fields_first", true)) else null
+			if careers.on and careers.go_work(u): continue # (a trade is worked while its resource is needed)
+			var choice := _pick_need(needs, unbuilt != null)
+			if choice == "": choice = "art" if folk.can_art(u) else "lore" # (nothing wanted: crafts, else the rites)
+			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 			if field: choice = "field" # (food: a field or dock with a free place before the wild)
 			if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)
 				choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (weighed: nothing of it within a safe walk)

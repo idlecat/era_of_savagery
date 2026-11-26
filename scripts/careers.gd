@@ -193,13 +193,14 @@ func go_work(u: E.Unit) -> bool:
 	var w: Dictionary = def(u.career).get("work", {})
 	if w.has("gather"):
 		var res := str(w["gather"])
-		if res == "wood" and sim.stock["wood"] >= sim.story.count(sim.RULES["vice"]["steward"].get("wood_enough", 1e9)): return false # (the woodpile is high enough: the Steward finds them other work)
+		if sim.need_of(res) <= 0.0: return false # (not needed now: the Steward finds them other work)
 		var n = sim.find_node(res, u.home, D.region_at(u.home), float(C["reach"]), w.get("kinds", []), u)
 		if n == null: return false
 		sim.assign_gather(u, res, {"node_id": n.id, "bank": D.region_at(u.home), "area": u.home, "area_r": float(C["reach"])})
 		sim.give_shift(u) # (a stint at the trade, then a look at what the tribe needs)
 		return true
-	if w.has("work_at"): # a field, a dock: the nearest of that type with a free place
+	if w.has("work_at"): # a field, a dock: the nearest of that type with a free place, while food is needed
+		if sim.need_of("food") <= 0.0: return false
 		var f = sim.free_field(u.home, float(C["reach"]), [str(w["work_at"])])
 		if f == null: return false
 		sim.assign_field(u, f)
@@ -211,7 +212,7 @@ func go_work(u: E.Unit) -> bool:
 				sim.assign_build(u, s)
 				return true
 		return false
-	if w.get("ritual", false):
+	if w.get("ritual", false) and sim.need_of("lore") > 0.0:
 		sim.assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 		sim.give_shift(u)
 		return true
