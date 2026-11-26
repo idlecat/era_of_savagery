@@ -41,8 +41,10 @@ func update(dt: float) -> void:
 		return
 	timer -= dt
 	if timer > 0: return
-	timer = float(C.get("every", 15))
-	if not on or sim.rest_time() or planner() == null: return
+	var who := planner()
+	var st: E.Unit = sim.unit_by_id(sim.vice["steward"])
+	timer = float(C.get("every", 15)) * (1.0 if who != null and who == st else float(C.get("anyone_every_mult", 1.0))) # (without a Steward the tribe still builds, more slowly)
+	if not on or sim.rest_time() or who == null: return
 	if retire_one(): return
 	if open_sites() >= maxi(1, sim.story.count(C.get("max_sites", 1))): return # (a number, or {base, per_pop}: a bigger tribe raises more at once)
 	var opts := wanted()

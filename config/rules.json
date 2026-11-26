@@ -284,9 +284,10 @@
   }
  },
  "improvements": {
-  "_doc": "The village lays out improvements itself (improve.gd). planner: steward (only while a Steward is appointed) or anyone (the tribe's best at lore plans without one). Every `every` seconds by day, with fewer than `max_sites` of its sites unfinished (a count: a number or {base, per_pop}), the first entry of `list` that is wanted (`when`: conditions as in scenario scripts), known, affordable keeping `wood_reserve`, and has room within `reach` of the village (a count: it grows with the tribe) (near the structure type `near`) is laid out. If several are wanted, the Steward's LLM node may choose (`ask`; it waits `ask_wait` seconds, at most once per `ask_every`). A road entry ({\"road\": level id, \"structure\": \"roadworks\", \"cells\", \"min_cells\"}) makes the busiest trails near the village into that road.",
+  "_doc": "The village lays out improvements itself (improve.gd). planner: steward (only while a Steward is appointed) or anyone (the tribe's best at lore plans without one, every `every` x anyone_every_mult seconds: a tribe without a Steward still builds, more slowly). Every `every` seconds by day, with fewer than `max_sites` of its sites unfinished (a count: a number or {base, per_pop}), the first entry of `list` that is wanted (`when`: conditions as in scenario scripts), known, affordable keeping `wood_reserve`, and has room within `reach` of the village (a count: it grows with the tribe) (near the structure type `near`) is laid out. If several are wanted, the Steward's LLM node may choose (`ask`; it waits `ask_wait` seconds, at most once per `ask_every`). A road entry ({\"road\": level id, \"structure\": \"roadworks\", \"cells\", \"min_cells\"}) makes the busiest trails near the village into that road.",
   "on": true,
-  "planner": "steward",
+  "planner": "anyone",
+  "anyone_every_mult": 2,
   "every": 15,
   "max_sites": {"base": 1, "per_pop": 0.015},
   "wood_reserve": 10,

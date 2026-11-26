@@ -212,6 +212,8 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 		"stuck": nat["stuck"] / maxf(0.01, nat["person_days"]), "night_up": nat["night_up"] / maxf(1.0, nat["night"]), "left_kills": float(left)}
 	soc["ledger"] = sim.food_summary()
 	r["society"] = soc
+	r["min_food_days"] = snappedf(float(r.get("min_food_days", 99.0)), 0.01)
+	r["short_hours"] = snappedf(float(r.get("short_hours", 0.0)), 0.1)
 	sim.dispose()
 	return r
 
@@ -238,6 +240,11 @@ func _sample(sim, r: Dictionary, dead_seen: Dictionary) -> void:
 			if u.dead and not u.gone and not dead_seen.has(u.id): r["winter_deaths"] += 1
 	if sim.day() > 1: r["min_food_frac"] = minf(r["min_food_frac"], frac)
 	if frac < 0.15 and sim.day() > 1: r["near_miss"] = true
+	var eat_day: float = sim.soc.food_demand(sim.hz.season_idx()) # (food in days of eating: what "close to starving" means, whatever the granaries hold)
+	var fdays: float = sim.stock["food"] / maxf(1.0, eat_day)
+	if sim.day() > 1:
+		r["min_food_days"] = minf(float(r.get("min_food_days", 99.0)), fdays)
+		if fdays < 0.5: r["short_hours"] = float(r.get("short_hours", 0.0)) + 1.0 / (D.DAY_LEN / 24.0)
 	if frac < 0.02 and sim.day() > 1: r["hungry_hours"] += 1.0 / (D.DAY_LEN / 24.0) # (game hours with empty stores)
 	if sim.living().filter(func(u): return u.sick > 0).size() >= 3:
 		r["sick_wave"] = true
@@ -591,6 +598,12 @@ func _society_report(rows: Array, pols: Array) -> void:
 		var eaten := float(fout.get("eaten", 0.0))
 		var c_day := eaten / maxf(1.0, pop_s / D.DAY_LEN)
 		var r_meas := (own / maxf(0.01, food_hand_days)) / (eaten / maxf(0.01, adult_days)) if eaten > 0.0 else 0.0
+		var mfd := 0.0
+		var sh := 0.0
+		for r in rs:
+			mfd += float(r.get("min_food_days", 0.0))
+			sh += float(r.get("short_hours", 0.0))
+		print("    food in store at its lowest: %.2f days of eating; hours under half a day's food: %.1f a run" % [mfd / rs.size(), sh / rs.size()])
 		print("    c %.2f food a person-day; R %.2f (own food a food hand-day / food eaten a grown-up-day); food share %.0f%%, 1/R %.0f%%" %
 			[c_day, r_meas, 100.0 * float(cols.get("food", 0.0)) / maxf(1.0, jobs_s), 100.0 / maxf(0.01, r_meas)])
 

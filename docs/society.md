@@ -951,3 +951,22 @@ decisions again barely separate the hoarder from the feaster (gap 0.01), and the
 band overshoots (50%); without a Steward nobody lays out buildings (improvements.planner),
 so a tribe that loses its Steward stops growing.
 
+### 14.5 The tribe builds without a Steward; the stores run thin (2026-11-26)
+
+- **The planner, too, follows the principle**: `rules.json improvements.planner` is
+  `anyone` (the tribe's best at lore plans when no Steward is appointed, at half the pace:
+  `anyone_every_mult` 2). The seed that lost its Steward on day 40 grows to 105 by day 60
+  (it stopped at 73). 60 days, seeds 1-3: 95-105 people, 0-7 deaths, wood 536-1,172.
+- **The near-miss is real, not the measure.** Near-miss and famine count stores under 15%
+  of the granaries' capacity, which since 90fbad3 is large, so they were suspected of
+  reading a full camp as a close call. Counted in days of eating instead (the metrics'
+  society report now prints both), the stores fall to 0.01 days at their lowest and stay
+  under half a day's food 28-71 hours of a 12-day game (10-25% of the time): the hoarder 28,
+  the steward 53, the feaster 71. Food decisions matter (the days show it better than the
+  old gap's 0.35), but the tribe lives too near the edge.
+- **Next, by the principle: food's price.** With the stores half covered, food weighs about
+  as much as a waiting building site (~22-26 for a tribe of 13: shelter's impact 0.5 on
+  growth and contentment against food's), so builders are taken off the food. The fix is
+  the impact values (`society.json impact`, the calculator's fitted knobs, open #1), not a
+  rule for the stores.
+
