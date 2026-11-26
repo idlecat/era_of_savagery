@@ -450,9 +450,11 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 	match a.get("do", ""):
 		"ritual":
 			sim.assign_ritual(u, u.home + Vector2(randf_range(-40, 40), randf_range(-50, -20)))
+			u.job["leisure"] = true # (a pastime: the Steward may call them to work)
 			return true
 		"art":
 			sim.folk.start_art(u)
+			u.job["leisure"] = true
 			return true
 		"sit":
 			var to: Variant = _spot(u, str(a.get("at", "here")))

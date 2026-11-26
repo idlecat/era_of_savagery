@@ -13,6 +13,7 @@ const Folk = preload("res://scripts/folk.gd")
 const Improve = preload("res://scripts/improve.gd")
 const Ranks = preload("res://scripts/ranks.gd")
 const Careers = preload("res://scripts/careers.gd")
+const Society = preload("res://scripts/society.gd")
 const Policy = preload("res://scripts/policy.gd")
 const Crisis = preload("res://scripts/crisis.gd")
 const Director = preload("res://scripts/director.gd")
@@ -109,6 +110,7 @@ var folk: Folk
 var challenges: Challenges
 var ranks: Ranks # ranks earned by deeds: trials gate the levels past routine work (ranks.gd)
 var careers: Careers # trades people come to live by as the tribe develops (careers.gd)
+var soc: Society # the society model: the Steward's allocation by the model's weights (society.gd)
 var improve: Improve # the village lays out improvements itself (improve.gd)
 var policy: Policy # the Council's standing policies (policy.gd)
 var crisis: Crisis # emergency mode: the chieftain's direct command in a crisis (crisis.gd)
@@ -143,6 +145,7 @@ func _init() -> void:
 	improve = Improve.new(self)
 	ranks = Ranks.new(self)
 	careers = Careers.new(self)
+	soc = Society.new(self)
 	policy = Policy.new(self)
 	crisis = Crisis.new(self)
 	director = Director.new(self)
@@ -766,6 +769,11 @@ func unit_speed(u: E.Unit) -> float:
 	return s * roads.speed_at(u.pos) * life.speed_mult(u) * careers.speed_mult(u) # (trails and roads; weariness, hurry; a scout at their trade)
 
 func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u)
+## The share of the stores above the first 30 food that spoils a second (pottery, salt, the
+## season, inventions and buildings lower it).
+func spoil_rate() -> float:
+	return 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
+
 ## How much faster a person works at a skill's level (config/society.json work.skill_curve:
 ## one concave curve for every kind of work, docs/society.md §3).
 var SOC_WORK: Dictionary = preload("res://scripts/config.gd").load_cfg("society")["work"]
@@ -1329,6 +1337,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 			return
 	stock[j["res"]] += amt
 	if j["res"] == "food": note_food("in", "gather:" + (kind if kind != "" else "?"), amt)
+	soc.note_yield(j["res"], amt)
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
@@ -1879,6 +1888,7 @@ func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var got: float = rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
 	stock["food"] += got
 	note_food("in", "field:" + s.type, got)
+	soc.note_yield("food", got)
 	gain_xp(u, "forage", dt * 0.1)
 	evo.practice(u, str(w.get("practice", "berry")), dt)
 
@@ -2165,12 +2175,14 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 			u.idle_t = 0
 			assign_ritual(u, u.home + Vector2(randf_range(-40, 40), randf_range(-50, -20)))
 			give_shift(u)
+			u.job["leisure"] = true # (a devout pastime: the Steward may call them to work)
 		return
 	u.idle_t += dt
 	if u.idle_t > 5.0:
 		u.idle_t = 0.0
 		if folk.can_art(u):
 			folk.start_art(u)
+			u.job["leisure"] = true
 			return
 	u.wander_t -= dt
 	if u.wander_t <= 0:
@@ -2459,7 +2471,7 @@ func _tick(dt: float) -> void:
 	var target := maxf(1.0 if is_day_part("dark") else 0.0, nat.darkness())
 	night_amt += (target - night_amt) * minf(1.0, dt * 0.8)
 
-	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
+	var spoil := spoil_rate()
 	var cap := food_cap()
 	if stock["food"] > 30:
 		var gone: float = (minf(stock["food"], cap) - 30) * spoil * dt
@@ -2674,6 +2686,17 @@ var _cache_needs := {}
 var _cache_needs_t := -1.0
 func steward_needs() -> Dictionary:
 	if _cache_needs_t == time and _cache_in_tick: return _cache_needs # (asked by every trade's holder: once a tick)
+	var out := {}
+	var tg := steward_needs_targets()
+	for res in tg: out[res] = clampf(1.0 - float(stock.get(res, 0.0)) / maxf(1.0, float(tg[res])), 0.0, 1.0)
+	_cache_needs = out
+	_cache_needs_t = time
+	return out
+
+## The Steward's target for each resource the tribe can gather now (rules.json vice.steward
+## needs: a count, or food's share of what the stores hold); only what can be gathered near
+## home counts. Read by steward_needs() and the society model's allocation (society.gd).
+func steward_needs_targets() -> Dictionary:
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var out := {}
 	for res in sw["needs"]:
@@ -2681,9 +2704,7 @@ func steward_needs() -> Dictionary:
 		if not story.holds(nd.get("when", {})): continue
 		var t := food_cap() * float(nd["of_store"]) if nd.has("of_store") else float(story.count(nd["target"])) # (food: the granaries full)
 		if res != "lore" and res != "food" and find_node(res, D.VILLAGE, D.region_at(D.VILLAGE), float(sw["area_r"])) == null: continue # (nothing of it to gather near home)
-		out[res] = clampf(1.0 - float(stock.get(res, 0.0)) / maxf(1.0, t), 0.0, 1.0)
-	_cache_needs = out
-	_cache_needs_t = time
+		out[res] = t
 	return out
 
 ## How much the tribe needs `res` now (steward_needs(), 0 if not at all): a trade is worked
@@ -2739,7 +2760,7 @@ func vacate(u: E.Unit) -> void:
 	u.title = ""
 
 ## Free for other work: no job, or only an idle act of everyday life (life.gd).
-func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life"
+func is_idle(u: E.Unit) -> bool: return u.job.is_empty() or u.job.get("type", "") == "life" or u.job.get("leisure", false) # (a pastime, a carving or rites taken up idly, is free time)
 
 ## How readily a grown-up can be called away for a chore: 0 idle (no work, or an idle act),
 ## 1 gathering or working a field (work that keeps), -1 not to be called (other work, asleep, a crew, a child).
@@ -2815,11 +2836,18 @@ func _update_vice(dt: float) -> void:
 		var starving: bool = float(needs.get("food", 0.0)) >= float(sw["starving"]) # (rest cures no hunger)
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
 			and u.sick <= 0.0 and (u.hp >= u.max_hp * rest_below or starving)) # (the sick and the badly hurt are left to rest, unless the tribe is starving)
+		if soc.on: soc.round_start(float(vc["every"]))
 		for u in idle:
 			var unbuilt = site_for(u)
 			if careers.on and careers.go_work(u): continue # (a trade is worked while its resource is needed)
-			var choice := _pick_need(needs, unbuilt != null)
-			if choice == "": choice = "art" if folk.can_art(u) else "lore" # (nothing wanted: crafts, else the rites)
+			var choice := ""
+			if soc.on: # (the society model: the greatest weight, counted before the next hand; nothing gains = rest)
+				choice = soc.pick(u, unbuilt != null)
+				if choice == "": continue
+				if choice == "rites": choice = "lore"
+			else:
+				choice = _pick_need(needs, unbuilt != null)
+				if choice == "": choice = "art" if folk.can_art(u) else "lore" # (nothing wanted: crafts, else the rites)
 			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 			if field: choice = "field" # (food: a field or dock with a free place before the wild)
 			if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)

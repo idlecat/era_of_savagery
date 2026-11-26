@@ -31,9 +31,16 @@
  "health": {"_doc": "Per-head incidence grows with density, density_k on N against n_ref (model §6: density ∝ N^0.3, incidence ∝ density^0.5).", "density_k": 0.15, "n_ref": 20},
  "safety": {"_doc": "Safety's demand: max(vigilance per head, threat per head × (N / n_ref)^wealth_k) (model §4.1, §6).", "vigilance": 0.015, "wealth_k": 0.3, "n_ref": 20},
 
- "work": {"_doc": "How the game's work rates follow the model (society_plan.md step 3, read by sim.gd): skill_curve: the work multiplier by skill level 0..10, one concave curve for every kind of work (model §3: x1.0 to x1.4); gather: the gathering rate per resource against the game's base rates (food 0.25: the game's gathering brought down to the model's band, society.md §14.1, open #11).",
+ "work": {"_doc": "How the game follows the model (read by sim.gd and society.gd). skill_curve: the work multiplier by skill level 0..10, one concave curve for every kind of work (model §3: x1.0 to x1.4); gather: the gathering rate per resource against the game's base rates (food 0.25: the game's gathering brought down to the model's band, society.md §14.1, open #11). The Steward's allocation (society.gd, step 4): rates: what a full-time hand brings in a day of each resource until measured (every measure_every s, a running mean of weight measure_k; a full-time hand works job_secs a day); band_below: under this many people the tribe is a band, else its village's tier is the level; walk_food: the walk's share on top of the hunger at rest; food_season: a food hand's yield by season [spring, summer, autumn, winter] against the others (fields and berries none in winter: the hunt, fishing and the pens); stock_needs: the stocks the Steward keeps and the need each serves (covered by the stock and the hands on it against rules.json vice.steward needs); hand_needs: work covered by hands (crafts, rites, building) and its need (hands per head from levels.<level>.hands; the hands on it averaged over avg_secs, as a carving takes only moments); reserve_days: food's today window asks for today's eating and this many days of it in store (meals and births draw on the stores, not on the day's gathering); food_buffer: the look-ahead coverage food is kept to (food security for births, model §10, open #2); min_weight: below this a choice is not worth a hand (rest).",
   "skill_curve": [1.0, 1.06, 1.11, 1.16, 1.2, 1.24, 1.28, 1.31, 1.34, 1.37, 1.4],
-  "gather": {"food": 0.25}},
+  "gather": {"food": 0.25},
+  "rates": {"food": 9, "wood": 15, "stone": 8, "herbs": 5, "copper": 4, "tin": 4, "lore": 6},
+  "measure_every": 30, "measure_k": 0.3, "job_secs": 60, "band_below": 35, "walk_food": 1.15,
+  "food_season": [1.0, 1.0, 1.1, 0.3],
+  "stock_needs": {"wood": "warmth", "stone": "shelter", "herbs": "health", "copper": "safety", "tin": "safety", "lore": "knowledge"},
+  "hand_needs": {"art": "comfort", "rites": "spirit", "build": "shelter"},
+  "food_buffer": 1.2, "reserve_days": 1.0, "avg_secs": 30,
+  "min_weight": 0.01},
 
  "jobs": {"_doc": "Which need a job in the game serves (tools/metrics.gd's society report, society_plan.md step 1): keys are a job type, or type:resource for gathering; the columns are the share table's. A job not listed counts as other.",
   "gather:food": "food", "field": "food", "tend": "food",

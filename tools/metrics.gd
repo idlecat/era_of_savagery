@@ -523,7 +523,7 @@ func _society(sim, soc: Dictionary) -> void:
 		var st := "work"
 		if u.sleeping: st = "asleep"
 		elif jt == "meal": st = "meal"
-		elif sim.is_idle(u): st = "idle"
+		elif sim.is_idle(u): st = "idle" # (idle acts and pastimes: crafts and rites taken up idly are leisure)
 		elif moved > 3.0: st = "walk"
 		soc["state"][st] = float(soc["state"].get(st, 0.0)) + 1.0
 		if st != "walk" and st != "work": continue

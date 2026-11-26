@@ -891,3 +891,38 @@ lever, before cutting rates further. The 12-day bands overshoot (near-miss 100%,
 this change; famine 50-100%, band 10-25%), and growth halved: both are for step 4 and the
 tuning after it. The balance baseline is rewritten.
 
+### 14.3 Step 4: the Steward places hands by the model (2026-11-26)
+
+`scripts/society.gd` (`sim.soc`) is the Steward's allocation: every choice is a need, weighed
+V × N × the rise in benefit one more hand gives, the greatest first, each placement counted
+before the next; nothing gains = rest (§8). Stocks (wood, stone, herbs, ore, lore) are covered
+by the stock and the hands on them against the Steward's targets; crafts, rites and building
+by the hands on them (averaged over 30 s) against the level's hands per head; food by its two
+windows. Rates per hand-day are measured as the game runs. The old need rule stays for the
+tests (`soc.on = false` in `_new_sim()`).
+
+Three things the game taught on the way (now in the code and config):
+
+1. **Food's today window keeps a reserve.** "Today's eating against today's flow" let the
+   tribe live hand to mouth (stores at 6-14 while food weighed nothing), but the game's
+   meals and births draw on the stores: the window now asks for a day's eating in store
+   besides (`work.reserve_days`), and the look-ahead for 20% over (`food_buffer`, open #2).
+2. **The forecast is the hands on food now**, not the measured income: the income lags a
+   day, so the Steward trusted food that had gone and the stores swung to 0.
+3. **Pastimes are free time.** Crafts and rites taken up idly (everyday-life acts, a devout
+   person's rites, the idle carving) were real jobs the Steward could not take back, and
+   held 19-28% of the hands while the stores ran empty; they are now marked `leisure`, count
+   as idle (`sim.is_idle`) and as free time in the society report.
+
+| 12 days, 3 policies | Step 3 (the old rule) | Step 4 |
+|---|---|---|
+| Food share of hands | 46-59% | 49-64% |
+| Crafts and rites (work) | 21-22% | 9-11% |
+| Famine (band 10-25%) | steward 50%, hoarder 50%, feaster 100% | 50%, 0%, 50% |
+| Hoarder vs feaster gap | 0.50 | 0.55 |
+| 60 days (seeds 1, 2) | 78-86 people, no deaths | 100-102 people, 0-1 deaths; 34 field hands on 13 fields |
+
+Still: near-miss 100% (the band is 60-90%), R 3.5-3.7 (the model's band 1.3-1.6), wood piles
+to ~2,900 by day 60 (woodcutters by trade keep cutting past the target: careers still read the
+old need rule, `need_of()`). The balance baseline is rewritten.
+
