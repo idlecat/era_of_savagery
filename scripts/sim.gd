@@ -825,6 +825,7 @@ func gain_xp(u: E.Unit, skill: String, amt: float) -> void:
 
 ## Memory stream: keep the ~10 most impactful events.
 func remember(u: E.Unit, text: String, impact: int) -> void:
+	if u == null or u.memory.any(func(m): return m["text"] == text): return # (the same thing once)
 	u.memory.append({"day": day(), "text": text, "impact": impact, "t": time})
 	u.memory.sort_custom(func(a, b):
 		if a["impact"] != b["impact"]: return a["impact"] > b["impact"]
@@ -2255,9 +2256,10 @@ func kill_unit(u: E.Unit, killer) -> void:
 	life.on_death(u)
 	add_log(tr("%s has fallen - %s.") % [tr(u.name), cause], "danger", [u])
 	popup(u.pos + Vector2(0, -30), tr("%s has fallen") % tr(u.name), Color("#ff6b6b"), true)
-	for o in units:
-		if not o.dead and o != u and o.pos.distance_to(u.pos) < 300:
-			remember(o, tr("witnessed %s %s on Day %d") % [tr(u.name), cause, day()], 8)
+	if not (killer is E.Predator and killer.clan != ""): # (a clan's killing is remembered by rivals.on_villager_killed)
+		for o in units:
+			if not o.dead and o != u and o.pos.distance_to(u.pos) < 300:
+				remember(o, tr("witnessed %s %s on Day %d") % [tr(u.name), cause, day()], 8)
 	evo.on_death(u)
 	rivals.on_villager_killed(u, killer)
 	if killer: evo.drift("martial", 1.5)
