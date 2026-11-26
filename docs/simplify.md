@@ -42,6 +42,13 @@ trades work while their resource is needed. One addition the first test forced: 
 **weight** per resource (how vital it is), else an empty lore store pulled as many hands
 as an empty larder.
 
+What the 150-day games taught (seeds 1-3, against the old chain on the same code):
+food's target is **full granaries** (`of_store`), not so much a head: with "5 a head, 8
+in autumn" big towns went into winter half-stocked (74-100 deaths against 50). With
+full granaries: 53 deaths against 50, the stores near empty on 17 days against 13,
+1,902 people at day 150 against 2,056, and far less wood heaped up. The Council's way
+scales a resource's weight (how vital), not its target. The autumn rule went with it.
+
 What it replaces: all 13 knobs and their order, the coin flips, the woodpile
 overrides, the trades' checks. What emerges: shortages pull hands, plenty releases
 them to crafts and lore, the autumn rush comes from the food target rising before

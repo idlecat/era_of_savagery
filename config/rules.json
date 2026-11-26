@@ -141,9 +141,9 @@
   "day_only": ["renovate", "field"]
  },
  "vice": {
-  "steward": {"_doc": "How the Steward picks work for each idle person: one need rule (sim.steward_needs()). Each resource of `needs` has a target, a count that grows with the tribe (food's rises to `autumn` in autumn: the winter's eating ahead; it never asks for more than the stores hold); its need is how far the stock is below the target, 0..1. The Council's way scales targets (`policy`: the Steward's policy -> {resource: times}). A building site is a need of `build`. An idle hand takes a need at random, weighted by its square times the resource's `weight` (how vital it is: food first): the greatest most often, the others not forgotten; food work goes to a field or dock with a free place first. With no need above leisure_below, people turn to crafts, else rites. A trade's holder works their trade while its resource is needed. Work other than building and crafts is a stint of `shift` [min, max] seconds, then a new look at the needs; the chieftain's own orders have no shift. Gatherers work within area_r of home. The sick and those below rest_below of their health are left to rest, unless the food need is at least starving (rest cures no hunger).",
+  "steward": {"_doc": "How the Steward picks work for each idle person: one need rule (sim.steward_needs()). Each resource of `needs` has a target: a count that grows with the tribe (`target`), or a share of what the stores can hold (`of_store`: food keeps the granaries full, so a bigger town lays in more for winter); its need is how far the stock is below the target, 0..1. The Council's way makes resources more vital (`policy`: the Steward's policy -> {resource: times its weight}). A building site is a need of `build`. An idle hand takes a need at random, weighted by its square times the resource's `weight` (how vital it is: food first) and the policy's: the greatest most often, the others not forgotten; food work goes to a field or dock with a free place first. With no need above leisure_below, people turn to crafts, else rites. A trade's holder works their trade while its resource is needed. Work other than building and crafts is a stint of `shift` [min, max] seconds, then a new look at the needs; the chieftain's own orders have no shift. Gatherers work within area_r of home. The sick and those below rest_below of their health are left to rest, unless the food need is at least starving (rest cures no hunger).",
    "needs": {
-    "food": {"target": {"base": 20, "per_pop": 5}, "autumn": {"base": 20, "per_pop": 8}, "weight": 1.0},
+    "food": {"of_store": 0.95, "weight": 2.0},
     "wood": {"target": {"base": 150, "per_pop": 6}, "weight": 0.8},
     "stone": {"target": {"base": 40, "per_pop": 0.3}, "when": {"tech": "tools"}, "weight": 0.5},
     "herbs": {"target": {"base": 8}, "weight": 0.4},
@@ -151,7 +151,7 @@
     "tin": {"target": {"base": 6}, "when": {"tech": "bronze"}, "weight": 0.5},
     "lore": {"target": {"base": 40, "per_pop": 0.5}, "weight": 0.4}
    },
-   "build": 0.6,
+   "build": 0.5,
    "leisure_below": 0.1,
    "starving": 0.9,
    "policy": {"food": {"food": 2.0}, "wood": {"wood": 2.0}, "stone": {"stone": 3.0}, "lore": {"lore": 3.0}},

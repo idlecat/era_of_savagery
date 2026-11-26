@@ -63,9 +63,9 @@ func _initialize() -> void:
 			_new_day(sim)
 	if not cur.is_empty() and int(cur["day"]) <= days and sim.time >= end_t: _close_day(sim)
 	var out: String = a.get("out", "")
-	var csv := "seed,level,day,events,danger,warn,nature,crises,deaths,food,food_cap,pop,pop_cap,wood,fields,field_hands,mood,what\n"
+	var csv := "seed,level,day,events,danger,warn,nature,crises,deaths,food,food_cap,pop,pop_cap,wood,fields,field_hands,mood,rivals_pop,rival_max,rival_cap,rival_warriors,rival_homes,rival_era,rivals_left,what\n"
 	for r in day_rows:
-		csv += "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%d,%s\n" % [sd, sim.hz.level, r["day"], r["events"], r["danger"], r["warn"], r["nature"], r["crises"], r["deaths"], r["food"], r["food_cap"], r["pop"], r["pop_cap"], r["wood"], r["fields"], r["field_hands"], r["mood"], " ".join(r["what"]).replace(",", ";")]
+		csv += "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%d,%d,%d,%d,%d,%d,%.1f,%d,%s\n" % [sd, sim.hz.level, r["day"], r["events"], r["danger"], r["warn"], r["nature"], r["crises"], r["deaths"], r["food"], r["food_cap"], r["pop"], r["pop_cap"], r["wood"], r["fields"], r["field_hands"], r["mood"], r["rivals_pop"], r["rival_max"], r["rival_cap"], r["rival_warriors"], r["rival_homes"], r["rival_era"], r["rivals_left"], " ".join(r["what"]).replace(",", ";")]
 	if out != "":
 		var f := FileAccess.open(out, FileAccess.WRITE)
 		f.store_string(csv)
@@ -88,4 +88,26 @@ func _close_day(sim) -> void:
 	cur["fields"] = sim.structures.filter(func(s): return s.built and sim.ours(s) and s.type == "farm_plot").size()
 	cur["field_hands"] = float(cur.get("hands_sum", 0.0)) / maxf(1.0, float(cur.get("hands_n", 0))) # (the day's mean, by day)
 	cur["mood"] = roundi(sim.folk.mood)
+	# the rival clans: do they keep pace? (people in all, the largest, the cap they grow to,
+	# warriors, their homes, mean era, clans still standing)
+	var rp := 0
+	var rmax := 0
+	var rw := 0
+	var re := 0.0
+	var left := 0
+	for id in sim.rivals.clans:
+		if sim.rivals.gone(id): continue
+		var c: Dictionary = sim.rivals.clans[id]
+		left += 1
+		rp += int(c["pop"])
+		rmax = maxi(rmax, int(c["pop"]))
+		rw += int(c["warriors"])
+		re += float(c["era"])
+	cur["rivals_pop"] = rp
+	cur["rival_max"] = rmax
+	cur["rival_cap"] = sim.rivals.max_pop()
+	cur["rival_warriors"] = rw
+	cur["rival_homes"] = sim.structures.filter(func(s): return s.built and not sim.ours(s) and s.type in ["hut", "large_hut", "longhouse"]).size()
+	cur["rival_era"] = re / maxf(1.0, float(left))
+	cur["rivals_left"] = left
 	day_rows.append(cur)

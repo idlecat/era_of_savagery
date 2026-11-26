@@ -2627,8 +2627,7 @@ func appoint(u: E.Unit, role: String) -> bool:
 
 ## The Steward's need rule (rules.json vice.steward needs): for each resource the tribe can
 ## gather now, how far its stock is below its target, 0..1. Targets are counts that grow
-## with the tribe; food's rises in autumn to the winter's eating ahead and never asks more than
-## the stores hold; the Council's way scales them (steward.policy). Only what can be gathered
+## with the tribe, or a share of the stores (food: the granaries full). Only what can be gathered
 ## near home counts (the tools for stone, a known find for herbs and ore). A game master
 ## reads it too.
 var _cache_needs := {}
@@ -2636,14 +2635,11 @@ var _cache_needs_t := -1.0
 func steward_needs() -> Dictionary:
 	if _cache_needs_t == time and _cache_in_tick: return _cache_needs # (asked by every trade's holder: once a tick)
 	var sw: Dictionary = RULES["vice"]["steward"]
-	var mult: Dictionary = sw.get("policy", {}).get(steward_policy, {})
 	var out := {}
 	for res in sw["needs"]:
 		var nd: Dictionary = sw["needs"][res]
 		if not story.holds(nd.get("when", {})): continue
-		var t := float(story.count(nd["autumn"] if res == "food" and nd.has("autumn") and hz.season_idx() == hz.AUTUMN else nd["target"]))
-		t *= float(mult.get(res, 1.0))
-		if res == "food": t = minf(t, food_cap() * 0.95) # (the stores can't hold more)
+		var t := food_cap() * float(nd["of_store"]) if nd.has("of_store") else float(story.count(nd["target"])) # (food: the granaries full)
 		if res != "lore" and res != "food" and find_node(res, D.VILLAGE, D.region_at(D.VILLAGE), float(sw["area_r"])) == null: continue # (nothing of it to gather near home)
 		out[res] = clampf(1.0 - float(stock.get(res, 0.0)) / maxf(1.0, t), 0.0, 1.0)
 	_cache_needs = out
@@ -2659,9 +2655,10 @@ func need_of(res: String) -> float: return float(steward_needs().get(res, 0.0))
 ## leisure_below (crafts and rites then).
 func _pick_need(needs: Dictionary, site: bool) -> String:
 	var sw: Dictionary = RULES["vice"]["steward"]
+	var mult: Dictionary = sw.get("policy", {}).get(steward_policy, {}) # (the Council's way: what it holds more vital)
 	var w := {}
 	for res in needs:
-		if float(needs[res]) > float(sw["leisure_below"]): w[res] = pow(float(needs[res]), 2.0) * float(sw["needs"][res].get("weight", 1.0)) # (the greater and the more vital)
+		if float(needs[res]) > float(sw["leisure_below"]): w[res] = pow(float(needs[res]), 2.0) * float(sw["needs"][res].get("weight", 1.0)) * float(mult.get(res, 1.0)) # (the greater and the more vital)
 	if site: w["build"] = pow(float(sw["build"]), 2.0)
 	var total := 0.0
 	for k in w: total += float(w[k])

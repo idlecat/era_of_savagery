@@ -4456,12 +4456,9 @@ func test_need_rule() -> void:
 	check(is_equal_approx(nd["food"], 1.0) and nd["wood"] == 0.0 and nd["lore"] == 0.0, "no food: food is all the need (%s)" % str(nd))
 	for k in 4: sim.add_structure("granary", sim.dry_spot(D.VILLAGE + Vector2(-300 + k * 60, 260)), true) # (room to store more than a camp's 80)
 	sim.stock["food"] = 40.0
-	var spring: float = sim.steward_needs()["food"]
-	sim.time = D.DAY_LEN * sim.hz.SEASON_DAYS * 2 + 5.0 # (autumn: the winter's eating ahead)
-	check(sim.steward_needs()["food"] > spring, "in autumn the same stores are further from the target (%.2f -> %.2f)" % [spring, sim.steward_needs()["food"]])
-	sim.time = D.DAY_LEN * 0.3
-	sim.steward_policy = "food"
-	check(sim.steward_needs()["food"] > spring, "a food-first Council raises the food target")
+	var half: float = sim.steward_needs()["food"]
+	sim.add_structure("granary", sim.dry_spot(D.VILLAGE + Vector2(-60, 320)), true)
+	check(sim.steward_needs()["food"] > half, "food's target is full granaries: a new granary is more to fill (%.2f -> %.2f)" % [half, sim.steward_needs()["food"]])
 	sim.steward_policy = "balanced"
 	# hands spread by need: food short, wood a little short
 	sim.stock["food"] = 0.0
@@ -4471,6 +4468,11 @@ func test_need_rule() -> void:
 		var c: String = sim._pick_need(sim.steward_needs(), false)
 		picks[c] = picks.get(c, 0) + 1
 	check(picks.get("food", 0) > picks.get("wood", 0) and picks.get("wood", 0) > 0, "the greatest need most often, the lesser not forgotten (%s)" % str(picks))
+	sim.steward_policy = "wood"
+	var wp := 0
+	for k in 400: if sim._pick_need(sim.steward_needs(), false) == "wood": wp += 1
+	check(wp > picks.get("wood", 0), "a wood-first Council sends more hands to wood (%d > %d)" % [wp, picks.get("wood", 0)])
+	sim.steward_policy = "balanced"
 	# nothing needed: leisure
 	sim.stock["food"] = 9999.0
 	sim.stock["wood"] = 9999.0
