@@ -541,6 +541,7 @@ func _debug_shot(args: Dictionary) -> void:
 			for p in sim.predators: p.fled = true
 			for id in sim.rivals.clans: sim.rivals.clans[id]["met"] = true
 			sim.rivals.pending.clear()
+			if args.has("fire"): sim.research("fire") # (--fire: Friction Fire known, the fires' wider light)
 			if args.has("burial"):
 				for nm in ["Bai", "Shan"]:
 					var dd = sim.unit_by_name(nm)

@@ -153,8 +153,9 @@ func setup(s) -> void:
 	vig.add_child(vr)
 	add_child(vig)
 	var g := Gradient.new()
-	g.set_color(0, Color(1.0, 0.74, 0.45, 1.0)) # (warm, never white: added over lit ground)
+	g.set_color(0, Color(1.0, 0.70, 0.42, 1.0)) # (warm, never white: added over lit ground)
 	g.set_color(1, Color(1.0, 0.55, 0.25, 0.0))
+	g.add_point(0.3, Color(1.0, 0.64, 0.36, 0.5)) # (bright by the flames, falling off fast: a pool, not a lit field)
 	light_tex = GradientTexture2D.new()
 	light_tex.gradient = g
 	light_tex.fill = GradientTexture2D.FILL_RADIAL
@@ -798,7 +799,7 @@ func _sync_lights() -> void:
 		var near := 0
 		for o in sim.structures:
 			if o != s and o.type == "bonfire" and o.built and o.pos.distance_to(s.pos) < r * 0.8: near += 1
-		l.energy = (0.3 + 0.5 * sim.night_amt) / (1.0 + 0.6 * near) * (1.0 + 0.08 * sin(t * 9 + s.id))
+		l.energy = 0.55 * sim.night_amt / (1.0 + 0.6 * near) * (1.0 + 0.08 * sin(t * 9 + s.id)) # (as dark as the night is: with the night tint the brightest spot stays under daylight, at dusk too)
 	for u in sim.units:
 		if not _has_torch(u): continue
 		var key := "t%d" % u.id
@@ -888,7 +889,7 @@ func draw_glow() -> void:
 			"bonfire": r = 70.0
 			"council_ring": r = 45.0
 			"smelter": r = 38.0
-		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.16 + 0.2 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
+		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.1 + 0.16 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
 	for u in sim.units:
 		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
 	_draw_fireflies()
