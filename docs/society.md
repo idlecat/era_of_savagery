@@ -819,3 +819,40 @@ Also found:
 10. **The fit**: `--fit` prints the hands per head that land the share table; the
    camp's and the town's comfort+spirit come out above their targets (21% vs 14%, 32% vs
    27%) because their R runs high. Tune R first, then fit.
+
+### 14.1 The game measured (step 1, 2026-11-26)
+
+`tools/metrics.gd` now prints a society report (a grown-up's day, the share of hands per
+need by `config/society.json jobs`, food in and out by source from the sim's new food
+ledger, `sim.food_summary()`). Two steward games, 12 days, The Ford (~19 people, 15
+grown-ups):
+
+| | The game | The model's band |
+|---|---|---|
+| A grown-up's day (s of 90) | asleep 15, meals 10, idle 4, walking at work 34, at work 28 | at work ~36 |
+| The walk, of work time | 55% | 35% |
+| Food a hand-day | bushes 24, mushrooms 20, tubers 22, a kill 54, a worked field 15.5, a dock 6.9 | ~6 |
+| R | ~6 | 1.3-1.6 |
+| Food share of hands | 43% | 72% |
+| Where the food goes | eaten 1,383, births 450, spoiled and rotted 224, feasts and gifts 178 | eaten, spoiled |
+| c, a person-day | 3.2 | 2.6-2.7 |
+
+What it says:
+
+- **The game is a land of plenty per hand.** One gatherer brings in four times what the
+  model's band assumes. The hands are not scarce at the camp; food is spent on growth
+  (a birth costs 15 food: a third as much as all the meals) and on filling the granaries
+  the Steward now aims for (90fbad3). So the game's food "pinch" is the stores, not labour.
+- **Fields lose to the wild.** A worked field makes 15.5 a hand-day against 24 from
+  bushes, a dock 6.9; the fields' and docks' own yield (no hands) is ~10% of the food.
+  In the model the fields are the step up from the band; in the game they are a step
+  down, kept up only by their free yield and the bushes' limit.
+- **The walk is longer than the model's**, 55% against 35%, and h is 28 s, not 36.
+
+**Open #11 (the decision this asks for):** either the game's gathering comes down to the
+model's band (×~1/4: R 1.5, most hands on food, the levels' climb visible in the share of
+hands), or the model's band moves up to the game (R ~6 at the band, the climb ×3 from
+there: a town at R ~18 with ~6% of its hands on food), so that scarcity lives in the stores
+and the walk rather than in hands. Either way the fields must out-yield the wild at the
+camp level, or farming is no step.
+

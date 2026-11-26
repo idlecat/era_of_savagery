@@ -380,6 +380,7 @@ func eat(u: E.Unit) -> void:
 	var cost: float = minf(sim.stock["food"], float(sv["meal"]) * want / fill)
 	if cost <= 0.0: return
 	sim.stock["food"] -= cost
+	sim.note_food("out", "eaten", cost)
 	sim.evo.drift("ranked", -0.15 * cost / float(sv["meal"]))
 	u.hunger = minf(100.0, u.hunger + fill * cost / float(sv["meal"]))
 

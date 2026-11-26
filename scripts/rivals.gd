@@ -354,6 +354,7 @@ func steal(p: E.Predator) -> void:
 		note(p.clan, "torched")
 	var amount: float = minf(sim.stock["food"], Config.rand_in(ct["food"]))
 	sim.stock["food"] -= amount
+	sim.note_food("out", "raided", amount)
 	p.loot = true
 	p.fleeing = true
 	sim.popup(p.pos + Vector2(0, -30), tr(ct["popup"]) % roundi(amount), Color("#ff8a7a"), true)
@@ -425,6 +426,7 @@ func _treaties(c: Dictionary) -> void:
 		var due: int = c["treaties"]["peace"]["tribute"]
 		if sim.stock["food"] >= due:
 			sim.stock["food"] -= due
+			sim.note_food("out", "paid", due)
 			sim.add_log(tr("Tribute of %d food sent to the %s.") % [due, tr(c["name"])], "info")
 		else:
 			c["treaties"].erase("peace")
@@ -977,6 +979,9 @@ func seal(envoy: E.Unit, id: String, t: Dictionary, round_i: int) -> String:
 		var g: int = mini(t["tribe_gives"][r], int(sim.stock[r]))
 		sim.stock[r] -= g
 		sim.stock[r] += t["clan_gives"][r]
+		if r == "food":
+			sim.note_food("out", "traded", g)
+			sim.note_food("in", "trade", t["clan_gives"][r])
 	if t.get("teach", "") != "" and not sim.has_tech(t["teach"]):
 		sim.evo.seed(t["teach"], float(C["parley"]["seal"]["teach"]), envoy)
 		sim.remember(envoy, tr("was taught the secret of %s by the %s on Day %d") % [tr(sim.evo.tech_def(t["teach"])["name"]), tr(c["name"]), sim.day()], 7)
@@ -1060,6 +1065,7 @@ func war_spoils(id: String, objective: String, contract) -> String:
 	var food: int = mini(int(pf["max"]), int(pf["base"]) + c["pop"] * int(pf["per_pop"]))
 	var wood := int(sp["plunder_wood"])
 	sim.stock["food"] += food
+	sim.note_food("in", "plunder", food)
 	sim.stock["wood"] += wood
 	_deed(id, "plundered")
 	sim.popup(c["pos"] + Vector2(0, -60), tr("+%d food, +%d wood") % [food, wood], Color("#ffe08a"), true)
@@ -1158,6 +1164,7 @@ func _daily_bonds(c: Dictionary) -> void:
 	var id: String = c["id"]
 	if c["vassal"] > 0:
 		sim.stock["food"] += c["vassal"]
+		sim.note_food("in", "tribute", c["vassal"])
 		sim.add_log(tr("The %s, our vassals, bring %d food.") % [tr(c["name"]), c["vassal"]], "info")
 		if c["relation"] < float(C["alliance"]["vassal_revolt_below"]) and c["warriors"] >= int(C["alliance"]["vassal_revolt_warriors"]): # they have had enough
 			c["vassal"] = 0

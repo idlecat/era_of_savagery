@@ -255,7 +255,7 @@ each need's `impact` on it, the food sources (season profiles, rates, which take
 method factor), order's, health's and safety's laws, tools as a worn good, and per **level**
 (band, camp, village, town, city) the reference size, the productivity factors, the walk,
 spoilage, institutions, bought food, land limits (`Y`) and each other need's hands per
-head; `targets` holds the share of hands per need and the R band the model intends. Read
+head; `jobs` maps the game's job types to the needs (the metrics' society report); `targets` holds the share of hands per need and the R band the model intends. Read
 only by the calculator `tools/society_calc.gd` for now (society_plan.md step 0); no
 player-visible texts.
 

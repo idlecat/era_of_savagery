@@ -350,3 +350,10 @@ recast health, order, safety and the standard; 10-11 the building plan and wealt
   passive field trickle, farm workers at 8-10% of a city) when it lands.
   [society_plan.md](society_plan.md) is its implementation plan; step 0 is a
   calculator that tests the model's share of hands per need before any game code.
+- **2026-11-26, society steps 0 and 1.** The calculator (`tools/society_calc.gd`) solves the
+  model's year per level and corrected the model in four places (society.md §14). The
+  game measured the same way (the metrics' society report, the sim's food ledger) is a land
+  of plenty per hand: a gatherer brings in ~24 food a day, four times the model's band, R
+  ~6, and worked fields yield less than bushes (15.5 a hand-day). The decision before step
+  3 (society.md open #11): bring the game's gathering down to the model, or the model's
+  band up to the game.

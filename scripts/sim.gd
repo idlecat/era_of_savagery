@@ -1298,7 +1298,22 @@ func _rot(n: E.ResNode, dt: float, winter: bool) -> void:
 	n.amount -= float(g["carcass_rot"]) * dt * (float(g["carcass_winter"]) if winter else 1.0)
 	if n.amount < 1.0: _node_gone(n)
 
+## The food ledger: every food that came into the stores, by where it came from ("gather:<node
+## kind>", "field:<structure type>", "idle:<structure type>" (a building's own yield), "pens",
+## "trade", "tribute", "plunder", "contracts"), and every food that went out ("eaten",
+## "spoiled", "rotted", "oxen", "births", "raided", "paid", "flood"), summed over the game.
+## Read by tools/metrics.gd (docs/society_plan.md step 1) and a game master (food_summary()).
+var food_ledger := {"in": {}, "out": {}}
+func note_food(way: String, src: String, amt: float) -> void:
+	if amt <= 0.0 or not way in ["in", "out"]: return
+	food_ledger[way][src] = float(food_ledger[way].get(src, 0.0)) + amt
+
+## The food ledger as a plain dictionary (a game master's view of where the food comes from
+## and goes): {in: {source: amount}, out: {use: amount}}, summed over the game.
+func food_summary() -> Dictionary: return food_ledger.duplicate(true)
+
 func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
+	var kind := u.carry_kind # (_find_effects clears it)
 	gain_xp(u, "forage", amt * 0.45)
 	_find_effects(u, amt)
 	if j["dropoff"] >= 0:
@@ -1307,6 +1322,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 			contracts.deposit(c, j["res"], amt, u)
 			return
 	stock[j["res"]] += amt
+	if j["res"] == "food": note_food("in", "gather:" + (kind if kind != "" else "?"), amt)
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
@@ -1726,6 +1742,7 @@ func _herd(dt: float) -> void:
 		var need: float = OX_EAT * oxen * (float(RULES["herds"]["winter_eat"]) if hz.winter() else 1.0) * dt
 		if stock["food"] >= need:
 			stock["food"] -= need
+			note_food("out", "oxen", need)
 			ox_hunger = 0.0
 		else:
 			stock["food"] = 0.0
@@ -1734,8 +1751,12 @@ func _herd(dt: float) -> void:
 				ox_hunger = 0.0
 				oxen -= 1
 				stock["food"] += 20
+				note_food("in", "pens", 20.0)
 				alert(tr("With nothing left to feed them, the tribe slaughters an ox (+20 food)."), D.VILLAGE, "warn")
-		if ox_care > 0: stock["food"] += OX_MILK * oxen * hz.food_mult("aurochs_pen") * dt
+		if ox_care > 0:
+			var milk: float = OX_MILK * oxen * hz.food_mult("aurochs_pen") * dt
+			stock["food"] += milk
+			note_food("in", "pens", milk)
 		ox_care = maxf(0.0, ox_care - CARE_DECAY * dt)
 		if ox_care <= 0:
 			ox_neglect += dt
@@ -1849,7 +1870,9 @@ func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.act = str(w["act"])
 	u.doing = str(w["doing"])
 	var rate := float(w["food"]) * (1.0 + 0.05 * u.lv("forage")) * work_mul(u)
-	stock["food"] += rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
+	var got: float = rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
+	stock["food"] += got
+	note_food("in", "field:" + s.type, got)
 	gain_xp(u, "forage", dt * 0.1)
 	evo.practice(u, str(w.get("practice", "berry")), dt)
 
@@ -2159,7 +2182,9 @@ func unit_needs(u: E.Unit, dt: float) -> void:
 	u.hunger -= drain * dt * (float(sv["child_hunger"]) if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
 	u.walked = 0.0
 	if u.hunger < float(sv["eat_below"]) and stock["food"] >= 1:
-		stock["food"] -= minf(stock["food"], float(sv["meal"])) # a day's eating is a real cost: winter needs stores
+		var bite := minf(stock["food"], float(sv["meal"]))
+		stock["food"] -= bite # a day's eating is a real cost: winter needs stores
+		note_food("out", "eaten", bite)
 		evo.drift("ranked", -0.15) # meals from the common store
 		u.hunger = minf(100, u.hunger + float(sv["meal_fill_fire"] if has_tech("fire") else sv["meal_fill"]))
 	if u.hunger <= 0:
@@ -2430,16 +2455,24 @@ func _tick(dt: float) -> void:
 
 	var spoil := 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
 	var cap := food_cap()
-	if stock["food"] > 30: stock["food"] -= (minf(stock["food"], cap) - 30) * spoil * dt
+	if stock["food"] > 30:
+		var gone: float = (minf(stock["food"], cap) - 30) * spoil * dt
+		stock["food"] -= gone
+		note_food("out", "spoiled", gone)
 	if stock["food"] > cap: # nowhere to keep it: it rots fast
-		stock["food"] -= (stock["food"] - cap) * FOOD_ROT * dt
+		var rot: float = (stock["food"] - cap) * FOOD_ROT * dt
+		stock["food"] -= rot
+		note_food("out", "rotted", rot)
 		if day() != rot_warn_day:
 			rot_warn_day = day()
 			alert(tr("The stores are full and food is rotting on the ground. Build a Granary to keep more."), D.VILLAGE, "warn")
 	for s in structures:
 		if not s.built or not ours(s): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		stock["food"] += sd.get("food", 0.0) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
+		if sd.has("food"):
+			var own: float = float(sd["food"]) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
+			stock["food"] += own
+			note_food("in", "idle:" + s.type, own)
 		stock["lore"] += sd.get("lore", 0.0) * dt
 	stock["lore"] += (0.03 + inv.lore_rate()) * dt
 
@@ -2582,6 +2615,7 @@ func _update_births(dt: float) -> void:
 		if birth_timer > float(cb["every"]):
 			birth_timer = 0
 			stock["food"] -= float(cb["cost"])
+			note_food("out", "births", float(cb["cost"]))
 			var nm := new_name()
 			var parents: Array = living().filter(func(o): return o.role == "" and residents_of(settlement_of(o.home)).size() < beds_at(settlement_of(o.home))) # (born where there is a bed)
 			if parents.is_empty(): parents = living().filter(func(o): return o.role == "" and o.home.distance_to(D.VILLAGE) < 60)
@@ -2844,6 +2878,7 @@ func can_afford(cost: Dictionary) -> bool:
 func spend(cost: Dictionary) -> bool:
 	if not can_afford(cost): return false
 	for r in cost: stock[r] = float(stock.get(r, 0.0)) - float(cost[r])
+	if cost.has("food"): note_food("out", "spent", float(cost["food"])) # (feasts, gifts, prices)
 	return true
 
 ## Add `amounts` ({resource: n}, negative takes, never below 0) to the stores. Input from
@@ -2859,6 +2894,7 @@ func give(amounts: Dictionary) -> Dictionary:
 		var before := float(stock[r])
 		stock[r] = maxf(0.0, before + float(n))
 		out[r] = stock[r] - before
+		if r == "food": note_food("in" if out[r] > 0.0 else "out", "given", absf(out[r])) # (story actions, contracts, the hunt's meat)
 	return out
 
 ## Lay out a building site (`size`: a wall's radius, 0 = the default one).
@@ -3160,6 +3196,7 @@ func flood_strike() -> void:
 	var gf: Dictionary = nat.C["great_flood"]
 	var lost := floori(stock["food"] * float(gf["food_lost"]))
 	stock["food"] -= lost
+	note_food("out", "flood", lost)
 	var hurt := 0
 	for u in living():
 		if D.river_dist(u.pos) < float(gf["hit_radius"]):

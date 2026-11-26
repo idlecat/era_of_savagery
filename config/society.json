@@ -31,6 +31,14 @@
  "health": {"_doc": "Per-head incidence grows with density, density_k on N against n_ref (model §6: density ∝ N^0.3, incidence ∝ density^0.5).", "density_k": 0.15, "n_ref": 20},
  "safety": {"_doc": "Safety's demand: max(vigilance per head, threat per head × (N / n_ref)^wealth_k) (model §4.1, §6).", "vigilance": 0.015, "wealth_k": 0.3, "n_ref": 20},
 
+ "jobs": {"_doc": "Which need a job in the game serves (tools/metrics.gd's society report, society_plan.md step 1): keys are a job type, or type:resource for gathering; the columns are the share table's. A job not listed counts as other.",
+  "gather:food": "food", "field": "food", "tend": "food",
+  "gather:wood": "shelter_warmth", "gather:stone": "shelter_warmth", "build": "shelter_warmth",
+  "gather:herbs": "health", "aid": "health",
+  "attack": "safety", "firefight": "safety", "cover": "safety",
+  "experiment": "knowledge", "explore": "knowledge", "seek": "knowledge",
+  "art": "comfort_spirit", "ritual": "comfort_spirit"},
+
  "levels": {
   "_doc": "Per level: N (reference size), factors (the productivity budget, model §3), walk (share of a food hand's working time spent walking at N; grows as √(N / N) away from it), spoil (share of the stores lost a day: pots, granaries, the smokehouse), steward, institutions, import (share of food bought or paid in tribute), Y (land limits per source, food a day), and hands per head of each other need at full coverage (the labour cost l times the units per head: health's is care per case, safety's the threat, order's a multiplier on its formula).",
   "band": {"N": 20, "factors": {"method": 1.0, "products": 1.0, "skill": 1.08, "techniques": 1.0, "culture": 1.0}, "walk": 0.35, "spoil": 0.2, "steward": false, "institutions": false, "import": 0.0,

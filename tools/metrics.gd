@@ -47,6 +47,7 @@ const OUTPOST_BAND := [0.4, 0.7]
 const NATURAL_BANDS := {"walk": [0.15, 0.6], "empty": [0.0, 0.4], "switches": [0.0, 1.5], "stuck": [0.0, 0.5], "night_up": [0.0, 0.1], "left_kills": [0.0, 0.5]}
 const WORK_JOBS := ["gather", "build", "tend", "art", "ritual", "experiment", "seek", "trade_trip"]
 const STUCK_SECS := 15.0
+var SOCIETY: Dictionary = preload("res://scripts/config.gd").load_cfg("society")
 
 var a := {}
 
@@ -70,7 +71,7 @@ func _initialize() -> void:
 			print("  %s seed %d: %s" % [pid, seed0 + i, _short(r)])
 	_report(rows, pols)
 	if a.has("out"):
-		var keys: Array = rows[0].keys().filter(func(k): return not k in ["forecasts", "causes", "challenges"]) if not rows.is_empty() else []
+		var keys: Array = rows[0].keys().filter(func(k): return not k in ["forecasts", "causes", "challenges", "society"]) if not rows.is_empty() else []
 		var csv := ",".join(keys) + "\n"
 		for r in rows: csv += ",".join(keys.map(func(k): return str(r[k]).replace(",", ";"))) + "\n"
 		var f := FileAccess.open(a["out"], FileAccess.WRITE)
@@ -131,6 +132,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	var last_seal := -1e9
 	var dead_seen := {}
 	var nat := {"work": 0.0, "walk": 0.0, "empty": 0.0, "switches": 0, "stuck": 0, "night": 0.0, "night_up": 0.0, "person_days": 0.0, "u": {}, "kills": {}}
+	var soc := {"state": {}, "cols": {}, "src": {}, "pos": {}, "adult_s": 0.0, "pop_s": 0.0, "n": 0}
 	while sim.time < end_t and not sim.living().is_empty():
 		# the player's seat, played by the policy
 		if sim.pending_event != "":
@@ -163,6 +165,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 			next_sample = sim.time + 1.0
 			_sample(sim, r, dead_seen)
 			_natural(sim, nat)
+			_society(sim, soc)
 	r["days"] = snappedf(sim.time / D.DAY_LEN, 0.1)
 	r["alive"] = sim.living().size()
 	r["famine"] = r["starved"] > 0 or r["hungry_sick"] or r["left"] > 0 # (a sickness wave counts when it strikes a hungry camp)
@@ -207,6 +210,8 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	var wh := maxf(1.0, nat["work"]) # person-seconds of work
 	r["natural"] = {"walk": nat["walk"] / wh, "empty": nat["empty"] / wh, "switches": nat["switches"] / maxf(0.01, nat["work"] / (D.DAY_LEN / 24.0)),
 		"stuck": nat["stuck"] / maxf(0.01, nat["person_days"]), "night_up": nat["night_up"] / maxf(1.0, nat["night"]), "left_kills": float(left)}
+	soc["ledger"] = sim.food_summary()
+	r["society"] = soc
 	sim.dispose()
 	return r
 
@@ -347,6 +352,7 @@ func _report(rows: Array, pols: Array) -> void:
 		print("Skill sensitivity (hoarder vs feaster: min food + famine + near-miss gaps): %.2f%s" % [d, "  <- food decisions barely matter" if d < 0.15 else ""])
 	_calibration(rows)
 	_naturalness(rows, pols)
+	_society_report(rows, pols)
 	if a.has("baseline"): _baseline(summ)
 	var allc: Array = []
 	for r in rows: allc.append_array(r["forecasts"])
@@ -500,6 +506,93 @@ func _natural(sim, nat: Dictionary) -> void:
 		if not u.dead and u.job.has("node_id"): claimed[u.job["node_id"]] = true
 	for n in sim.nodes_of("food"):
 		if n.kind == "carcass" and (claimed.has(n.id) or not nat["kills"].has(n.id)): nat["kills"][n.id] = sim.time
+
+## One second of the society sample (docs/society_plan.md step 1): what each grown-up's
+## day goes to (asleep, at a meal, idle, walking at work, at work), which need their job
+## serves (config/society.json jobs) and, for food, which source.
+func _society(sim, soc: Dictionary) -> void:
+	var JOBS: Dictionary = SOCIETY["jobs"]
+	soc["n"] += 1
+	for u in sim.living():
+		soc["pop_s"] += 1.0
+		if u.role == "child": continue
+		soc["adult_s"] += 1.0
+		var jt: String = u.job.get("type", "")
+		var moved: float = u.pos.distance_to(soc["pos"].get(u.id, u.pos))
+		soc["pos"][u.id] = u.pos
+		var st := "work"
+		if u.sleeping: st = "asleep"
+		elif jt == "meal": st = "meal"
+		elif sim.is_idle(u): st = "idle"
+		elif moved > 3.0: st = "walk"
+		soc["state"][st] = float(soc["state"].get(st, 0.0)) + 1.0
+		if st != "walk" and st != "work": continue
+		var key := jt + (":" + str(u.job.get("res", "")) if jt == "gather" else "")
+		var col: String = JOBS.get(key, JOBS.get(jt, "other"))
+		soc["cols"][col] = float(soc["cols"].get(col, 0.0)) + 1.0
+		if col == "food":
+			var src := jt
+			if jt == "gather":
+				var nd = sim.node_by_id(int(u.job.get("node_id", -1)))
+				src = "gather:" + (nd.kind if nd else (u.carry_kind if u.carry_kind != "" else "?"))
+			elif jt == "field":
+				var s = sim.struct_by_id(int(u.job.get("struct_id", -1)))
+				src = "field:" + (s.type if s else "?")
+			soc["src"][src] = float(soc["src"].get(src, 0.0)) + 1.0
+
+## The society report: per policy, a grown-up's day, the share of hands per need and food
+## per hand-day by source, against what the calculator (tools/society_calc.gd) predicts.
+func _society_report(rows: Array, pols: Array) -> void:
+	print("\nSociety (docs/society_plan.md step 1; compare tools/society_calc.gd):")
+	for pid in pols:
+		var rs: Array = rows.filter(func(r): return r["policy"] == pid and r.has("society"))
+		if rs.is_empty(): continue
+		var st := {}
+		var cols := {}
+		var src := {}
+		var fin := {}
+		var fout := {}
+		var adult_s := 0.0
+		var pop_s := 0.0
+		var secs := 0.0
+		for r in rs:
+			var s: Dictionary = r["society"]
+			adult_s += s["adult_s"]
+			pop_s += s["pop_s"]
+			secs += s["n"]
+			for k in s["state"]: st[k] = float(st.get(k, 0.0)) + s["state"][k]
+			for k in s["cols"]: cols[k] = float(cols.get(k, 0.0)) + s["cols"][k]
+			for k in s["src"]: src[k] = float(src.get(k, 0.0)) + s["src"][k]
+			for k in s["ledger"]["in"]: fin[k] = float(fin.get(k, 0.0)) + s["ledger"]["in"][k]
+			for k in s["ledger"]["out"]: fout[k] = float(fout.get(k, 0.0)) + s["ledger"]["out"][k]
+		var adult_days := adult_s / D.DAY_LEN
+		var per := func(k: String) -> float: return float(st.get(k, 0.0)) / maxf(1.0, adult_days)
+		var jobs_s := float(st.get("walk", 0.0)) + float(st.get("work", 0.0))
+		print("  %s: %.0f people on average, %.0f grown-ups" % [pid, pop_s / maxf(1.0, secs), adult_s / maxf(1.0, secs)])
+		print("    a grown-up's day (s of 90): asleep %.0f, meals %.0f, idle %.0f, walking at work %.0f, at work %.0f (h); the walk %.0f%% of work time" %
+			[per.call("asleep"), per.call("meal"), per.call("idle"), per.call("walk"), per.call("work"), 100.0 * float(st.get("walk", 0.0)) / maxf(1.0, jobs_s)])
+		var parts: Array = []
+		for c in ["food", "shelter_warmth", "health", "safety", "order", "knowledge", "comfort_spirit", "other"]:
+			parts.append("%s %.0f%%" % [c, 100.0 * float(cols.get(c, 0.0)) / maxf(1.0, jobs_s)])
+		print("    share of hands (of time in jobs): " + ", ".join(parts) + "; idle %.0f%% of waking time" % (100.0 * float(st.get("idle", 0.0)) / maxf(1.0, adult_s - float(st.get("asleep", 0.0)))))
+		var own := 0.0
+		var food_hand_days := float(cols.get("food", 0.0)) / D.DAY_LEN
+		var lines: Array = []
+		var keys: Array = fin.keys()
+		keys.sort_custom(func(x, y): return fin[x] > fin[y])
+		for k in keys:
+			var hd := float(src.get(k, 0.0)) / D.DAY_LEN
+			if k.begins_with("gather:") or k.begins_with("field:") or k == "pens" or k.begins_with("idle:"): own += fin[k]
+			lines.append("%s %.0f%s" % [k, fin[k], (" (%.1f a hand-day)" % (fin[k] / hd)) if hd > 0.05 else ""])
+		print("    food in: " + ", ".join(lines))
+		var outs: Array = []
+		for k in fout: outs.append("%s %.0f" % [k, fout[k]])
+		print("    food out: " + ", ".join(outs))
+		var eaten := float(fout.get("eaten", 0.0))
+		var c_day := eaten / maxf(1.0, pop_s / D.DAY_LEN)
+		var r_meas := (own / maxf(0.01, food_hand_days)) / (eaten / maxf(0.01, adult_days)) if eaten > 0.0 else 0.0
+		print("    c %.2f food a person-day; R %.2f (own food a food hand-day / food eaten a grown-up-day); food share %.0f%%, 1/R %.0f%%" %
+			[c_day, r_meas, 100.0 * float(cols.get("food", 0.0)) / maxf(1.0, jobs_s), 100.0 / maxf(0.01, r_meas)])
 
 ## The naturalness report: per policy, the mean of each measure against its band.
 func _naturalness(rows: Array, pols: Array) -> void:
