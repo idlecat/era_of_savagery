@@ -73,6 +73,13 @@ rush).
 - G3's numbers are the designer's call: decay is the lever on normal (0.8–1.0 softer,
   ~2.5 harder); harsh is set by its multipliers, not its cap. Any change needs a new
   canary baseline (`--write-baseline`).
+- **Growth against the band's hunger trap** (the society model, `society.md` §14.6): a
+  designer's knob, not decided. `config/society.json work`: `secure_from`/`secure_to` (births
+  and newcomers by food security: a step at 1.2 today, halving growth; a ramp 1.0 → 1.2
+  brings it back but let 2 of 5 60-day bands die out), `gather.food` (0.25), `reserve_days`
+  (2), each overridable per challenge level (`work.by_challenge`, as `director.json`'s
+  levels). Measure with G1 (famine band, hours under half a day's food: the metrics'
+  society report) and `tools/pacing.gd` (people at day 60, bands that die out).
 - Most measurements used 4–8 seeds; the food bands and the winter-choice table want
   16–20.
 - Linux CI reproduces macOS runs exactly (same per-seed numbers, 2026-11-24). The canary's

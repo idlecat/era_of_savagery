@@ -1004,7 +1004,9 @@ or a forecast made honest rather than a rule for one case:
 growth (46-60 people at day 60, against ~100). A smooth ramp (births from coverage 1.0 to
 1.2) brought growth back in three seeds but let two unlucky bands breed into a hunger trap
 and die out (12 and 1 people): since step 3 a band without fields lives near subsistence,
-which is the model's band ceiling. Open #12: how fast should a tribe grow (the city plan's
-curve, ~150 by day 60, assumed the old abundance), and is the band's poverty trap a
-challenge to keep (the push to fields) or to soften (more winter food for the band)?
+which is the model's band ceiling. Open #12 is **a designer's knob, not a decision**
+(`make_it_fun.md` G, Tuning): `work.secure_from`/`secure_to` (a step at 1.2 today; a ramp
+from 1.0), `gather.food`, `reserve_days`, overridable per challenge level
+(`work.by_challenge`), set against G1's bands and `tools/pacing.gd`'s growth and band
+deaths when the tuning pass comes.
 

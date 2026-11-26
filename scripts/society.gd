@@ -34,6 +34,13 @@ var last := {} # choice -> weight, the last round (for a game master and the HUD
 func _init(s) -> void:
 	sim = s
 
+## A work knob (config/society.json work) for the challenge level now: work.by_challenge
+## [hz.level] overrides the defaults, as director.json's levels do (make_it_fun.md G: the
+## designer's knobs, measured against the G1 bands).
+func work_val(key: String):
+	var by: Dictionary = S["work"].get("by_challenge", {}).get(sim.hz.level, {})
+	return by[key] if by.has(key) else S["work"][key]
+
 ## A need's value per person: its channels' values times its impact on them (model §8).
 func value(need: String) -> float:
 	var v := 0.0
@@ -142,9 +149,11 @@ func food_factor_now(kind: String) -> float:
 	if kind == "bush": return sim.hz.berry_mult()
 	return food_factor(kind, sim.hz.season_idx())
 
-## Food security (model §10), 0 or 1: the look-ahead coverage (today's food hands held) at
-## least the buffer. Births and newcomers follow it: a tribe that won't carry its winter with
-## a margin takes in no more mouths. Looked at once a second.
+## Food security (model §10), 0..1: the look-ahead coverage (today's food hands held) from
+## work.secure_from (0) to secure_to (1), a step when they are equal. Births and newcomers
+## follow it: a tribe that won't carry its winter with a margin takes in no more mouths. The
+## designer's knob between growth and the band's hunger trap (society.md 14.6, open #12).
+## Looked at once a second.
 var _cache_secure := 1.0
 var _cache_secure_t := -10.0
 func food_security() -> float:
@@ -155,8 +164,9 @@ func food_security() -> float:
 	var none: Array = []
 	for j in seasons.size(): none.append(0.0)
 	var c := c_horizon(float(sim.stock["food"]), food_forecast(seasons), none, seasons)
-	var buf := float(S["work"]["food_buffer"])
-	_cache_secure = 1.0 if c >= buf else 0.0 # (a ramp from 1.0 to the buffer let thin-surplus births tip unlucky bands into a hunger trap: 2 of 5 60-day seeds died out; society.md 14.6)
+	var lo := float(work_val("secure_from"))
+	var hi := float(work_val("secure_to"))
+	_cache_secure = (1.0 if c >= hi else 0.0) if hi <= lo else clampf((c - lo) / (hi - lo), 0.0, 1.0) # (a step when from == to; a ramp brings growth back but lets thin-surplus births tip unlucky bands into a hunger trap: society.md 14.6)
 	return _cache_secure
 
 ## The food work a new hand would take today: a field or dock with a free place, else the
@@ -262,8 +272,8 @@ func weights(site: bool) -> Dictionary:
 	var flow: float = sup[0]
 	if s_now > 0.0:
 		var stores: float = sim.stock["food"]
-		var c_now := (stores + flow) / maxf(1e-6, day_eat * (1.0 + float(S["work"]["reserve_days"]))) # (today's eating, and a reserve in store: meals and births draw on the stores)
-		var buf := float(S["work"]["food_buffer"]) # (food security: births want stores in hand, model §10)
+		var c_now := (stores + flow) / maxf(1e-6, day_eat * (1.0 + float(work_val("reserve_days")))) # (today's eating, and a reserve in store: meals and births draw on the stores)
+		var buf := float(work_val("food_buffer")) # (food security: births want stores in hand, model §10)
 		var none: Array = []
 		for j in seasons.size(): none.append(0.0)
 		var ch := c_horizon(stores, sup, none, seasons) / buf

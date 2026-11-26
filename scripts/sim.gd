@@ -1261,7 +1261,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
 		u.doing = {"tree": "chop", "carcass": "butcher", "boulder": "quarry"}.get(n.kind, "pick")
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
-		var rate := base * float(SOC_WORK["gather"].get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
+		var rate := base * float(soc.work_val("gather").get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
 		rate *= inv.gather_mult(n.kind, fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry"))
 		var activity: String = fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")

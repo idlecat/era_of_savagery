@@ -4769,6 +4769,17 @@ func test_society_alloc() -> void:
 	sim.stock["wood"] = 99999.0
 	sim.stock["food"] = 0.0
 	check(sim.soc.best_for(wc, sim.soc.weights(false))[0] == "food" and not sim.soc.trade_pays(wc), "with wood piled high and food short, the woodcutter goes for food, and doesn't go to the trees by themselves")
+	# the designer's knobs: per challenge level, a step or a ramp of food security
+	var S2: Dictionary = sim.soc.S.duplicate(true)
+	S2["work"]["by_challenge"] = {"off": {"secure_from": 1.0, "secure_to": 1.4, "gather": {"food": 0.5}}}
+	sim.soc.S = S2
+	sim.hz.level = "off"
+	check(float(sim.soc.work_val("secure_to")) == 1.4 and float(sim.soc.work_val("gather")["food"]) == 0.5 and float(sim.soc.work_val("reserve_days")) == float(S2["work"]["reserve_days"]), "a challenge level overrides only the knobs it names")
+	sim.stock["food"] = 0.0
+	sim.soc._cache_secure_t = -10.0
+	check(sim.soc.food_security() == 0.0, "with empty stores and nobody on food, no food security")
+	sim.hz.level = "normal"
+	sim.soc.S = preload("res://scripts/config.gd").load_cfg("society")
 	# no Steward: the idle choose their own work by the same rule
 	for k in sim.vice: sim.vice[k] = -1
 	var idler = sim.living().filter(func(x): return x.role == "" and x.career == "")[0]
