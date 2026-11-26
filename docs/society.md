@@ -184,8 +184,8 @@ Nine needs, each with the same parts:
      channels (mortality, contentment) and the hardship (famine).
    - **C_horizon** = `(stores + expected supply over the horizon) / demand over the
      horizon`: what is there to eat until the next harvest. It is an **anticipation signal
-     only**: it sets food's weight in the allocation (§8) and the food security that births
-     need (§10). The horizon rolls: from now to the start of the next harvest window,
+     only**: it sets the storage term of food's allocation demand (§8) and the food
+     security that births need (§10). The horizon rolls: from now to the start of the next harvest window,
      clamped to half a year (4 days). So C_horizon falls in late summer when the winter
      comes into it, and the autumn push starts before the cold. A fixed window would miss
      an early frost or over-react in spring.
@@ -338,12 +338,22 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
   design band: **1.5-3×** at the trade's typical skill. Below 1 the trade loses hands;
   far above 3 one maker carries the town.
 
-**Which coverage the allocation reads.** Food's weight uses **C_horizon** (anticipation);
-every other need, and food's channels and famine, use the coverage of now (§4). A huge
-winter demand can't starve the other needs of hands, because a hand's gain is
-`ΔB` from *its own* supply s: in winter a field's s is 0, so its ΔB is 0 however low
-C_horizon is, and only the food sources that still yield (fishing, the hunt, the pens)
-draw hands.
+**Which coverage the allocation reads.** Every weight is per day, so every need's ΔB is
+reckoned on a daily supply against a daily demand. For food that is a **flow coverage**,
+not C_now (the stores would hold it at 1 until they ran out) and not C_horizon (a horizon's
+demand against a day's supply mixes windows):
+
+`C_alloc = S_today / D_alloc`, with
+`D_alloc = D_today + max(0, D_horizon - stores - later supply) / productive days left`
+
+Today's eating plus the rate at which the stores must fill to carry the tribe to the next
+harvest. Anticipation lives in that **storage term**: it grows in late summer as the
+winter comes into the horizon, and the autumn rush follows. The hand's gain is
+`ΔB = B(min(1, C_alloc + s/D_alloc)) - B(C_alloc)` with its own s, so in winter a field
+(s = 0) gains nothing however short the stores are, and only the food sources that still
+yield (fishing, the hunt, the pens) draw hands. A low winter C_horizon never inflates a
+weight or tilts food against the other needs' daily weights. C_now still drives food's
+channels and famine; C_horizon the storage term and births.
 
 **Seasons move the allocation through s and D.** With the fields idle in winter, the
 hands flow to what yields indoors (tools, cloth, teaching, rites). C_horizon falls in late
@@ -424,11 +434,21 @@ Without a rule of their own:
 | payback band | what a multiplying trade must earn | 1.5-3× |
 
 **The calculator comes first**: a small script that takes this table and, for each level
-and size (Band 20, Camp 50, Village 150, Town 500), solves the steady state (the
-allocation of §8 to a fixed point, the tool fixed point of §3.1) and prints the share of
-hands per need, h, R, K, every need's coverage, the standard, and where the ceiling is. The
-share table (§6) is its first test. Only once its numbers look right does the game get
-measured against it.
+and size (Band 20, Camp 50, Village 150, Town 500), solves a **periodic steady state over
+the year**: it runs the 8-day year season by season (each season's yields, hunger and
+cold; the allocation of §8 within it; the tool fixed point of §3.1; the stores carried from
+one season to the next) and repeats the year until it comes round the same (the stores
+at the start of spring equal those of the year before). It prints:
+
+- **year-averaged** shares of hands per need, h, R, K, coverage and the standard: what the
+  §6 share table and the R bands are about (R is a year average, §2);
+- **per season**: the same, so the rhythm shows (the autumn rush, the winter workshop,
+  0% field hands in winter by design, not by error);
+- **active-season R**: R in spring and summer alone, to check each food method's rate;
+- where the ceiling is: the size at which a need's coverage falls to its floor.
+
+The share table (§6) is its first test. Only once its numbers look right does the game
+get measured against it.
 
 ## 13. Settled, and still open
 
@@ -451,8 +471,12 @@ measured against it.
 
 - **Units**: l is person-days per unit, `1 / (rate × h)`, so S × l sums to the workers
   (§4).
-- **Food has two coverages**: C_now for the channels and famine, C_horizon for
-  anticipation (food's allocation weight, births' food security) (§4, §8).
+- **Food has two coverages and an allocation demand**: C_now for the channels and famine,
+  C_horizon for anticipation (births' food security, and the storage term of food's
+  allocation demand); the allocation reads a daily flow coverage S_today / D_alloc like
+  every other need (§4, §8).
+- **The calculator solves a periodic year**, season by season with stores carried over,
+  and reports year-averaged and per-season shares and active-season R (§12).
 - **The horizon rolls** to the next harvest window, clamped to half a year (§4).
 - **Two tiers of shortfall**: friction from C < 1, hardship events below C_floor ≈ 0.6
   (0.5-0.7 per need); food's warning when C_horizon falls under a buffer (§4).
