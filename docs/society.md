@@ -1,8 +1,10 @@
 # A model of the tribe as a society: needs, capital and levels
 
-Draft 3, 2026-11-25. A model to get right before any code. Draft 1 (`economy.md`)
-modelled the food economy; draft 2 made food one case of a general model; draft 3 fixes
-its units, removes double counting, and settles the questions a review answered (§13).
+Draft 4, 2026-11-25. A model to get right before any code. Draft 1 (`economy.md`)
+modelled the food economy; draft 2 made food one case of a general model; draft 3 fixed
+its units and double counting; draft 4 closes the traps a second review found (two food
+coverages, labour cost in person-days, safety as a stock against a pressure, what N
+counts) (§13).
 
 The question: as the tribe learns, fewer hands are needed for food, and the freed hands
 make the tribe richer, healthier, safer, better kept. How much richer, at what cost, and
@@ -48,10 +50,15 @@ Six ideas carry it:
 
 ## 2. Labour, time and consumption
 
+- **N, the people.** A person in the simulation stands for a family line (one unit; no
+  ageing, no mates). **N always counts these units**, children included, and every "per
+  head" in the model is per unit. Workers are the units of working age who are not sick,
+  badly hurt or away; **d** is computed inside the simulation from those counts, not an
+  abstract demographic multiplier.
 - **Consumption**: a grown-up eats **c ≈ 3 food a day** (hunger 0.33/s, 3 food per 30
   hunger, a 90 s day), ×1.25 in winter; a child 0.6 of that. ~25 food a year (8 days).
 - **Dependants**: children, the sick and the badly hurt eat and don't work. **d** =
-  mouths / workers (~1.2-1.4 in a growing tribe). Health and safety move d.
+  N / workers (~1.2-1.4 in a growing tribe). Health and safety move d.
 - **The time budget of a working day** (seconds of a 90 s day):
 
   `H_awake = 90 - rest` (~70) → `H_work = H_awake - meals - life` (~55) → `h = H_work - walk`
@@ -163,36 +170,63 @@ Nine needs, each with the same parts:
 3. **Supply S** in the same unit, from workers (a service), goods (that wear) or
    buildings (capacity, or a multiplier on workers: §3.1). A stock need's supply is the
    capacity standing; its labour is building and upkeep.
-4. **Labour cost l**: person-days per unit of supply (for a stock: per unit built and
-   kept). **Hands for a need = S × l** (per day). This is the one conversion between a
-   need's unit and person-days.
+4. **Labour cost l**, in **person-days per unit of supply**: `l = 1 / (output of one
+   person-day)` = `1 / (rate × h)` for a worker's own output (in the need's unit per
+   second at work, times seconds at work a day). For a service, a person-day's output is
+   the people it serves a day (`span`, patients, pupils, congregation); for a stock, it is
+   the units a person-day builds and keeps up. A flow's S is per day, so **hands for a need
+   = S × l** is in person-days per day = workers; a stock's hands are its upkeep and growth
+   (§3.1) × l. Summed over needs, the hands are N / d: the 100% of the share table. This is
+   the one conversion between a need's unit and person-days, and h lives only inside it.
 5. **Coverage C = S / D**, a pure number. Above 1 is surplus, with no further gain.
-   **Storable needs look ahead**: food's coverage is
-   `(stores + expected supply over the horizon) / demand over the horizon`, the horizon
-   reaching to the next harvest season, so coverage drops in late summer when the winter
-   comes into view, not in winter when fields yield nothing.
+   **A storable need has two coverages**:
+   - **C_now** = `(stores + S_today) / D_today`: what is there to eat now. It drives the
+     channels (mortality, contentment) and the hardship (famine).
+   - **C_horizon** = `(stores + expected supply over the horizon) / demand over the
+     horizon`: what is there to eat until the next harvest. It is an **anticipation signal
+     only**: it sets food's weight in the allocation (§8) and the food security that births
+     need (§10). The horizon rolls: from now to the start of the next harvest window,
+     clamped to half a year (4 days). So C_horizon falls in late summer when the winter
+     comes into it, and the autumn push starts before the cold. A fixed window would miss
+     an early frost or over-react in spring.
 6. **Benefit B(C) = 1 - (1 - C)²** for C < 1, 1 above: concave, the first healer matters
    most. **Each channel the need feeds takes the shortfall `1 - B(C)` smoothly**: no
    cliff anywhere in the rules.
 7. **Hardships** (famine, an epidemic, strife, a raid that breaks in) are discrete
-   events: their rate is 0 above a floor **C_floor** and rises linearly to its maximum
-   at C = 0, and the director paces them as now. The smooth channel effect and the event
-   rate are the only two ways a shortfall acts. Food's mechanical starvation (stores at 0)
-   is the event of the food need; stores make it a forecast, not a surprise.
+   events, in two tiers:
+   - **Friction**: the smooth channel penalty `1 - B(C)` begins as soon as C < 1. A
+     minor deficit is felt, never a disaster.
+   - **Hardship**: an event becomes possible only below **C_floor ≈ 0.6** (0.5-0.7 per
+     need); its rate rises linearly from 0 there to its maximum at C = 0, and the director
+     paces it as now. For food, famine needs C_now < C_floor, and its warning (an alert, the
+     council) comes when C_horizon falls below a safety buffer.
+
+   The channel penalty and the event rate are the only two ways a shortfall acts.
 
 ### 4.1 The unit table
 
 | Need | Kind | Unit | Demand D | Supply S | Labour cost l | Channels |
 |---|---|---|---|---|---|---|
-| **Food** | flow, storable | food / day | N_mouths × c × season × cooking (the cookhouse lowers c) | Σ food workers × rate × h, bounded by land (Y) | 1 / F | mortality (starving), consumption (cooking), losses (spoilage: pots, granaries), contentment |
+| **Food** | flow, storable (C_now, C_horizon) | food / day | N × c × season × cooking (the cookhouse lowers c) | Σ food workers × rate × h, bounded by land (Y) | 1 / F, F = rate × h | mortality (starving), consumption (cooking), losses (spoilage: pots, granaries), contentment |
 | **Shelter** | stock | beds | N × (1 + margin) | Σ `cap` of homes standing | build + upkeep per bed | people (births need beds), health (crowding raises sickness incidence), contentment |
 | **Warmth** | flow, seasonal | warm person-hours / day in the cold | N × hours of cold exposure × cloth (cloth lowers exposure) | warm places of fires and hearths × hours; fuel | wood per warm hour / wood rate | mortality (freezing), labour (the cold slows) |
 | **Health** | flow | care-days / day | cases (incidence × N, raised by density, hunger, cold) × care per case | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
-| **Safety** | stock (vs a threat) | defence strength | expected threat: raiders drawn by wealth and size, beasts | guards × arms × skill × walls (a multiplier) | training + upkeep per strength | losses (raids), mortality |
+| **Safety** | stock against a pressure | defence strength (the same unit as a war band's strength) | max(vigilance, expected threat): the strength of the band likely to come over the horizon (`rivals.gd`'s threat query), and never below a vigilance floor per head | strength standing: guards on hand × arms × skill × walls (a multiplier), decaying (training lapses, walls age) | 1 / strength a person-day trains and keeps up | losses (raids), mortality |
 | **Order** | flow | disputes / day | a × N × (N / N₀)^k beyond the face-to-face band (§6) | keepers × span (the Steward, council, chiefs; the Code multiplies span) | 1 / span | labour (waste), losses (strife), contentment |
 | **Knowledge** | flow | teaching-days / day | learners (children, newcomers, new methods × people to learn them) × days to teach, plus keepers wanted per method | teachers × pupils each; codification ends the keepers' part | 1 / pupils per teacher-day | labour (the `known` factor), losses (a method lost) |
 | **Comfort** | flow (goods wear) | wanted goods / day | N × the level's wants × wear | makers × rate | 1 / F_maker | contentment |
 | **Spirit** | flow | rite-hours / day | N × the level's wants | shamans × congregation × temple | 1 / congregation per rite | contentment (and devotion) |
+
+**Safety: a stock against a pressure.** Its C compares two strengths in the same unit:
+the defence standing now (S, a stock that decays without upkeep) against the strength of
+the threat expected over the horizon (D, a pressure that rises with our wealth and the
+clans' state). So C = S / D is a ratio of strengths, not of rates. Two things keep a safe
+town vigilant: D never falls below a **vigilance floor** per head (a watch is kept even in
+peace), and S decays, so upkeep goes on at C ≥ 1; and as raiders grow, D rises and C
+falls, pulling hands back before the raid comes. **The boundary**: the threat pressure
+(how often and how strong raids come, from our wealth and the rivals' state) stays in
+`rivals.gd` as a threat query; this model owns how the tribe prepares for and absorbs
+it (guards, walls, weapons, coverage, raid losses).
 
 ### 4.2 Counting each effect once
 
@@ -304,10 +338,17 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
   design band: **1.5-3×** at the trade's typical skill. Below 1 the trade loses hands;
   far above 3 one maker carries the town.
 
-**Seasons move the allocation through s and D.** In winter a field's s is 0, so no hand
-goes there; the hands flow to what yields indoors (tools, cloth, teaching, rites). Food's
-look-ahead coverage (§4) falls in late summer as winter comes into the horizon, so the
-autumn rush begins before the cold. No seasonal rule of its own.
+**Which coverage the allocation reads.** Food's weight uses **C_horizon** (anticipation);
+every other need, and food's channels and famine, use the coverage of now (§4). A huge
+winter demand can't starve the other needs of hands, because a hand's gain is
+`ΔB` from *its own* supply s: in winter a field's s is 0, so its ΔB is 0 however low
+C_horizon is, and only the food sources that still yield (fishing, the hunt, the pens)
+draw hands.
+
+**Seasons move the allocation through s and D.** With the fields idle in winter, the
+hands flow to what yields indoors (tools, cloth, teaching, rites). C_horizon falls in late
+summer as the winter comes into the horizon, so the autumn rush begins before the cold.
+No seasonal rule of its own.
 
 ## 9. Knowledge, inventions and skills, in one place
 
@@ -373,9 +414,11 @@ Without a rule of their own:
 | Y and regrowth per source; depletion and rest | carrying capacity | foraging K ~30-40 per band's reach |
 | a, k, N₀ per need | need per head; cost of scale; thresholds | §6 |
 | l per need, per level | labour cost of a unit (methods lower it) | from the share table |
-| B(C), C_floor per need | concavity; where hardships start | `1 - (1 - C)²`; floors per need |
-| channel values | what the tribe values | from the Council's policies |
-| wants per level | the standard's bar | to be set |
+| B(C), C_floor per need | concavity; where hardships start | `1 - (1 - C)²`; C_floor ≈ 0.6 |
+| food horizon, food safety buffer | anticipation; when food is "secure" | to the next harvest window, ≤ 4 days; buffer to be set |
+| vigilance floor per head | safety's minimum demand | to be set |
+| channel values | what the tribe values | mortality > labour, losses > contentment; fitted by the calculator; shifted by the Council's policies |
+| wants per level | the standard's bar | 1.0 at the band, rising; fitted so comfort + spirit ≈ 4% → 27% |
 | birth response to the standard | more people vs better lives | moderate |
 | goods wear | how much upkeep capital takes | a tool lasts a few days |
 | payback band | what a multiplying trade must earn | 1.5-3× |
@@ -404,16 +447,28 @@ measured against it.
 - **Nine needs**: transport became the walk term of the time budget (§2); water folds
   into health, trade into exchange and prices, law into order.
 
+**Settled by the second review:**
+
+- **Units**: l is person-days per unit, `1 / (rate × h)`, so S × l sums to the workers
+  (§4).
+- **Food has two coverages**: C_now for the channels and famine, C_horizon for
+  anticipation (food's allocation weight, births' food security) (§4, §8).
+- **The horizon rolls** to the next harvest window, clamped to half a year (§4).
+- **Two tiers of shortfall**: friction from C < 1, hardship events below C_floor ≈ 0.6
+  (0.5-0.7 per need); food's warning when C_horizon falls under a buffer (§4).
+- **Safety** is a stock against a pressure, with a vigilance floor; the threat pressure
+  stays in `rivals.gd`, preparation and losses here (§4.1).
+- **N counts units** (each a family line, children included); d is computed from the
+  simulation's counts (§2).
+- **Channel values and wants per level are the calculator's knobs**: ordered mortality >
+  labour, losses > contentment, wants from 1.0 at the band rising by level, and fitted so
+  that at each level's size comfort + spirit land near the share table's 4% → 27% (§6).
+
 **Still open:**
 
-1. **C_floor per need**: where each hardship begins (food: when look-ahead coverage falls
-   under the stores' safety margin? order: ~0.6?).
-2. **The channel values**: what a life is worth against output and contentment, and how
-   the Council's policies shift them.
-3. **The wants per level**: what a camp, a village, a town expect of comfort and spirit.
-4. **The horizon for food**: to the next harvest, or a fixed season ahead?
-5. **Safety as a stock against a threat**: the expected threat is itself a model (clans,
-   their size and mood, our wealth). How much of that model belongs here, and how much stays
-   with `rivals.gd`?
-6. **The one-family-line rule**: a person is a family line, so a household's trade fits it,
-   and births and departures by the standard need no ageing or mates.
+1. **The fitted values**: the channel values and the wants per level that the calculator
+   finds. Do they look like a society we recognise (is a life worth a sensible amount of
+   output)?
+2. **The safety buffer for food**: how many days of eating ahead is "secure" (for the
+   warning and for births)?
+3. **C_floor per need**: one value (0.6) for all at first, or per need from the start?
