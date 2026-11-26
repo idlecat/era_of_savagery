@@ -174,7 +174,7 @@ func _lapse(u: E.Unit) -> void:
 ## u (idle) goes to their trade by themselves: by day, near home, after `idle_secs` idle.
 ## Returns true if they set off (sim.unit_idle).
 func self_work(u: E.Unit) -> bool:
-	if not on or u.career == "" or u.role != "" or sim.rest_time() or u.sick > 0.0 or sim.hz.keep_in(): return false
+	if not on or u.career == "" or u.role != "" or sim.rest_time() or u.sick > 0.0: return false
 	if u.pos.distance_to(u.home) > float(C["reach"]) * 0.5 or not D.same_side(u.pos, u.home): return false
 	var t := float(next_try.get(u.id, -1.0))
 	if t < 0.0:

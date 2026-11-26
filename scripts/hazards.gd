@@ -30,7 +30,6 @@ var sim
 var level := "normal"
 var weather := "clear"
 var weather_left := 0.0
-var react_t := 0.0 # seconds to the weather's next reaction (react_every)
 var weather_roll := 20.0
 var incoming := ""       # announced weather that has not arrived yet
 var incoming_t := 0.0
@@ -258,10 +257,6 @@ func _herds_return() -> void:
 	for r in want:
 		for i in maxi(0, want[r] - counts.get(r, 0)): sim.spawn_deer(r, true)
 
-## The weather keeps people in (events.json weather `keep_in`: a blizzard): no work is
-## handed out that would take them from the fires.
-func keep_in() -> bool: return weather != "clear" and bool(WEATHER.get(weather, {}).get("keep_in", false))
-
 func _weather(dt: float) -> void:
 	if incoming != "":
 		incoming_t -= dt
@@ -269,12 +264,6 @@ func _weather(dt: float) -> void:
 		return
 	if weather != "clear":
 		weather_left -= dt
-		var ke := float(WEATHER[weather].get("react_every", 0.0))
-		if ke > 0.0: # (a weather whose reactions repeat: whoever walked out into it is sent back in)
-			react_t -= dt
-			if react_t <= 0.0:
-				react_t = ke
-				sim.react.trigger(weather, {"at": D.VILLAGE})
 		if weather_left <= 0:
 			if WEATHER[weather].has("done"): sim.alert(tr(WEATHER[weather]["done"]), Vector2.ZERO, "info")
 			weather = "clear"

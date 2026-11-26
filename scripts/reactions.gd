@@ -26,7 +26,7 @@ const E = preload("res://scripts/entities.gd")
 const Config = preload("res://scripts/config.gd")
 
 const VERBS := ["cover", "aid", "flee", "firefight", "defend", "warm", "shelter", "look", "startle"]
-const WHO := ["all", "able", "victim", "near", "river", "helpers", "exposed"]
+const WHO := ["all", "able", "victim", "near", "river", "helpers"]
 
 var C: Dictionary = Config.load_cfg("reactions")
 var sim
@@ -110,7 +110,6 @@ func _pick(r: Dictionary, ctx: Dictionary) -> Array:
 		"river": out = sim.living().filter(func(u): return D.river_dist(u.pos) < reach)
 		"able": out = sim.living().filter(func(u): return able(u) and u.pos.distance_to(at) < reach)
 		"helpers": out = _helpers(r, ctx)
-		"exposed": out = sim.living().filter(func(u): return not sim.in_hut(u) and not sim.near_warmth(u)) # (out in the open, away from any warmth)
 		_: out = sim.living()
 	return out.filter(func(u): return _fits(r, u))
 
@@ -339,26 +338,19 @@ func _start_warm(r: Dictionary, u: E.Unit) -> bool:
 	if not low and not sim.weigh.must_head_back(u): return false
 	var fire = sim.weigh.nearest_warmth(u.pos)
 	if fire == null: return false
-	var to: Vector2 = fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40))
-	var bed := false
-	if u.bed_id >= 0 and u.bed_pos != null and u.pos.distance_to(u.bed_pos) < u.pos.distance_to(fire.pos): # (their bed under a roof is nearer than a fire: in there, not through the snow)
-		to = u.bed_pos
-		bed = true
-	interrupt(u, {"type": "warm", "to": to, "bed": bed, "r": r})
+	interrupt(u, {"type": "warm", "to": fire.pos + Vector2(randf_range(-30, 30), randf_range(10, 40)), "r": r})
 	if not low: sim.weigh.note_turned_back(u) # (turned back at the point of no return, still warm enough: a word, no popup)
 	elif r.has("popup"): sim.popup(u.pos + Vector2(0, -30), tr(r["popup"]), Color("#a8d8ff"))
 	return true
 
 func do_warm(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var r: Dictionary = j.get("r", {})
-	var storm: bool = str(r.get("while_weather", "")) != "" and sim.hz.weather == str(r["while_weather"]) # (sheltering until the blizzard is over)
-	if not storm and (r.has("while_weather") or (u.hp >= u.max_hp * float(r.get("until", 0.8)) and sim.near_warmth(u)) or not sim.hz.cold_can_kill()): # (a weather's errand ends with it; the cold's once warm again by a fire)
+	if (u.hp >= u.max_hp * float(r.get("until", 0.8)) and sim.near_warmth(u)) or not sim.hz.cold_can_kill(): # (warm again by a fire, or the cold is over)
 		sim.end_errand(u) # (warm again by the fire, or the cold is over)
 		return
 	if not sim.approach(u, j["to"], 4, dt):
 		u.act = _act(r, 0)
 		return
-	if j.get("bed", false): u.sleeping = true # (under the roof: a hut is warmth, even on a night of alarm)
 	u.act = _act(r, 1)
 
 # ------------------------------------------------------------ shelter (panic)

@@ -70,9 +70,11 @@ person preferring a closer bed. `weigh` already refuses errands into deadly cold
 (`find_node`, the Steward), re-weighs a gatherer's node, and turns people back
 (`must_head_back`).
 
-**Proposal:** remove the four, keep `weigh`, and replay the two traced blizzard
-deaths (seed 2 day 55, seed 1 day 23) to confirm nobody freezes. Low risk, the
-smallest change here.
+**Done (2026-11-25).** The four are removed; `weigh` is the one rule. Checked on
+three 60-day games (seeds 1-3, 11 blizzards in all): without the patches nobody froze
+(2-5 deaths a game, all in raids); with them, seed 2 lost 9 to the cold, 8 in its
+blizzards. The patches were not only redundant, they fought `weigh` (sending people to
+a far bed, holding them in place) and cost lives.
 
 ### 4. Smaller: rules that fold into 1
 

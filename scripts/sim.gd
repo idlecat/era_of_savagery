@@ -2735,7 +2735,7 @@ func _update_vice(dt: float) -> void:
 	var vc: Dictionary = RULES["vice"]
 	vice_timer = float(vc["every"])
 	var steward := unit_by_id(vice["steward"])
-	if steward and not steward.dead and not rest_time() and not hz.keep_in(): # no work handed out at night, nor in a blizzard
+	if steward and not steward.dead and not rest_time(): # no work handed out at night (in a deadly cold, weigh keeps errands within reach of a fire)
 		var rest_below := float(vc["steward"].get("rest_below", 0.0))
 		var famine: bool = stock["food"] < living().size() # (less than a meal each in the stores)
 		var eat_below := float(RULES["survival"]["eat_below"])
