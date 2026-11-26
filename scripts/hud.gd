@@ -565,10 +565,30 @@ func _build_right(root: Control) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	p.add_child(v)
-	v.add_child(_header("BUILD (select workers, then place)"))
+	challenge_text = _rich(0, true)
+	v.add_child(challenge_text)
+	v.add_child(_header("NEIGHBORING CLANS"))
+	clans_text = _rich(0, true)
+	v.add_child(clans_text)
+	clans_btns = HFlowContainer.new()
+	v.add_child(clans_btns)
+	# Building, the chronicle and the Task Contracts share the rest of the panel as tabs.
+	log_tabs = TabContainer.new()
+	log_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	log_tabs.custom_minimum_size = Vector2(0, 200)
+	v.add_child(log_tabs)
+	var build_scroll := ScrollContainer.new()
+	build_scroll.name = "Build"
+	build_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	log_tabs.add_child(build_scroll)
+	var bv := VBoxContainer.new()
+	bv.add_theme_constant_override("separation", 6)
+	bv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	build_scroll.add_child(bv)
+	bv.add_child(_label("Select workers, then place.", 13, COL_DIM))
 	var grid := GridContainer.new()
 	grid.columns = 2
-	v.add_child(grid)
+	bv.add_child(grid)
 	for k in D.VILLAGE_BUILDS:
 		var sd: Dictionary = D.STRUCTURES[k]
 		var b := _button(tr("%s (%s)") % [tr(sd["name"]), _cost_short(sd)], func(): world.build_type = k, tr("Costs %s") % _cost_long(sd))
@@ -588,9 +608,9 @@ func _build_right(root: Control) -> void:
 		if err != "": sim.popup(D.VILLAGE, tr(err), Color("#ff8080")), "Rebuild old homes and walls in the current era's style")
 	reno_btn.visible = false
 	reno_btn.clip_text = true
-	v.add_child(reno_btn)
+	bv.add_child(reno_btn)
 	var ph := HBoxContainer.new()
-	v.add_child(ph)
+	bv.add_child(ph)
 	var pl := _label("Steward policy:", 14, COL_DIM)
 	pl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	ph.add_child(pl)
@@ -604,25 +624,13 @@ func _build_right(root: Control) -> void:
 	auto.tooltip_text = ("The Steward plans new buildings when the village needs them (a Granary when the stores fill up, a Hut when beds run short...) and pays for them from the stockpile. With an LLM node the Steward chooses between them.")
 	auto.button_pressed = sim.improve.on
 	auto.toggled.connect(func(b): sim.improve.on = b)
-	v.add_child(auto)
+	bv.add_child(auto)
 	var routine := CheckBox.new()
 	routine.text = "Steward decides routine matters"
 	routine.tooltip_text = "Routine questions, like whether to hold a festival this season, are decided by the Steward and only reported. Without a Steward they are asked."
 	routine.button_pressed = sim.steward_routine
 	routine.toggled.connect(func(b): sim.steward_routine = b)
-	v.add_child(routine)
-	challenge_text = _rich(0, true)
-	v.add_child(challenge_text)
-	v.add_child(_header("NEIGHBORING CLANS"))
-	clans_text = _rich(0, true)
-	v.add_child(clans_text)
-	clans_btns = HFlowContainer.new()
-	v.add_child(clans_btns)
-	# The chronicle and the Task Contracts share the rest of the panel as two tabs.
-	log_tabs = TabContainer.new()
-	log_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	log_tabs.custom_minimum_size = Vector2(0, 200)
-	v.add_child(log_tabs)
+	bv.add_child(routine)
 	log_text = _rich(0)
 	log_text.name = "Chronicle"
 	log_text.meta_clicked.connect(_on_log_link)
@@ -634,8 +642,15 @@ func _build_right(root: Control) -> void:
 	contracts_text.meta_clicked.connect(_on_log_link)
 	contracts_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	log_tabs.add_child(contracts_text)
-	log_tabs.set_tab_title(0, tr("Chronicle"))
+	_tab_titles()
+	log_tabs.current_tab = 1 # (the chronicle shows first)
 	v.add_child(_label("LMB select/drag · RMB command (tree/bush/deer = gather, tiger = attack, site = build) · pan: WASD / screen edge / MMB drag / two-finger swipe · zoom: wheel / pinch · Space pause · F11 fullscreen", 12, COL_DIM))
+
+## The right panel's tab titles (they follow a change of language; the contracts tab counts those running).
+func _tab_titles(running := 0, alarm := false) -> void:
+	log_tabs.set_tab_title(0, tr("Build"))
+	log_tabs.set_tab_title(1, tr("Chronicle"))
+	log_tabs.set_tab_title(2, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
 
 ## A small panel by the cursor naming what is under it on the map.
 func _map_tip(delta: float) -> void:
@@ -1157,8 +1172,7 @@ func _refresh_right() -> void:
 	if contracts_text.text != s: contracts_text.text = s # (only when it changed: a click on a name isn't lost to a refresh)
 	var running: int = sim.contracts.list.filter(func(c): return sim.contracts.is_running(c)).size()
 	var alarm: bool = sim.contracts.list.any(func(c): return c.status in ["interrupted", "defending"])
-	log_tabs.set_tab_title(0, tr("Chronicle")) # (both titles follow a change of language)
-	log_tabs.set_tab_title(1, (tr("Task Contracts (%d)") % running if running > 0 else tr("Task Contracts")) + (" ⚠" if alarm else ""))
+	_tab_titles(running, alarm)
 	clans_text.text = _clans_bbcode()
 	var chs: Dictionary = sim.challenges.summary()
 	challenge_text.visible = chs["active"] != ""

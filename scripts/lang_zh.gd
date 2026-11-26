@@ -76,6 +76,8 @@ const STRINGS := {
 	"Key is stored only in this machine's Godot user data folder (not in the project).": "密钥只保存在本机的 Godot 用户数据目录中（不在项目里）。",
 	"TRIBE": "部落",
 	"BUILD (select workers, then place)": "建造（先选工人，再放置）",
+	"Build": "建造",
+	"Select workers, then place.": "先选工人，再放置。",
 	"TASK CONTRACTS": "任务契约",
 	"CHRONICLE": "编年史",
 	"NEGOTIATION": "谈判",
