@@ -64,6 +64,8 @@ const GROUND_TEX := ["grass", "grass2", "meadow", "dry", "dirt", "forest", "road
 var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
+var fall_pan := Vector2() # screen px the land has slid by panning: falling rain and snow follow it
+var fall_cam := Vector2() # the camera centre fall_pan was last taken at
 var clean := false # pictures (the HUD's achievement snapshots): no labels, bars, rings or popups
 var decor: Array = []
 var river_banks: Array = [] # per river: [left bank, right bank] polylines
@@ -380,6 +382,9 @@ func _process(delta: float) -> void:
 		fog_refresh = 0.1
 		_refresh_fog()
 	var vs := get_viewport_rect().size / cam.zoom.x
+	var cc := cam.get_screen_center_position()
+	fall_pan -= (cc - fall_cam) * cam.zoom.x # the land moved this many px on screen
+	fall_cam = cc
 	view = Rect2(cam.get_screen_center_position() - vs / 2, vs).grow(140)
 	_sync_items()
 	ground_fx.queue_redraw()
@@ -1102,29 +1107,54 @@ func _storm_flash() -> float:
 	if k < 0.34: return 0.55
 	return 0.1
 
-## Rain, snow and blizzards are drawn over the visible screen area only.
+## Rain, snow and blizzards fall in screen space over what is on screen: so many drops
+## per screen, the same size at any zoom. Each drop has its own hashed place, depth and
+## speed (never a lattice in i, which lined the flakes up into a diagonal streak whenever
+## the screen's shape matched its steps), and the near ones slide with the land as the
+## camera pans (`fall_pan`), so the weather is out there rather than on the glass.
 func _draw_weather() -> void:
 	var hz = sim.hz
 	if not hz.on(): return
 	var w: String = hz.weather
 	var snowing: bool = w == "blizzard" or (hz.winter() and w == "clear")
+	var scr := get_viewport_rect().size
+	var k := maxf(1.0, scr.y / 1080.0) # px per reference px: a hi-dpi screen gets the same look
+	var many := clampf(scr.x * scr.y / (k * k * 1920.0 * 1080.0), 0.4, 3.0) # drops per screen
 	if w in ["rain", "storm"]:
-		var slant := 3.0 + 10.0 * wind_k() # the rain leans with the gusts
-		for i in 220:
-			var x := view.position.x + fmod(i * 137.71 + t * 60.0, view.size.x)
-			var y := view.position.y + fmod(i * 91.37 + t * 620.0, view.size.y)
-			ci.draw_line(Vector2(x, y), Vector2(x - slant, y + 16), Color(0.75, 0.85, 1.0, 0.35), 1.2)
+		var wk := wind_k()
+		var v := Vector2(40.0 + 160.0 * wk, 760.0) * k # px/s: the rain leans with the gusts
+		var dir := v.normalized()
+		for i in int((340 if w == "storm" else 260) * many):
+			var d := 0.55 + 0.9 * _hash01(i, 3) # depth: near drops are longer, faster, brighter
+			var p := _fall_at(i, v * d, d, scr, 0.0)
+			ci.draw_line(p, p + dir * (18.0 * d * k) / cam.zoom.x, Color(0.75, 0.85, 1.0, 0.18 + 0.22 * d), 1.1 * d * k / cam.zoom.x)
 		if w == "storm":
 			var fl: float = _storm_flash()
 			if fl > 0.0: ci.draw_rect(view, Color(1, 1, 0.9, 0.35 * fl))
 	if snowing:
-		var n := 420 if w == "blizzard" else 140
-		var drift := 260.0 if w == "blizzard" else 25.0
-		for i in n:
-			var x := view.position.x + fmod(i * 137.71 + t * drift + sin(t + i) * 12.0, view.size.x)
-			var y := view.position.y + fmod(i * 91.37 + t * (140.0 if w == "blizzard" else 45.0), view.size.y)
-			ci.draw_circle(Vector2(x, y), 1.6 + fmod(i * 0.37, 1.6), Color(1, 1, 1, 0.75))
-		if w == "blizzard": ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+		var bliz := w == "blizzard"
+		var v := (Vector2(320.0, 170.0) if bliz else Vector2(14.0, 42.0)) * k
+		for i in int((600 if bliz else 320) * many):
+			var d := 0.55 + 0.9 * _hash01(i, 3)
+			var p := _fall_at(i, v * d * (0.8 + 0.4 * _hash01(i, 4)), d, scr, (10.0 if not bliz else 4.0) * d * k)
+			ci.draw_circle(p, (0.9 + 1.1 * _hash01(i, 5)) * d * k / cam.zoom.x, Color(1, 1, 1, 0.45 + 0.35 * d))
+		if bliz: ci.draw_rect(view, Color(0.9, 0.94, 1.0, 0.25))
+
+## A steady pseudo-random number in [0, 1) for drop `i` and channel `k`.
+func _hash01(i: int, k: int) -> float:
+	var x := sin(float(i) * 12.9898 + float(k) * 78.233) * 43758.5453
+	return x - floorf(x)
+
+## Where falling drop `i` is now, in canvas space: its hashed home on a wrap a little
+## larger than the screen, moved by its velocity `v` (screen px/s), a sideways sway of
+## `sway` px, and the camera's pan times its depth `d`.
+func _fall_at(i: int, v: Vector2, d: float, scr: Vector2, sway: float) -> Vector2:
+	var wrap := scr + Vector2(80, 80)
+	var x := _hash01(i, 1) * wrap.x + t * v.x + fall_pan.x * d
+	if sway > 0.0: x += sin(t * (0.7 + _hash01(i, 6)) + _hash01(i, 7) * TAU) * sway
+	var y := _hash01(i, 2) * wrap.y + t * v.y + fall_pan.y * d
+	var px := Vector2(fposmod(x, wrap.x), fposmod(y, wrap.y)) - Vector2(40, 40)
+	return cam.get_screen_center_position() + (px - scr / 2.0) / cam.zoom.x
 
 # ------------------------------------------------------------ ambient life
 ## Where firelight shows through a home's door (and an era-3 longhouse's windows), on the
