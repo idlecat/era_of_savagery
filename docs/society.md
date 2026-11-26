@@ -27,7 +27,7 @@ of their labour on food even in early towns. The model lets productivity climb f
                                                |
                          COVERAGE of each need: C = S / D (no units)
                                                |
-          five CHANNELS: mortality, labour, consumption, losses, contentment
+          six CHANNELS: mortality, growth, labour, consumption, losses, contentment
                                                |
           END STATE: people (born, dead, come, gone), output per head, standard
                                                |
@@ -43,7 +43,7 @@ Six ideas carry it:
    walk is the cost of distance, counted there and nowhere else (§2).
 3. **Every need has the same shape**, in its own unit: demand, supply, coverage, benefit
    (§4, with the unit table in §4.1).
-4. **Every effect goes through five channels**, each counted once (§5).
+4. **Every effect goes through six channels**, each counted once (§5).
 5. **Some demand grows faster than people** (§6): the cost of scale.
 6. **A level is a regime with one binding constraint** that the next level's methods
    relax (§7). Between levels the tribe meets a ceiling, not a timer.
@@ -107,10 +107,23 @@ and output per person-day = `rate × h`.
 - **culture**: a tradition's leaning, ×1.0-1.2 on one kind of work.
 - **land**: the natural capital drawn on, with diminishing returns (§3.2).
 
-**The productivity budget.** From band to town, food output per worker-day rises ~×3
-(§7). The sources share it: methods ×1.6-1.8, products ×1.3-1.5, skill ×1.2-1.3,
-techniques ×1.1, culture ×1.0-1.2, and the walk (h) what roads and granaries win back.
-Each source is capped at its share.
+**The productivity budget.** From band to town, food output per worker-day rises ×3
+(R 1.5 → 4.5, §7), so **the sources must multiply to 3**, not each be tuned on its own.
+The central allocation:
+
+| Source | Band → town | Note |
+|---|---|---|
+| methods | ×1.6 | fields, the plough, irrigation |
+| products | ×1.3 | stone then bronze tools at full coverage |
+| skill | ×1.2 | the typical food worker's level rising from ~2 to ~6 on the ×1.0 → ×1.4 curve |
+| techniques | ×1.05 | small, many |
+| culture | ×1.0 on average | a tradition is a *leaning* (×1.2 on one kind of work, nothing on the others), not a general gain |
+| the walk (h) | ×1.15 | walking from ~35% to ~25% of work time (§6) |
+| **product** | **×3.0** | |
+
+Each source is capped at its share; a config whose product drifts from ×3 is a
+config error the calculator reports. (Draft 3's ranges multiplied to ×2.7-4.6, ×3.6
+in the middle: too loose to tune by.)
 
 ### 3.1 Capital is not a need: its upkeep is charged to the need it serves
 
@@ -136,8 +149,13 @@ workshop each maker).
 
 ### 3.2 Land: why one farm feeds only so many
 
-- **The labour limit**: a worker makes F food a day (rate × h), so feeds
-  **R = F / (c × d)** people.
+- **The labour limit**: a worker makes F food a day (rate × h), enough for **F / c
+  mouths**. Since each worker comes with d mouths (themself and their share of the
+  dependants), one food worker carries **R = F / (c × d)** workers with their families.
+  R is the inverse of the food share: **food share of the hands = (1 + m) / R**, where m
+  is the margin for spoilage and the winter store (~0.05-0.1). The share table (§6) and
+  the R bands (§7) are the same numbers read two ways: R 1.5 → ~70%, 2 → ~53%,
+  3 → ~36%, 4.5 → ~24%.
 - **The land limit**: a source yields at most **Y** food a day however many work it (a
   bush regrows only so fast, a field holds only so much soil). The land within reach of a
   settlement holds at most **K = ΣY / c** people: its **carrying capacity**.
@@ -148,9 +166,10 @@ workshop each maker).
   until it is rested (fallow) or left. Bounded: a patch recovers when rested.
 
 **The farm.** How many people live on one field with one farmer has two numbers:
-`min(F, Y_field) / (c × d)`. With the design's numbers one farmer on one family plot
-feeds **R** people: ~2 at the camp level, ~3 in a village, ~4-5 in a town (§7). More
-hands on a field get closer to Y_field, at less each.
+`min(F, Y_field) / c` mouths, or R families' workers. With the design's numbers one
+farmer on one family plot (c = 3, d = 1.3) feeds ~2.6 mouths at the camp level (F ≈ 8),
+~3.9 in a village (F ≈ 12), ~5.9 in a town (F ≈ 18) (§7). More hands on a field get
+closer to Y_field, at less each.
 
 Today a field yields food on its own, worked or not (~3 people fed per field with no
 hands). In the model that goes: food is work on land, under both limits.
@@ -208,7 +227,7 @@ Nine needs, each with the same parts:
 | Need | Kind | Unit | Demand D | Supply S | Labour cost l | Channels |
 |---|---|---|---|---|---|---|
 | **Food** | flow, storable (C_now, C_horizon) | food / day | N × c × season × cooking (the cookhouse lowers c) | Σ food workers × rate × h, bounded by land (Y) | 1 / F, F = rate × h | mortality (starving), consumption (cooking), losses (spoilage: pots, granaries), contentment |
-| **Shelter** | stock | beds | N × (1 + margin) | Σ `cap` of homes standing | build + upkeep per bed | people (births need beds), health (crowding raises sickness incidence), contentment |
+| **Shelter** | stock | beds | N × (1 + margin) | Σ `cap` of homes standing | build + upkeep per bed | growth (births need beds), health (crowding raises sickness incidence), contentment |
 | **Warmth** | flow, seasonal | warm person-hours / day in the cold | N × hours of cold exposure × cloth (cloth lowers exposure) | warm places of fires and hearths × hours; fuel | wood per warm hour / wood rate | mortality (freezing), labour (the cold slows) |
 | **Health** | flow | care-days / day | cases (incidence × N, raised by density, hunger, cold) × care per case | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
 | **Safety** | stock against a pressure | defence strength (the same unit as a war band's strength) | max(vigilance, expected threat): the strength of the band likely to come over the horizon (`rivals.gd`'s threat query), and never below a vigilance floor per head | strength standing: guards on hand × arms × skill × walls (a multiplier), decaying (training lapses, walls age) | 1 / strength a person-day trains and keeps up | losses (raids), mortality |
@@ -244,19 +263,26 @@ The rules that keep the model from double counting:
 5. **Crowding is a link, not a double cost**: shelter's shortfall raises health's
    *demand* (incidence); it doesn't also hit mortality directly.
 
-## 5. The five channels and the end state
+## 5. The six channels and the end state
 
 | Channel | What it changes | Fed by |
 |---|---|---|
 | **Mortality** | deaths a day | food, warmth, health, safety |
+| **Growth** | births, families who leave, migrants who come | shelter (births need a bed), food (security: C_horizon), the standard (§10) |
 | **Labour** | hands (sick days, d) × how well they work (`work_mul`) | health, warmth, order, knowledge |
 | **Consumption** | food and goods used per head | food (cooking, spoilage) |
 | **Losses** | capital destroyed: raids, fires, strife, rot, a method forgotten | safety, order, knowledge, food (spoilage) |
 | **Contentment** | mood: the standard against what is wanted (§10) | food, shelter, order, comfort, spirit |
 
-The end state is three numbers: **people** (births, deaths, comers, leavers), **output
-per head** (the value of a person-day, at trade prices), and **the standard** (§10). The
-channels make needs comparable: their values are what the tribe weighs (§8).
+The end state is three numbers: **people** (moved by mortality and growth), **output
+per head** (the value of a person-day, at trade prices; moved by labour, consumption and
+losses), and **the standard** (§10; moved by contentment). The channels make needs
+comparable: their values are what the tribe weighs (§8).
+
+**Growth is a channel of its own** (draft 3 had five): beds gate births, food security
+and the standard set their pace, and none of those is a death, a loss of work or a mood.
+Without it, shelter's effect on the end state had nowhere to go but "contentment", and
+the birth response (§10) had no place in the allocation's values.
 
 ## 6. Scale: demand that grows faster than people
 
@@ -270,11 +296,24 @@ step with people).
 | Need | k | Why |
 |---|---|---|
 | Food, shelter, warmth, comfort, spirit | 0 | each mouth, bed, warm place the same |
-| Health | ~0.3 | incidence rises with density; a big settlement is denser |
-| Order | 0 below ~50; ~0.5 past it; formal institutions needed past ~150 | two thresholds (§13): below ~50 everyone knows everyone; 50-150 an elder or the Steward can keep it (an informal keeper); past ~150 only institutions (council, Code) keep it at a reasonable span |
+| Health | 0 on N; ~0.5 on **density** | incidence rises with residents per settled area, not with N itself. Density comes from the layout (and rises past the beds as crowding, §4.2), so a town that spreads out pays in the walk instead of in fevers. The calculator assumes settled area ∝ N^0.7 (density ∝ N^0.3) until the layout is measured |
+| Order | see below | the face-to-face limit |
 | Safety | ~0.3 on wealth | a richer tribe draws more raiders and coalitions |
 | Knowledge | ~0 on N | grows with methods held and learners, not with size itself |
-| (the walk, in h) | ~0.5 | radius ∝ √N: every trip lengthens |
+| (the walk, in h) | ~0.5 | radius ∝ √(settled area): every trip lengthens |
+
+**Order: one threshold on demand, one on supply.** The two thresholds of §13 are
+different things and sit on different sides:
+
+- **Demand** begins at the face-to-face limit N₀ ≈ 50 and grows faster than people past
+  it: `D_order = a × max(0, N - N₀) × (N / N₀)^k`, k ≈ 0.5. It is continuous at N₀ (no
+  jump in disputes when the 51st person is born).
+- **Supply** is keepers × span, and **span depends on the kind of keeper**: an
+  informal keeper (an elder, the Steward) keeps order among those who know them, so their
+  span shrinks past N₁ ≈ 150 (`span_informal × (N₁ / N)` above N₁); an institution (the
+  Council Ring, the Tribal Code) has a span that doesn't shrink. So past ~150 a tribe
+  without institutions needs ever more keepers for the same order: the village → town
+  step is a change of method on the supply side, as every level's step is.
 
 **Methods lower a (or lengthen span, or raise speed), never k.** The Code lets each
 keeper serve more; a wall makes each guard worth more; roads make each trip quicker. A
@@ -347,7 +386,11 @@ demand against a day's supply mixes windows):
 `D_alloc = D_today + max(0, D_horizon - stores - later supply) / productive days left`
 
 Today's eating plus the rate at which the stores must fill to carry the tribe to the next
-harvest. Anticipation lives in that **storage term**: it grows in late summer as the
+harvest. **With no productive days left** (in winter, before the next harvest window)
+the storage term is dropped: there is nothing left to fill the stores with, so
+`D_alloc = D_today` and the shortfall shows only as C_horizon's warning and, when it
+comes, C_now's famine. ("Productive days" are days on which the tribe's food sources
+yield above a small floor; the hunt, fishing and the pens keep a few in winter.) Anticipation lives in that **storage term**: it grows in late summer as the
 winter comes into the horizon, and the autumn rush follows. The hand's gain is
 `ΔB = B(min(1, C_alloc + s/D_alloc)) - B(C_alloc)` with its own s, so in winter a field
 (s = 0) gains nothing however short the stores are, and only the food sources that still
@@ -496,3 +539,8 @@ get measured against it.
 2. **The safety buffer for food**: how many days of eating ahead is "secure" (for the
    warning and for births)?
 3. **C_floor per need**: one value (0.6) for all at first, or per need from the start?
+4. **The value of growth** (the new channel, §5): is a birth worth something in itself
+   (a tribe that values numbers), or only through the hands it will become? This sets how
+   hard the Steward works for beds and food security against comfort.
+5. **The density assumption** (§6): settled area ∝ N^0.7 is a guess; the layout's real
+   growth (rings, then the grid) decides how much health costs a town.
