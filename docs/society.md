@@ -242,9 +242,9 @@ Nine needs, each with the same parts:
 | **Food** | flow, storable (C_now, C_horizon) | food / day | c × d × workers × season × cooking (the cookhouse lowers c; a child's mouth is 0.6 of c, folded into d, §2) | Σ food workers × rate × h, bounded by land (Y) | 1 / F, F = rate × h | mortality (starving), growth (births' food security: C_horizon), consumption (cooking), losses (spoilage: pots, granaries), contentment |
 | **Shelter** | stock | beds | N × (1 + margin) | Σ `cap` of homes standing | build + upkeep per bed | growth (births need beds), health (crowding raises sickness incidence), contentment |
 | **Warmth** | flow, seasonal | warm person-hours / day in the cold | N × hours of cold exposure × cloth (cloth lowers exposure) | warm places of fires and hearths × hours; fuel | wood per warm hour / wood rate | mortality (freezing), labour (the cold slows) |
-| **Health** | flow | care-days / day | cases (incidence × N, raised by density, hunger, cold) × care per case | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
+| **Health** | flow | care-days / day | cases (incidence × N, raised by density, crowding, hunger, cold) × care per case (a level's want, §6) | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
 | **Safety** | stock against a pressure | defence strength (the same unit as a war band's strength) | max(vigilance, expected threat): the strength of the band likely to come over the horizon (`rivals.gd`'s threat query), and never below a vigilance floor per head | strength standing: guards on hand × arms × skill × walls (a multiplier), decaying (training lapses, walls age) | 1 / strength a person-day trains and keeps up | losses (raids), mortality |
-| **Order** | flow | disputes / day | a × max(0, N - N₀) × (N / N₀)^k past the face-to-face limit (§6) | whole keepers × span — an informal keeper's span shrinks past N₁ ≈ 150, an institution's doesn't; the Code multiplies span (§6) | 1 / span | labour (waste), losses (strife), contentment |
+| **Order** | flow | disputes / day | coordination `a_c × N` (from the first Steward) + disputes `a × max(0, N - N₀) × (N / N₀)^k` past the face-to-face limit (§6) | whole keepers × span — an informal keeper's span shrinks past N₁ ≈ 150, an institution's doesn't; the Code multiplies span (§6) | 1 / span | labour (waste), losses (strife), contentment |
 | **Knowledge** | flow | teaching-days / day | learners (children, newcomers, new methods × people to learn them) × days to teach, plus keepers wanted per method | teachers × pupils each; codification ends the keepers' part | 1 / pupils per teacher-day | labour (the `known` factor), losses (a method lost) |
 | **Comfort** | flow (goods wear) | wanted goods / day | N × the level's wants × wear | makers × rate | 1 / F_maker | contentment |
 | **Spirit** | flow | rite-hours / day | N × the level's wants | shamans × congregation × temple | 1 / congregation per rite | contentment (and devotion) |
@@ -331,11 +331,24 @@ different things and sit on different sides:
   step is a change of method on the supply side, as every level's step is.
 
   Keepers are whole hands: the band has none (order is shared), and the first is the
-  Steward, whose one hand in ~38 workers is the camp's ~2% while the demand is still near
-  zero (the rest of his day advises and lays out — the allocation's own cost, not a
-  need's). The Council and the Code must multiply an informal keeper's span about ×1.4 to
-  hold the town near 9%; without institutions the order share passes 3× the village's by
-  N ≈ 300 and 8× by N ≈ 500 — the ceiling.
+  Steward, whose one hand in ~38 workers is the camp's ~2%. That hand is not outside the
+  needs (every hand belongs to one, §3.1): order's demand has a second, small term,
+  **coordination**, `a_c × N` from the first Steward on (laying out work and sites,
+  advising: the allocation's own running cost), beside the dispute term that starts at
+  N₀. At the camp coordination is all of order; past N₀ disputes take over. The Council
+  and the Code must multiply an informal keeper's span about ×1.4 to hold the town near
+  9%; without institutions the order share passes 3× the village's by N ≈ 300 and 8× by
+  N ≈ 500: the ceiling.
+
+**Why health's share still climbs ×9 when its incidence climbs ×1.6.** Health's hands go
+from ~1% to ~9% (the share table below) while per-head incidence rises only ~×1.6 with
+density. The rest is not scale but **care becoming possible and wanted**: a band has no
+healer's method (its sick rest and recover or die, coverage near 0, its cost paid in
+mortality), and **care per case** is a level's want like comfort's (a band expects rest
+by the fire, a town a healer's days). So health's demand is
+`incidence(density, crowding) × N × care_per_case(level)`, and care per case rises ~×5
+band → town. This keeps density mild, as the third review found, and puts health's climb
+where it belongs: in what the tribe has learned to do for its sick.
 
 **Methods lower a (or lengthen span, or raise speed), never k.** The Code lets each
 keeper serve more; a wall makes each guard worth more; roads make each trip quicker. A
@@ -367,7 +380,7 @@ its floor), and the next level's methods relax it.
 |---|---|---|---|---|
 | **Band** | wild food in reach (land, K) | walks grow, gatherers come back light, a lean season hungry | fields, fishing, stone tools | 1.3-1.6 |
 | **Camp** | the winter (stored food) and food hands | an autumn rush, empty stores by late winter | pottery, granaries, smoking, the bone needle | 1.8-2.2 |
-| **Village** | health and the walk, as density and spread grow | fevers in the crowd, fields far out, the day spent walking | healers and medicine, oxen and the plough, roads, the cookhouse | 2.8-3.5 |
+| **Village** | the walk, as the worked land spreads; health where the beds lag | fields far out, the day spent walking; fevers once crowding sets in | healers and medicine, oxen and the plough, roads, the cookhouse | 2.8-3.5 |
 | **Town** | order (past ~150) and safety | waste, strife, raids on a rich town | the Council and the Code, walls, bronze, the warehouse, trade | 4-5 |
 | **City** | (beyond the first cut) | | | |
 
@@ -392,8 +405,8 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
 - **The channel values** are what the tribe values: lives first, then output,
   contentment... The Council's policies set them (a war footing weighs losses and
   mortality from raids; a feasting tribe weighs contentment).
-- The next hand goes to the greatest weight. Concave B spreads hands across needs, and a
-  shortfall pulls in proportion to how bad it is.
+- The next hand goes to the greatest weight, recomputed after each hand (below). Concave
+  B spreads hands across needs, and a shortfall pulls in proportion to how bad it is.
 - **Payback**: a trade (a need's worker whose output is a multiplier, such as a
   toolmaker) is worth having when its hands free more hands elsewhere than it takes. The
   design band: **1.5-3×** at the trade's typical skill. Below 1 the trade loses hands;
@@ -423,10 +436,37 @@ nothing, however short the stores. The four behaviours the design asks for:
   today gain — the hunt, the fishing, the pens, never the idle fields.
 
 C_now still drives food's channels and famine; C_horizon the births and the horizon
-term's pull. The horizon's expected supply (inside C_horizon) is what the allocation
-itself will send: the calculator solves that fixed point with the year, the live game
-reads its standing plan. There is no storage term, no "productive days left", and no
-case that divides by zero.
+term's pull. There is no storage term, no "productive days left", and no case that
+divides by zero.
+
+**Each window carries its own channels, so food is not counted twice.** Summing two ΔB
+terms under one V_food would weigh food double against every other need whenever both
+windows are short (a famine in autumn). So V splits by window: the **now** term carries
+the channels a shortfall today acts through (mortality from starving, contentment); the
+**horizon** term carries what a shortfall ahead acts through (growth: births' food
+security, and the winter's mortality, discounted by how far off it is: `δ^(days ahead)`,
+δ fitted). `weight_food = N × (V_now × ΔB_now + V_horizon × ΔB_horizon)`, and each
+channel's value is used once.
+
+**The expected supply inside C_horizon is a persistence forecast**: the food hands
+assigned now, held at their current sources to the horizon, with each source's seasonal
+yield applied (fields 0 in winter). The calculator and the game both use it, so neither
+needs to know its own future plan; the calculator's periodic year then checks that the
+forecast and the year it actually runs agree.
+
+**s_horizon in the first cut equals s_now.** Every food source pays as it is worked
+(fields yield per worked second, times the season), so a hand's horizon credit is the
+food it brings in today, and a field in winter gets nothing. A **crop cycle** (sow in
+spring, tend in summer, harvest in autumn, the labour credited at the harvest) is what
+s_horizon's delayed payoff is for; it is open (§13), not part of the first cut.
+
+**The next hand goes to the greatest weight, recomputed after each hand.** Not a random
+pick in proportion to the weights (today's Steward): a proportional pick never equalizes
+the hands' marginal gains, so it settles at different shares than the model's and the
+calculator would predict a different society than the game plays. Spread comes from B's
+concavity and the recompute (each hand lowers its need's ΔB before the next is placed),
+not from chance; ties break by the nearest work. The calculator and the game use the
+same rule.
 
 > **pi:** your dropped-when-empty storage term fixed the arithmetic but not the
 > behaviour. With the term dropped in deep winter, C_alloc fell back on the bare daily
@@ -583,7 +623,8 @@ get measured against it.
 - **Food's allocation weight is the sum of its two windows** (§8): a C_now term and a
   C_horizon term, each pairing its own demand with its own supply. This replaces the
   second review's `D_alloc` (see §8's pi note). **s_horizon** — a hand's horizon credit,
-  including delayed payoffs like spring sowing — is what gets the fields planted.
+  including delayed payoffs like spring sowing — is what would get the fields planted
+  under a crop cycle (open; in the first cut s_horizon = s_now, below).
 - **d is adult-equivalent mouths per worker** (a child 0.6 of c): food's demand is
   c × d × workers, not N × c, and the worker count is counted directly (§2, §4.1).
 - **Order's supply is quantized and two-kinded** (§6): keepers are whole hands (the
@@ -598,6 +639,17 @@ get measured against it.
   radius (∝ √N), trips inside the settlement with the built area's (∝ N^0.35 under the
   density assumption); the walk's k ≈ 0.5 is the land term, and a town that spreads out
   trades fevers for walking.
+- **Food's two windows carry separate channels** (claude, r2): the now term mortality
+  and contentment, the horizon term growth and the winter's mortality discounted by δ,
+  so food is never weighed twice; the horizon's expected supply is a persistence
+  forecast; s_horizon = s_now until a crop cycle exists.
+- **The allocation takes the greatest weight, recomputed after each hand**, in the
+  calculator and the game alike (a proportional random pick settles at other shares).
+- **Order's demand has a coordination term** from the first Steward, so the camp's one
+  keeper belongs to a need.
+- **Health's climb is care becoming possible and wanted** (care per case a level's want,
+  ~×5 band → town), density only ~×1.6; the village binds on the walk, and on health
+  where the beds lag (answers the open question on health's share).
 
 **Still open:**
 
@@ -609,7 +661,8 @@ get measured against it.
 3. **C_floor per need**: one value (0.6) for all at first, or per need from the start?
 4. **The density assumption** (§6): settled area ∝ N^0.7 is a guess; the layout's real
    growth (rings, then the grid) decides how much health costs a town.
-5. **Health's share of the village's ceiling** (§7): with density-law health (per-head
-   incidence ∝ N^0.15), is the village's binding constraint still "health and the walk",
-   or the walk alone unless the beds lag (crowding)? The calculator's per-season report
-   answers it.
+5. **A crop cycle** (§8): sow in spring, tend in summer, harvest in autumn, with the
+   labour credited at the harvest through s_horizon. It would make the harvest a labour
+   peak and sowing a real decision; the first cut has fields pay as worked. Worth it?
+6. **The horizon's discount δ** (§8): how much less a winter death weighs than one
+   today, when the allocation trades stores against now.
