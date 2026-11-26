@@ -812,8 +812,8 @@ func _sync_lights() -> void:
 			lights[key] = l
 		var tl: PointLight2D = lights[key]
 		tl.position = iso(u.pos) - Vector2(0, 30)
-		tl.texture_scale = 140.0 / 256.0
-		tl.energy = 0.9 * (1.0 + 0.1 * sin(t * 13 + u.id))
+		tl.texture_scale = 110.0 / 256.0
+		tl.energy = 0.25 * sim.night_amt * (1.0 + 0.1 * sin(t * 13 + u.id)) # (a small flame: well under a bonfire's pool)
 	for id in lights.keys():
 		if not alive.has(id):
 			lights[id].queue_free()
@@ -891,7 +891,7 @@ func draw_glow() -> void:
 			"smelter": r = 38.0
 		if r > 0: _halo(iso(st.pos) - Vector2(0, 10), r, (0.1 + 0.16 * night) * (1.0 + 0.1 * sin(t * 9 + st.id)))
 	for u in sim.units:
-		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 26.0, 0.35 + 0.3 * night)
+		if _has_torch(u) and _in_view(u.pos): _halo(iso(u.pos) - Vector2(0, 30), 18.0, 0.06 + 0.1 * night)
 	_draw_fireflies()
 	_draw_hearths()
 
