@@ -4,7 +4,8 @@ Draft 4, 2026-11-25. A model to get right before any code. Draft 1 (`economy.md`
 modelled the food economy; draft 2 made food one case of a general model; draft 3 fixed
 its units and double counting; draft 4 closes the traps a second review found (two food
 coverages, labour cost in person-days, safety as a stock against a pressure, what N
-counts) (§13).
+counts) (§13); the calculator round (a third review) fixed what that left broken: the
+winter allocation weight, d's units, order's supply and the walk's two distances.
 
 The question: as the tribe learns, fewer hands are needed for food, and the freed hands
 make the tribe richer, healthier, safer, better kept. How much richer, at what cost, and
@@ -58,7 +59,10 @@ Six ideas carry it:
 - **Consumption**: a grown-up eats **c ≈ 3 food a day** (hunger 0.33/s, 3 food per 30
   hunger, a 90 s day), ×1.25 in winter; a child 0.6 of that. ~25 food a year (8 days).
 - **Dependants**: children, the sick and the badly hurt eat and don't work. **d** =
-  N / workers (~1.2-1.4 in a growing tribe). Health and safety move d.
+  adult-equivalent mouths per worker — (grown-ups + 0.6 × children) / workers — ~1.2-1.4
+  in a growing tribe (a child's mouth is 0.6, so d sits a little under people-per-worker).
+  Health and safety move d. Workers are counted directly (above); d is for eating —
+  food's demand, R and the stores (§3.2, §4.1) — never for the worker count.
 - **The time budget of a working day** (seconds of a 90 s day):
 
   `H_awake = 90 - rest` (~70) → `H_work = H_awake - meals - life` (~55) → `h = H_work - walk`
@@ -68,7 +72,8 @@ Six ideas carry it:
   (or a longer working day: lamps for indoor work). Today the walk is 58-65% of working
   time (measured): h ≈ 20-25 s.
 - **The walk** = trips × distance / speed. Distance grows with the settlement's spread
-  (radius ∝ √ of its built area, so ∝ √N) and with how far out the work is (the nearest
+  (radius ∝ √ of its built area, ∝ N^0.35 under §6's density assumption) and with how far
+  out the work is: the worked land grows with people, so its radius ∝ √N (the nearest
   land is worked first). Roads (speed), oxen and carrying frames (load, so fewer trips),
   granaries by the fields and workshops at home (distance) shorten it. **Transport is
   not a need**: it is the walk term of every kind of work, and its methods raise h.
@@ -115,15 +120,20 @@ The central allocation:
 |---|---|---|
 | methods | ×1.6 | fields, the plough, irrigation |
 | products | ×1.3 | stone then bronze tools at full coverage |
-| skill | ×1.2 | the typical food worker's level rising from ~2 to ~6 on the ×1.0 → ×1.4 curve |
+| skill | ×1.2 | the typical food hand's factor rising ~×1.08 → ~×1.28: a band generalist to a town hand at its trade (specialists sit higher still) |
 | techniques | ×1.05 | small, many |
 | culture | ×1.0 on average | a tradition is a *leaning* (×1.2 on one kind of work, nothing on the others), not a general gain |
 | the walk (h) | ×1.15 | walking from ~35% to ~25% of work time (§6) |
 | **product** | **×3.0** | |
 
-Each source is capped at its share; a config whose product drifts from ×3 is a
-config error the calculator reports. (Draft 3's ranges multiplied to ×2.7-4.6, ×3.6
-in the middle: too loose to tune by.)
+Each source is capped at its share; a config whose product drifts from ×3 by more
+than ±0.3 is a config error the calculator reports. (Draft 3's ranges multiplied to
+×2.7-4.6, ×3.6 in the middle: too loose to tune by.)
+
+**known and land are not sources of the climb.** The budget assumes known = 1 (the
+level's food hands know its methods) and the land factor held constant, not depleted.
+Both are ways to *lose* the climb — an unknown method works at 0.5, tired land at less —
+and the calculator reports them as shortfalls, never as productivity.
 
 ### 3.1 Capital is not a need: its upkeep is charged to the need it serves
 
@@ -139,7 +149,8 @@ up.
 
 **Tools that make tools.** Toolmakers use tools too, so the tool economy is a fixed
 point: more tools → faster toolmaking → more tools. It is bounded because the products
-factor is capped (×1.5 at most) and one maker supplies many users (payback > 1, §8);
+factor is capped at its budget share (×1.3 for farm tools at full coverage) and one
+maker supplies many users (payback > 1, §8);
 the calculator solves it by iteration.
 
 **A building is one of two things, never both**: the **capacity** of a stock need (beds
@@ -166,9 +177,10 @@ workshop each maker).
   until it is rested (fallow) or left. Bounded: a patch recovers when rested.
 
 **The farm.** How many people live on one field with one farmer has two numbers:
-`min(F, Y_field) / c` mouths, or R families' workers. With the design's numbers one
-farmer on one family plot (c = 3, d = 1.3) feeds ~2.6 mouths at the camp level (F ≈ 8),
-~3.9 in a village (F ≈ 12), ~5.9 in a town (F ≈ 18) (§7). More hands on a field get
+`min(F, Y_field) / c` mouths, or R families' workers. With the design's numbers
+(c = 3, d ≈ 1.25) one farmer on one family plot feeds ~2.6 mouths at the camp level
+(F ≈ 8; R ≈ 2.1), ~3.9 in a village (F ≈ 12; R ≈ 3.2), ~5.9 in a town (F ≈ 18; R ≈ 4.8),
+mouths counted with the farmer's own family among them (§7). More hands on a field get
 closer to Y_field, at less each.
 
 Today a field yields food on its own, worked or not (~3 people fed per field with no
@@ -195,16 +207,17 @@ Nine needs, each with the same parts:
    the people it serves a day (`span`, patients, pupils, congregation); for a stock, it is
    the units a person-day builds and keeps up. A flow's S is per day, so **hands for a need
    = S × l** is in person-days per day = workers; a stock's hands are its upkeep and growth
-   (§3.1) × l. Summed over needs, the hands are N / d: the 100% of the share table. This is
-   the one conversion between a need's unit and person-days, and h lives only inside it.
+   (§3.1) × l. Summed over needs, the hands are the workers of §2 — the 100% of the share
+   table (d is mouths for eating, not the worker count). This is the one conversion
+   between a need's unit and person-days, and h lives only inside it.
 5. **Coverage C = S / D**, a pure number. Above 1 is surplus, with no further gain.
    **A storable need has two coverages**:
    - **C_now** = `(stores + S_today) / D_today`: what is there to eat now. It drives the
      channels (mortality, contentment) and the hardship (famine).
    - **C_horizon** = `(stores + expected supply over the horizon) / demand over the
      horizon`: what is there to eat until the next harvest. It is an **anticipation signal
-     only**: it sets the storage term of food's allocation demand (§8) and the food
-     security that births need (§10). The horizon rolls: from now to the start of the next harvest window,
+     only**: it drives no channel and no hardship — it enters food's allocation weight as
+     the horizon window's term (§8) and sets the food security that births need (§10). The horizon rolls: from now to the start of the next harvest window,
      clamped to half a year (4 days). So C_horizon falls in late summer when the winter
      comes into it, and the autumn push starts before the cold. A fixed window would miss
      an early frost or over-react in spring.
@@ -226,12 +239,12 @@ Nine needs, each with the same parts:
 
 | Need | Kind | Unit | Demand D | Supply S | Labour cost l | Channels |
 |---|---|---|---|---|---|---|
-| **Food** | flow, storable (C_now, C_horizon) | food / day | N × c × season × cooking (the cookhouse lowers c) | Σ food workers × rate × h, bounded by land (Y) | 1 / F, F = rate × h | mortality (starving), consumption (cooking), losses (spoilage: pots, granaries), contentment |
+| **Food** | flow, storable (C_now, C_horizon) | food / day | c × d × workers × season × cooking (the cookhouse lowers c; a child's mouth is 0.6 of c, folded into d, §2) | Σ food workers × rate × h, bounded by land (Y) | 1 / F, F = rate × h | mortality (starving), growth (births' food security: C_horizon), consumption (cooking), losses (spoilage: pots, granaries), contentment |
 | **Shelter** | stock | beds | N × (1 + margin) | Σ `cap` of homes standing | build + upkeep per bed | growth (births need beds), health (crowding raises sickness incidence), contentment |
 | **Warmth** | flow, seasonal | warm person-hours / day in the cold | N × hours of cold exposure × cloth (cloth lowers exposure) | warm places of fires and hearths × hours; fuel | wood per warm hour / wood rate | mortality (freezing), labour (the cold slows) |
 | **Health** | flow | care-days / day | cases (incidence × N, raised by density, hunger, cold) × care per case | healers × patients per healer-day × medicine | 1 / patients per healer-day | mortality, labour (sick days, and d) |
 | **Safety** | stock against a pressure | defence strength (the same unit as a war band's strength) | max(vigilance, expected threat): the strength of the band likely to come over the horizon (`rivals.gd`'s threat query), and never below a vigilance floor per head | strength standing: guards on hand × arms × skill × walls (a multiplier), decaying (training lapses, walls age) | 1 / strength a person-day trains and keeps up | losses (raids), mortality |
-| **Order** | flow | disputes / day | a × N × (N / N₀)^k beyond the face-to-face band (§6) | keepers × span (the Steward, council, chiefs; the Code multiplies span) | 1 / span | labour (waste), losses (strife), contentment |
+| **Order** | flow | disputes / day | a × max(0, N - N₀) × (N / N₀)^k past the face-to-face limit (§6) | whole keepers × span — an informal keeper's span shrinks past N₁ ≈ 150, an institution's doesn't; the Code multiplies span (§6) | 1 / span | labour (waste), losses (strife), contentment |
 | **Knowledge** | flow | teaching-days / day | learners (children, newcomers, new methods × people to learn them) × days to teach, plus keepers wanted per method | teachers × pupils each; codification ends the keepers' part | 1 / pupils per teacher-day | labour (the `known` factor), losses (a method lost) |
 | **Comfort** | flow (goods wear) | wanted goods / day | N × the level's wants × wear | makers × rate | 1 / F_maker | contentment |
 | **Spirit** | flow | rite-hours / day | N × the level's wants | shamans × congregation × temple | 1 / congregation per rite | contentment (and devotion) |
@@ -291,16 +304,18 @@ Each need's demand per head can rise with size:
 `D(N) = a × N × (N / N₀)^k`
 
 **a**: the need per head at the reference size N₀; **k**: its scale exponent (0 = in
-step with people).
+step with people). Three rows swap N for what the need really scales on — order: people
+past the face-to-face limit; health: density; safety: wealth — but the shape
+a × X × (X / X₀)^k is the same.
 
 | Need | k | Why |
 |---|---|---|
 | Food, shelter, warmth, comfort, spirit | 0 | each mouth, bed, warm place the same |
-| Health | 0 on N; ~0.5 on **density** | incidence rises with residents per settled area, not with N itself. Density comes from the layout (and rises past the beds as crowding, §4.2), so a town that spreads out pays in the walk instead of in fevers. The calculator assumes settled area ∝ N^0.7 (density ∝ N^0.3) until the layout is measured |
+| Health | 0 on N; ~0.5 on **density** | incidence rises with residents per settled area, not with N itself. Density comes from the layout (and rises past the beds as crowding, §4.2), so a town that spreads out pays in the walk instead of in fevers. The calculator assumes settled area ∝ N^0.7 (density ∝ N^0.3) until the layout is measured. Composed: per-head incidence ∝ density^0.5 ∝ N^0.15 — only ~×1.6 from band to town, so health's cost of scale is mild while the beds keep up (crowding, §4.2, is what makes a village feverish) and the walk carries the rest |
 | Order | see below | the face-to-face limit |
 | Safety | ~0.3 on wealth | a richer tribe draws more raiders and coalitions |
 | Knowledge | ~0 on N | grows with methods held and learners, not with size itself |
-| (the walk, in h) | ~0.5 | radius ∝ √(settled area): every trip lengthens |
+| (the walk, in h) | ~0.5 | the trip to work lengthens with the worked land's radius (∝ √N: each person needs constant land); trips inside the settlement grow slower, ∝ √(built area) ≈ N^0.35 under the assumption above |
 
 **Order: one threshold on demand, one on supply.** The two thresholds of §13 are
 different things and sit on different sides:
@@ -314,6 +329,13 @@ different things and sit on different sides:
   Council Ring, the Tribal Code) has a span that doesn't shrink. So past ~150 a tribe
   without institutions needs ever more keepers for the same order: the village → town
   step is a change of method on the supply side, as every level's step is.
+
+  Keepers are whole hands: the band has none (order is shared), and the first is the
+  Steward, whose one hand in ~38 workers is the camp's ~2% while the demand is still near
+  zero (the rest of his day advises and lays out — the allocation's own cost, not a
+  need's). The Council and the Code must multiply an informal keeper's span about ×1.4 to
+  hold the town near 9%; without institutions the order share passes 3× the village's by
+  N ≈ 300 and 8× by N ≈ 500 — the ceiling.
 
 **Methods lower a (or lengthen span, or raise speed), never k.** The Code lets each
 keeper serve more; a wall makes each guard worth more; roads make each trip quicker. A
@@ -362,7 +384,7 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
 - **Its gain is the actual rise in benefit**, not the slope:
   `ΔB = B(min(1, C + s/D)) - B(C)`, which is bounded by `1 - B(C)` (a tiny need can't
   pull more than what it lacks) and is **0 once C ≥ 1** (no negative weights, no
-  over-investing).
+  over-investing). Food sums two such terms, one per window (below).
 - **Its worth scales with the people it affects**:
   `weight = V_need × N_affected × ΔB`, where V_need is the sum of the values of the
   channels the need feeds (per person). A need of 5 people weighs as 5 people's, so a
@@ -377,26 +399,44 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
   design band: **1.5-3×** at the trade's typical skill. Below 1 the trade loses hands;
   far above 3 one maker carries the town.
 
-**Which coverage the allocation reads.** Every weight is per day, so every need's ΔB is
-reckoned on a daily supply against a daily demand. For food that is a **flow coverage**,
-not C_now (the stores would hold it at 1 until they ran out) and not C_horizon (a horizon's
-demand against a day's supply mixes windows):
+**Which windows the allocation reads.** Every weight is per day, and every need but food
+has one window: today. Food has two (§4), and its weight is the **sum over its windows**,
+each window pairing its own demand with its own supply — no window's demand is ever set
+against another window's supply:
 
-`C_alloc = S_today / D_alloc`, with
-`D_alloc = D_today + max(0, D_horizon - stores - later supply) / productive days left`
+`ΔB_food = [B(min(1, C_now + s_now/D_today)) - B(C_now)] + [B(min(1, C_horizon + s_horizon/D_horizon)) - B(C_horizon)]`
 
-Today's eating plus the rate at which the stores must fill to carry the tribe to the next
-harvest. **With no productive days left** (in winter, before the next harvest window)
-the storage term is dropped: there is nothing left to fill the stores with, so
-`D_alloc = D_today` and the shortfall shows only as C_horizon's warning and, when it
-comes, C_now's famine. ("Productive days" are days on which the tribe's food sources
-yield above a small floor; the hunt, fishing and the pens keep a few in winter.) Anticipation lives in that **storage term**: it grows in late summer as the
-winter comes into the horizon, and the autumn rush follows. The hand's gain is
-`ΔB = B(min(1, C_alloc + s/D_alloc)) - B(C_alloc)` with its own s, so in winter a field
-(s = 0) gains nothing however short the stores are, and only the food sources that still
-yield (fishing, the hunt, the pens) draw hands. A low winter C_horizon never inflates a
-weight or tilts food against the other needs' daily weights. C_now still drives food's
-channels and famine; C_horizon the storage term and births.
+**s_now** is what one more hand yields today (its rate × h). **s_horizon** is what
+assigning it there adds to the horizon's supply: the same food for a source that yields
+now (the harvest, the hunt), and the delayed payoff for work that pays later — a field
+sown in spring is credited with its harvest when it comes, a field in winter with
+nothing, however short the stores. The four behaviours the design asks for:
+
+- **A healthy winter**: both coverages ≥ 1, ΔB = 0, and the hands flow indoors (the
+  winter workshop, §12) even though the flow S_today < D_today *by design* — the stores
+  are for that gap, and a planned draw-down is not a shortfall.
+- **The autumn rush**: C_now ≈ 1 while C_horizon falls as the winter comes into the
+  horizon — the horizon term pulls hands to whatever will fill the stores, hardest where
+  B is steepest (short coverage).
+- **Famine**: C_now < 1 — the now term pulls every source that yields.
+- **Short stores in winter**: only the horizon term is live, and only sources yielding
+  today gain — the hunt, the fishing, the pens, never the idle fields.
+
+C_now still drives food's channels and famine; C_horizon the births and the horizon
+term's pull. The horizon's expected supply (inside C_horizon) is what the allocation
+itself will send: the calculator solves that fixed point with the year, the live game
+reads its standing plan. There is no storage term, no "productive days left", and no
+case that divides by zero.
+
+> **pi:** your dropped-when-empty storage term fixed the arithmetic but not the
+> behaviour. With the term dropped in deep winter, C_alloc fell back on the bare daily
+> flow — and the flow is below eating all winter by design, so every yielding source
+> kept its full pull (only its land cap Y stopped it): a tribe with full granaries still
+> fished to its cap instead of working indoors. Worse, a hand's s was its *today's*
+> yield, so no rule of this shape can credit spring sowing — the calculator would never
+> plant. The two-window sum says the intent directly: no pull when both windows are
+> covered, pull in proportion to the horizon gap, s_horizon for the delayed payoff. If
+> you want D_alloc back, it needs an answer for sowing.
 
 **Seasons move the allocation through s and D.** With the fields idle in winter, the
 hands flow to what yields indoors (tools, cloth, teaching, rites). C_horizon falls in late
@@ -430,7 +470,9 @@ living as a camp lived is unhappy. Rising wants are what keep freed hands busy.
 **People respond to the standard, moderately**: births above subsistence, departures below
 a floor, migrants when above the neighbours'; births also need beds and food security
 (look-ahead food coverage). A moderate response lets the tribe enjoy stretches of
-stability and accumulation instead of bouncing off famine and epidemic ceilings.
+stability and accumulation instead of bouncing off famine and epidemic ceilings. The
+growth channel's value is fitted to the same shape: births clear deaths by a little
+while the ceiling is far, and sit level with them at it (§13).
 
 **Ownership**: one communal store in the first cut; households keeping part of their
 trade's output (a ranked culture: an incentive, and inequality as a cost on order) later.
@@ -458,7 +500,8 @@ Without a rule of their own:
 
 | Parameter | What it sets | Proposed |
 |---|---|---|
-| c, d | food a day, dependants | 3, 1.3 |
+| c, child eating, d | food a day (grown-up; child 0.6 of c); adult-equivalent mouths per worker | 3; 0.6; d ≈ 1.25 (children ~25%) |
+| m, the food margin | spoilage and the store's buffer: the R ↔ share conversion (§3.2) | 0.06 to start (0.05-0.1) |
 | the time budget: rest, meals, life; trips, distance, speed | h | from the day's parts; the walk from geometry |
 | base(method) per kind of work, per level | the steps | from each level's R band |
 | productivity budget shares | each source's part of the climb | §3 |
@@ -466,6 +509,7 @@ Without a rule of their own:
 | skill curve | the specialist's edge | ×1.0 → ×1.4 |
 | Y and regrowth per source; depletion and rest | carrying capacity | foraging K ~30-40 per band's reach |
 | a, k, N₀ per need | need per head; cost of scale; thresholds | §6 |
+| order supply: spans, N₁, the Code's multiplier | order's supply side (§6) | N₁ = 150; the Code ×~1.4; spans fitted to the 2% / 5% / 9% of the share table |
 | l per need, per level | labour cost of a unit (methods lower it) | from the share table |
 | B(C), C_floor per need | concavity; where hardships start | `1 - (1 - C)²`; C_floor ≈ 0.6 |
 | food horizon, food safety buffer | anticipation; when food is "secure" | to the next harvest window, ≤ 4 days; buffer to be set |
@@ -477,7 +521,8 @@ Without a rule of their own:
 | payback band | what a multiplying trade must earn | 1.5-3× |
 
 **The calculator comes first**: a small script that takes this table and, for each level
-and size (Band 20, Camp 50, Village 150, Town 500), solves a **periodic steady state over
+and size (Band 20, Camp 50, Village 150, Town 500 — children ~25% at each, which sets d),
+solves a **periodic steady state over
 the year**: it runs the 8-day year season by season (each season's yields, hunger and
 cold; the allocation of §8 within it; the tool fixed point of §3.1; the stores carried from
 one season to the next) and repeats the year until it comes round the same (the stores
@@ -490,7 +535,9 @@ at the start of spring equal those of the year before). It prints:
 - **active-season R**: R in spring and summer alone, to check each food method's rate;
 - where the ceiling is: the size at which a need's coverage falls to its floor.
 
-The share table (§6) is its first test. Only once its numbers look right does the game
+The share table (§6) is its first test. Growth is the game's channel, not the
+calculator's: every solve holds N fixed, and the growth value fitted in §13 is checked
+in play. Only once its numbers look right does the game
 get measured against it.
 
 ## 13. Settled, and still open
@@ -517,7 +564,7 @@ get measured against it.
 - **Food has two coverages and an allocation demand**: C_now for the channels and famine,
   C_horizon for anticipation (births' food security, and the storage term of food's
   allocation demand); the allocation reads a daily flow coverage S_today / D_alloc like
-  every other need (§4, §8).
+  every other need (§4, §8). (Superseded by the third review's two-window sum, §8.)
 - **The calculator solves a periodic year**, season by season with stores carried over,
   and reports year-averaged and per-season shares and active-season R (§12).
 - **The horizon rolls** to the next harvest window, clamped to half a year (§4).
@@ -531,6 +578,27 @@ get measured against it.
   labour, losses > contentment, wants from 1.0 at the band rising by level, and fitted so
   that at each level's size comfort + spirit land near the share table's 4% → 27% (§6).
 
+**Settled by the third review (the calculator round):**
+
+- **Food's allocation weight is the sum of its two windows** (§8): a C_now term and a
+  C_horizon term, each pairing its own demand with its own supply. This replaces the
+  second review's `D_alloc` (see §8's pi note). **s_horizon** — a hand's horizon credit,
+  including delayed payoffs like spring sowing — is what gets the fields planted.
+- **d is adult-equivalent mouths per worker** (a child 0.6 of c): food's demand is
+  c × d × workers, not N × c, and the worker count is counted directly (§2, §4.1).
+- **Order's supply is quantized and two-kinded** (§6): keepers are whole hands (the
+  camp's 2% is the Steward), an informal keeper's span shrinks past N₁ ≈ 150, an
+  institution's doesn't, and the Code's multiplier (~×1.4) holds the town near 9%.
+  Without institutions the order share passes 3× the village's by N ≈ 300: the ceiling.
+- **The value of growth is fitted, not derived** — the open question that stood here,
+  now closed: births clear deaths by a little while the ceiling is far and sit level
+  with them at it, so the tribe pauses at a ceiling instead of crashing into it; a
+  culture that values numbers raises it, a leaning like §3's culture factor.
+- **The walk has two distances** (§2, §6): the trip to work grows with the worked land's
+  radius (∝ √N), trips inside the settlement with the built area's (∝ N^0.35 under the
+  density assumption); the walk's k ≈ 0.5 is the land term, and a town that spreads out
+  trades fevers for walking.
+
 **Still open:**
 
 1. **The fitted values**: the channel values and the wants per level that the calculator
@@ -539,8 +607,9 @@ get measured against it.
 2. **The safety buffer for food**: how many days of eating ahead is "secure" (for the
    warning and for births)?
 3. **C_floor per need**: one value (0.6) for all at first, or per need from the start?
-4. **The value of growth** (the new channel, §5): is a birth worth something in itself
-   (a tribe that values numbers), or only through the hands it will become? This sets how
-   hard the Steward works for beds and food security against comfort.
-5. **The density assumption** (§6): settled area ∝ N^0.7 is a guess; the layout's real
+4. **The density assumption** (§6): settled area ∝ N^0.7 is a guess; the layout's real
    growth (rings, then the grid) decides how much health costs a town.
+5. **Health's share of the village's ceiling** (§7): with density-law health (per-head
+   incidence ∝ N^0.15), is the village's binding constraint still "health and the walk",
+   or the walk alone unless the beds lag (crowding)? The calculator's per-season report
+   answers it.
