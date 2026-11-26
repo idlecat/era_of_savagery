@@ -487,6 +487,23 @@
    "step": 10
   }
  },
+ "work_groups": {
+  "_doc": "How the tribe list groups the people at home by what they work at (hud roster, sim.work_group()). A job is matched as type:resource for gathering, then by its type; the first group listing it wins. Jobs in 'set_aside' (a meal, an idle act, warming up, a glance round) and pastimes taken up idly don't count: the work set aside for them does. Anyone left over is in 'idle'.",
+  "set_aside": ["life", "meal", "warm", "shelter", "look", "startle"],
+  "groups": [
+   {"id": "food", "name": "Food", "color": "#b6e07a", "jobs": ["gather:food", "field", "tend"]},
+   {"id": "wood", "name": "Wood", "color": "#d9a066", "jobs": ["gather:wood"]},
+   {"id": "stone", "name": "Stone", "color": "#b8c0c8", "jobs": ["gather:stone", "gather:copper", "gather:tin"]},
+   {"id": "build", "name": "Building", "color": "#e8c07a", "jobs": ["build"]},
+   {"id": "health", "name": "Healing", "color": "#8fe0b0", "jobs": ["gather:herbs", "aid", "bury"]},
+   {"id": "safety", "name": "Defence", "color": "#ff9a8a", "jobs": ["attack", "firefight", "cover"]},
+   {"id": "lore", "name": "Lore", "color": "#a8b8ff", "jobs": ["experiment", "seek"]},
+   {"id": "spirit", "name": "Crafts & rites", "color": "#e0a8f0", "jobs": ["art", "ritual"]},
+   {"id": "trade", "name": "Trade", "color": "#ffd36b", "jobs": ["trade_trip", "envoy"]},
+   {"id": "other", "name": "Other errands", "color": "#c8bca0", "jobs": ["move", "depart", "explore"]}
+  ],
+  "idle": {"id": "idle", "name": "Idle", "color": "#8a8a80"}
+ },
  "contracts": {
   "_doc": "Task Contracts. settle_room: no new outpost while one of ours has this many beds or more to spare (contracts.settle_block()). titles: the name players read for a contract of each kind (plan_id is an internal id the leader picks, never shown); %s is the leader (settle), the wisdom sought (research), the enemy clan (war) or what is sought (seek). Read by contracts.title().",
   "settle_room": 3,

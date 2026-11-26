@@ -2128,6 +2128,19 @@ func work_kind(u: E.Unit) -> String:
 		if s and s.reno: return "renovate"
 	return jt
 
+## The work a person is at for the tribe list (rules.json work_groups): the group's id, looking
+## past a meal, an idle act or a pastime to the work set aside for it; "idle" if none.
+func work_group(u: E.Unit) -> String:
+	var W: Dictionary = RULES["work_groups"]
+	var j: Dictionary = u.job
+	if j.is_empty() or j.get("type", "") in W["set_aside"] or j.get("leisure", false): j = u.resume_job
+	if j.is_empty() or j.get("leisure", false): return str(W["idle"]["id"])
+	var jt: String = j.get("type", "")
+	var key := jt + ":" + str(j.get("res", "")) if jt == "gather" else jt
+	for g in W["groups"]:
+		if key in g["jobs"] or jt in g["jobs"]: return str(g["id"])
+	return str(W["idle"]["id"])
+
 func pick_bed(u: E.Unit) -> void:
 	var bank := D.region_at(u.pos)
 	var near: Vector2 = u.home if D.region_at(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos

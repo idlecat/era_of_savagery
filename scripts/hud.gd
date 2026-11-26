@@ -822,7 +822,8 @@ func _refresh_left() -> void:
 	_refresh_left_content()
 
 ## People grouped by what they are doing: one group per running Task Contract (its crew,
-## leader first), then scouts out exploring, then everyone in the village.
+## leader first), then scouts out exploring, then everyone at home by the work they are at
+## (food, wood, stone...: sim.work_group()), then the children.
 func _roster_groups() -> Array:
 	var groups: Array = []
 	var placed := {}
@@ -839,9 +840,14 @@ func _roster_groups() -> Array:
 		groups.append({"key": "scouts", "units": scouts, "focus": scouts[0].pos, "color": Color("#b6f28a")})
 	var kids: Array = sim.living().filter(func(u): return not placed.has(u.id) and u.role == "child")
 	for u in kids: placed[u.id] = true
-	var rest: Array = sim.living().filter(func(u): return not placed.has(u.id))
-	if not rest.is_empty():
-		groups.append({"key": "village", "units": rest, "focus": D.VILLAGE, "color": COL_ACCENT})
+	var by_work := {} # (the rest by the work they are at: rules.json work_groups)
+	for u in sim.living():
+		if not placed.has(u.id): by_work.get_or_add(sim.work_group(u), []).append(u)
+	var W: Dictionary = sim.RULES["work_groups"]
+	for g in W["groups"] + [W["idle"]]:
+		var members: Array = by_work.get(str(g["id"]), [])
+		if not members.is_empty():
+			groups.append({"key": "w:" + str(g["id"]), "units": members, "focus": D.VILLAGE, "color": Color(str(g["color"]))})
 	if not kids.is_empty():
 		groups.append({"key": "children", "units": kids, "focus": D.VILLAGE, "color": Color("#ffd6f0")})
 	return groups
@@ -948,13 +954,16 @@ func _roster_signature() -> String:
 		return ",".join(parts2)
 	var parts: Array = []
 	for u in sim.living():
-		parts.append(tr("%d:%d:%s") % [u.id, u.contract_id if u.role == "contract" else -1, ("x" if u.job.get("type", "") == "explore" else "") + ("k" if u.role == "child" else "")])
+		parts.append("%d:%d:%s:%s" % [u.id, u.contract_id if u.role == "contract" else -1, ("x" if u.job.get("type", "") == "explore" else "") + ("k" if u.role == "child" else ""), sim.work_group(u)])
 	for c in sim.contracts.list: parts.append(tr("c%d%s") % [c.id, c.status])
 	return ",".join(parts)
 
 func _group_title(key: String, units: Array) -> String:
 	if key == "scouts": return tr("▸ SCOUTING THE UNKNOWN (%d)") % units.size()
-	if key == "village": return tr("▸ VILLAGE (%d)") % units.size()
+	if key.begins_with("w:"):
+		var W: Dictionary = sim.RULES["work_groups"]
+		for g in W["groups"] + [W["idle"]]:
+			if "w:" + str(g["id"]) == key: return tr("▸ %s (%d)") % [tr(str(g["name"])).to_upper(), units.size()]
 	if key == "children": return tr("▸ CHILDREN (%d)") % units.size()
 	var c = sim.contracts.by_id(int(key.substr(1)))
 	if c == null: return key
