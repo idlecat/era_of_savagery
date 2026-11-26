@@ -182,25 +182,28 @@ func self_work(u: E.Unit) -> bool:
 		return false
 	if sim.time < t: return false
 	next_try.erase(u.id)
-	if go_work(u): return true
+	if sim.soc.on and not sim.soc.trade_pays(u): # (the one rule: their trade is not their best work now)
+		next_try[u.id] = sim.time + float(C["idle_secs"]) * 4.0
+		return false
+	if go_work(u, sim.soc.on): return true
 	next_try[u.id] = sim.time + float(C["idle_secs"]) * 4.0 # (nothing to do at their trade now: try again later)
 	return false
 
 ## Send u to their trade now (the Steward, self_work, a game master). False if it has no work
 ## of its own or there is none to be had (no game in reach, no building site...).
-func go_work(u: E.Unit) -> bool:
-	if u == null or u.dead or u.career == "": return false
+func go_work(u: E.Unit, priced := false) -> bool:
+	if u == null or u.dead or u.career == "": return false # (priced: the one rule already chose the trade, society.gd: no need check)
 	var w: Dictionary = def(u.career).get("work", {})
 	if w.has("gather"):
 		var res := str(w["gather"])
-		if sim.need_of(res) <= 0.0: return false # (not needed now: the Steward finds them other work)
+		if not priced and sim.need_of(res) <= 0.0: return false # (not needed now: the Steward finds them other work)
 		var n = sim.find_node(res, u.home, D.region_at(u.home), float(C["reach"]), w.get("kinds", []), u)
 		if n == null: return false
 		sim.assign_gather(u, res, {"node_id": n.id, "bank": D.region_at(u.home), "area": u.home, "area_r": float(C["reach"])})
 		sim.give_shift(u) # (a stint at the trade, then a look at what the tribe needs)
 		return true
 	if w.has("work_at"): # a field, a dock: the nearest of that type with a free place, while food is needed
-		if sim.need_of("food") <= 0.0: return false
+		if not priced and sim.need_of("food") <= 0.0: return false
 		var f = sim.free_field(u.home, float(C["reach"]), [str(w["work_at"])])
 		if f == null: return false
 		sim.assign_field(u, f)
@@ -212,7 +215,7 @@ func go_work(u: E.Unit) -> bool:
 				sim.assign_build(u, s)
 				return true
 		return false
-	if w.get("ritual", false) and sim.need_of("lore") > 0.0:
+	if w.get("ritual", false) and (priced or sim.need_of("lore") > 0.0):
 		sim.assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
 		sim.give_shift(u)
 		return true

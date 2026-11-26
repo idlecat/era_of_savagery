@@ -186,20 +186,58 @@ func weights(site: bool) -> Dictionary:
 		out[c] = value(need) * n * M.gain(on_it / d, 1.0, d) * float(pol.get(c, 1.0))
 	return out
 
-## The Steward's choice for u: the greatest weight ("" when nothing gains: rest), counted
-## before the next hand is placed. `site`: an unfinished site waits for builders.
-func pick(u: E.Unit, site: bool) -> String:
-	var w := weights(site)
-	if not sim.folk.can_art(u): w.erase("art")
+# ------------------------------------------------------------------ one rule for everyone
+## The choice a person's trade works at ("" for a trade with no work of its own: herder,
+## warrior, scout), from careers.json `work`.
+func trade_choice(u: E.Unit) -> String:
+	if u.career == "": return ""
+	var w: Dictionary = sim.careers.def(u.career).get("work", {})
+	if w.has("gather"): return str(w["gather"])
+	if w.has("work_at"): return "food"
+	if w.get("ritual", false): return "rites"
+	if w.get("art", false): return "art"
+	if w.get("build", false): return "build"
+	return ""
+
+## How productive u is at a choice: their skill on the one curve, and their trade's edge at
+## their own trade (careers.json work_mult).
+func productivity(u: E.Unit, choice: String) -> float:
+	var skill: String = S["work"]["skills"].get(choice, "forage")
+	var p: float = sim.skill_mult(u.lv(skill))
+	if choice == trade_choice(u) and sim.careers.on: p *= float(sim.careers.C["work_mult"])
+	return p
+
+## The one rule (model §8, the invisible hand): every person works where their hand is worth
+## most, the work's price (its weight: what one more hand gains the tribe) times their own
+## productivity at it. A good in plenty is worth nothing, so even its masters turn to what is
+## wanted; a specialist keeps to their trade while it pays them at least as well as anything
+## else (comparative advantage). Returns [choice, value]; "" when nothing is worth a hand.
+func best_for(u: E.Unit, w: Dictionary) -> Array:
 	var best := ""
 	var bw := float(S["work"]["min_weight"])
 	for c in w:
-		if float(w[c]) > bw:
-			bw = float(w[c])
+		if c == "art" and not sim.folk.can_art(u): continue
+		var v := float(w[c]) * productivity(u, c)
+		if v > bw:
+			bw = v
 			best = c
+	return [best, bw]
+
+## The Steward's choice for u by the one rule ("" when nothing is worth a hand: rest),
+## counted before the next hand is placed. `site`: an unfinished site waits for builders.
+func pick(u: E.Unit, site: bool) -> String:
+	var w := weights(site)
 	last = w
+	var best: String = best_for(u, w)[0]
 	if best != "": placed[best] = int(placed.get(best, 0)) + 1
 	return best
+
+## Whether u, a person with a trade, should go to it by themselves now: only when the one rule
+## says their trade is their best work (careers.self_work).
+func trade_pays(u: E.Unit) -> bool:
+	var tc := trade_choice(u)
+	if tc == "": return false
+	return best_for(u, weights(sim.site_for(u) != null))[0] == tc
 
 ## A new round of the Steward's placements (sim._update_vice): what was placed is now in the
 ## jobs, so the round's count starts again; the rates are measured on the way.
@@ -209,6 +247,31 @@ func round_start(dt: float) -> void:
 	measure(h, dt)
 	var k := clampf(dt / float(S["work"]["avg_secs"]), 0.0, 1.0)
 	for c in S["work"]["hand_needs"]: avg_hands[c] = lerpf(float(avg_hands.get(c, 0.0)), float(h.get(c, 0)), k)
+
+var next_try := {} # person id -> when they next look for work by themselves
+
+## With no Steward to place them, an idle grown-up chooses their own work by the one rule,
+## after self_secs of idleness, by day near home (the Steward is quicker and counts each
+## placement before the next; without one the tribe still works, a little less well).
+## Returns true if they set off (sim.unit_idle).
+func self_work(u: E.Unit) -> bool:
+	if u.role != "" or u.sick > 0.0 or sim.rest_time() or not D.same_side(u.pos, u.home): return false
+	var st = sim.unit_by_id(sim.vice.get("steward", -1))
+	if st != null and not st.dead: return false # (the Steward places the idle)
+	if u.pos.distance_to(u.home) > float(sim.RULES["vice"]["steward_reach"]): return false
+	var t := float(next_try.get(u.id, -1.0))
+	if t < 0.0:
+		next_try[u.id] = sim.time + float(S["work"]["self_secs"])
+		return false
+	if sim.time < t: return false
+	next_try.erase(u.id)
+	var unbuilt = sim.site_for(u)
+	var choice: String = best_for(u, weights(unbuilt != null))[0]
+	if choice == "":
+		next_try[u.id] = sim.time + float(S["work"]["self_secs"]) * 4.0 # (nothing worth a hand: rest, and look again later)
+		return false
+	if choice == trade_choice(u) and sim.careers.on and sim.careers.go_work(u, true): return true
+	return sim.set_to_work(u, "lore" if choice == "rites" else choice, unbuilt)
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:

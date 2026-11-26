@@ -2165,6 +2165,7 @@ func dry_spot(p: Vector2) -> Vector2:
 
 func unit_idle(u: E.Unit, dt: float) -> void:
 	if careers.self_work(u): return # (someone with a trade goes to it by themselves)
+	if soc.on and soc.self_work(u): return # (no Steward to place them: they choose their own work by the one rule)
 	if life.on and u.role == "" and D.same_side(u.pos, u.home): # (the idle acts of config/life.json)
 		life.idle(u, dt)
 		return
@@ -2730,6 +2731,27 @@ func _pick_need(needs: Dictionary, site: bool) -> String:
 		if r <= 0.0: return k
 	return w.keys()[-1]
 
+## Send u to the work `choice` (a resource to gather, "food" (a field with a free place first),
+## "build" at `unbuilt`, "lore" for the rites, "art"): the Steward's verb, and anyone's who
+## chooses their own work by the one rule (society.gd). Gathering is weighed (weigh.gd): with
+## nothing of it within a safe walk, the other of food and wood, a site, or nothing (false).
+func set_to_work(u: E.Unit, choice: String, unbuilt = null) -> bool:
+	var sw: Dictionary = RULES["vice"]["steward"]
+	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
+	if field: choice = "field" # (food: a field or dock with a free place before the wild)
+	if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)
+		choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (weighed: nothing of it within a safe walk)
+		if choice == "": return false
+	if choice == "build" and unbuilt == null: return false
+	match choice:
+		"field": assign_field(u, field)
+		"build": assign_build(u, unbuilt)
+		"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
+		"art": folk.start_art(u)
+		_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])})
+	if choice != "build" and choice != "art": give_shift(u) # (gathering, fields, rites: a stint, then a new look at what is needed)
+	return true
+
 ## What the Steward gives `u` instead of gathering `res` when no place for it is a safe walk
 ## away (weigh.gd): the other of food and wood if it is, a building site, else "" (nothing).
 func _steward_instead(u: E.Unit, res: String, unbuilt, reach: float) -> String:
@@ -2839,27 +2861,17 @@ func _update_vice(dt: float) -> void:
 		if soc.on: soc.round_start(float(vc["every"]))
 		for u in idle:
 			var unbuilt = site_for(u)
-			if careers.on and careers.go_work(u): continue # (a trade is worked while its resource is needed)
 			var choice := ""
-			if soc.on: # (the society model: the greatest weight, counted before the next hand; nothing gains = rest)
+			if soc.on: # (the one rule: each to the work their hand is worth most at, counted before the next; nothing worth a hand = rest)
 				choice = soc.pick(u, unbuilt != null)
 				if choice == "": continue
+				if choice == soc.trade_choice(u) and careers.on and careers.go_work(u, true): continue # (their own trade, by its own verb)
 				if choice == "rites": choice = "lore"
+			elif careers.on and careers.go_work(u): continue # (the old rule: a trade is worked while its resource is needed)
 			else:
 				choice = _pick_need(needs, unbuilt != null)
 				if choice == "": choice = "art" if folk.can_art(u) else "lore" # (nothing wanted: crafts, else the rites)
-			var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
-			if field: choice = "field" # (food: a field or dock with a free place before the wild)
-			if not choice in ["build", "lore", "art", "field"] and find_node(choice, u.home, D.region_at(u.home), float(sw["area_r"]), [], u) == null: # (a field is at home: not weighed)
-				choice = _steward_instead(u, choice, unbuilt, float(sw["area_r"])) # (weighed: nothing of it within a safe walk)
-				if choice == "": continue # (left to themselves: in the cold they go and sit by the fire)
-			match choice:
-				"field": assign_field(u, field)
-				"build": assign_build(u, unbuilt)
-				"lore": assign_ritual(u, u.home + Vector2(randf_range(-60, 60), -randf_range(30, 70)))
-				"art": folk.start_art(u)
-				_: assign_gather(u, choice, {"bank": D.region_at(u.home), "area": u.home, "area_r": float(sw["area_r"])})
-			if choice != "build" and choice != "art": give_shift(u) # (gathering, fields, rites: a stint, then a new look at what is needed)
+			if not set_to_work(u, choice, unbuilt): continue # (left to themselves: in the cold they go and sit by the fire)
 			gain_xp(steward, "lore", float(sw["xp"]))
 			evo.practice(steward, "lead", float(sw["practice"]))
 		if not idle.is_empty():

@@ -4715,6 +4715,27 @@ func test_society_alloc() -> void:
 	check(sim.soc.weights(false).get("wood", 0.0) == 0.0, "a stock over its target gains nothing")
 	check(not sim.soc.weights(false).has("build") and sim.soc.weights(true).has("build"), "building weighs only while a site waits")
 	check(lv.has("comfort") and sim.soc.summary()["level"] in ["band", "camp", "village", "town", "city"], "the tribe's level reads the model's (%s)" % sim.soc.summary()["level"])
+	# the one rule: each works where their hand is worth most; plenty is worth nothing, even to its masters
+	sim.careers.on = true
+	var wc = sim.living().filter(func(x): return x.role == "")[1]
+	wc.career = "woodcutter"
+	wc.skills["forage"]["lv"] = 8
+	sim.stock["wood"] = 0.0
+	sim.stock["food"] = 99999.0
+	var w2: Dictionary = sim.soc.weights(false)
+	check(sim.soc.best_for(wc, w2)[0] == "wood", "a woodcutter cuts wood while it is wanted")
+	sim.stock["wood"] = 99999.0
+	sim.stock["food"] = 0.0
+	check(sim.soc.best_for(wc, sim.soc.weights(false))[0] == "food" and not sim.soc.trade_pays(wc), "with wood piled high and food short, the woodcutter goes for food, and doesn't go to the trees by themselves")
+	# no Steward: the idle choose their own work by the same rule
+	for k in sim.vice: sim.vice[k] = -1
+	var idler = sim.living().filter(func(x): return x.role == "" and x.career == "")[0]
+	idler.job = {}
+	idler.pos = idler.home
+	sim.hz.level = "off"
+	check(not sim.soc.self_work(idler), "an idle grown-up first waits a moment")
+	sim.time += float(sim.soc.S["work"]["self_secs"]) + 1.0
+	check(sim.soc.self_work(idler) and sim.soc.choice_of(idler.job) == "food", "then, with no Steward and food short, goes for food by themselves (%s)" % str(idler.job.get("type", "")))
 
 func test_society_model() -> void:
 	print("\n== The society model's formulas (docs/society.md, scripts/society_model.gd) ==")

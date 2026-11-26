@@ -436,6 +436,18 @@ without raising R).
 
 ## 8. Allocation: where the next hand goes
 
+**One rule for everyone, the invisible hand.** A need's weight per hand is its **price**:
+what one more hand's work there gains the tribe. It falls smoothly to 0 as the need is
+covered, so a good in plenty is worth nothing. **Every person works where their hand is
+worth most: the price times their own productivity at it** (their skill, and their trade's
+edge at their own trade). There are no special cases for a woodpile or a craft: a master
+woodcutter turns to food when wood is piled high (wood is worth nothing, food a lot), and
+keeps to the trees while wood pays them at least as well as anything else (comparative
+advantage). The Steward places the idle by this rule, quickly and counting each placement
+before the next; a person with a trade goes to it by themselves only when it is their best
+work; and with no Steward the idle choose their own work by it (more slowly). Wanted
+behaviour comes from prices, never from a rule for one case.
+
 The Steward's rule (a weighted gap) stays; the model derives its weights.
 
 - **One more hand on a need** adds s units of supply (its rate × h, in the need's unit).
@@ -925,4 +937,17 @@ Three things the game taught on the way (now in the code and config):
 Still: near-miss 100% (the band is 60-90%), R 3.5-3.7 (the model's band 1.3-1.6), wood piles
 to ~2,900 by day 60 (woodcutters by trade keep cutting past the target: careers still read the
 old need rule, `need_of()`). The balance baseline is rewritten.
+
+### 14.4 One rule for everyone (2026-11-26)
+
+After step 4, careers still went by the old need rule, so woodcutters cut past the target
+(wood ~2,900 by day 60). Rather than a rule for the woodpile, everyone now follows the
+model's price (§8, `society.gd best_for`): the Steward places by it, a trade is worked by
+itself only while it is its holder's best work (`trade_pays`), and with no Steward the
+idle choose their own work by it (`self_work`; one seed lost its Steward to a blizzard on
+day 40 and, with nobody placing hands, starved from 60 to 13 people: now it holds at 73).
+60 days, seeds 1-3: 73-100 people, 0-7 deaths, wood 536-1,501 at day 60. Open: food
+decisions again barely separate the hoarder from the feaster (gap 0.01), and the famine
+band overshoots (50%); without a Steward nobody lays out buildings (improvements.planner),
+so a tribe that loses its Steward stops growing.
 
