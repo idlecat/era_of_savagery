@@ -66,7 +66,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4672,6 +4672,31 @@ func test_freezing() -> void:
 	sim.stock["wood"] = 0.0
 	check(sim.out_of_fuel() and not sim.near_warmth(v), "with no wood the fire is cold")
 	sim.dispose()
+
+func test_society_model() -> void:
+	print("\n== The society model's formulas (docs/society.md, scripts/society_model.gd) ==")
+	var SM = preload("res://scripts/society_model.gd")
+	check(SM.benefit(0.0) == 0.0 and SM.benefit(1.0) == 1.0 and SM.benefit(1.7) == 1.0 and is_equal_approx(SM.benefit(0.5), 0.75), "benefit is concave: 0, 0.75 at half, 1 at full and above")
+	check(SM.gain(1.0, 5.0, 10.0) == 0.0 and SM.gain(0.5, 0.0, 10.0) == 0.0 and SM.gain(0.5, 1.0, 0.0) == 0.0, "a covered need, no supply or no demand gain nothing")
+	check(SM.gain(0.0, 1000.0, 1.0) <= 1.0 and is_equal_approx(SM.gain(0.9, 1000.0, 1.0), 1.0 - SM.benefit(0.9)), "a hand's gain is bounded by what the need lacks")
+	check(SM.gain(0.2, 1.0, 10.0) > SM.gain(0.6, 1.0, 10.0), "the first hands on a need gain the most")
+	var below := SM.order_demand(49.999, 0.01, 0.02, 50.0, 0.5, true)
+	var at := SM.order_demand(50.0, 0.01, 0.02, 50.0, 0.5, true)
+	check(absf(at - below) < 0.001 and SM.order_demand(50.0, 0.01, 0.02, 50.0, 0.5, false) == 0.0, "order's demand is continuous at the face-to-face limit, and a band without a Steward has none")
+	check(SM.order_demand(500.0, 0.01, 0.02, 50.0, 0.5, true) / 500.0 > 2.0 * SM.order_demand(150.0, 0.01, 0.02, 50.0, 0.5, true) / 150.0, "past it, disputes grow faster than people")
+	check(SM.order_span(100.0, 150.0, false, 1.4) == 1.0 and is_equal_approx(SM.order_span(300.0, 150.0, false, 1.4), 0.5) and SM.order_span(300.0, 150.0, true, 1.4) == 1.4, "an informal keeper's span shrinks past 150, an institution's doesn't")
+	check(is_equal_approx(SM.land_output(10.0, 2.0, 0.0), 20.0) and SM.land_output(10.0, 2.0, 30.0) < 20.0 and SM.land_output(1000.0, 2.0, 30.0) <= 30.0, "land limits output: below n x f, never past Y")
+	check(SM.land_marginal(10.0, 2.0, 30.0) < SM.land_marginal(1.0, 2.0, 30.0), "each hand on the same land adds less")
+	check(is_equal_approx(SM.food_share(2.0, 0.06), 0.53), "the food share is (1 + m) / R")
+	check(is_equal_approx(SM.food_per_day(29.7, 0.0, 0.004, 3.0, 38.0), 29.7 * 3.0 / 38.0) and SM.food_per_day(29.7, 2000.0, 0.004, 3.0, 38.0) > SM.food_per_day(29.7, 0.0, 0.004, 3.0, 38.0), "food a day: the day's hunger at rest, and more with the walk")
+	# the parameters keep the model's budget: band to town multiplies the food worker's day by 3 +- 0.3
+	var S: Dictionary = preload("res://scripts/config.gd").load_cfg("society")
+	var lv: Dictionary = S["levels"]
+	var climb: float = SM.factor_product(lv["town"]["factors"]) / SM.factor_product(lv["band"]["factors"]) * (1.0 - float(lv["town"]["walk"])) / (1.0 - float(lv["band"]["walk"]))
+	check(absf(climb - 3.0) <= 0.3, "the productivity budget multiplies to x3 +- 0.3 from band to town (x%.2f)" % climb)
+	for k in lv:
+		if k == "_doc": continue
+		check(lv[k]["hands"].size() == 8 and S["targets"].has(k), "level %s has every need's hands and a target row" % k)
 
 func test_perf() -> void:
 	print("\n== A city stays fast (city_proposal step 4) ==")

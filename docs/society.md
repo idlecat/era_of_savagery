@@ -231,20 +231,22 @@ Nine needs, each with the same parts:
    **A storable need has two coverages**:
    - **C_now** = `(stores + S_today) / D_today`: what is there to eat now. It drives the
      channels (mortality, contentment) and the hardship (famine).
-   - **C_horizon** = `(stores + expected supply over the horizon) / demand over the
-     horizon`: what is there to eat until the next harvest. It is an **anticipation signal
+   - **C_horizon** = the **lowest running coverage over the horizon**: for each day ahead,
+     (the stores, spoiling, + the expected supply up to that day) / (the demand up to that
+     day), at its worst day. A ratio over the whole window would hide a gap in the middle
+     (the fields' spring yield counted against the winter before it), and the stores
+     spoil while they wait (§14). It is an **anticipation signal
      only**: it drives no channel and no hardship — it enters food's allocation weight as
      the horizon window's term (§8) and sets the food security that births need (§10).
      The **harvest window** is the last season in which the fields and the wild yield
      before one in which they don't (autumn, with the seasons as they are; the hunt,
      fishing and the pens yield through the winter, which is what makes them the
-     winter's sources, §8). The horizon rolls: from now to the start of the next harvest
-     window (inside one, the next year's), clamped to half a year (4 days). Through spring and summer the window
-     ends at the coming harvest, so C_horizon holds near 1; when the harvest window opens
-     the horizon rolls past it to next year's and the winter comes in — C_horizon falls,
-     and the autumn rush, the harvest worked hard, fills the stores before the cold. A
-     fixed window would miss an early frost or pull the coming winter's hunger in before
-     the harvest that must fill the stores.
+     winter's sources, §8). The horizon rolls **through the next lean season, to its end**
+     (the first day after the season that follows the harvest window), clamped to 6 days:
+     from summer it sees the coming winter, in winter it reaches only to spring. Because
+     C_horizon is the worst day's coverage and credits the harvest to come, summer pulls
+     hands to food only when the harvest won't carry the winter; an earlier horizon that
+     ended at the harvest left summer hands idle while winter went short (§14).
 6. **Benefit B(C) = 1 - (1 - C)²** for C < 1, 1 above: concave, the first healer matters
    most. **Each channel the need feeds takes the shortfall `1 - B(C)` smoothly**: no
    cliff anywhere in the rules.
@@ -441,10 +443,13 @@ The Steward's rule (a weighted gap) stays; the model derives its weights.
   `ΔB = B(min(1, C + s/D)) - B(C)`, which is bounded by `1 - B(C)` (a tiny need can't
   pull more than what it lacks) and is **0 once C ≥ 1** (no negative weights, no
   over-investing). Food sums two such terms, one per window (below).
-- **Its worth scales with the people it affects**:
-  `weight = V_need × N_affected × ΔB`, where V_need is the sum of the values of the
-  channels the need feeds (per person; food's V splits by window, below). A need of 5
-  people weighs as 5 people's, so a small D can't yank hands from food or safety.
+- **Its worth scales with the people it affects and with how much the need matters**:
+  `weight = V_need × N_affected × ΔB`, where **V_need = Σ value(channel) × impact(need,
+  channel)** over the channels the need feeds (per person; food's V splits by window,
+  below). The **impact** is how much of the channel the need moves when wholly uncovered,
+  against food's: no food kills everyone (mortality 1), untreated sickness far fewer
+  (~0.15). Without it a need that merely *feeds* mortality weighs like food, and since a
+  small need's per-hand gain is large, healers pulled hands from a starving band (§14).
 - **The channel values** are what the tribe values: lives first, then output,
   contentment... The Council's policies set them (a war footing weighs losses and
   mortality from raids; a feasting tribe weighs contentment).
@@ -764,3 +769,53 @@ section named; `git log -p -- docs/society.md` has the argument):
    lever, not a steeper δ.
 7. **Culture packs and the budget** (§3): checked per pack against the shares, or with
    some headroom for a pack's character (a share may run ×1.1 over its cap)?
+
+## 14. What the calculator found (step 0, 2026-11-26)
+
+`tools/society_calc.gd` solves the periodic year for each level of `config/society.json`
+(`-- --seasons --sweep --fit --no-institutions`, ~1 s). Its first runs corrected the model
+in four places (now in the sections above) and set the first parameters:
+
+1. **A need's value needs its impact** (§8). With V the plain sum of channel values,
+   health weighed like food (both feed mortality) and, being small, won every hand: the
+   band put 7% on health and starved. V = value × impact fixed it.
+2. **C_horizon is the worst day's coverage, with spoilage** (§4). The window's average
+   credited the spring yield against the winter before it, so autumn read covered and
+   winter starved (lowest C_now 0.5-0.7 at every level).
+3. **The horizon runs through the lean season** (§4). Ending at the harvest left 4-15%
+   of the hands idle in summer while the winter went short; δ (0.7-1.0) changed nothing.
+4. **Small tribes split their days**: the calculator places hands in quarter days, or a
+   band's single healer is 7% of its hands.
+
+The first parameters (`config/society.json`), year averages:
+
+| Level | R (band) | Food share (target) | Lowest C_now | Ceiling | Notes |
+|---|---|---|---|---|---|
+| Band 20 | 1.37 (1.3-1.6) | 69% (72%) | 0.51 | ~20 | a band without pottery loses 22% of its stores a day and lives on the winter hunt: at its ceiling at 20 |
+| Camp 50 | 2.31 (1.8-2.2) | 46% (53%) | 1.00 | ~100 | R a little high: the food base or the camp's factors may come down |
+| Village 150 | 2.94 (2.8-3.5) | 36% (36%) | 1.00 | ~300 | order rises from 5% to 12% by 300 without institutions: the step to the town |
+| Town 500 | 5.09 (4.0-5.0) | 20% (25%) | 1.00 | above 1,500 | the winter workshop shows (winter: food 13%, 13% free); order 7% (target 9%: the Code's ×1.4 is generous) |
+| City 1,000 | 4.34 (4.5-5.5) | 21% (20%) | 1.00 | ~2,000 | the fields' land limit binds, as the City row says |
+| Town without the Council and the Code | | | 0.86 | ~625 | order takes up to 26% of the hands, then is abandoned (coverage 0.08): strife |
+
+Also found:
+
+- **Tools pay only from a ×1.25 factor up.** A tool lasts 4 days and a toolmaker makes 2.5
+  a day, so tools cost 0.1 of a hand per food hand; at the camp's ×1.1 the payback is 0,
+  at the village's ×1.2 it is 1.0, at the town's ×1.3 it is 2.0 (the band 1.5-3). So a
+  worn good is worth having only where its factor clears ~1.25: either the stone tools
+  stay a flag at the camp (a worn good from the village or the town), or the camp's
+  products share is raised. Open #8.
+- **Spoilage before pottery is the band's limit**, more than land: at 22% a day no band
+  carries stores through a winter, so the winter sources (the hunt, fishing) must feed
+  it; the game keeps the first 30 food from spoiling, which the calculator now does too.
+- **The budget holds**: band → town multiplies the food worker's day ×2.99 (test_society_model).
+
+**Still open (from the calculator):**
+
+8. **Tools as a worn good**: from which level (open above)?
+9. **The band's winter**: accept that a band of 20 is at its ceiling (the push to
+   pottery and fields), or give it winter sources enough to sit below it?
+10. **The fit**: `--fit` prints the hands per head that land the share table; the
+   camp's and the town's comfort+spirit come out above their targets (21% vs 14%, 32% vs
+   27%) because their R runs high. Tune R first, then fit.
