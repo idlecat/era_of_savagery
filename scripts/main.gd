@@ -101,6 +101,9 @@ func _ready() -> void:
 	world.blocked = hud.modal_open
 	loading.queue_free()
 	ready_done = true
+	perf = Array(OS.get_cmdline_user_args()).has("--perf")
+	world.perf = perf
+	hud.perf = perf
 
 ## Map choice: from the command line (--map=<scenario id>|small|standard|large|huge
 ## [--tribes=N] [--seed=S]; "classic" = the default scenario), the default scenario for
@@ -143,7 +146,24 @@ func _loading_screen() -> CanvasLayer:
 	add_child(cl)
 	return cl
 
+## --perf: once a second, where the frame goes (the engine's own --print-fps gives the rate):
+## the frame, the sim's ticks (main), the world's sync and the HUD's refresh, in milliseconds.
+var perf := false
+var _perf_us := 0 # when the last frame began
+var _perf_t := 0.0 # seconds since the last line
+var _perf_n := 0
+var _perf_frame := 0
+var _perf_tick := 0
+var _perf_t0 := 0
+
 func _process(delta: float) -> void:
+	if perf:
+		var now := Time.get_ticks_usec()
+		if _perf_us > 0:
+			_perf_frame += now - _perf_us
+			_perf_n += 1
+		_perf_us = now
+		_perf_t0 = now
 	if not ready_done: return
 	_autosave()
 	if sim.paused or hud.modal_open(): return
@@ -155,6 +175,22 @@ func _process(delta: float) -> void:
 		sim.tick(dt / n)
 		if sim.paused: break # an abort condition or event fired mid-frame
 		if ff and not sim.night_ff(): break
+	if perf: _perf_report(delta, now_us())
+
+func now_us() -> int: return Time.get_ticks_usec()
+
+func _perf_report(delta: float, now: int) -> void:
+	_perf_tick += now - _perf_t0
+	_perf_t += delta
+	if _perf_t < 1.0 or _perf_n == 0: return
+	var k := 1000.0 / _perf_n
+	print("perf: frame %.1f ms (%.0f fps) | sim ticks %.1f | world %.1f | hud %.1f | people %d" % [_perf_frame * k, _perf_n / _perf_t, _perf_tick * k, world.perf_us * k, hud.perf_us * k, sim.living().size()])
+	_perf_t = 0.0
+	_perf_n = 0
+	_perf_frame = 0
+	_perf_tick = 0
+	world.perf_us = 0
+	hud.perf_us = 0
 
 func _unhandled_key_input(ev: InputEvent) -> void:
 	var k := ev as InputEventKey

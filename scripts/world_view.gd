@@ -350,7 +350,10 @@ func _water_field(w: int, h: int, reach: float) -> PackedFloat32Array:
 	return out
 
 # ------------------------------------------------------------ frame
+var perf := false # (main.gd --perf) this _process's cost, in microseconds, summed over the second
+var perf_us := 0
 func _process(delta: float) -> void:
+	var t0 := Time.get_ticks_usec() if perf else 0
 	t += delta
 	if not sim.paused and not (blocked.is_valid() and blocked.call()): anim_t += delta * sim.crisis.slow()
 	_pan_keys(delta)
@@ -416,6 +419,7 @@ func _process(delta: float) -> void:
 	fog.queue_redraw()
 	fog_mat.set_shader_parameter("night_tint", Vector3(night.color.r, night.color.g, night.color.b))
 	queue_redraw()
+	if perf: perf_us += Time.get_ticks_usec() - t0
 
 ## Fog of war as a tiny texture (one texel per fog cell), drawn through the iso transform
 ## with linear filtering so the edges are soft: black = unexplored, dim = explored, clear = in sight.

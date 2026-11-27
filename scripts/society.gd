@@ -72,6 +72,8 @@ static func job_res(j: Dictionary) -> String:
 	return ""
 
 ## Hands on each choice now: gathering by resource, fields as food, crafts, rites, building.
+## Asked for a few times a tick, and it must be fresh each time: the Steward hands out work
+## as it goes, so who is at what changes within the tick.
 func hands_now() -> Dictionary:
 	var out := {}
 	for u in sim.living():
@@ -111,13 +113,21 @@ func measure(hands: Dictionary, dt: float) -> void:
 
 # ------------------------------------------------------------------ food's two windows
 ## Food the tribe eats a day now (from the meals' rule: hunger at rest, plus the walk's).
+var _cache_demand := {} # season -> what the tribe eats a day in it, this tick
+var _cache_demand_t := -1.0
 func food_demand(si: int) -> float:
+	if sim.in_tick() and _cache_demand_t == sim.time and _cache_demand.has(si): return _cache_demand[si]
+	if _cache_demand_t != sim.time:
+		_cache_demand = {}
+		_cache_demand_t = sim.time if sim.in_tick() else -1.0
 	var sv: Dictionary = sim.RULES["survival"]
 	var fill := float(sv["meal_fill_fire"] if sim.has_tech("fire") else sv["meal_fill"])
 	var mouths := 0.0
 	for u in sim.living(): mouths += float(sv["child_hunger"]) if u.role == "child" else 1.0
 	var hunger := float(sv["hunger_rate"]) * D.DAY_LEN * float(sim.hz.C["seasons"]["hunger"][si])
-	return mouths * hunger * float(sv["meal"]) / fill * float(S["work"]["walk_food"])
+	var d := mouths * hunger * float(sv["meal"]) / fill * float(S["work"]["walk_food"])
+	if sim.in_tick(): _cache_demand[si] = d
+	return d
 
 ## The horizon (model §4): days from today through the next winter, at most horizon_max.
 func horizon() -> Array:
@@ -134,7 +144,14 @@ func horizon() -> Array:
 ## a field's or dock's `yields`, the bushes' `berries`; a find yields in winter only if it
 ## says so; half the herds leave for the winter). Field/dock: the structure type; gather: the
 ## node kind.
+var _cache_factor := {} # kind|season -> the season's factor (the game's own tables: fixed while it runs)
 func food_factor(kind: String, si: int) -> float:
+	var key := kind + "|" + str(si)
+	if _cache_factor.has(key): return _cache_factor[key]
+	var f := _food_factor(kind, si)
+	_cache_factor[key] = f
+	return f
+func _food_factor(kind: String, si: int) -> float:
 	var sz: Dictionary = sim.hz.C["seasons"]
 	if sz["yields"].has(kind): return float(sz["yields"][kind][si])
 	if kind == "bush": return float(sz["berries"][si])

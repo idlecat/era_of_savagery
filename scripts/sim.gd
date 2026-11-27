@@ -723,6 +723,7 @@ func warm_reach() -> float: return 110.0 * (2.0 if has_tech("fire") else 1.0)
 ## What warms, by grid cell as wide as the farthest-reaching warmth: rebuilt with the
 ## building index (asked for every person every tick; a town of a thousand has ~40 fires). A _cache.
 var _cache_warm := {}
+var _cache_warm_reach := {} # building id -> how far its warmth reaches (made with _cache_warm)
 var _cache_warm_t := -2.0
 var _cache_warm_cell := 1.0
 
@@ -734,17 +735,22 @@ func near_warmth(u: E.Unit) -> bool:
 	if _cache_warm_t != _cache_built_t or not _lists_hold(): # (outside a tick or a hold: look afresh, as built_of() does)
 		_cache_warm_t = _cache_built_t
 		_cache_warm = {}
+		_cache_warm_reach = {}
 		_cache_warm_cell = r
-		for s in warm: _cache_warm_cell = maxf(_cache_warm_cell, r * serves(s, "warmth"))
+		var reach := {} # building id -> its type's warmth (the per-person loop reads this, not the tables)
+		for s in warm:
+			reach[s.id] = serves(s, "warmth")
+			_cache_warm_cell = maxf(_cache_warm_cell, r * reach[s.id])
 		for s in warm:
 			var k := Vector2i(floori(s.pos.x / _cache_warm_cell), floori(s.pos.y / _cache_warm_cell))
 			if _cache_warm.has(k): _cache_warm[k].append(s)
 			else: _cache_warm[k] = [s]
+		_cache_warm_reach = reach
 	var c := Vector2i(floori(u.pos.x / _cache_warm_cell), floori(u.pos.y / _cache_warm_cell))
 	for dx in [-1, 0, 1]:
 		for dy in [-1, 0, 1]:
 			for s in _cache_warm.get(c + Vector2i(dx, dy), []):
-				if s.pos.distance_to(u.pos) < r * serves(s, "warmth"): return true
+				if s.pos.distance_to(u.pos) < r * float(_cache_warm_reach.get(s.id, serves(s, "warmth"))): return true # (the reach now: it doubles with fire)
 	return false
 
 ## A building's radius: a wall's chosen one, else its type's.

@@ -19,6 +19,7 @@ var speed_btns: Array = []
 var left_title: Label
 var roster_box: VBoxContainer
 var roster_buttons := {}
+var roster_text := {} # row id -> the text last written (only the changed rows are written)
 var sheet_box: VBoxContainer
 var bld_box: VBoxContainer # the building panel (a building selected on the map)
 var bld_text: RichTextLabel
@@ -56,7 +57,7 @@ var snap_cam: Camera2D
 var modal_token := 0
 var refresh_t := 0.0
 var log_dirty := true
-var roster_sig := ""
+var roster_sig := -1
 var roster_headers := {} # group key -> Button
 var roster_bar: HBoxContainer
 var roster_mode := "quest" # "quest" (grouped by what people are doing) or "ability" (sortable table)
@@ -680,8 +681,20 @@ func _map_tip(delta: float) -> void:
 		map_tip.position = mp
 
 # ------------------------------------------------------------ periodic refresh
+var perf := false # (main.gd --perf) this _process's cost, in microseconds, summed over the second
+var perf_us := 0
 func _process(delta: float) -> void:
-	if minimap: minimap.queue_redraw()
+	var t0 := Time.get_ticks_usec() if perf else 0
+	_process_body(delta)
+	if perf: perf_us += Time.get_ticks_usec() - t0
+
+var mini_t := 0.0 # the minimap is redrawn ten times a second, not every frame
+
+func _process_body(delta: float) -> void:
+	mini_t -= delta
+	if mini_t <= 0.0:
+		mini_t = 0.1
+		if minimap: minimap.queue_redraw()
 	_feat_tick()
 	if not trader_wait.is_empty() and (sim.pending_event != trader_wait["id"] or sim.time > float(trader_wait["until"])) and modal == null:
 		if sim.pending_event == trader_wait["id"]: # nobody came to trade: the trader goes home
@@ -947,17 +960,21 @@ func _marks_tip(u) -> String:
 	elif u.job.get("type", "") == "explore": lines.append(tr("◎ Scouting the unknown"))
 	return "\n" + "\n".join(lines) if not lines.is_empty() else ""
 
-func _roster_signature() -> String:
+## A number that changes when the roster's rows or order would: mixed from everyone's id, what
+## they are at and their levels (a town's tribe is hundreds of people, and this is asked four
+## times a second: no strings built per person).
+func _roster_signature() -> int:
+	var h := 17
 	if roster_mode == "ability": # rebuild when the order or any shown value changes
-		var parts2: Array = [sort_key, str(sort_desc)]
+		h = h * 31 + hash(sort_key) * 7 + (1 if sort_desc else 0)
 		for u in _sorted_living():
-			parts2.append("%d:%d%d%d%d%d:%s:%s%s" % [u.id, u.lv("forage"), u.lv("craft"), u.lv("combat"), u.lv("lore"), u.lv("trade"), u.title, u.role, u.job.get("type", "") == "explore"])
-		return ",".join(parts2)
-	var parts: Array = []
+			h = (h * 131 + u.id) * 3 + u.lv("forage") + u.lv("craft") * 11 + u.lv("combat") * 101 + u.lv("lore") * 1009 + u.lv("trade") * 10007
+			h = h * 31 + hash(u.title) + hash(u.role) * 3 + (1 if u.job.get("type", "") == "explore" else 0)
+		return h
 	for u in sim.living():
-		parts.append("%d:%d:%s:%s" % [u.id, u.contract_id if u.role == "contract" else -1, ("x" if u.job.get("type", "") == "explore" else "") + ("k" if u.role == "child" else ""), sim.work_group(u)])
-	for c in sim.contracts.list: parts.append(tr("c%d%s") % [c.id, c.status])
-	return ",".join(parts)
+		h = (h * 131 + u.id) * 7 + (u.contract_id if u.role == "contract" else -1) * 3 + (u.role == "child" and 5 or 0) + (u.job.get("type", "") == "explore" and 11 or 0) + hash(sim.work_group(u)) * 13
+	for c in sim.contracts.list: h = (h * 131 + c.id) * 7 + hash(c.status)
+	return h
 
 func _group_title(key: String, units: Array) -> String:
 	if key == "scouts": return tr("▸ SCOUTING THE UNKNOWN (%d)") % units.size()
@@ -996,7 +1013,10 @@ func _refresh_left_content() -> void:
 			var tag: String = " ★" + tr(u.title) if tr(u.title) != "" else ""
 			var c = sim.contracts.by_id(u.contract_id) if u.role == "contract" else null
 			if c and c.leader_id == u.id: tag += tr(" [leader]")
-			roster_buttons[id].text = tr("   %s Lv%d%s — %s") % [tr(u.name), sim.unit_level(u), tag, I.act(u.act)]
+			var text: String = tr("   %s Lv%d%s — %s") % [tr(u.name), sim.unit_level(u), tag, I.act(u.act)]
+			if roster_text.get(id, "") != text: # (a town's hundreds of rows: only the changed ones are written)
+				roster_text[id] = text
+				roster_buttons[id].text = text
 			roster_buttons[id].modulate = COL_ACCENT if u.id in world.selected else Color.WHITE
 		return
 	var u = sel[0]
@@ -1258,7 +1278,7 @@ func _toggle_lang() -> void:
 	I.save_pref(l)
 	get_window().title = tr("Era of Savagery · Clan Chronicles")
 	lang_btn.text = I.LANGS["en" if I.is_zh() else "zh"]
-	roster_sig = ""
+	roster_sig = -1
 	_refresh_left()
 	_refresh_right()
 	_refresh_top()
