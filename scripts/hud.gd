@@ -807,6 +807,7 @@ func _refresh_left() -> void:
 	if not single:
 		for c in roster_box.get_children(): c.queue_free()
 		roster_buttons.clear()
+		roster_text.clear() # (the rows are made anew: their texts are written to the new buttons)
 		roster_headers.clear()
 		roster_sig = _roster_signature()
 		if roster_mode == "ability":
@@ -972,7 +973,7 @@ func _roster_signature() -> int:
 			h = h * 31 + hash(u.title) + hash(u.role) * 3 + (1 if u.job.get("type", "") == "explore" else 0)
 		return h
 	for u in sim.living():
-		h = (h * 131 + u.id) * 7 + (u.contract_id if u.role == "contract" else -1) * 3 + (u.role == "child" and 5 or 0) + (u.job.get("type", "") == "explore" and 11 or 0) + hash(sim.work_group(u)) * 13
+		h = (h * 131 + u.id) * 7 + (u.contract_id if u.role == "contract" else -1) * 3 + (5 if u.role == "child" else 0) + (11 if u.job.get("type", "") == "explore" else 0) + hash(sim.work_group(u)) * 13
 	for c in sim.contracts.list: h = (h * 131 + c.id) * 7 + hash(c.status)
 	return h
 

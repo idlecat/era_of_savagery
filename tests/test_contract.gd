@@ -13,6 +13,7 @@ const _NewGame = preload("res://scripts/new_game_ui.gd")
 const E = preload("res://scripts/entities.gd")
 const I18N = preload("res://scripts/i18n.gd")
 const Cultures = preload("res://scripts/cultures.gd")
+const SaveGame = preload("res://scripts/save_game.gd")
 # Compile-check the UI scripts too (a parse error in any of them fails this test run).
 const _Main = preload("res://scripts/main.gd")
 const _HUD = preload("res://scripts/hud.gd")
@@ -66,7 +67,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_smoke]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4845,7 +4846,7 @@ func test_perf() -> void:
 	for k in 100: sim.tick(0.05)
 	var ms := (Time.get_ticks_usec() - t0) / 1000.0 / 100.0
 	print("  200 people at work: %.2f ms a tick" % ms)
-	check(ms < 30.0, "200 people at work tick in under 30 ms (%.2f)" % ms)
+	check(ms < 16.0, "200 people at work tick in under 16 ms (%.2f; 10 before the lists were shared)" % ms)
 	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
 	sim.dispose()
 
@@ -5343,6 +5344,99 @@ func _smoke(sim, days: float) -> Array:
 		t += 5.0
 		for b in sim.check_invariants(): bad.append("day %d: %s" % [sim.day(), b])
 	return bad
+
+## The lists the tick shares (living, our buildings, settlements, the beds) must never hand out a
+## stale answer: each is made again the moment what it was made from changes.
+func test_tick_caches() -> void:
+	print("\n== The tick's shared lists stay exact ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var before: int = sim.living().size()
+	sim.tick(0.05)
+	sim.hold_lists() # (as world_view does around a frame's drawing: the same lists, made once)
+	check(is_same(sim.living(), sim.living()) and is_same(sim.settlements(), sim.settlements()) and is_same(sim.our_built(), sim.our_built()), "held (as in a tick), the lists are made once and the same list is handed out")
+	sim.release_lists()
+	check(not is_same(sim.living(), sim.living()), "and outside a tick or a hold, they are made afresh (a test may have changed things)")
+	var victim = sim.living()[3]
+	sim.kill_unit(victim, null)
+	check(sim.living().size() == before - 1 and not victim in sim.living(), "someone dying mid-tick is gone from the list at once")
+	sim.tick(0.05)
+	var st = sim.add_structure("bonfire", sim.dry_spot(D.VILLAGE + Vector2(-40, 25)))
+	sim.complete_structure(st, null)
+	check(st in sim.built_of("bonfire") and st in sim.our_built(), "a building finished mid-tick is in the lists at once")
+	check(sim.pop_cap() == sim.our_built().map(func(o): return int(D.STRUCTURES[o.type].get("cap", 0))).reduce(func(a, b): return a + b, 0), "the beds count what stands")
+	sim.demolish(st.id)
+	check(not st in sim.our_built(), "and one pulled down is gone at once")
+	# a settlement stands the moment its contract is done
+	var c := E.Contract.new()
+	c.id = sim.uid()
+	c.kind = "settle"
+	c.status = "running"
+	c.site = sim.dry_spot(D.VILLAGE + Vector2(700, -160))
+	sim.contracts.list.append(c)
+	check(not c.site in sim.settlements(), "an unfinished settlement is not one of ours")
+	c.status = "done"
+	sim.sites_changed()
+	check(c.site in sim.settlements(), "and is, as soon as it is done")
+	# who lives where, and which buildings belong there, are exact after a move
+	var mover = sim.living().filter(func(u): return u.home == D.VILLAGE and u.role == "" and u.title == "")[0]
+	check(mover in sim.people_of(D.VILLAGE), "someone lives in the village")
+	mover.home = c.site
+	sim.homes_changed()
+	check(not mover in sim.people_of(D.VILLAGE) and mover in sim.people_of(c.site), "and after moving, live in the new settlement")
+	var hut = sim.add_structure("hut", sim.dry_spot(c.site + Vector2(30, 20)))
+	sim.complete_structure(hut, null)
+	check(hut in sim.buildings_of(c.site) and not hut in sim.buildings_of(D.VILLAGE), "a building raised there belongs to it")
+	# the beds: what pick_bed and wake keep up agrees with a fresh count
+	var sleepers: Array = sim.living().slice(0, 6)
+	for u in sleepers: sim.pick_bed(u)
+	var counted := {}
+	for u in sim.living():
+		if u.bed_id >= 0: counted[u.bed_id] = int(counted.get(u.bed_id, 0)) + 1
+	var taken: Dictionary = sim.beds_taken()
+	check(counted.size() == taken.size() and counted.keys().all(func(k): return int(taken.get(k, 0)) == int(counted[k])), "the beds taken match a fresh count (%s)" % str(counted))
+	sim.wake(sleepers[0])
+	check(int(sim.beds_taken().get(sleepers[0].bed_id, 0)) == int(counted.get(sleepers[0].bed_id, 0)) - 1 or sleepers[0].bed_id < 0, "someone waking frees their bed")
+	check(sim.check_invariants().is_empty(), "invariants hold: %s" % str(sim.check_invariants()))
+	sim.dispose()
+
+## The same seed must play the same game, twice, with every system on and the tick's lists
+## shared: a list made once a tick that is read stale would show up here as a different game.
+func test_determinism() -> void:
+	print("\n== The same seed plays the same game ==")
+	var games: Array = []
+	for run in 2:
+		seed(4242)
+		var sim = Sim.new()
+		sim.new_game()
+		for k in 2400: # (two days)
+			sim.tick(0.05)
+			if sim.paused:
+				if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+				sim.paused = false
+		games.append(_fp(sim))
+		sim.dispose()
+	check(games[0] == games[1], "two runs of the same seed are the same game (%s)" % games[0].substr(0, 12))
+	seed(4242)
+	var sim = Sim.new()
+	sim.new_game()
+	for k in 2400:
+		sim.tick(0.05)
+		if sim.paused:
+			if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
+			sim.paused = false
+	check(_fp(sim) == games[0], "and a third, in another sim, agrees too")
+	sim.dispose()
+
+## A fingerprint of the whole simulation (its saved state, hashed).
+func _fp(sim) -> String:
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_SHA256)
+	var enc: Dictionary = SaveGame.encode(sim)
+	enc.get("inv", {}).erase("_fx")
+	enc.get("inv", {}).erase("_fx_sig")
+	ctx.update(var_to_bytes(enc))
+	return ctx.finish().hex_encode()
 
 func test_smoke() -> void:
 	print("\n== Smoke: a whole game with every system on ==")

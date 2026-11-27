@@ -382,8 +382,8 @@ func _process(delta: float) -> void:
 			plaza_sig = psig
 			plaza_layer.queue_redraw()
 	fog_refresh -= delta
-	if fog_refresh <= 0:
-		fog_refresh = 0.1
+	if fog_refresh <= 0: # (the sim reveals in sight twice a second: the texture follows it)
+		fog_refresh = 0.2
 		_refresh_fog()
 	var vs := get_viewport_rect().size / cam.zoom.x
 	view = Rect2(cam.get_screen_center_position() - vs / 2, vs).grow(140)
@@ -2542,7 +2542,7 @@ func _unit_pose(u, key: String, walk: bool, busy: bool) -> String:
 	if anim == "attack": # (each weapon fights its own way: art_baker WEAPON_ANIMS; the spear is the plain attack)
 		var wn := "man_attack_%s_%d_%d" % [str(sim.arms.wielded(u).get("id", "")), di, int(anim_t * speed + u.id) % frames]
 		if art.has(wn): name = wn
-	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
+	if anim in ["chop", "build", "attack"] and (_frame_bronze if _judging else sim.has_bronze()) and art.has(name + "_bronze"): name += "_bronze"
 	return name
 
 ## What a person's picture depends on, besides where they stand: all that _draw_unit() reads.
@@ -2553,6 +2553,8 @@ func _unit_pose(u, key: String, walk: bool, busy: bool) -> String:
 ## fever's sweat, a torch's flame, a rite's sparks, the z's of a sleeper in the open, a hero's
 ## glow, the hand-drawn figure): drawn every frame.
 var _pose := ""
+var _frame_bronze := false # whether the tribe has bronze, asked once a frame (the picture of every person asks)
+var _judging := false # (_unit_sig is judging a picture: its sprite choice may use the frame's bronze)
 func _unit_sig(u, key: String) -> int:
 	if art == null or not art.has("man_idle_0_0"): return -1 # (no baked villagers: the figure is drawn by hand, and moves)
 	if u.dead:
@@ -2578,8 +2580,10 @@ func _unit_sig(u, key: String) -> int:
 		fl |= 2048
 		if walk: fl |= (int(anim_t * 10.0 + key.hash() % 7) % 6) << 8 # (the ox strides behind them: bits 8-10)
 	var ranks := 0 # their ranks make their feathers (ranks.marks): the level of every skill (bits 13 up)
-	for s in D.SKILLS: ranks = ranks * 64 + u.lv(s)
+	for s in D.SKILLS: ranks = ranks * 64 + int(u.skills[s]["lv"]) # (straight from the table: a town's people every frame)
+	_judging = true
 	_pose = _unit_pose(u, key, walk, DOING_ANIM.has(u.doing))
+	_judging = false
 	return fl | (ranks << 13)
 
 func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
@@ -3444,6 +3448,8 @@ func _sync_items() -> void:
 			it.visible = exp
 			it.modulate = _pick_glow(st)
 			_touch(it, (1 if st.built else 0) + st.style * 10 + st.graves.size() * 10000 + st.decor * 1000000 + (10000000 if sim.knows_find("ochre") else 0) + (sim.hz.season_idx() * 100 if st.type == "farm_plot" else 0) + (1000 if sim.hz.snow > 0.5 else 0) + (_tier_k(st.pos) * 100000000 if st.type in ["hut", "large_hut"] else 0))
+	var judge := _node_frame % 2 == 0 # (a person's picture is judged every other frame: a sprite changes no faster than 11 times a second)
+	_frame_bronze = sim.has_bronze() # (asked for every one of a town's people: once a frame)
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true
@@ -3451,17 +3457,18 @@ func _sync_items() -> void:
 		var it := _item(key, 2, u, sp, false)
 		if not view.has_point(sp):
 			it.stale = true # out of sight: its picture is drawn again when it comes back
-		else:
-			var sig := _unit_sig(u, key)
-			if sig < 0: # (the clock moves part of the picture: every frame; and what it shows is forgotten)
-				it.sig = -3
-				it.pose = ""
-				it.queue_redraw()
-			elif it.stale or it.sig != sig or it.pose != _pose:
-				it.sig = sig
-				it.pose = _pose
-				it.queue_redraw()
-			it.stale = false
+			continue
+		if not judge: continue # (judged next frame)
+		var sig := _unit_sig(u, key)
+		if sig < 0: # (the clock moves part of the picture: every frame; and what it shows is forgotten)
+			it.sig = -3
+			it.pose = ""
+			it.queue_redraw()
+		elif it.stale or it.sig != sig or it.pose != _pose:
+			it.sig = sig
+			it.pose = _pose
+			it.queue_redraw()
+		it.stale = false
 	for p in sim.predators:
 		var key := "p%d" % p.id
 		seen[key] = true
