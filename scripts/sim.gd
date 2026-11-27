@@ -1028,7 +1028,8 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Ar
 # ------------------------------------------------------------------ unit update
 func update_unit(u: E.Unit, dt: float) -> void:
 	u.doing = ""
-	if u.inside >= 0 and u.job.get("type", "") != "craft": u.inside = -1 # (indoors only while at the craft)
+	var indoors: bool = u.job.get("type", "") == "craft" or u.job.has("inside") # (a craft, or an idle chore done in the house)
+	if u.inside >= 0 and not indoors: u.inside = -1 # (indoors only while at that work)
 	if u.dead: return
 	unit_needs(u, dt)
 	u.cd -= dt
@@ -2143,9 +2144,26 @@ func night_start() -> float:
 	if day_frac() < from: base -= D.DAY_LEN
 	return base + D.DAY_LEN * from
 
-## Indoors: asleep in a hut, or at work inside one (a craft at home, society.gd): hidden,
-## sheltered from the cold and the weather, out of a beast's reach.
+## Indoors: asleep in a hut, or at work inside one (a craft at home, society.gd, or an
+## indoor idle chore, life.json `inside`): hidden, sheltered from the cold and the weather,
+## out of a beast's reach.
 func in_hut(u: E.Unit) -> bool: return (u.sleeping and u.bed_id >= 0) or u.inside >= 0
+
+## The house `u` works indoors in: their own bed's building if it still stands and is ours,
+## else the nearest of our shelters to their home (null if the tribe has none to spare).
+func own_hut(u: E.Unit) -> E.Structure:
+	var hut = struct_by_id(u.bed_id) if u.bed_id >= 0 else null
+	if hut != null and hut.built and ours(hut): return hut
+	var best: E.Structure = null
+	var best_d := INF
+	for t in SHELTERS:
+		for s in built_of(t):
+			if not ours(s): continue
+			var d: float = s.pos.distance_to(u.home)
+			if d < best_d:
+				best_d = d
+				best = s
+	return best
 
 ## Is something stirring that should rouse the camp? Beasts or raiders at the village (the
 ## War Chief's range), someone hurt in a fight, or the river flooding. A pack prowling the

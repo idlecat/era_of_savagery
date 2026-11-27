@@ -3959,6 +3959,78 @@ func test_life() -> void:
 	var fill: float = float(sv["meal_fill_fire"] if sim.has_tech("fire") else sv["meal_fill"])
 	check(is_equal_approx(food0 - sim.stock["food"], float(sv["meal"]) * 10.0 / fill) and is_equal_approx(u.hunger, 100.0),
 		"a meal costs food in proportion to what is eaten (%.2f for the last 10)" % (food0 - sim.stock["food"]))
+	# where a meal is eaten is one weighed rule for everyone: the fire's company is worth
+	# `fire_bonus` seconds of walking, so whoever is near enough gathers there and the rest eat
+	# where they are (a farmer in the field, a maker at work indoors)
+	sim = _life_sim(0.3)
+	sim.stock["food"] = 100.0
+	var meals: Dictionary = sim.life.C["meals"]
+	check(meals.has("fire_bonus") and meals.has("acts_here"), "where a meal is eaten is one number (fire_bonus), not a table per job")
+	var rule: Dictionary = sim.life.C.duplicate(true)
+	sim.life.C = rule
+	rule["meals"]["fire_bonus"] = 0.0 # (no walk to the fire is worth it)
+	var plot = sim.add_structure("farm_plot", sim.dry_spot(D.VILLAGE + Vector2(-380, 60)))
+	sim.complete_structure(plot, null)
+	var farmer = sim.unit_by_name("Yan")
+	farmer.hunger = 20.0
+	sim.assign_field(farmer, plot)
+	for i in 300:
+		sim.tick(0.05)
+		if farmer.doing == "till": break
+	var field_pos: Vector2 = farmer.pos
+	farmer.meal_slot = -99 # (a meal may have come while they walked out)
+	sim.time = D.DAY_LEN * 0.345 # (the midday meal)
+	for i in 20: sim.tick(0.05)
+	check(farmer.job.get("type", "") == "meal" and not farmer.job.has("face"), "a farmer too far from the fire eats where they work")
+	check(farmer.job["to"].distance_to(field_pos) < 40.0 and not sim.in_hut(farmer), "at the field, without walking back to the fire")
+	for i in 400:
+		sim.tick(0.05)
+		if farmer.job.get("type", "") != "meal": break
+	check(farmer.job.get("type", "") == "field" and farmer.hunger > 70.0, "then back to the field, fed (%d)" % roundi(farmer.hunger))
+	sim.techs["tools"] = true
+	sim.stock["stone"] = 20.0
+	sim.stock["wood"] = 20.0
+	var maker = sim.living().filter(func(x): return x.role == "" and x != farmer)[0]
+	maker.hunger = 20.0
+	maker.meal_slot = -99 # (they were asked at this meal already, idle and not hungry)
+	check(sim.soc.assign_craft(maker, "tools"), "a toolmaker is sent to the bench")
+	for i in 400:
+		sim.tick(0.05)
+		if sim.in_hut(maker) and maker.job.get("type", "") == "craft": break
+	var bench: int = maker.inside
+	sim.time = D.DAY_LEN * 0.345
+	maker.meal_slot = -99
+	for i in 20: sim.tick(0.05)
+	check(maker.job.get("type", "") == "meal" and maker.job.get("inside", -1) == bench and sim.in_hut(maker), "a maker at work indoors eats there: hidden, sheltered and warm")
+	for i in 400:
+		sim.tick(0.05)
+		if maker.job.get("type", "") != "meal": break
+	check(maker.job.get("type", "") == "craft" and sim.in_hut(maker) and maker.inside == bench, "then back to the work, still indoors")
+	# make the company worth any walk and the same farmer goes to the fire
+	rule["meals"]["fire_bonus"] = 1e9
+	farmer.hunger = 20.0
+	farmer.meal_slot = -99
+	sim.time = D.DAY_LEN * 0.345
+	for i in 20: sim.tick(0.05)
+	check(farmer.job.get("type", "") == "meal" and farmer.job.has("face"), "when the fire's company is worth the walk, they gather round it")
+	# but a crowd is no company: past `fire_crowd` at one fire the rest eat where they are
+	sim = _life_sim(0.3)
+	sim.stock["food"] = 100.0
+	var crowd: Dictionary = sim.life.C.duplicate(true)
+	sim.life.C = crowd
+	crowd["meals"]["fire_bonus"] = 1e9 # (any walk is worth it: only the crowd keeps them away)
+	crowd["meals"]["fire_crowd"] = 2
+	for o in sim.living():
+		o.pos = D.VILLAGE + Vector2(randf_range(-40, 40), randf_range(-40, 40))
+		o.hunger = 20.0
+		o.meal_slot = -99
+		sim.set_job(o, {})
+	sim.time = D.DAY_LEN * 0.345
+	for i in 40: sim.tick(0.05)
+	var eating: Array = sim.living().filter(func(o): return o.job.get("type", "") == "meal")
+	var at_fire: Array = eating.filter(func(o): return o.job.has("face"))
+	check(at_fire.size() == 2 and eating.size() > at_fire.size(), "a fire is good company for `fire_crowd` and no more (%d of %d went)" % [at_fire.size(), eating.size()])
+	check(eating.size() - at_fire.size() >= 3, "the rest sit down where they are (%d)" % (eating.size() - at_fire.size()))
 	# idle acts: nobody just stands about for long
 	sim = _life_sim(0.2)
 	u = sim.unit_by_name("Yan")
@@ -4824,6 +4896,18 @@ func test_tools_indoors() -> void:
 	check(float(w.get("tools", 0.0)) > 0.0, "with hands at work and no tools, a toolmaker's day has a price (%.2f)" % float(w.get("tools", 0.0)))
 	sim.stock["tools"] = float(adults) * 2.0
 	check(float(sim.soc.weights(false).get("tools", 0.0)) == 0.0, "with tools enough for all, making more is worth nothing")
+	# A pastime that is a chore of the house is done indoors too (life.json idle acts `inside`)
+	var mender = sim.living().filter(func(x): return x.role == "" and not x.job.is_empty())[0]
+	var act: Dictionary = sim.life.C["idle"]["acts"].filter(func(a): return a.get("id", "") == "mend")[0]
+	check(act.get("inside", false), "mending tools is a chore done at home")
+	check(sim.life.start(mender, act) and mender.job.has("inside"), "so the mender goes home to do it")
+	for i in 200:
+		sim.update_unit(mender, 0.1)
+		if sim.in_hut(mender): break
+	check(sim.in_hut(mender) and mender.inside == mender.job["inside"], "and mends indoors: hidden, sheltered and warm")
+	var was = mender.inside
+	while mender.inside >= 0 and mender.job.get("type", "") == "life": sim.update_unit(mender, 0.1) # (the chore runs its time out)
+	check(was >= 0 and mender.inside < 0 and not sim.in_hut(mender), "and comes out when it is done")
 
 func test_society_model() -> void:
 	print("\n== The society model's formulas (docs/society.md, scripts/society_model.gd) ==")

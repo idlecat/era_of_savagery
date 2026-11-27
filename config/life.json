@@ -2,18 +2,22 @@
  "_doc": "Everyday life of the people (life.gd, sim.life): meals at the fire, waking, how fast people walk, weariness (fatigue), spirits (morale), the bonds between families, the idle acts people choose when nobody needs them, and the short things they say. Each person is one family line: a child starts a new line, kin to the line it came from. Times are seconds unless named *_days; day parts are fractions of the day (sim.day_frac(): 0.74 night falls, 0.96 dawn). Texts are English translation keys. See docs/CONFIG.md.",
 
  "meals": {
-  "_doc": "In each of `times` (day parts) people at home who are hungrier than hungry_below put down work listed in `jobs` ('' = no work, 'life' = an idle act) and walk to the nearest fire within `reach` to eat in a ring around it (seat: distance from the fire). They eat up to a full meal (survival meal_fill) for food in proportion (survival meal per meal_fill), then go back to work. People far away still eat from the stores when very hungry (survival eat_below).",
+  "_doc": "In each of `times` (day parts) people who are hungrier than hungry_below put down the work listed in `jobs` ('' = no work, 'life' = an idle act) and eat a meal. Where they eat is one rule for everyone, weighed: the company at the nearest fire (no further than `reach`) is worth `fire_bonus` seconds of walking there and back, for up to `fire_crowd` people: each one already at it takes that share of the bonus, so a crowded ring is no company at all. A house that is already warm is worth `indoors_bonus` of it. Whoever gains more by staying eats where they stand (the farmer in the field, the woodcutter at the tree; a maker at work indoors eats there, hidden and warm), the rest gather in a ring round the fire (`seat`). Those who eat near each other still grow closer (bond_reach). They eat up to a full meal (survival meal_fill) for food in proportion (survival meal per meal_fill), then go back to work. People far away still eat from the stores when very hungry (survival eat_below).",
   "times": [[0.34, 0.42], [0.6, 0.68]],
   "hungry_below": 80,
   "reach": 650,
+  "fire_bonus": 8,
+  "fire_crowd": 6,
+  "indoors_bonus": 6,
   "roles": ["", "child"],
-  "jobs": ["", "life", "gather", "build", "art", "tend", "ritual"],
+  "jobs": ["", "life", "gather", "field", "build", "art", "tend", "ritual", "craft"],
   "seat": [40, 78],
   "eat_time": [5, 9],
   "give_up": 40,
   "bond": 1.0,
   "bond_reach": 70,
   "acts": ["Going to eat", "Eating at the fire"],
+  "acts_here": ["Stopping for a bite", "Eating where they are"],
   "pose": "sit",
   "talk": "eating",
   "talk_chance": 0.35
@@ -117,14 +121,14 @@
  },
 
  "idle": {
-  "_doc": "What grown-ups at home do when nobody needs them: every `every` seconds of idling one act is picked, weighted by `weight` plus `more` for each condition that holds. `needs`: conditions that must all hold; `when`: tribe conditions as in scenario scripts (story.holds). Conditions: dusk, morning, cold, wet, tired, hurt, hungry, grieving, low_spirits, high_spirits, children, kin_child, can_art, trait:<trait>. Verbs (do): sit (at: fire, here, shelter, grave, edge), chat, work (a chore at home, or `near` one of our buildings of that type; arms_xp: weapon practice a second with the weapon they carry, arms.gd), water, watch (the children), gaze, ritual (lasts until new orders), art (folk.gd), wander. acts: [walking there, doing it] ('%s': the other person); pose: the drawn pose there (sit, talk, build, gather, ritual).",
+  "_doc": "What grown-ups at home do when nobody needs them: every `every` seconds of idling one act is picked, weighted by `weight` plus `more` for each condition that holds. `needs`: conditions that must all hold; `when`: tribe conditions as in scenario scripts (story.holds). Conditions: dusk, morning, cold, wet, tired, hurt, hungry, grieving, low_spirits, high_spirits, children, kin_child, can_art, trait:<trait>. Verbs (do): sit (at: fire, here, shelter, grave, edge), chat, work (a chore at home; `inside`: done in the house, hidden and sheltered as a craft is, sim.own_hut(); or `near` one of our buildings of that type; arms_xp: weapon practice a second with the weapon they carry, arms.gd), water, watch (the children), gaze, ritual (lasts until new orders), art (folk.gd), wander. acts: [walking there, doing it] ('%s': the other person); pose: the drawn pose there (sit, talk, build, gather, ritual).",
   "every": [2, 4],
   "acts": [
    {"id": "fire", "do": "sit", "at": "fire", "weight": 2, "more": {"dusk": 6, "cold": 5, "tired": 3, "wet": -2}, "time": [10, 18],
     "acts": ["Walking to the fire", "Sitting by the fire"], "pose": "sit", "talk": "fire", "talk_chance": 0.25},
    {"id": "chat", "do": "chat", "weight": 3, "more": {"dusk": 2, "high_spirits": 2, "low_spirits": -2}, "time": [6, 10], "reach": 240,
     "acts": ["Going to talk with %s", "Talking with %s"], "pose": "talk", "talk": "chat"},
-   {"id": "mend", "do": "work", "weight": 2, "time": [8, 14], "acts": ["Mending tools", "Mending tools"], "pose": "build", "xp": {"craft": 0.04}},
+   {"id": "mend", "do": "work", "inside": true, "weight": 2, "time": [8, 14], "acts": ["Going home to mend tools", "Mending tools at home"], "pose": "build", "xp": {"craft": 0.04}},
    {"id": "hide", "do": "work", "weight": 2, "when": {"tech": "hide"}, "time": [8, 14], "acts": ["Scraping a hide", "Scraping a hide"], "pose": "gather", "xp": {"craft": 0.03}},
    {"id": "spar", "do": "work", "near": "weapon_rack", "weight": 1.5, "more": {"trait:belligerent": 3, "tired": -3, "hurt": -4}, "when": {"built": "weapon_rack"}, "time": [8, 14],
     "acts": ["Going to the weapon rack", "Weapon practice"], "pose": "attack", "xp": {"combat": 0.03}, "arms_xp": 0.12},

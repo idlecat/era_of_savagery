@@ -1,7 +1,8 @@
-## Everyday life of the people (sim.life): the rhythm of the day (meals in a ring at the
-## fire, a moment on waking, the evening fire), what people do when nobody needs them
-## (idle acts), the bonds between the tribe's families, each person's spirits (morale) and
-## weariness (fatigue), and the short things they say (speech marks over their heads).
+## Everyday life of the people (sim.life): the rhythm of the day (meals at the fire, at
+## their work or at home, a moment on waking, the evening fire), what people do when nobody
+## needs them (idle acts), the bonds between the tribe's families, each person's spirits
+## (morale) and weariness (fatigue), and the short things they say (speech marks over their
+## heads).
 ## Each person stands for one family line; a child starts a new line, kin to its parent's.
 ##
 ## Everything tunable is in config/life.json; the verbs of the idle acts are coded here:
@@ -44,6 +45,8 @@ var extra_lines := {} # situation -> [texts] (add_lines: a game master's)
 var _t := 0.0
 var _cache_kids := {} # parent id -> its living children (kin_of)
 var _cache_kids_t := -1.0
+var _cache_meal_fire := {} # fire id -> how many are eating there this meal (a _cache: rebuilt each meal time)
+var _cache_meal_slot := -1
 
 func _init(s) -> void:
 	sim = s
@@ -330,7 +333,11 @@ func _meal_slot() -> int:
 		if f >= float(times[i][0]) and f < float(times[i][1]): return sim.day() * 10 + i
 	return -1
 
-## In a meal time, hungry people at home come to the fire to eat together.
+## In a meal time, hungry people put down work and eat. Where is one weighed rule for
+## everyone: the company at the fire is worth `fire_bonus` seconds of walking for up to
+## `fire_crowd` people (each one already there takes a share of it: a crowd is no company),
+## and a house that is already warm is worth `indoors_bonus` of it. Whoever gains more by
+## staying eats where they stand, indoors if that is where they are (config/life.json).
 func _meal_call(u: E.Unit) -> void:
 	var slot := _meal_slot()
 	if slot < 0 or u.meal_slot == slot: return
@@ -342,11 +349,27 @@ func _meal_call(u: E.Unit) -> void:
 	if u.role == "child" and not u.job.is_empty(): return
 	u.meal_slot = slot # (asked once a meal time)
 	if u.hunger >= float(mc["hungry_below"]) or sim.stock["food"] < 1.0: return
+	if _cache_meal_slot != slot: # (a new meal time: the fires are empty again)
+		_cache_meal_slot = slot
+		_cache_meal_fire = {}
+	var job := {"type": "meal", "to": u.pos, "t": 0.0, "pose": mc["pose"], "acts": mc["acts_here"]}
+	if u.inside >= 0: job["inside"] = u.inside # (at work indoors: eat there, hidden and warm)
 	var fire = sim.nearest_serving("gather", u.pos)
-	if fire == null or fire.pos.distance_to(u.pos) > float(mc["reach"]) or not D.same_side(fire.pos, u.pos): return
-	var a := float(u.id) * 2.39996 + randf_range(-0.2, 0.2) # (round the fire, each at their place)
-	var seat: Vector2 = sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * Config.rand_in(mc["seat"]))
-	_take_over(u, {"type": "meal", "to": seat, "face": fire.pos, "t": 0.0, "eat": Config.rand_in(mc["eat_time"]), "pose": mc["pose"]})
+	if fire != null and D.same_side(fire.pos, u.pos) and fire.pos.distance_to(u.pos) <= float(mc["reach"]):
+		var walk: float = 2.0 * fire.pos.distance_to(u.pos) / maxf(1.0, sim.unit_speed(u))
+		var here: float = float(mc["indoors_bonus"]) if u.inside >= 0 else 0.0 # (a warm house is worth some of the walk)
+		var crowd: float = maxf(1.0, float(mc["fire_crowd"])) # (a crowded ring is no company at all)
+		var n: int = int(_cache_meal_fire.get(fire.id, 0))
+		if float(mc["fire_bonus"]) * (1.0 - float(n) / crowd) - walk > here: # (worth it: eat in a ring round it, each in their place)
+			_cache_meal_fire[fire.id] = n + 1
+			var a := float(u.id) * 2.39996 + randf_range(-0.2, 0.2)
+			job["to"] = sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * Config.rand_in(mc["seat"]))
+			job["face"] = fire.pos
+			job["fire_id"] = fire.id
+			job["acts"] = mc["acts"]
+			job["talk"] = str(mc["talk"])
+	job["eat"] = Config.rand_in(mc["eat_time"])
+	_take_over(u, job)
 
 ## Put work down for a moment (kept in resume_job; idle acts are not worth coming back to).
 func _take_over(u: E.Unit, job: Dictionary) -> void:
@@ -357,20 +380,41 @@ func _take_over(u: E.Unit, job: Dictionary) -> void:
 func do_meal(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var mc: Dictionary = C["meals"]
 	if sim.rest_time() or sim.time - u.job_t > float(mc["give_up"]):
+		_leave_house(u)
 		sim.end_errand(u)
 		return
 	if not sim.approach(u, j["to"], 5, dt):
-		u.act = mc["acts"][0]
+		u.act = _meal_act(j, 0)
 		return
-	u.act = mc["acts"][1]
-	u.face = j["face"]
+	if j.has("inside") and u.inside != int(j["inside"]): # (in at the bench or the hearth)
+		var hut = sim.struct_by_id(int(j["inside"]))
+		if hut == null or not hut.built:
+			_leave_house(u)
+			sim.end_errand(u)
+			return
+		u.inside = hut.id
+		u.pos = hut.pos
+	u.act = _meal_act(j, 1)
+	if j.has("face"): u.face = j["face"]
 	j["t"] += dt
 	if j["t"] < float(j["eat"]): return
 	eat(u)
-	if randf() < float(mc["talk_chance"]): say(u, str(mc["talk"]))
-	for o in sim.living(): # eating together brings families closer
+	if j.get("talk", "") != "" and randf() < float(mc["talk_chance"]): say(u, str(j["talk"]))
+	for o in sim.units_near(u.pos, float(mc["bond_reach"])): # (the grid: only those at their meal near, not everyone)
 		if o != u and o.job.get("type", "") == "meal" and o.pos.distance_to(u.pos) < float(mc["bond_reach"]): add_bond(u, o, float(mc["bond"]))
+	_leave_house(u)
 	sim.end_errand(u)
+
+## What they say while walking to their meal and while eating it.
+func _meal_act(j: Dictionary, i: int) -> String:
+	var acts: Array = j.get("acts", [])
+	if acts.is_empty(): acts = ["Eating", "Eating"]
+	return str(acts[mini(i, acts.size() - 1)])
+
+## Out of the house after an indoor meal, unless the work they go back to is indoors too.
+func _leave_house(u: E.Unit) -> void:
+	var rj: Dictionary = u.resume_job
+	if not (rj.get("type", "") == "craft" or rj.has("inside")): u.inside = -1
 
 ## A meal from the common store: up to full, food in proportion to what is eaten.
 func eat(u: E.Unit) -> void:
@@ -469,7 +513,14 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 				job["face"] = to
 				job["to"] = to + Vector2(randf_range(-12, 12), 14)
 		"work":
-			job["to"] = _home_spot(u)
+			if a.get("inside", false): # (a chore done in the house: hidden and sheltered as a craft is)
+				var hut = sim.own_hut(u)
+				if hut == null: return false
+				u.inside = -1
+				job["to"] = hut.pos
+				job["inside"] = hut.id
+			else:
+				job["to"] = _home_spot(u)
 			if a.has("near"): # (at one of our buildings of that type, the nearest)
 				var best = null
 				for st in sim.structures:
@@ -607,6 +658,7 @@ func do_act(u: E.Unit, j: Dictionary, dt: float) -> void:
 				sim.step_move(u, dt, spd)
 				return
 			u.path.clear()
+			if j.has("inside") and not _indoors(u, j): return
 			if j.has("back"): # (water: now home with it)
 				j["to"] = j["back"]
 				j.erase("back")
@@ -619,6 +671,7 @@ func do_act(u: E.Unit, j: Dictionary, dt: float) -> void:
 		1:
 			u.act = label.call(1)
 			u.doing = str(j.get("act", ""))
+			if j.has("inside") and not _indoors(u, j): return # (at home indoors: hidden, sheltered and warm)
 			if j.has("kid"): # watching a child: keep them in sight
 				var k: E.Unit = sim.unit_by_id(j["kid"])
 				if k == null or k.dead or k.role != "child":
@@ -637,8 +690,21 @@ func do_act(u: E.Unit, j: Dictionary, dt: float) -> void:
 				_done(u)
 
 func _done(u: E.Unit) -> void:
+	u.inside = -1 # (out of the house, if the chore was done indoors)
 	sim.set_job(u, {})
 	u.idle_t = 0.0
+
+## Someone at an indoor chore (life.json idle acts `inside`) goes in: hidden, sheltered and
+## warm as a craft is, and out of a beast's reach. False (and the chore is dropped) if the
+## house is gone.
+func _indoors(u: E.Unit, j: Dictionary) -> bool:
+	var hut = sim.struct_by_id(int(j.get("inside", -1)))
+	if hut == null or not hut.built:
+		_done(u)
+		return false
+	u.inside = hut.id
+	u.pos = hut.pos
+	return true
 
 ## The end of a talk: closer, or a quarrel.
 func _end_chat(u: E.Unit, p: E.Unit) -> void:

@@ -57,7 +57,7 @@ const TEXT_KEYS := ["text", "title", "label", "desc", "result", "else_result", "
 ## Keys whose values are all texts ({id: text} or {id: [texts]}).
 const TEXT_TABLES := ["voices", "treasures", "warn", "titles", "happened", "outcome", "talk", "dates", "tags", "names", "feats", "grows", "spots", "intro"]
 ## Keys holding lists of texts (nested lists too; numbers in them are skipped).
-const TEXT_LISTS := ["acts", "words", "signs"]
+const TEXT_LISTS := ["acts", "acts_here", "words", "signs"]
 
 ## Every player-visible text in a config (strings under TEXT_KEYS, lists of them for
 ## "acts", the key of a [key, var names...] text, and TEXT_TABLES), for translation checks.

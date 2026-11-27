@@ -489,13 +489,7 @@ func good_weight(good: String, w: Dictionary, hands: Dictionary) -> float:
 ## it can't be made now (unknown, or the stores can't pay its cost).
 func assign_craft(u: E.Unit, good: String) -> bool:
 	if not can_make(good) or not sim.can_afford(GOODS[good]["cost"]): return false
-	var hut = sim.struct_by_id(u.bed_id) if u.bed_id >= 0 else null
-	if hut == null or not hut.built or not sim.ours(hut):
-		var best_d := INF
-		for s in sim.structures:
-			if s.built and sim.ours(s) and s.type in sim.SHELTERS and s.pos.distance_to(u.home) < best_d:
-				best_d = s.pos.distance_to(u.home)
-				hut = s
+	var hut = sim.own_hut(u)
 	if hut == null: return false
 	sim.set_job(u, {"type": "craft", "good": good, "struct_id": hut.id, "t": 0.0})
 	sim.give_shift(u)
