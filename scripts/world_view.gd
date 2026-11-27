@@ -64,7 +64,10 @@ const GROUND_TEX := ["grass", "grass2", "meadow", "dry", "dirt", "forest", "road
 var wear_img: Image
 var wear_refresh := 0.0
 var view := Rect2() # visible canvas rect (iso space) for culling
-var clean := false # pictures (the HUD's achievement snapshots): no labels, bars, rings or popups
+## Pictures (the HUD's achievement snapshots): no labels, bars, rings or popups. A snapshot is
+## drawn by a second camera elsewhere in the world: whatever went stale out of the main view is
+## drawn again first (set by the HUD, read here).
+var clean := false: set = _set_clean
 var decor: Array = []
 var river_banks: Array = [] # per river: [left bank, right bank] polylines
 var cmd_marker := {}
@@ -381,13 +384,8 @@ func _process(delta: float) -> void:
 		_refresh_fog()
 	var vs := get_viewport_rect().size / cam.zoom.x
 	view = Rect2(cam.get_screen_center_position() - vs / 2, vs).grow(140)
-	_sync_items()
-	ground_fx.queue_redraw()
-	glow.queue_redraw()
-	overlay.queue_redraw()
-	ghost.queue_redraw()
-	fog.queue_redraw()
-	fog_mat.set_shader_parameter("night_tint", Vector3(night.color.r, night.color.g, night.color.b))
+	# Who moves, and which way they face, before the items are synced: a person's picture
+	# is drawn again when what it shows changes, and that is judged from these.
 	for u in sim.units:
 		var uk := "u%d" % u.id
 		_track(uk, u.pos)
@@ -406,8 +404,17 @@ func _process(delta: float) -> void:
 				attacking["p%d" % p.id] = true
 				heading["p%d" % p.id] = (iso(u.pos) - iso(p.pos)).normalized()
 				break
-	for n in sim.nodes:
+	for n in _moving_nodes: # (the deer; burning trees stand still)
 		if n.kind == "deer": _track("n%d" % n.id, n.pos)
+	sim.hold_lists() # (the sim's once-a-tick lists stay as they are while every person is asked for)
+	_sync_items()
+	sim.release_lists()
+	ground_fx.queue_redraw()
+	glow.queue_redraw()
+	overlay.queue_redraw()
+	ghost.queue_redraw()
+	fog.queue_redraw()
+	fog_mat.set_shader_parameter("night_tint", Vector3(night.color.r, night.color.g, night.color.b))
 	queue_redraw()
 
 ## Fog of war as a tiny texture (one texel per fog cell), drawn through the iso transform
@@ -782,8 +789,10 @@ func focus_on(p: Vector2) -> void:
 
 func _sync_lights() -> void:
 	var alive := {}
+	var fires: Array = [] # the bonfires that stand (rival clans' too: their pools add up with ours)
 	for s in sim.structures:
-		if s.type != "bonfire" or not s.built: continue
+		if s.type == "bonfire" and s.built: fires.append(s)
+	for s in fires:
 		alive[s.id] = true
 		if not lights.has(s.id):
 			var l := PointLight2D.new()
@@ -797,8 +806,8 @@ func _sync_lights() -> void:
 		l.texture_scale = r * 2.6 / 256.0
 		# (fires close together share the light: their pools add up, so each gives less)
 		var near := 0
-		for o in sim.structures:
-			if o != s and o.type == "bonfire" and o.built and o.pos.distance_to(s.pos) < r * 0.8: near += 1
+		for o in fires: # (only fires can neighbour a fire: not every building of every clan)
+			if o != s and o.pos.distance_to(s.pos) < r * 0.8: near += 1
 		l.energy = 0.55 * sim.night_amt / (1.0 + 0.6 * near) * (1.0 + 0.08 * sin(t * 9 + s.id)) # (as dark as the night is: with the night tint the brightest spot stays under daylight, at dusk too)
 	for u in sim.units:
 		if not _has_torch(u): continue
@@ -1327,6 +1336,15 @@ func _draw_wolf(p) -> void:
 
 func _in_view(p: Vector2) -> bool:
 	return view.has_point(iso(p))
+
+func _set_clean(v: bool) -> void:
+	if v:
+		for key in items: # (a snapshot from elsewhere: what went stale out of the main view is drawn again)
+			var it: Item = items[key]
+			if it.stale:
+				it.stale = false
+				it.queue_redraw()
+	clean = v
 
 func _draw_landmark(lm: Dictionary) -> void:
 	var b := iso(lm["pos"])
@@ -2435,8 +2453,11 @@ func _draw_unit(u) -> void:
 			var k := fmod(t * 0.7 + i / 3.0, 1.0)
 			ci.draw_circle(b + Vector2(sin(t * 2 + i * 2) * 10, -10 - 30 * k), 1.8, Color(0.8, 0.7, 1, 1 - k))
 
+var _dir_cache := {} # key -> [the heading it was judged from, its index]: asked for every person every frame
 func _dir_index(key: String) -> int:
 	var dir: Vector2 = heading.get(key, Vector2(0.6, 0.8))
+	var c: Array = _dir_cache.get(key, [])
+	if c.size() == 2 and c[0] == dir: return c[1]
 	var di := 0
 	var best := -2.0
 	for i in sprite_dirs.size():
@@ -2444,6 +2465,7 @@ func _dir_index(key: String) -> int:
 		if dd > best:
 			best = dd
 			di = i
+	_dir_cache[key] = [dir, di]
 	return di
 
 ## Pre-rendered animal: 8 facings, idle / 6-frame walk.
@@ -2498,7 +2520,11 @@ func _rank_feathers(u, at: Vector2, f: float) -> void:
 		ci.draw_line(at, tip, m["color"].darkened(0.35), 0.8)
 		if m["master"]: ci.draw_circle(tip, 1.4, Color("#ffd36b"))
 
-func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
+## The sprite a person shows just now: the animation for what their hands are doing (or their
+## stride, or the pose life.gd gave them), which of the 8 baked facings, and the frame of it on
+## the clock. One rule for the picture (_draw_unit_sprite) and for _unit_sig(), which decides
+## whether the picture is drawn again.
+func _unit_pose(u, key: String, walk: bool, busy: bool) -> String:
 	var di := _dir_index(key)
 	var anim := "idle"
 	if busy: anim = DOING_ANIM[u.doing]
@@ -2513,6 +2539,47 @@ func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> vo
 		var wn := "man_attack_%s_%d_%d" % [str(sim.arms.wielded(u).get("id", "")), di, int(anim_t * speed + u.id) % frames]
 		if art.has(wn): name = wn
 	if anim in ["chop", "build", "attack"] and sim.has_bronze() and art.has(name + "_bronze"): name += "_bronze"
+	return name
+
+## What a person's picture depends on, besides where they stand: all that _draw_unit() reads.
+## A villager is drawn again when it changes, not 60 times a second: someone standing still
+## never (a corpse, a bed), a walker as often as their stride turns over (11 times a second),
+## someone at a chore 7 times. The sprite is left in `_pose`; the bits are the rest (a picked
+## ring, a title, a load, their ranks' feathers...). -1: the clock moves part of the picture (a
+## fever's sweat, a torch's flame, a rite's sparks, the z's of a sleeper in the open, a hero's
+## glow, the hand-drawn figure): drawn every frame.
+var _pose := ""
+func _unit_sig(u, key: String) -> int:
+	if art == null or not art.has("man_idle_0_0"): return -1 # (no baked villagers: the figure is drawn by hand, and moves)
+	if u.dead:
+		_pose = "buried" if u.buried else ("carried" if _carried(u) else "fallen")
+		return 0 if u.buried else _dir_index(key)
+	if sim.in_hut(u):
+		_pose = "indoors"
+		return 0
+	if u.sleeping: return -1 # (the z's drift)
+	if u.hero or u.sick > 0 or u.doing == "ritual" or _has_torch(u): return -1
+	var walk: bool = moving.get(key, false)
+	var fl := 0
+	if u.id in selected: fl |= 1
+	if u.id == hover_unit: fl |= 2
+	if u.role == "child": fl |= 4
+	if u.role == "contract": fl |= 8
+	if u.title != "": fl |= 16
+	if u.carry_amt > 0: fl |= 32 * (1 if u.carry_type == "wood" else (2 if u.carry_type == "stone" else 3))
+	if u.job.get("load", "") == "water": fl |= 128
+	if facing.get(key, 1) > 0: fl |= 4096
+	if u.ox and u.job.get("type", "") == "gather":
+		if not art.has("packox_idle_0_0"): return -1 # (the hand-drawn ox's legs move)
+		fl |= 2048
+		if walk: fl |= (int(anim_t * 10.0 + key.hash() % 7) % 6) << 8 # (the ox strides behind them: bits 8-10)
+	var ranks := 0 # their ranks make their feathers (ranks.marks): the level of every skill (bits 13 up)
+	for s in D.SKILLS: ranks = ranks * 64 + u.lv(s)
+	_pose = _unit_pose(u, key, walk, DOING_ANIM.has(u.doing))
+	return fl | (ranks << 13)
+
+func _draw_unit_sprite(u, b: Vector2, key: String, walk: bool, busy: bool) -> void:
+	var name := _unit_pose(u, key, walk, busy)
 	var k := 0.95
 	_sprite(name, b, k)
 	_sprite(name + "_cloth", b, k, u.color)
@@ -3200,6 +3267,8 @@ class Item extends Node2D:
 	var obj
 	var sig := -1
 	var dynamic := false
+	var pose := "" # a person's: the sprite sig was drawn with (_unit_pose)
+	var stale := false # out of the view when its picture changed: draw again once it is back
 	func _draw() -> void:
 		wv.ci = self
 		draw_set_transform(-position)
@@ -3298,6 +3367,7 @@ func _build_decor_chunks() -> void:
 const NODE_FULL_EVERY := 6
 var _node_frame := 0
 var _moving_nodes: Array = []
+var _static_n := -1 # the items not looked for between full passes (decor chunks, and nodes): counted when the tidy-up runs
 
 func _sync_items() -> void:
 	var seen := {}
@@ -3373,7 +3443,21 @@ func _sync_items() -> void:
 	for u in sim.units:
 		var key := "u%d" % u.id
 		seen[key] = true
-		_touch(_item(key, 2, u, iso(u.pos), true), 0)
+		var sp := iso(u.pos)
+		var it := _item(key, 2, u, sp, false)
+		if not view.has_point(sp):
+			it.stale = true # out of sight: its picture is drawn again when it comes back
+		else:
+			var sig := _unit_sig(u, key)
+			if sig < 0: # (the clock moves part of the picture: every frame; and what it shows is forgotten)
+				it.sig = -3
+				it.pose = ""
+				it.queue_redraw()
+			elif it.stale or it.sig != sig or it.pose != _pose:
+				it.sig = sig
+				it.pose = _pose
+				it.queue_redraw()
+			it.stale = false
 	for p in sim.predators:
 		var key := "p%d" % p.id
 		seen[key] = true
@@ -3383,11 +3467,18 @@ func _sync_items() -> void:
 	if sim.guardian and not sim.guardian.dead:
 		seen["g"] = true
 		_touch(_item("g", 4, sim.guardian, iso(sim.guardian.pos) + Vector2(0, 80), true), 0)
-	for key in items.keys():
-		if key.begins_with("d") or (not full and key.begins_with("n")): continue # (static nodes: checked on full passes)
-		if not seen.has(key):
-			items[key].queue_free()
-			items.erase(key)
+	# What is gone (a fled beast, a finished road) is freed: looked for only when the numbers
+	# say something must be, not by walking every key each frame (a forest has thousands).
+	if items.size() != seen.size() + _static_n:
+		_static_n = 0
+		for key in items.keys():
+			if key.begins_with("d") or (not full and key.begins_with("n")):
+				_static_n += 1 # (static nodes: checked on full passes)
+				continue
+			if not seen.has(key):
+				items[key].queue_free()
+				items.erase(key)
+				_dir_cache.erase(key)
 
 ## A hovered building lights up a touch (a picked one carries its marker: _draw_pick_marks).
 func _pick_glow(st) -> Color:
