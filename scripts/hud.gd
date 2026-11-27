@@ -815,7 +815,7 @@ func _refresh_left() -> void:
 			_build_ability_table()
 			_refresh_left_content()
 			return
-		for g in _roster_groups():
+		for g in _roster_groups(): # (a quest's title, its head count, and its leader's row)
 			var members: Array = g["units"]
 			var hb := _button("", func():
 				world.selected = members.map(func(u): return u.id)
@@ -826,20 +826,21 @@ func _refresh_left() -> void:
 			hb.clip_text = true
 			hb.flat = true
 			hb.add_theme_color_override("font_color", g["color"])
-			hb.tooltip_text = "Select this whole group"
+			hb.tooltip_text = tr("Select this whole group (%d)") % members.size()
 			roster_box.add_child(hb)
 			roster_headers[g["key"]] = hb
-			for u in members:
+			for u in _group_leaders(g): # (a quest's leader gets a row of their own)
 				var b := _button("", func(): _roster_click(u))
 				b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 				b.clip_text = true
+				b.tooltip_text = tr("Leader of this quest")
 				roster_box.add_child(b)
 				roster_buttons[u.id] = b
 	_refresh_left_content()
 
-## People grouped by what they are doing: one group per running Task Contract (its crew,
-## leader first), then scouts out exploring, then everyone at home by the work they are at
-## (food, wood, stone...: sim.work_group()), then the children.
+## The quests the people are on, with how many are on each: one per running Task Contract
+## (its leader listed under it), then scouts out exploring, then the rest at home by the work
+## they are at (food, wood, stone...: sim.work_group()), then the children.
 func _roster_groups() -> Array:
 	var groups: Array = []
 	var placed := {}
@@ -867,6 +868,14 @@ func _roster_groups() -> Array:
 	if not kids.is_empty():
 		groups.append({"key": "children", "units": kids, "focus": D.VILLAGE, "color": Color("#ffd6f0")})
 	return groups
+
+## The leaders listed under a group's title. Only a running Task Contract has one (its leader),
+## and only while they are still with the crew; the count in the title includes them.
+func _group_leaders(g: Dictionary) -> Array:
+	var c = g.get("contract")
+	if c == null: return []
+	var ld = sim.unit_by_id(c.leader_id)
+	return [ld] if ld and not ld.dead and g["units"].has(ld) else []
 
 ## Click selects one person and looks at them; Shift-click adds or removes them from the selection.
 func _roster_click(u) -> void:
@@ -987,8 +996,7 @@ func _group_title(key: String, units: Array) -> String:
 	if key == "children": return tr("▸ CHILDREN (%d)") % units.size()
 	var c = sim.contracts.by_id(int(key.substr(1)))
 	if c == null: return key
-	var ld = sim.unit_by_id(c.leader_id)
-	return tr("⚑ %s · %s %d%% (%d)") % [sim.contracts.title(c.plan), tr(c.status), roundi(c.progress * 100), units.size()]
+	return tr("⚑ %s · %d villager%s") % [sim.contracts.title(c.plan), units.size(), "" if units.size() == 1 else I.plural_s()]
 
 func _refresh_left_content() -> void:
 	var bsel = _selected_building()
@@ -1009,7 +1017,12 @@ func _refresh_left_content() -> void:
 				roster_buttons[id].tooltip_text = tr("%s · %s\nHP %d/%d · ATK %.1f · DEF %.1f\nNow: %s") % [tr(au.name), tr(D.TRAITS[au.traits[0]]["name"]), au.hp, au.max_hp, sim.unit_atk(au), sim.unit_def(au), I.act(au.act)] + _marks_tip(au)
 			return
 		for g in _roster_groups():
-			if roster_headers.has(g["key"]): roster_headers[g["key"]].text = _group_title(g["key"], g["units"])
+			if not roster_headers.has(g["key"]): continue
+			var hb: Button = roster_headers[g["key"]]
+			hb.text = _group_title(g["key"], g["units"])
+			var c = g.get("contract")
+			if c: hb.tooltip_text = tr("%s · %s %d%%\nClick to select the whole quest") % [sim.contracts.title(c.plan), tr(c.status), roundi(c.progress * 100)]
+			else: hb.tooltip_text = tr("Select this whole group (%d)") % g["units"].size()
 		for id in roster_buttons:
 			var u = sim.unit_by_id(id)
 			var tag: String = " ★" + tr(u.title) if tr(u.title) != "" else ""

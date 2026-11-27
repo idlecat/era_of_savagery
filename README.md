@@ -33,7 +33,7 @@ Install Godot 4.7.2 and its export templates (Editor → Manage Export Templates
 - **Explore:** select people and press X (or *Scout the unknown*) to auto-scout. Right-click recalls them.
 - **Minimap** (bottom left): left-click or drag to move the view, right-click to send the selected people there.
 - **Roster:** two views.
-  - *By quest* (default): people are grouped under each running Task Contract (leader first), then scouts, then the village. Click a group header to select the whole group.
+  - *By quest* (default): a list of the quests people are on with how many are on each — one per running Task Contract (with its leader listed beneath), then scouts, then the village, the children. Click a quest to select the whole group.
   - *By ability*: a table of level and the five skills (Foraging, Crafting, Combat & Leadership, Lore, Trade & Barter). Click a column to sort by it; click it again to reverse. Hover a row to see HP, ATK, DEF and what the person is doing.
   - In both views, Shift-click adds a person to the selection or removes them.
 - **Hover the map:** point at a building, plant, ore, animal, landmark or the ford to see what it is and what it does (and, for huts and the burial ground, who is inside).
