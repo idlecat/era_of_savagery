@@ -19,6 +19,7 @@ const E = preload("res://scripts/entities.gd")
 const M = preload("res://scripts/society_model.gd")
 
 var S: Dictionary = preload("res://scripts/config.gd").load_cfg("society")
+var GOODS: Dictionary = S["goods"].duplicate() # good id -> its config (the _doc key left out)
 
 var sim
 var on := true # (tests switch it off: the old need rule; test_society_alloc and test_smoke run it)
@@ -33,6 +34,7 @@ var last := {} # choice -> weight, the last round (for a game master and the HUD
 
 func _init(s) -> void:
 	sim = s
+	GOODS.erase("_doc")
 
 ## A work knob (config/society.json work) for the challenge level now: work.by_challenge
 ## [hz.level] overrides the defaults, as director.json's levels do (make_it_fun.md G: the
@@ -86,6 +88,7 @@ func hands_now() -> Dictionary:
 static func choice_of(j: Dictionary) -> String:
 	match j.get("type", ""):
 		"gather", "field": return job_res(j)
+		"craft": return str(j.get("good", ""))
 		"art": return "art"
 		"ritual": return "rites"
 		"build": return "build"
@@ -307,6 +310,10 @@ func weights(site: bool) -> Dictionary:
 		var have: float = float(sim.stock.get(res, 0.0)) + float(hands.get(res, 0)) * rate_of(res)
 		var need: String = S["work"]["stock_needs"][res]
 		out[res] = value(need) * n * M.gain(have / maxf(1e-6, t), rate_of(res), t) * float(pol.get(res, 1.0))
+	# goods that wear: what one more maker saves (after the others: it reads their weights)
+	for g in GOODS:
+		var gw := good_weight(g, out, hands)
+		if gw > 0.0: out[g] = gw
 	# needs met by hands: crafts (comfort), rites (spirit), building (shelter)
 	var lv: Dictionary = S["levels"][level()]["hands"]
 	for c in S["work"]["hand_needs"]:
@@ -329,6 +336,7 @@ func trade_choice(u: E.Unit) -> String:
 	if w.get("ritual", false): return "rites"
 	if w.get("art", false): return "art"
 	if w.get("build", false): return "build"
+	if w.has("craft"): return str(w["craft"])
 	return ""
 
 ## How productive u is at a choice: their skill on the one curve, and their trade's edge at
@@ -419,6 +427,110 @@ func self_work(u: E.Unit) -> bool:
 	if place(u, sim.site_for(u)): return true
 	next_try[u.id] = sim.time + float(S["work"]["self_secs"]) * 4.0 # (nothing worth a hand can be done: rest, and look again later)
 	return false
+
+# ------------------------------------------------------------------ goods that wear (model §3.1)
+## Whether the tribe can make `good` now (its `when`).
+func can_make(good: String) -> bool:
+	return GOODS.has(good) and sim.story.holds(GOODS[good].get("when", {}))
+
+## How many of `good` the tribe wants: per_worker for each grown-up.
+func good_target(good: String) -> float:
+	var n := 0
+	for u in sim.living():
+		if u.role != "child": n += 1
+	return maxf(1.0, n * float(GOODS[good]["per_worker"]))
+
+## A good's coverage: what is in store against what the tribe wants.
+func coverage_of(good: String) -> float:
+	return clampf(float(sim.stock.get(good, 0.0)) / good_target(good), 0.0, 1.0)
+
+## How much faster the goods make the work on `res` go: 1 + (max - 1) x B(coverage), for each
+## good that `uses` it (tools: gathering, the fields). 1 for a good the tribe can't make yet.
+func tool_mult(res: String) -> float:
+	var m := 1.0
+	for g in GOODS:
+		if res in GOODS[g]["uses"] and can_make(g): m *= 1.0 + (float(GOODS[g]["max"]) - 1.0) * M.benefit(coverage_of(g))
+	return m
+
+## Goods wear with use: each hand at the work a good serves wears `wear` of it a day.
+var _wear_t := 0.0
+func tick(dt: float) -> void:
+	if not on: return
+	_wear_t += dt
+	if _wear_t < 1.0: return
+	var step := _wear_t
+	_wear_t = 0.0
+	var h := hands_now()
+	for g in GOODS:
+		if float(sim.stock.get(g, 0.0)) <= 0.0: continue
+		var users := 0
+		for res in GOODS[g]["uses"]: users += int(h.get(res, 0))
+		sim.stock[g] = maxf(0.0, float(sim.stock[g]) - users * float(GOODS[g]["wear"]) * step / D.DAY_LEN)
+
+## The price of making `good` (the one rule): what one more maker's day saves, the rise in the
+## multiplier times the hands on the work it serves, each valued at the best use of a hand
+## (the greatest of the other weights), every day the goods last (1 / wear): a tool is worth
+## the time it gives back over its life. With hands to spare (nothing else weighs), nothing.
+func good_weight(good: String, w: Dictionary, hands: Dictionary) -> float:
+	if not can_make(good) or not sim.can_afford(GOODS[good]["cost"]): return 0.0
+	var gd: Dictionary = GOODS[good]
+	var c := coverage_of(good)
+	var made := float(S["work"]["job_secs"]) / float(gd["work"]) # (a full-time maker's day)
+	var dc := made / good_target(good)
+	var dm := (float(gd["max"]) - 1.0) * (M.benefit(c + dc) - M.benefit(c))
+	var best := 0.0
+	for k in w: best = maxf(best, float(w[k]))
+	var users := 0.0
+	for res in gd["uses"]: users += float(hands.get(res, 0))
+	var life := 1.0 / maxf(0.01, float(gd["wear"])) # (a good saves time every day it lasts: its worth is the stream, days of use until worn out)
+	return dm * users * best * life
+
+## Send u to make `good` at home, indoors (their own hut, else the nearest of ours). False if
+## it can't be made now (unknown, or the stores can't pay its cost).
+func assign_craft(u: E.Unit, good: String) -> bool:
+	if not can_make(good) or not sim.can_afford(GOODS[good]["cost"]): return false
+	var hut = sim.struct_by_id(u.bed_id) if u.bed_id >= 0 else null
+	if hut == null or not hut.built or not sim.ours(hut):
+		var best_d := INF
+		for s in sim.structures:
+			if s.built and sim.ours(s) and s.type in sim.SHELTERS and s.pos.distance_to(u.home) < best_d:
+				best_d = s.pos.distance_to(u.home)
+				hut = s
+	if hut == null: return false
+	sim.set_job(u, {"type": "craft", "good": good, "struct_id": hut.id, "t": 0.0})
+	sim.give_shift(u)
+	return true
+
+## The craft job: walk home, go inside, work the piece; when it is done, pay its cost and
+## the good is in store; then the next piece, until the stint ends.
+func do_craft(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var hut = sim.struct_by_id(int(j.get("struct_id", -1)))
+	var gd: Dictionary = GOODS.get(str(j.get("good", "")), {})
+	if hut == null or not hut.built or gd.is_empty():
+		u.inside = -1
+		sim.set_job(u, {})
+		return
+	if u.inside < 0 and not sim.approach(u, hut.pos, 10, dt):
+		u.act = "Walking to work"
+		return
+	u.inside = hut.id
+	u.pos = hut.pos
+	u.act = str(gd["act"])
+	u.doing = str(gd["doing"])
+	j["t"] = float(j.get("t", 0.0)) + dt * sim.work_mul(u) * sim.skill_mult(u.lv(str(gd["skill"])))
+	if float(j["t"]) < float(gd["work"]): return
+	j["t"] = 0.0
+	if not sim.spend(gd["cost"]):
+		u.inside = -1
+		sim.set_job(u, {}) # (nothing left to make it from)
+		return
+	var g: String = str(j["good"])
+	sim.stock[g] = float(sim.stock.get(g, 0.0)) + 1.0
+	note_yield(g, 1.0)
+	sim.gain_xp(u, str(gd["skill"]), 1.0)
+	if float(j.get("shift_end", INF)) <= sim.time:
+		u.inside = -1
+		sim.set_job(u, {}) # (the stint is over: a new look at what is needed)
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:

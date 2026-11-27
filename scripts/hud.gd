@@ -729,6 +729,7 @@ func _refresh_top() -> void:
 	extra.append("[color=%s]%s[/color]" % [mc, tr("Mood %d") % roundi(sim.folk.mood)])
 	if sim.stock["goods"] > 0 or not sim.folk.treasures.is_empty(): extra.append("[color=#e6c46a]%s[/color]" % (tr("Goods %d") % sim.stock["goods"]))
 	if sim.knows_find("willow") or sim.knows_find("yarrow"): extra.append("[color=#9ad88a]%s[/color]" % (tr("Herbs %d") % sim.stock["herbs"]))
+	if sim.stock["tools"] > 0 or sim.has_tech("tools"): extra.append("[color=#c8c0b0]%s[/color]" % (tr("Tools %d") % sim.stock["tools"]))
 	if sim.knows_find("copper"): extra.append("[color=#d9965a]%s[/color]" % (tr("Copper %d") % sim.stock["copper"]))
 	if sim.knows_find("tin"): extra.append("[color=#a8b0b8]%s[/color]" % (tr("Tin %d") % sim.stock["tin"]))
 	if not extra.is_empty(): top_stats.text += "   " + "   ".join(extra)

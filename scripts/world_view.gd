@@ -969,7 +969,7 @@ func draw_overlay() -> void:
 	for e in first: _draw_unit_name(e[1], e[0] >= NAME_ALWAYS)
 	var abed := {} # hut id -> sleepers inside
 	for u in sim.units:
-		if sim.in_hut(u): abed[u.bed_id] = abed.get(u.bed_id, 0) + 1
+		if sim.in_hut(u) and u.sleeping: abed[u.bed_id] = abed.get(u.bed_id, 0) + 1
 	for s in sim.structures:
 		if abed.has(s.id) and _in_view(s.pos): _zzz(iso(s.pos) + Vector2(12, -52), s.id)
 	for p in sim.predators:
@@ -1169,7 +1169,7 @@ func _draw_hearths() -> void:
 	if k < 0.1: return
 	var home := {} # hut id -> someone inside
 	for u in sim.units:
-		if sim.in_hut(u): home[u.bed_id] = true
+		if sim.in_hut(u) and u.sleeping: home[u.bed_id] = true
 	for s in sim.structures:
 		if not s.built or not (s.type in ["hut", "large_hut"]) or not _in_view(s.pos) or not sim.is_visible(s.pos): continue
 		if not home.has(s.id) and sim.night_amt > 0.5: continue # (a dark, empty home)

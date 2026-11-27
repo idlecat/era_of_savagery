@@ -45,6 +45,7 @@ class Unit:
 	var job_t: float = 0.0 # when the current job was given (night orders keep people up)
 	var sleeping: bool = false
 	var bed_id: int = -1 # the hut someone sleeps in tonight (-1 = by a fire or in the open)
+	var inside: int = -1 # the building someone works indoors in (a craft at home), -1 outside
 	var bed_pos: Variant = null
 	var fell_t: float = 0.0 # when they died
 	var buried: bool = false

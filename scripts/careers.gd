@@ -222,6 +222,7 @@ func go_work(u: E.Unit, priced := false) -> bool:
 	if w.get("art", false) and sim.folk.can_art(u):
 		sim.folk.start_art(u)
 		return true
+	if w.has("craft") and (priced or not sim.soc.on): return sim.soc.assign_craft(u, str(w["craft"])) # (a good, made indoors at home)
 	return false
 
 ## The career whose holders go first for `duty` (config "preferred"), or "".
