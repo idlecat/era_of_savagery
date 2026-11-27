@@ -1583,6 +1583,7 @@ func _disband(c: E.Contract) -> void:
 
 func _complete(c: E.Contract) -> void:
 	c.status = "done"
+	sim.sites_changed() # (a settlement may stand now: settlements() lists again)
 	field_say(c, "done", "", true, true)
 	c.progress = 1.0
 	sim.stock["wood"] += c.wood
@@ -1613,6 +1614,7 @@ func _complete(c: E.Contract) -> void:
 			if lead: sim.gain_xp(u, "combat", 15) # leadership
 			else: sim.ranks.learned_under(u, ld, "craft")
 			u.home = c.site
+	sim.homes_changed() # (the founders now belong to the new settlement: people_of() sorts again)
 	sim.ranks.deed(ld, "lead_build")
 	_disband(c)
 	sim.popup(c.site + Vector2(0, -80), tr("Outpost founded!"), Color("#b6f28a"), true)

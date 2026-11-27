@@ -1,18 +1,44 @@
 ## Sim cost by population (city_proposal step 4): seeds The Ford, adds people (newcomers),
 ## lets them work a while with everything on, then times the tick.
-## $GODOT --headless --path . --script res://tools/perf.gd -- [--pops=50,200,500,1000] [--secs=20]
+## $GODOT --headless --path . --script res://tools/perf.gd -- [--pops=50,200,500,1000] [--secs=10]
+## --profile: for tools/profile.gd, which runs this under the engine's script profiler (a debugger
+## attached through --remote-debug): each measured loop is profiled, and perf.gd waits for the
+## profiler to have its table before it goes on.
 extends SceneTree
 const Sim = preload("res://scripts/sim.gd")
 const D = preload("res://scripts/data.gd")
 const Scenarios = preload("res://scripts/scenarios.gd")
+var profiling := false
+var acked := false
+
 func _initialize() -> void:
 	var a := {}
 	for s in OS.get_cmdline_user_args():
 		var kv := s.trim_prefix("--").split("=", true, 1)
 		a[kv[0]] = kv[1] if kv.size() > 1 else "1"
+	profiling = a.has("profile") and EngineDebugger.is_active() and EngineDebugger.has_profiler("servers")
+	if profiling: EngineDebugger.register_message_capture("eos", _captured)
 	for ps in str(a.get("pops", "50,200,500")).split(","):
-		print("pop %5d: %6.2f ms/tick" % [int(ps), measure(int(ps), float(a.get("secs", "20")))])
+		var pop := int(ps)
+		var ms := measure(pop, float(a.get("secs", "10")))
+		print("pop %5d: %6.2f ms/tick" % [pop, ms])
+		if profiling: _hand_over(pop, ms)
 	quit()
+
+func _captured(cmd: String, _data: Array) -> bool:
+	if cmd == "ack": acked = true
+	return true
+
+## The profiler has the table only once the debugger has read it: tell it the tick count and wait.
+func _hand_over(pop: int, ms: float) -> void:
+	acked = false
+	EngineDebugger.send_message("eos:meta", [pop, last_ticks, ms])
+	var t0 := Time.get_ticks_msec()
+	while not acked and Time.get_ticks_msec() - t0 < 30000:
+		EngineDebugger.line_poll()
+		OS.delay_msec(2)
+
+var last_ticks := 0
 
 ## Mean ms of a 0.05 s tick with `pop` people at work (a warm-up first).
 func measure(pop: int, secs: float) -> float:
@@ -38,10 +64,13 @@ func measure(pop: int, secs: float) -> float:
 	for k in 200: sim.tick(0.05) # (warm up: the Steward hands out work)
 	var t0 := Time.get_ticks_usec()
 	var n := int(secs / 0.05)
+	if profiling: EngineDebugger.profiler_enable("servers", true, [16384, false])
 	for k in n:
 		sim.paused = false
 		if sim.pending_event != "": sim.resolve_event(sim.pending_event, 0)
 		sim.tick(0.05)
+	if profiling: EngineDebugger.profiler_enable("servers", false, [])
 	var ms := (Time.get_ticks_usec() - t0) / 1000.0 / n
+	last_ticks = n
 	sim.dispose()
 	return ms

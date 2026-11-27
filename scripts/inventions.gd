@@ -116,8 +116,10 @@ func feat(kind: String, text: String, who: E.Unit = null, info := {}) -> void:
 ## Effects are data ({"stat", "mul"|"add", "of"}, see D.EFFECT_STATS) on inventions, on
 ## culture finds (while known) and on the culture's event/tale boons (sim.cult.boons).
 ## mul() multiplies them up and add() sums them; both cache until something is learned.
-var _fx := {}
-var _fx_sig := -1
+## The folds made so far (stat|of -> {mul, add}), emptied when the sources change: a memo that
+## rebuilds itself, so a _cache (not saved: the first question after loading makes it again).
+var _cache_fx := {}
+var _cache_fx_sig := -1
 
 func _sources() -> Array:
 	var out: Array = []
@@ -131,11 +133,11 @@ func _sources() -> Array:
 
 func _fold(stat: String, of: String) -> Dictionary:
 	var sig: int = known.size() + sim.known_finds.size() * 1000 + sim.cult.boons.size() * 1000000 + (sim.policy.rev * 100000000 if sim.policy else 0)
-	if sig != _fx_sig:
-		_fx = {}
-		_fx_sig = sig
+	if sig != _cache_fx_sig:
+		_cache_fx = {}
+		_cache_fx_sig = sig
 	var key := stat + "|" + of
-	if not _fx.has(key):
+	if not _cache_fx.has(key):
 		var m := 1.0
 		var a := 0.0
 		for e in _sources():
@@ -144,8 +146,8 @@ func _fold(stat: String, of: String) -> Dictionary:
 			if o != "" and o != of and not (of.contains("/") and o in of.split("/")) and not (o.contains("|") and of in o.split("|")): continue
 			if e.has("mul"): m *= float(e["mul"])
 			if e.has("add"): a += float(e["add"])
-		_fx[key] = {"mul": m, "add": a}
-	return _fx[key]
+		_cache_fx[key] = {"mul": m, "add": a}
+	return _cache_fx[key]
 
 ## Product of every known "mul" effect on `stat` (narrowed by `of`, "a/b" matches either;
 ## an effect's own `of` may list several: "a|b").

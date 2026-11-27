@@ -436,6 +436,7 @@ func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 
 func add_structure(type: String, p: Vector2, built := false, owner := "village", paid := false) -> E.Structure:
 	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
+	structs_changed()
 	var s := E.Structure.new()
 	s.id = uid(); s.type = type; s.pos = p; s.built = built
 	s.work = D.STRUCTURES[type]["work"]; s.progress = s.work if built else 0.0
@@ -479,7 +480,23 @@ func has_tech(t: String) -> bool: return techs.has(t)
 func has_bronze() -> bool: return has_tech("bronze") and struct_exists("smelter") and stock["copper"] >= 1 and stock["tin"] >= 1 and ranks.tribe_can("fine_craft")
 func knows_find(id: String) -> bool: return known_finds.has(id)
 func struct_exists(type: String) -> bool: return not built_of(type).is_empty() # (the per-tick index: asked per blow through has_bronze())
-func living() -> Array: return units.filter(func(u): return not u.dead)
+## The people alive, in the order of `units` (the dead stay in `units`). Within a tick the list
+## is made once and shared (dozens of rules ask for it every tick, and a town has a thousand
+## people): read it, don't change it. It is made again the moment someone dies or leaves
+## (_cache_gone), when someone is born, and on every tick outside a tick() (tests, the HUD).
+var _cache_living: Array = []
+var _cache_living_key: Array = [] # [tick, units.size(), _cache_gone] when the list was made
+var _cache_gone := 0 # how many people have died or left so far
+func living() -> Array:
+	if _lists_hold() and not _cache_living_key.is_empty() and _cache_living_key[0] == _cache_serial and _cache_living_key[1] == units.size() and _cache_living_key[2] == _cache_gone:
+		return _cache_living
+	var out: Array = []
+	for u in units:
+		if not u.dead: out.append(u)
+	if _lists_hold():
+		_cache_living = out
+		_cache_living_key = [_cache_serial, units.size(), _cache_gone]
+	return out
 
 ## Level of detail (rules.json lod): people out of danger are updated every `every`-th tick
 ## with that many times the step; those in a fight, fleeing, reacting, in an emergency or
@@ -499,7 +516,7 @@ var _cache_grid := {}
 var _cache_grid_t := -1.0
 
 func _grid() -> Dictionary:
-	if _cache_grid_t != time or not _cache_in_tick: # (outside a tick people may have been moved by hand: look again)
+	if _cache_grid_t != time or not _lists_hold(): # (outside a tick or a hold people may have been moved by hand: look again)
 		_cache_grid_t = time
 		_cache_grid = {}
 		for u in units:
@@ -588,8 +605,8 @@ func ours(s: E.Structure) -> bool: return not s.owner.begins_with("rival:")
 
 func pop_cap() -> int:
 	var c := 0
-	for s in structures:
-		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("cap", 0))
+	for s in our_built():
+		c += int(D.STRUCTURES[s.type].get("cap", 0))
 	return c
 
 ## Our built buildings of `type`, indexed once a tick (people ask this every tick:
@@ -598,9 +615,11 @@ var _cache_built := {}
 var _cache_built_t := -1.0
 var _cache_serving := {} # role -> our built buildings serving it (serving(), rebuilt with built_of's)
 ## A building was lost or changed outside the usual paths: built_of() looks again.
-func buildings_changed() -> void: _cache_built_t = -1.0
+func buildings_changed() -> void:
+	_cache_built_t = -1.0
+	structs_changed()
 func built_of(type: String) -> Array:
-	if _cache_built_t != time or not _cache_in_tick: # (outside a tick a building may have been changed by hand: look again)
+	if _cache_built_t != time or not _lists_hold(): # (outside a tick or a hold a building may have been changed by hand: look again)
 		_cache_built_t = time
 		_cache_built = {}
 		_cache_serving = {}
@@ -609,6 +628,50 @@ func built_of(type: String) -> Array:
 			if _cache_built.has(s.type): _cache_built[s.type].append(s)
 			else: _cache_built[s.type] = [s]
 	return _cache_built.get(type, [])
+
+## Our buildings that stand, in the order of `structures` (the rival clans' villages are most
+## of that list, and were walked past one building at a time by every rule that scans).
+## Made once a tick, and made again at once when a building rises, falls, is demolished or
+## is finished (structs_changed(): nothing stale within the tick, as the scans were exact).
+## Read-only.
+var _cache_ours: Array = []
+var _cache_rings: Array = [] # of those, the walls and rings (structures.json "ring")
+var _cache_ours_key: Array = [] # [tick, structures, size, _cache_structs_n] when they were listed
+var _cache_structs_n := 0 # bumped whenever a building is added, removed, rises or falls
+func structs_changed() -> void: _cache_structs_n += 1
+func our_built() -> Array:
+	if not (_lists_hold() and _cache_ours_key.size() == 4 and _cache_ours_key[0] == _cache_serial and is_same(_cache_ours_key[1], structures) and _cache_ours_key[2] == structures.size() and _cache_ours_key[3] == _cache_structs_n):
+		_cache_ours = []
+		_cache_rings = []
+		for s in structures:
+			if not s.built or not ours(s): continue
+			_cache_ours.append(s)
+			if D.STRUCTURES[s.type].get("ring", false): _cache_rings.append(s)
+		_cache_ours_key = [_cache_serial, structures, structures.size(), _cache_structs_n]
+		_cache_sgrid = {}
+	return _cache_ours
+
+## Our standing buildings by grid cell (as wide as the usual reach asked for), made from
+## our_built(): who is near a place without walking the list. In no particular order. A _cache.
+const STRUCT_CELL := 200.0
+var _cache_sgrid := {}
+func structs_near(p: Vector2, r: float) -> Array:
+	our_built()
+	if _cache_sgrid.is_empty():
+		for s in _cache_ours:
+			var k := Vector2i(floori(s.pos.x / STRUCT_CELL), floori(s.pos.y / STRUCT_CELL))
+			if _cache_sgrid.has(k): _cache_sgrid[k].append(s)
+			else: _cache_sgrid[k] = [s]
+	var out: Array = []
+	var x0 := floori((p.x - r) / STRUCT_CELL)
+	var x1 := floori((p.x + r) / STRUCT_CELL)
+	var y0 := floori((p.y - r) / STRUCT_CELL)
+	var y1 := floori((p.y + r) / STRUCT_CELL)
+	for x in range(x0, x1 + 1):
+		for y in range(y0, y1 + 1):
+			for s in _cache_sgrid.get(Vector2i(x, y), []):
+				if s.pos.distance_to(p) < r: out.append(s)
+	return out
 
 ## Fuel (rules.json fuel): in winter the fires burn wood, per head and more at night.
 func fuel_rate() -> float:
@@ -668,7 +731,7 @@ func near_warmth(u: E.Unit) -> bool:
 	if out_of_fuel(): return false # (the fires have burned down: no wood to feed them)
 	var r := warm_reach()
 	var warm: Array = serving("warmth") # (also renews the building index)
-	if _cache_warm_t != _cache_built_t or not _cache_in_tick: # (outside a tick: look afresh, as built_of() does)
+	if _cache_warm_t != _cache_built_t or not _lists_hold(): # (outside a tick or a hold: look afresh, as built_of() does)
 		_cache_warm_t = _cache_built_t
 		_cache_warm = {}
 		_cache_warm_cell = r
@@ -709,14 +772,18 @@ func inside_wall(p: Vector2) -> bool:
 ## strongest wall around p, 0 outside every wall).
 func wall_def(p: Vector2) -> float:
 	var best := 0.0
-	for s in structures:
-		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0:
+	for s in _rings():
+		if s.pos.distance_to(p) < struct_r(s) + 15.0:
 			best = maxf(best, float(D.STRUCTURES[s.type].get("inside_def", 0)))
 	return best
 
+func _rings() -> Array:
+	our_built()
+	return _cache_rings
+
 func _wall_at(p: Vector2) -> E.Structure:
-	for s in structures:
-		if s.built and ours(s) and D.STRUCTURES[s.type].get("ring", false) and s.pos.distance_to(p) < struct_r(s) + 15.0: return s
+	for s in _rings():
+		if s.pos.distance_to(p) < struct_r(s) + 15.0: return s
 	return null
 
 ## Whether `hazard` (lightning, wildfire, flood, quake) can knock building s down
@@ -725,8 +792,8 @@ func hit_by(s: E.Structure, hazard: String) -> bool:
 	return hazard in D.STRUCTURES[s.type].get("hazards", [])
 
 func struct_near(type: String, p: Vector2, r: float) -> bool:
-	for s in structures:
-		if s.built and ours(s) and s.type == type and s.pos.distance_to(p) < r: return true
+	for s in structs_near(p, r): # (the grid: a few buildings near, not the whole list)
+		if s.type == type: return true
 	return false
 
 # ------------------------------------------------------------------ stats
@@ -787,8 +854,8 @@ var FOOD_STORE_BASE: int = int(RULES["survival"]["store_base"])
 var FOOD_ROT: float = float(RULES["survival"]["rot"])
 func food_cap() -> int:
 	var c := FOOD_STORE_BASE + inv.store_bonus()
-	for s in structures:
-		if s.built and ours(s): c += int(D.STRUCTURES[s.type].get("store", 0))
+	for s in our_built():
+		c += int(D.STRUCTURES[s.type].get("store", 0))
 	return c
 ## Hunger per unit of distance walked: a villager walking all day gets ~70% hungrier.
 var WALK_HUNGER: float = float(RULES["survival"]["walk_hunger"])
@@ -1343,6 +1410,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
 	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
+	structs_changed()
 	if s.type == "roadworks": # a finished road is part of the ground, not a building
 		s.progress = s.work
 		roads.progress(s)
@@ -1538,10 +1606,21 @@ func _find_effects(u: E.Unit, amt: int) -> void:
 
 # ------------------------------------------------------------------ settlements
 ## Where our people live: the home village, plus every outpost a settle contract founded.
+## Our settlements: the village and the sites of settled contracts (the village first). Made
+## once a tick: asked for every person, every tick (settlement_of()). Don't change the list.
+var _cache_settle: Array = []
+var _cache_settle_key: Array = []
+## A contract was completed: a new settlement stands, and the list is made again.
+func sites_changed() -> void: _cache_settle_key = []
 func settlements() -> Array:
+	if _lists_hold() and _cache_settle_key.size() == 3 and _cache_settle_key[0] == _cache_serial and _cache_settle_key[1] == contracts.list.size() and is_same(_cache_settle_key[2], contracts.list):
+		return _cache_settle
 	var out: Array = [D.VILLAGE]
 	for c in contracts.list:
 		if c.kind == "settle" and c.status == "done": out.append(c.site)
+	if _lists_hold():
+		_cache_settle = out
+		_cache_settle_key = [_cache_serial, contracts.list.size(), contracts.list]
 	return out
 
 ## The settlement a person at `p` sets out from: the nearest of ours on the same land
@@ -1560,8 +1639,8 @@ func at_settlement(p: Vector2) -> bool:
 
 func beds_at(p: Vector2) -> int:
 	var n := 0
-	for s in structures:
-		if s.built and ours(s) and s.type in SHELTERS and settlement_of(s.pos).distance_to(p) < 1.0: n += int(D.STRUCTURES[s.type]["cap"]) # (the settlement's own beds, however far it has spread)
+	for s in our_built():
+		if s.type in SHELTERS and settlement_of(s.pos).distance_to(p) < 1.0: n += int(D.STRUCTURES[s.type]["cap"]) # (the settlement's own beds, however far it has spread)
 	return n
 
 ## Whether a fire of ours burns at the settlement at `p` (within rules.json beds.fire_reach,
@@ -1592,13 +1671,42 @@ func _place_key(p: Vector2) -> String: return "%d,%d" % [roundi(p.x), roundi(p.y
 ## What is known of settlement `at`: {"name", "tier", "day"} ({} before its first look).
 func place_of(at: Vector2) -> Dictionary: return places.get(_place_key(at), {})
 
-## Our people whose home is settlement `at` (one of settlements()).
+## Our people whose home is settlement `at` (one of settlements()): the living in the order of
+## `units`. Sorted by home once a tick (asked for a person at a time by the tiers), and again
+## at once when someone's home changes (homes_changed()), someone dies or is born, or a
+## settlement stands. The lists are read-only.
+var _cache_people := {} # settlement -> [people]
+var _cache_people_key: Array = [] # [tick, the living list's key, settlements(), _cache_moved_n]
+var _cache_moved_n := 0 # bumped whenever someone's home changes
+func homes_changed() -> void: _cache_moved_n += 1
 func people_of(at: Vector2) -> Array:
-	return living().filter(func(u): return settlement_of(u.home).distance_to(at) < 1.0)
+	var st: Array = settlements()
+	var lv: Array = living()
+	if not (_lists_hold() and _cache_people_key.size() == 4 and _cache_people_key[0] == _cache_serial and _cache_people_key[1] == _cache_living_key and is_same(_cache_people_key[2], st) and _cache_people_key[3] == _cache_moved_n):
+		_cache_people = {}
+		for u in lv:
+			var h: Vector2 = settlement_of(u.home)
+			if _cache_people.has(h): _cache_people[h].append(u)
+			else: _cache_people[h] = [u]
+		_cache_people_key = [_cache_serial, _cache_living_key, st, _cache_moved_n]
+	return _cache_people.get(at, [])
 
-## Built buildings of ours belonging to settlement `at`.
+## Built buildings of ours belonging to settlement `at`, in the order of `structures`: sorted
+## by home once a tick, and again at once when a building rises, falls, changes hands or a
+## settlement stands. Read-only.
+var _cache_built_at := {} # settlement -> [buildings]
+var _cache_built_at_key: Array = [] # [tick, our_built()'s key, settlements()]
 func buildings_of(at: Vector2) -> Array:
-	return structures.filter(func(s): return s.built and ours(s) and settlement_of(s.pos).distance_to(at) < 1.0)
+	var st: Array = settlements()
+	our_built()
+	if not (_lists_hold() and _cache_built_at_key.size() == 3 and _cache_built_at_key[0] == _cache_serial and _cache_built_at_key[1] == _cache_ours_key and is_same(_cache_built_at_key[2], st)):
+		_cache_built_at = {}
+		for b in _cache_ours:
+			var h: Vector2 = settlement_of(b.pos)
+			if _cache_built_at.has(h): _cache_built_at[h].append(b)
+			else: _cache_built_at[h] = [b]
+		_cache_built_at_key = [_cache_serial, _cache_ours_key, st]
+	return _cache_built_at.get(at, [])
 
 ## What settlement `at` still lacks for tier row `t` (rules.json tiers), in words; [] = it is one.
 func tier_lacks(at: Vector2, t: Dictionary) -> Array:
@@ -1730,6 +1838,7 @@ func move_out(from: Vector2, to: Vector2) -> E.Unit:
 	movers.sort_custom(func(a, b): return spare_hand(a) < spare_hand(b))
 	var u: E.Unit = movers[0]
 	u.home = to
+	homes_changed()
 	set_job(u, {"type": "move", "to": to + Vector2(randf_range(-40, 40), randf_range(-30, 30))})
 	add_log(tr("%s moves to '%s', where there are empty beds.") % [tr(u.name), settlement_name(to)], "story", [u])
 	remember(u, tr("moved to '%s' on Day %d") % [settlement_name(to), day()], 6)
@@ -1898,8 +2007,8 @@ var BURY_RANGE: float = float(RULES["burial"]["range"]) # bodies further out tha
 var GRAVE_DIG: float = float(RULES["burial"]["dig"])
 
 func burial_ground() -> E.Structure:
-	for s in structures:
-		if s.built and ours(s) and s.type == "burial_ground": return s
+	for s in our_built():
+		if s.type == "burial_ground": return s
 	return null
 
 ## A quiet spot at the edge of the village, clear of everything else.
@@ -2075,6 +2184,7 @@ func wake(u: E.Unit) -> void:
 		u.path.clear()
 		u.dest = null
 	u.sleeping = false
+	_bed_left(u)
 	u.bed_id = -1
 	u.bed_pos = null
 
@@ -2144,15 +2254,18 @@ func work_group(u: E.Unit) -> String:
 func pick_bed(u: E.Unit) -> void:
 	var bank := D.region_at(u.pos)
 	var near: Vector2 = u.home if D.region_at(u.home) == bank and u.home.distance_to(u.pos) < BED_FAR else u.pos
+	var taken := beds_taken()
 	var best: E.Structure = null
-	for s in structures:
-		if not s.built or not ours(s) or not s.type in SHELTERS or D.region_at(s.pos) != bank: continue
+	for s in our_built():
+		if not s.type in SHELTERS or D.region_at(s.pos) != bank: continue
 		var cap: int = int(D.STRUCTURES[s.type]["cap"])
-		var used: int = units.filter(func(o): return not o.dead and o != u and o.bed_id == s.id).size()
+		var used: int = int(taken.get(s.id, 0)) - (1 if u.bed_id == s.id else 0)
 		if used >= cap: continue
 		if best == null or s.pos.distance_to(near) < best.pos.distance_to(near): best = s # beds at home first
+	_bed_left(u)
 	if best and best.pos.distance_to(u.pos) < BED_FAR:
 		u.bed_id = best.id
+		_bed_taken(u)
 		u.bed_pos = best.pos + Vector2(0, 6)
 		return
 	u.bed_id = -1
@@ -2162,6 +2275,28 @@ func pick_bed(u: E.Unit) -> void:
 		u.bed_pos = dry_spot(fire.pos + Vector2(cos(a), sin(a)) * (34.0 + float(u.id % 3) * 12.0))
 	else:
 		u.bed_pos = dry_spot(u.pos) # camp in the open, but not at the water's edge
+
+## The beds taken: hut id -> how many of the living sleep in it. Counted once a tick, and kept
+## up as people pick a bed and wake (pick_bed(), wake()): everyone used to count the sleepers
+## of every hut when they lay down, a town's nightfall in huts x people. A _cache.
+var _cache_beds := {}
+var _cache_beds_key: Array = [] # [tick, the living list's key] when they were counted
+func beds_taken() -> Dictionary:
+	var lv: Array = living()
+	if not _lists_hold() or _cache_beds_key.size() != 2 or _cache_beds_key[0] != _cache_serial or _cache_beds_key[1] != _cache_living_key:
+		_cache_beds = {}
+		for u in lv:
+			if u.bed_id >= 0: _cache_beds[u.bed_id] = int(_cache_beds.get(u.bed_id, 0)) + 1
+		_cache_beds_key = [_cache_serial, _cache_living_key]
+	return _cache_beds
+func _beds_current() -> bool:
+	return _cache_beds_key.size() == 2 and _cache_beds_key[0] == _cache_serial and _cache_beds_key[1] == _cache_living_key
+## `u` gives up the bed they had (before u.bed_id changes).
+func _bed_left(u: E.Unit) -> void:
+	if u.bed_id >= 0 and _beds_current() and _cache_beds.has(u.bed_id): _cache_beds[u.bed_id] = int(_cache_beds[u.bed_id]) - 1
+## `u` takes the bed u.bed_id names (after it is set).
+func _bed_taken(u: E.Unit) -> void:
+	if u.bed_id >= 0 and _beds_current(): _cache_beds[u.bed_id] = int(_cache_beds.get(u.bed_id, 0)) + 1
 
 ## How far from a river's centreline the ground is wet: the river, a margin of bank, and
 ## the spring flood while it is up.
@@ -2259,6 +2394,7 @@ func hurt_unit(u: E.Unit, dmg: float, attacker) -> void:
 func kill_unit(u: E.Unit, killer) -> void:
 	director.note("death")
 	u.dead = true
+	_cache_gone += 1 # (living() makes its list again)
 	u.hp = 0
 	u.job = {}
 	u.fell_t = time
@@ -2470,10 +2606,20 @@ func _update_guardian(dt: float) -> void:
 
 # ------------------------------------------------------------------ world tick
 var _cache_in_tick := false
+var _cache_serial := 0 # counts ticks: the lists made once a tick (living(), settlements(), our_built()) are keyed to it
 ## Whether tick() is running (per-tick caches may be used; outside it, look fresh).
 func in_tick() -> bool: return _cache_in_tick
+## Outside a tick the lists made once a tick (living(), built_of(), our_built()...) are made
+## afresh at every call: the HUD or a test may have changed things. A frame's drawing asks for
+## every person at a time (who carries a torch), so world_view holds the lists still around its
+## sync: made at the first ask, kept until release_lists(). Nothing but drawing runs in between.
+var _cache_hold := 0
+func hold_lists() -> void: _cache_hold += 1
+func release_lists() -> void: _cache_hold = maxi(0, _cache_hold - 1)
+func _lists_hold() -> bool: return _cache_in_tick or _cache_hold > 0
 func tick(dt: float) -> void:
 	_cache_in_tick = true
+	_cache_serial += 1
 	_tick(dt)
 	_cache_in_tick = false
 
@@ -2500,8 +2646,7 @@ func _tick(dt: float) -> void:
 		if day() != rot_warn_day:
 			rot_warn_day = day()
 			alert(tr("The stores are full and food is rotting on the ground. Build a Granary to keep more."), D.VILLAGE, "warn")
-	for s in structures:
-		if not s.built or not ours(s): continue
+	for s in our_built(): # (food and lore from what stands: the list made once a tick)
 		var sd: Dictionary = D.STRUCTURES[s.type]
 		if sd.has("food"):
 			var own: float = float(sd["food"]) * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
@@ -3073,6 +3218,7 @@ func demolish_block(s: E.Structure) -> String:
 ## Pull a building down (a building site is cancelled): part of its wood and stone back.
 func demolish(id: int) -> String:
 	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
+	structs_changed()
 	var s := struct_by_id(id)
 	var why := demolish_block(s)
 	if why != "": return why
@@ -3278,8 +3424,8 @@ func flood_strike() -> void:
 			hurt_unit(u, u.max_hp * float(gf["hit_damage"]), null)
 			hurt += 1
 			remember(u, tr("survived the Great Flood on Day %d") % day(), 7)
-	for s in structures:
-		if ours(s) and s.built and hit_by(s, "flood") and D.river_dist(s.pos) < float(gf["building_radius"]):
+	for s in our_built():
+		if hit_by(s, "flood") and D.river_dist(s.pos) < float(gf["building_radius"]):
 			s.built = false
 			buildings_changed()
 			s.progress = s.work * float(gf["rebuild"])
@@ -3292,6 +3438,17 @@ func best_unit(skill: String, exclude_contract := true) -> E.Unit:
 		if exclude_contract and u.role == "contract": continue
 		if best == null or u.lv(skill) > best.lv(skill): best = u
 	return best
+
+## The `n` hardest hitters of `pool`, hardest first (story's "fighters:<n>"). Each one's attack is
+## read once: it used to be read twice for every comparison of the sort, and a reading walks
+## the tribe's arms, trades and weapon racks (a dilemma cost a town seconds). The same sort on
+## the same attack values picks the same people in the same order.
+func hardest_hitters(pool: Array, n: int) -> Array:
+	var atk := {} # id -> attack
+	for u in pool: atk[u.id] = unit_atk(u)
+	var out: Array = pool.duplicate()
+	out.sort_custom(func(a, b): return atk[a.id] > atk[b.id])
+	return out.slice(0, n)
 
 ## Civilization-style dilemmas. Each option: {label, desc, enabled}.
 func event_def(id: String) -> Dictionary:
@@ -3467,8 +3624,7 @@ func fog_update() -> void:
 		if seen.has(key): continue
 		seen[key] = true
 		reveal(u.pos, sr)
-	for s in structures:
-		if s.built and ours(s): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_STRUCT)))
+	for s in our_built(): reveal(s.pos, float(D.STRUCTURES[s.type].get("sight", D.SIGHT_STRUCT)))
 	_lookouts()
 	if guardian and not guardian.dead: reveal(guardian.pos, 260)
 	for lm in landmarks:
@@ -3488,8 +3644,8 @@ func struct_block(type: String) -> String:
 ## within 140 (shrine, temple, altar), else 1.
 func ritual_mult(p: Vector2) -> float:
 	var m := 1.0
-	for s in structures:
-		if s.built and ours(s) and s.pos.distance_to(p) < 140.0: m = maxf(m, float(D.STRUCTURES[s.type].get("ritual_mult", 1.0)))
+	for s in structs_near(p, 140.0): # (the grid: what stands round the place, not every building)
+		m = maxf(m, float(D.STRUCTURES[s.type].get("ritual_mult", 1.0)))
 	return m
 
 ## Longhouses (structures.json "hearth_bond"): those asleep under one roof grow closer.
@@ -3497,10 +3653,18 @@ func _hearths(dt: float) -> void:
 	hearth_t -= dt
 	if hearth_t > 0.0: return
 	hearth_t = 2.0
-	for s in structures:
+	var roofs: Array = [] # the longhouses that stand
+	for s in our_built():
+		if float(D.STRUCTURES[s.type].get("hearth_bond", 0.0)) > 0.0: roofs.append(s)
+	if roofs.is_empty(): return
+	var sleepers_of := {} # hut id -> those asleep in it (the living in the order of `units`, as a scan gave them)
+	for u in living():
+		if u.sleeping and u.bed_id >= 0:
+			if not sleepers_of.has(u.bed_id): sleepers_of[u.bed_id] = []
+			sleepers_of[u.bed_id].append(u)
+	for s in roofs: # (the same huts, in the same order: the bonds are made as they were)
 		var hb := float(D.STRUCTURES[s.type].get("hearth_bond", 0.0))
-		if hb <= 0.0 or not s.built or not ours(s): continue
-		var sleepers: Array = units.filter(func(u): return not u.dead and u.sleeping and u.bed_id == s.id)
+		var sleepers: Array = sleepers_of.get(s.id, [])
 		for i in sleepers.size():
 			for j in range(i + 1, sleepers.size()):
 				life.add_bond(sleepers[i], sleepers[j], hb * 2.0) # (both ways at once: hb a second, every 2 s)
@@ -3510,8 +3674,8 @@ func _hearths(dt: float) -> void:
 func struct_mul(stat: String) -> float:
 	var m := 1.0
 	var seen := {}
-	for s in structures:
-		if not s.built or seen.has(s.type) or not ours(s): continue
+	for s in our_built():
+		if seen.has(s.type): continue
 		seen[s.type] = true
 		for e in D.STRUCTURES[s.type].get("effects", []):
 			if e is Dictionary and e.get("stat", "") == stat and e.has("mul"): m *= float(e["mul"])
@@ -3521,8 +3685,8 @@ func struct_mul(stat: String) -> float:
 ## band on the march (once per clan per band) or a wolf pack (once per pack), before anyone else
 ## sees it. They mark the beasts and warriors spotted (p.spotted).
 func _lookouts() -> void:
-	for s in structures:
-		if not s.built or not ours(s) or not D.STRUCTURES[s.type].get("lookout", false): continue
+	for s in our_built():
+		if not D.STRUCTURES[s.type].get("lookout", false): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
 		var r := float(sd.get("sight", D.SIGHT_STRUCT))
 		for p in predators:

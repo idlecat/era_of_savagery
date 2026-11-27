@@ -239,8 +239,7 @@ func people(who: String, vars: Dictionary = {}) -> Array:
 		return [b] if b else []
 	if who.begins_with("fighters:"):
 		out = out.filter(func(u): return u.role != "contract")
-		out.sort_custom(func(a, b): return sim.unit_atk(a) > sim.unit_atk(b))
-		return out.slice(0, int(who.substr(9)))
+		return sim.hardest_hitters(out, int(who.substr(9)))
 	return out
 
 ## Run actions. `vars` are the named values of the moment (a dilemma's clan, festival...);
@@ -374,8 +373,22 @@ func _vars(ev: Dictionary, vars: Dictionary) -> Dictionary:
 		v["speaker"] = tr(u.name) if u else tr(ev.get("speaker_default", "The elders"))
 	v["pop"] = sim.living().size()
 	v["day"] = sim.day()
-	if not v.has("fighters"): v["fighters"] = ", ".join(people("fighters:3").map(func(u): return tr(u.name)))
+	if not v.has("fighters") and fills(ev, "fighters"): # (only a text that names the var pays for the ranking)
+		v["fighters"] = ", ".join(people("fighters:3").map(func(u): return tr(u.name)))
 	return v
+
+## Whether a text in `v` (a dilemma, an option...) fills a "%s" from the var `name`: some
+## [key, names...] in it names it.
+static func fills(v, name: String) -> bool:
+	if v is Array:
+		for i in v.size():
+			if i > 0 and v[i] is String and v[i] == name: return true
+		for i in v.size():
+			if fills(v[i], name): return true
+	elif v is Dictionary:
+		for k in v:
+			if fills(v[k], name): return true
+	return false
 
 ## A text of a dilemma: [key, vars...], or a key whose lone "%s" is the speaker.
 func _say(t, ev: Dictionary, vars: Dictionary = {}) -> String:
