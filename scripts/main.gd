@@ -184,7 +184,8 @@ func _perf_report(delta: float, now: int) -> void:
 	_perf_t += delta
 	if _perf_t < 1.0 or _perf_n == 0: return
 	var k := 1000.0 / _perf_n
-	print("perf: frame %.1f ms (%.0f fps) | sim ticks %.1f | world %.1f | hud %.1f | people %d" % [_perf_frame * k, _perf_n / _perf_t, _perf_tick * k, world.perf_us * k, hud.perf_us * k, sim.living().size()])
+	print("perf: frame %.1f ms (%.0f fps) | sim ticks %.1f | world %.1f | hud %.1f | people %d | draws %d | prims %d" % [_perf_frame * k, _perf_n / _perf_t, _perf_tick * k, world.perf_us * k, hud.perf_us * k, sim.living().size(),
+		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)])
 	_perf_t = 0.0
 	_perf_n = 0
 	_perf_frame = 0
