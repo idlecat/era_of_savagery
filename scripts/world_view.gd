@@ -1679,12 +1679,18 @@ func _snowy() -> String:
 	return "_snow" if sim.hz.snow > 0.5 else ""
 
 ## Draw a baked sprite with its ground anchor at screen point b. False if not baked.
+## Most sprites are one texture each; the villagers (and their clothes) lie in an atlas, drawn
+## as a region of it so that a town's hundreds of them stay one texture — and batch (art_baker).
 func _sprite(key: String, b: Vector2, sc := 1.0, mod := Color.WHITE) -> bool:
 	if art == null or not art.has(key): return false
 	var sp: Dictionary = art.get_sprite(key)
 	var tex: Texture2D = sp["tex"]
 	var k: float = sc / art.BAKE_SCALE
-	ci.draw_texture_rect(tex, Rect2(b - sp["anchor"] * k, tex.get_size() * k), false, mod)
+	if sp.has("region"): # (an atlas page: its own size)
+		var r: Rect2 = sp["region"]
+		ci.draw_texture_rect_region(tex, Rect2(b - sp["anchor"] * k, r.size * k), r, mod)
+	else:
+		ci.draw_texture_rect(tex, Rect2(b - sp["anchor"] * k, tex.get_size() * k), false, mod)
 	return true
 
 ## Every tree is itself: a touch of hue and brightness jitter keyed to its id,

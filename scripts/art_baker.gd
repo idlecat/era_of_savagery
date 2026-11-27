@@ -15,6 +15,19 @@ const ART_VERSION := 27
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
+## Villagers (and their clothes) are the sprites drawn many times a frame: a town has hundreds
+## of them on screen. Each baked sprite is its own texture, and a texture change ends a 2D batch,
+## so they are packed into an atlas (one texture for the lot) and drawn with
+## draw_texture_rect_region(): Godot then batches them into a few draw calls. The gutter and the
+## cell alignment keep the atlas's mipmaps from mixing one sprite with its neighbour (bleeding):
+## every cell starts on an ALIGN-px boundary (mip level 3's 8x8 blocks never straddle cells) and
+## each sprite's border pixels are repeated outward into the gutter, so a sample that falls just
+## outside a sprite reads that sprite's own edge, not the next one.
+const ATLAS_PREFIX := "man_"
+const ATLAS_PAD := 8 # gutter px either side (enough for the mip levels a villager is drawn at)
+const ATLAS_ALIGN := 8
+const ATLAS_MAX := 4096
+const ATLAS_INDEX := "atlas_man.json"
 const DIRS := 8
 const WALK_FRAMES := 8
 const WORK_FRAMES := 4
@@ -62,23 +75,35 @@ func _load_cache() -> bool:
 	if f == null: return false
 	var idx = JSON.parse_string(f.get_as_text())
 	if not (idx is Dictionary): return false
+	var packed := _load_atlas(idx) # (the villagers' atlas, if there is one: 1088 PNGs not worth reading)
+	var man_imgs := {}
 	for key in idx:
+		if packed and key.begins_with(ATLAS_PREFIX): continue
 		var img := Image.load_from_file(CACHE_DIR + "/" + key + ".png")
 		if img == null: return false
+		if key.begins_with(ATLAS_PREFIX):
+			man_imgs[key] = img # (packed below, once all of them are in)
+			continue
 		img.generate_mipmaps()
 		sprites[key] = {"tex": ImageTexture.create_from_image(img), "anchor": Vector2(idx[key][0], idx[key][1])}
+	if not packed and not man_imgs.is_empty(): _pack_atlas(man_imgs, idx, true) # (and keep it for the next launch)
 	return true
 
 func _save_cache() -> void:
 	DirAccess.make_dir_recursive_absolute(CACHE_DIR)
 	var idx := {}
-	for key in sprites:
+	var man_imgs := {}
+	for key in sprites: # (the villagers' images are packed into the atlas below, before they are let go)
 		var img: Image = sprites[key]["img"]
 		img.save_png(CACHE_DIR + "/" + key + ".png")
 		idx[key] = [sprites[key]["anchor"].x, sprites[key]["anchor"].y]
-		sprites[key].erase("img")
+		if key.begins_with(ATLAS_PREFIX): man_imgs[key] = img
+		else: sprites[key].erase("img")
 	var f := FileAccess.open(CACHE_DIR + "/index.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(idx))
+	if not man_imgs.is_empty():
+		_pack_atlas(man_imgs, idx, true) # (and keep it for the next launch)
+		for key in man_imgs: sprites[key].erase("img")
 	# remove caches from older ART_VERSIONs
 	var ud := DirAccess.open("user://")
 	if ud:
@@ -88,6 +113,123 @@ func _save_cache() -> void:
 				if old:
 					for fn in old.get_files(): old.remove(fn)
 				ud.remove(d)
+
+# ------------------------------------------------------------ the villagers' atlas
+## The saved atlas, if it holds every villager of this index (its own file, so 1088 PNGs are not
+## read at all): {pages: [png names], keys: {key: [page, x, y, w, h]}}.
+func _load_atlas(idx: Dictionary) -> bool:
+	var f := FileAccess.open(CACHE_DIR + "/" + ATLAS_INDEX, FileAccess.READ)
+	if f == null: return false
+	var at = JSON.parse_string(f.get_as_text())
+	if not (at is Dictionary) or not at.get("keys") is Dictionary: return false
+	var keys: Dictionary = at["keys"]
+	var have := 0
+	for key in idx:
+		if not key.begins_with(ATLAS_PREFIX): continue
+		have += 1
+		if not keys.has(key): return false
+	if keys.size() != have: return false
+	var pages: Array = []
+	for name in at.get("pages", []):
+		var img := Image.load_from_file(CACHE_DIR + "/" + str(name))
+		if img == null: return false
+		img.generate_mipmaps() # (a PNG holds the full image only: the mips are made from the extruded edges)
+		pages.append(ImageTexture.create_from_image(img))
+	if pages.is_empty(): return false
+	for key in keys:
+		var e: Array = keys[key]
+		sprites[key] = {"tex": pages[int(e[0])], "region": Rect2(float(e[1]), float(e[2]), float(e[3]), float(e[4])), "anchor": Vector2(idx[key][0], idx[key][1])}
+	return true
+
+static func _aligned(n: int) -> int: return ceili(float(n) / ATLAS_ALIGN) * ATLAS_ALIGN
+
+## Pack the villagers' images into as few atlas pages as they need (shelves, in the order given),
+## each wrapped in its gutter with its border pixels repeated into it, mipmapped, and remember
+## where each one lies. With `save`, the pages and their index go to the cache for the next launch.
+func _pack_atlas(imgs: Dictionary, idx: Dictionary, save := false) -> void:
+	var cells := {}
+	var area := 0
+	for key in imgs:
+		var im: Image = imgs[key]
+		var c := [_aligned(im.get_width() + 2 * ATLAS_PAD), _aligned(im.get_height() + 2 * ATLAS_PAD)]
+		cells[key] = c
+		area += int(c[0]) * int(c[1])
+	var width := mini(ATLAS_MAX, maxi(1024, _aligned(ceili(sqrt(float(area))))))
+	# shelves: each page has one open shelf {y, h} at its bottom; a cell goes on it if it is narrow
+	# enough for the width and short enough for the shelf, else the next shelf (or a new page) is opened
+	var pages := [] # [{y: shelf top, h: shelf height, x: next free x, used: filled height}]
+	var places := {} # key -> [page, x, y] (the cell's corner, its gutter included)
+	for key in imgs:
+		var cw: int = cells[key][0]
+		var ch: int = cells[key][1]
+		var done := false
+		while not done:
+			if pages.is_empty(): pages.append({"y": 0, "h": ch, "x": 0, "used": 0})
+			var pg: Dictionary = pages[-1]
+			if pg["h"] == 0: # (a page with no shelf opened yet)
+				pg["h"] = ch
+				pg["y"] = pg["used"]
+			if pg["h"] >= ch and pg["x"] + cw <= width and pg["y"] + pg["h"] <= ATLAS_MAX:
+				places[key] = [pages.size() - 1, pg["x"], pg["y"]]
+				pg["x"] += cw
+				pg["used"] = maxi(int(pg["used"]), int(pg["y"]) + int(pg["h"]))
+				done = true
+				continue
+			var ny: int = pg["y"] + pg["h"] # (close the shelf)
+			if ny + ch <= ATLAS_MAX:
+				pg["used"] = ny
+				pg["y"] = ny
+				pg["h"] = ch
+				pg["x"] = 0
+				continue
+			pages.append({"y": 0, "h": ch, "x": 0, "used": 0}) # (this page is full)
+	# how tall each page came out, then the images themselves
+	for pg in pages: pg["img"] = Image.create(width, maxi(pg["used"], 8), false, Image.FORMAT_RGBA8)
+	for key in imgs:
+		var im: Image = imgs[key]
+		var p: Array = places[key]
+		var dst: Image = pages[int(p[0])]["img"]
+		var w := im.get_width()
+		var h := im.get_height()
+		var x: int = p[1] + ATLAS_PAD
+		var y: int = p[2] + ATLAS_PAD
+		dst.blit_rect(im, Rect2i(0, 0, w, h), Vector2i(x, y))
+		for i in ATLAS_PAD: # the border rows and columns, repeated outward (no neighbour bleeds in)
+			dst.blit_rect(im, Rect2i(0, 0, w, 1), Vector2i(x, y - 1 - i))
+			dst.blit_rect(im, Rect2i(0, h - 1, w, 1), Vector2i(x, y + h + i))
+			dst.blit_rect(im, Rect2i(0, 0, 1, h), Vector2i(x - 1 - i, y))
+			dst.blit_rect(im, Rect2i(w - 1, 0, 1, h), Vector2i(x + w + i, y))
+		var c0 := im.get_pixel(0, 0)
+		var c1 := im.get_pixel(w - 1, 0)
+		var c2 := im.get_pixel(0, h - 1)
+		var c3 := im.get_pixel(w - 1, h - 1)
+		for i in ATLAS_PAD:
+			for j in ATLAS_PAD:
+				dst.set_pixel(x - 1 - i, y - 1 - j, c0)
+				dst.set_pixel(x + w + i, y - 1 - j, c1)
+				dst.set_pixel(x - 1 - i, y + h + j, c2)
+				dst.set_pixel(x + w + i, y + h + j, c3)
+	var tex: Array = []
+	for pg in pages:
+		pg["img"].generate_mipmaps()
+		tex.append(ImageTexture.create_from_image(pg["img"]))
+	var saved := {}
+	for key in imgs:
+		var p: Array = places[key]
+		var im: Image = imgs[key]
+		var x: int = p[1] + ATLAS_PAD
+		var y: int = p[2] + ATLAS_PAD
+		sprites[key] = {"tex": tex[int(p[0])], "region": Rect2(x, y, im.get_width(), im.get_height()), "anchor": Vector2(idx[key][0], idx[key][1])}
+		saved[key] = [int(p[0]), x, y, im.get_width(), im.get_height()]
+	if not save: return
+	var names: Array = []
+	for i in pages.size():
+		var pname := "atlas_man_%d.png" % i
+		pages[i]["img"].save_png(CACHE_DIR + "/" + pname)
+		names.append(pname)
+	var f2 := FileAccess.open(CACHE_DIR + "/" + ATLAS_INDEX, FileAccess.WRITE)
+	f2.store_string(JSON.stringify({"pages": names, "keys": saved}))
+	f2.close()
 
 # ------------------------------------------------------------ studio
 func _setup() -> void:
