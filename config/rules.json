@@ -494,6 +494,7 @@
    {"id": "food", "name": "Food", "color": "#b6e07a", "jobs": ["gather:food", "field", "tend"]},
    {"id": "wood", "name": "Wood", "color": "#d9a066", "jobs": ["gather:wood"]},
    {"id": "stone", "name": "Stone", "color": "#b8c0c8", "jobs": ["gather:stone", "gather:copper", "gather:tin"]},
+   {"id": "tools", "name": "Tools", "color": "#c8c0b0", "jobs": ["craft"]},
    {"id": "build", "name": "Building", "color": "#e8c07a", "jobs": ["build"]},
    {"id": "health", "name": "Healing", "color": "#8fe0b0", "jobs": ["gather:herbs", "aid", "bury"]},
    {"id": "safety", "name": "Defence", "color": "#ff9a8a", "jobs": ["attack", "firefight", "cover"]},

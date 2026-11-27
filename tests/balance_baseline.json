@@ -8,20 +8,20 @@
  },
  "policies": {
   "steward": {
-   "near_miss": 1.0,
+   "near_miss": 0.5,
    "famine": 0.0,
-   "deaths": 0.5,
+   "deaths": 0.0,
    "starved": 0.0,
    "killed": 0.0,
    "left": 0.0,
    "empty": 1.6,
-   "min_food": 0.04,
+   "min_food": 0.095,
    "sealed": 3.0,
    "interrupts": 1.0,
    "pauses": 0.18,
-   "gap": 1.1,
+   "gap": 1.0,
    "era2": 1.0,
-   "ranks": 3.0,
+   "ranks": 2.5,
    "craft_gate": 1.0
   },
   "feaster": {
@@ -31,14 +31,14 @@
    "starved": 0.0,
    "killed": 0.0,
    "left": 0.0,
-   "empty": 2.8,
+   "empty": 2.95,
    "min_food": 0.05,
    "sealed": 4.0,
    "interrupts": 1.0,
-   "pauses": 0.19,
+   "pauses": 0.185,
    "gap": 0.7,
    "era2": 1.0,
-   "ranks": 3.0,
+   "ranks": 2.5,
    "craft_gate": 1.0
   }
  }

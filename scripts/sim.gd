@@ -49,7 +49,7 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0, "tools": 0.0}
 var known_finds := {} # find id -> day discovered
 var mushroom_loads := 0 # the tribe learns which mushrooms are safe
 var find_t := 0.0
@@ -955,6 +955,7 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Ar
 # ------------------------------------------------------------------ unit update
 func update_unit(u: E.Unit, dt: float) -> void:
 	u.doing = ""
+	if u.inside >= 0 and u.job.get("type", "") != "craft": u.inside = -1 # (indoors only while at the craft)
 	if u.dead: return
 	unit_needs(u, dt)
 	u.cd -= dt
@@ -1047,6 +1048,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			life.do_depart(u, j, dt)
 		"art":
 			folk.do_art(u, j, dt)
+		"craft":
+			soc.do_craft(u, j, dt)
 		"trade_trip":
 			folk.do_trade(u, j, dt)
 		"build":
@@ -1261,7 +1264,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
 		u.doing = {"tree": "chop", "carcass": "butcher", "boulder": "quarry"}.get(n.kind, "pick")
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
-		var rate := base * float(soc.work_val("gather").get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (1.3 if has_tech("tools") and n.kind != "bush" else 1.0) * work_mul(u)
+		var rate := base * float(soc.work_val("gather").get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (soc.tool_mult(j["res"]) if soc.on else (1.3 if has_tech("tools") and n.kind != "bush" else 1.0)) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2
 		rate *= inv.gather_mult(n.kind, fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry"))
 		var activity: String = fd["practice"] if not fd.is_empty() else {"tree": "chop", "carcass": "hunt", "boulder": "quarry"}.get(n.kind, "berry")
@@ -1885,7 +1888,7 @@ func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 		return
 	u.act = str(w["act"])
 	u.doing = str(w["doing"])
-	var rate := float(w["food"]) * skill_mult(u.lv("forage")) * work_mul(u)
+	var rate := float(w["food"]) * skill_mult(u.lv("forage")) * (soc.tool_mult("food") if soc.on else 1.0) * work_mul(u)
 	var got: float = rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
 	stock["food"] += got
 	note_food("in", "field:" + s.type, got)
@@ -2025,7 +2028,9 @@ func night_start() -> float:
 	if day_frac() < from: base -= D.DAY_LEN
 	return base + D.DAY_LEN * from
 
-func in_hut(u: E.Unit) -> bool: return u.sleeping and u.bed_id >= 0
+## Indoors: asleep in a hut, or at work inside one (a craft at home, society.gd): hidden,
+## sheltered from the cold and the weather, out of a beast's reach.
+func in_hut(u: E.Unit) -> bool: return (u.sleeping and u.bed_id >= 0) or u.inside >= 0
 
 ## Is something stirring that should rouse the camp? Beasts or raiders at the village (the
 ## War Chief's range), someone hurt in a fight, or the river flooding. A pack prowling the
@@ -2481,6 +2486,7 @@ func _tick(dt: float) -> void:
 	time += dt
 	ticks_since_llm += 1
 	story.tick(dt)
+	soc.tick(dt)
 	_hearths(dt)
 	cult.update(dt)
 	inv.update(dt)
@@ -2753,6 +2759,7 @@ func _pick_need(needs: Dictionary, site: bool) -> String:
 ## chooses their own work by the one rule (society.gd). Gathering is weighed (weigh.gd): with
 ## nothing of it within a safe walk, the other of food and wood, a site, or nothing (false).
 func set_to_work(u: E.Unit, choice: String, unbuilt = null, fallback := true) -> bool:
+	if soc.GOODS.has(choice): return soc.assign_craft(u, choice) # (a good made indoors, at home)
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 	if field: choice = "field" # (food: a field or dock with a free place before the wild)
@@ -2834,7 +2841,7 @@ func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
 
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
 const JOB_TYPES := ["move", "gather", "bury", "tend", "field", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
-	"life", "meal", "depart", "art", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
+	"life", "meal", "depart", "art", "craft", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
 
 ## What must always hold in a running game; returns the broken rules ([] when all is well).
 ## Tests call it after ticking; a game master can call it to sanity-check the world.

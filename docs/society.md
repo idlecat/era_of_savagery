@@ -1010,3 +1010,21 @@ from 1.0), `gather.food`, `reserve_days`, overridable per challenge level
 (`work.by_challenge`), set against G1's bands and `tools/pacing.gd`'s growth and band
 deaths when the tuning pass comes.
 
+### 14.7 Step 5, first cut: tools wear and are made indoors (2026-11-26)
+
+`tools` is a resource (`D.RESOURCES`, the top bar), a good in `config/society.json goods`:
+made indoors at home (the job `craft`: hidden, sheltered and warm like a sleeper, `sim.in_hut`;
+`u.inside`), one stone and one wood a piece; worn by the hands at food, wood and stone work
+(0.25 a day each); a tool for every grown-up makes that work go ×1.3 (`soc.tool_mult`: 1 + 0.3
+× B(coverage)), in place of the `tools` tech's flat ×1.3. A **toolmaker** career grows from
+the knapping. Its price for the one rule (`good_weight`): what one more maker's day saves,
+the rise in the multiplier times the hands at the work it serves, each valued at the best
+use of a hand, **over the tools' life** (1 / wear days): a tool is worth the time it gives
+back, and nothing while hands are to spare. Found on the way: counted for one day only, a
+tool was never worth making; counted over its life it is, from ~15 people up.
+
+Measured: tool coverage 0.5-1.0 and the multiplier ×1.22-1.30 once the tech is known; two
+toolmakers by day 30. 12 days (the tech comes on day ~12): hours short 4/11/21, famine 0/0/33%;
+60 days: 44-52 people, 0-9 deaths. The tools free food hands, but those go idle rather than
+into growth while food security holds births back (open #12, a designer's knob).
+
