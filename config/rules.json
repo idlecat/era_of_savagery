@@ -156,11 +156,11 @@
    "starving": 0.9,
    "policy": {"food": {"food": 2.0}, "wood": {"wood": 2.0}, "stone": {"stone": 3.0}, "lore": {"lore": 3.0}},
    "shift": [40, 75], "area_r": 900, "rest_below": 0.5, "xp": 0.5, "practice": 2.0},
-  "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work (steward: the need rule). When beasts or raiders come within warchief_range of the village, the War Chief keeps `fighters` people on the nearest of them: the best fighters within `reach` of it, not sick and with at least min_hp of their health.",
+  "_doc": "The Vice-Chieftains. There are two offices (Steward, War Chief) and one slot at first; Tribal Code or the Council of Elders tradition opens the second. Every `every` seconds by day the Steward puts idle grown-ups within steward_reach of home to work (steward: the need rule). When beasts or raiders come within warchief_range of the village, the War Chief meets each pack or band (threat.gd, config/threat.json): not a fixed handful, but the hands the threat is worth - the best people within `reach` of it, not sick and with at least min_hp of their health - at most `fighters` to one threat.",
   "every": 3,
   "steward_reach": 500,
   "warchief_range": 500,
-  "fighters": 3,
+  "fighters": 6,
   "reach": 700,
   "min_hp": 0.4
  },

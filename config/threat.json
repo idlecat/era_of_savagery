@@ -1,0 +1,28 @@
+{
+ "_doc": "How the tribe sizes up a threat and picks who meets it (threat.gd, sim.threat). A threat is the beasts or raiders that are one problem: wolves, or the warriors of one clan, within `group_r` of each other are met as one pack; a saber-tooth stands alone. `skip_kinds` are the clan folk who are no threat at all. A group's `power` is what it takes to bring it down times what it deals out: the health of all of them times the blows they deal a second between them (atk x the share of a blow that gets past a defender of `def` x 1/blow_cd, the predators' own reckoning, as in hunt.json's solo_margin, times `weight` for its kind). Ours is the same for the people sent: all their health times all the blows they deal a second against that kind of beast, the weapons they carry, their mastery and their trades folded in (sim.unit_atk, sim.arms.cd). The tribe then wants `margin` times the group's power in hands, at least `min` and at most `most`: a pack of wolves takes a couple of people, a saber-tooth one or two, a war band a handful. Who goes is picked by `score`: what they can do and how healthy they are (`wounded`: the share of it a badly hurt person is worth), `belligerent` and the War Chief's kind of warrior first (`preferred`), friends and kin of whoever the threat is after (`bond`, life.json bonds), and the walk there (`distance`: the score is halved that far away). `able` says who can be sent at all. The War Chief runs dispatch() (rules.json vice); an attack runs the defend responses through squad(), which sends only the hands the threat still needs, at most the response's `count`.",
+ "skip_kinds": ["hunter", "trader"],
+ "group_r": 320.0,
+ "reach": 800.0,
+ "margin": 1.5,
+ "min": 1,
+ "most": 8,
+ "able": {
+  "_doc": "Who can be sent: a grown-up of the village (role \"\"), not in a hut (sim.in_hut: asleep or working indoors), not sick, with at least `min_hp` of their health, not fleeing and not busy with a job whose type is in `busy` (react, fetch, or fight something else).",
+  "min_hp": 0.4,
+  "busy": ["attack", "bury", "explore", "trade_trip", "envoy", "aid", "firefight", "cover", "shelter", "warm"]
+ },
+ "value": {
+  "_doc": "The reckoning: `def` is the defence it assumes of the person a beast strikes (so a beast's power is what it deals an ordinary villager), `blow_cd` the seconds between a predator's blows (sim.update_predator), `weight` a beast kind's multiplier on its power (a wolf pack is bolder than its numbers, a raider better armed).",
+  "def": 3.0,
+  "blow_cd": 1.25,
+  "weight": {"wolf": 1.0, "tiger": 1.0, "warrior": 1.0, "hunter": 1.0}
+ },
+ "score": {
+  "_doc": "How the best hands are picked (see the top-level doc).",
+  "wounded": 0.6,
+  "belligerent": 0.3,
+  "preferred": 0.5,
+  "bond": 0.4,
+  "distance": 500.0
+ }
+}

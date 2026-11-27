@@ -31,6 +31,11 @@ const WHO := ["all", "able", "victim", "near", "river", "helpers"]
 var C: Dictionary = Config.load_cfg("reactions")
 var sim
 var _t := 0.0
+## The defenders picked for a `defend` response, kept for the moment it is dispatched: the
+## trigger calls back once per candidate, they all get the same answer.
+var _cache_squad: Array = []
+var _cache_squad_key := ""
+var _cache_squad_t := -1.0
 
 func _init(s) -> void:
 	sim = s
@@ -250,12 +255,28 @@ func flee_from(u: E.Unit, danger: Vector2, dist: float) -> void:
 	interrupt(u, {"type": "move", "to": sim.dry_spot(to), "flee": true})
 
 # ------------------------------------------------------------ defend (beasts, raiders)
+## Who comes to `v`'s aid against `p`: the best of the able people this response can reach
+## (threat.gd), no more than the threat still needs and at most the response's `count`.
+## A threat already met gets no more hands, so a pack that strikes several people at once
+## does not pull the whole village off its work.
+func _defend_squad(r: Dictionary, ctx: Dictionary) -> Array:
+	var p = ctx.get("attacker")
+	var v = ctx.get("victim")
+	var cap := int(r.get("count", 3))
+	var key := "%d:%d:%d:%s" % [p.id if p else -1, v.id if v else -1, cap, str(r)]
+	if _cache_squad_t == sim.time and _cache_squad_key == key: return _cache_squad
+	var ps: Array = sim.threat.group_of(p)
+	var pool: Array = _helpers(r, ctx).filter(func(o): return _fits(r, o))
+	_cache_squad = sim.threat.squad(ps, pool, cap, v)
+	_cache_squad_key = key
+	_cache_squad_t = sim.time
+	return _cache_squad
+
 func _start_defend(r: Dictionary, u: E.Unit, ctx: Dictionary) -> bool:
 	var p = ctx.get("attacker")
 	var v = ctx.get("victim")
 	if p == null or v == null or p.dead or p.kind in r.get("skip_attackers", []): return false
-	var fighting: int = sim.units.filter(func(o): return not o.dead and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == p.id).size()
-	if fighting >= int(r.get("count", 3)) + 1: return false # (the victim fights back too)
+	if not _defend_squad(r, ctx).has(u): return false # (enough hands already, or there are better ones for it)
 	sim.set_aside(u)
 	sim.assign_attack(u, p, u.job_key)
 	u.sleeping = false

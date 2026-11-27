@@ -25,6 +25,7 @@ const Inventions = preload("res://scripts/inventions.gd")
 const Culture = preload("res://scripts/culture.gd")
 const Reactions = preload("res://scripts/reactions.gd")
 const Hunt = preload("res://scripts/hunt.gd")
+const Threat = preload("res://scripts/threat.gd")
 const Weigh = preload("res://scripts/weigh.gd")
 const Arms = preload("res://scripts/arms.gd")
 const Life = preload("res://scripts/life.gd")
@@ -121,6 +122,7 @@ var inv: Inventions # everyday inventions and the tribe's achievements
 var cult: Culture # the culture's events, tales and legendary people (culture.gd)
 var react: Reactions # how people respond to quakes, fires, the hurt... (reactions.gd)
 var hunt: Hunt # how a band fights a dangerous beast: muster, charge together, ring it (hunt.gd)
+var threat: Threat # how many hands a threat needs and which ones meet it (threat.gd)
 var weigh: Weigh # the cost, risk and outcome of an errand, weighed before going (weigh.gd)
 var arms: Arms # weapons, who carries which, and weapon mastery (arms.gd)
 var life: Life # meals, idle acts, bonds, spirits and weariness, speech (life.gd)
@@ -156,6 +158,7 @@ func _init() -> void:
 	cult = Culture.new(self)
 	react = Reactions.new(self)
 	hunt = Hunt.new(self)
+	threat = Threat.new(self)
 	weigh = Weigh.new(self)
 	arms = Arms.new(self)
 	life = Life.new(self)
@@ -3082,24 +3085,9 @@ func _update_vice(dt: float) -> void:
 		if not idle.is_empty():
 			add_log(tr("Steward %s put %d idle hands to work (%s).") % [tr(steward.name), idle.size(), tr(steward_policy)], "vice", [steward])
 	var chief := unit_by_id(vice["warchief"])
-	if chief and not chief.dead:
-		var threats := active_predators_near(D.VILLAGE, float(vc["warchief_range"]))
-		if not threats.is_empty():
-			threats.sort_custom(func(a, b): return a.pos.distance_to(D.VILLAGE) < b.pos.distance_to(D.VILLAGE))
-			var foe = threats[0]
-			# keep `fighters` on it (topped up, not sent again and again): the best fighters nearby
-			var on_it := living().filter(func(u): return u.job.get("type", "") == "attack" and u.job.get("target_id", -1) == foe.id).size()
-			var need := int(vc["fighters"]) - on_it
-			if need > 0:
-				var fighters := living().filter(func(u): return u.role == "" and u.job.get("type", "") != "attack" and not in_hut(u) and u.sick <= 0.0 \
-					and u.hp >= u.max_hp * float(vc["min_hp"]) and u.pos.distance_to(foe.pos) < float(vc["reach"]) and D.same_side(u.pos, foe.pos))
-				fighters.sort_custom(func(a, b):
-					if careers.is_preferred(a, "warchief") != careers.is_preferred(b, "warchief"): return careers.is_preferred(a, "warchief") # (warriors first)
-					return a.lv("combat") > b.lv("combat"))
-				for u in fighters.slice(0, need):
-					set_aside(u) # (back to work once the beast is dealt with)
-					assign_attack(u, foe, u.job_key)
-				if not fighters.is_empty(): add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
+	if chief and not chief.dead: # (how many the threat needs and who is best for it: threat.gd)
+		var sent: Array = threat.dispatch(D.VILLAGE, float(vc["warchief_range"]), float(vc["reach"]), float(vc["min_hp"]), int(vc["fighters"]))
+		if not sent.is_empty(): add_log(tr("War Chief %s rallies warriors against the beast!") % tr(chief.name), "vice", [chief])
 
 # ------------------------------------------------------------------ village building (Tier 1)
 func can_place(type: String, p: Vector2, size := 0.0) -> String:

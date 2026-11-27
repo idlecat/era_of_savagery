@@ -67,7 +67,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors, test_threat_sizing]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -1986,7 +1986,7 @@ func test_help_and_carry() -> void:
 		sim.tick(0.05)
 		if t.dead or t.fleeing: break
 	var on_it: Array = sim.units.filter(func(o): return o != v and o.job.get("type", "") == "attack" and o.job.get("target_id", -1) == t.id)
-	check(on_it.size() >= 2 or t.dead or t.fleeing, "when a beast attacks, the people nearby come to help (%d came)" % on_it.size())
+	check(on_it.size() >= 1 or t.dead or t.fleeing, "when a beast attacks, the people nearby come to help (%d came)" % on_it.size())
 	check(on_it.size() <= int(sim.react.responses("attacked")[0]["count"]) + 1, "but not the whole tribe")
 	check(sim.living().filter(func(o): return o.role == "child" and o.job.get("type", "") == "attack").is_empty(), "children stay out of it")
 	for i in 600:
@@ -5655,3 +5655,78 @@ func test_absorb_clan() -> void:
 	check(sim.legacy.conqueror() == "heron", "the most hostile clan we know could take us in as conquerors")
 	sim.legacy.merge(sim.legacy.conqueror())
 	check(sim.legacy.pending == "merged" and sim.legacy.merged_with == "heron", "bowing to them ends the chronicle as one fire among many")
+
+func test_threat_sizing() -> void:
+	print("\n== The tribe sizes up a threat ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true # (only the beasts of this test)
+	for u in sim.living():
+		if u.role == "": sim.set_job(u, {})
+	sim.time = D.DAY_LEN * 0.2
+	var at := D.VILLAGE + Vector2(360, 0)
+	var pack: Array = []
+	for i in 4:
+		var w = sim.spawn_predator(at + Vector2(i * 15, 0), D.VILLAGE)
+		w.kind = "wolf"; w.hp = 28.0; w.max_hp = 28.0; w.atk = 3.5; w.def = 1.0
+		pack.append(w)
+	var tiger = sim.spawn_predator(at + Vector2(0, 260), D.VILLAGE)
+	check(sim.threat.group_of(pack[0]).size() == 4, "wolves close together are met as one pack")
+	check(sim.threat.group_of(tiger).size() == 1, "a saber-tooth beside the pack is its own threat")
+	tiger.fled = true
+	var pool: Array = sim.living().filter(func(u): return sim.threat.able(u))
+	var best = pool[0]
+	for u in pool:
+		if sim.threat.score(u, pack) > sim.threat.score(best, pack): best = u
+	var squad: Array = sim.threat.squad(pack, pool)
+	check(squad.size() >= 2 and squad.size() <= 3, "a pack of four wolves takes a couple of hands, not the tribe (%d of %d)" % [squad.size(), pool.size()])
+	check(squad.has(best), "the best fighter among them is sent (%s)" % best.name)
+	var weak = pool[0]
+	for u in pool:
+		if sim.threat.score(u, pack) < sim.threat.score(weak, pack): weak = u
+	check(not squad.has(weak), "the weakest stays at their work")
+	# a war band is a bigger problem than a pack, a lone beast a smaller one
+	var band: Array = []
+	for i in 6:
+		var w = sim.spawn_predator(at + Vector2(0, -120 - i * 15), D.VILLAGE)
+		w.kind = "warrior"; w.clan = "ochre"; w.hp = 42.0; w.max_hp = 42.0; w.atk = 5.5; w.def = 2.5
+		band.append(w)
+	var band_squad: Array = sim.threat.squad(band, pool)
+	check(band_squad.size() > squad.size(), "a war band of six takes more hands than a wolf pack (%d to %d)" % [band_squad.size(), squad.size()])
+	var lone: Array = [sim.spawn_predator(at + Vector2(0, 500), D.VILLAGE)]
+	check(sim.threat.squad(lone, pool).size() < squad.size(), "one beast takes fewer (tiger)")
+	# the War Chief sends by it: the pack is met, and nobody else is pulled off their work
+	var chief = sim.unit_by_name("Alie")
+	sim.appoint(chief, "warchief")
+	for p in band: p.fled = true
+	for p in lone: p.fled = true
+	sim.vice_timer = 0.0
+	sim._update_vice(0.05)
+	var sent: Array = sim.living().filter(func(u): return u.job.get("type", "") == "attack")
+	check(sent.size() == squad.size() and sent.size() > 0, "the War Chief sends exactly the hands the pack is worth (%d)" % sent.size())
+	check(sent.all(func(u): return u in squad), "and exactly the ones the reckoning picked")
+	sim.vice_timer = 0.0
+	sim._update_vice(0.05)
+	check(sim.living().filter(func(u): return u.job.get("type", "") == "attack").size() == sent.size(), "and keeps sending no more as long as it is met")
+	check(sim.threat.squad(pack, pool).is_empty(), "a threat already met gets no more hands")
+	var sum: Dictionary = sim.threat.summary()
+	check(sum["threats"].size() == 1 and sum["threats"][0]["beasts"] == 4 and sum["threats"][0]["engaged"] == sent.size(), "the reckoning reads as data for a game master (%s)" % str(sum["threats"]))
+	# a pack that strikes one person after another does not pull a squad to each
+	var sim2 = _new_sim()
+	for p in sim2.predators: p.fled = true
+	var v1 = sim2.unit_by_name("Tuo")
+	var v2 = sim2.unit_by_name("Yan")
+	var i := 0
+	for u in sim2.living():
+		if u.role == "": sim2.set_job(u, {})
+		u.pos = D.VILLAGE + Vector2(60 + i % 5 * 14, 40 + i / 5 * 14)
+		i += 1
+	var w1 = sim2.spawn_predator(v1.pos + Vector2(18, 0), v1.pos)
+	var w2 = sim2.spawn_predator(v2.pos + Vector2(20, 4), v2.pos)
+	for w in [w1, w2]:
+		w.kind = "wolf"; w.hp = 28.0; w.max_hp = 28.0; w.atk = 3.5; w.def = 1.0
+	sim2.react.trigger("attacked", {"victim": v1, "attacker": w1, "at": v1.pos})
+	var n1: int = sim2.living().filter(func(u): return u.job.get("type", "") == "attack").size()
+	sim2.react.trigger("attacked", {"victim": v2, "attacker": w2, "at": v2.pos})
+	var n2: int = sim2.living().filter(func(u): return u.job.get("type", "") == "attack").size()
+	check(n1 >= 1 and n2 == n1, "a pack that strikes a second person pulls no more hands than the first (%d, then %d)" % [n1, n2])
+	check(n1 <= int(sim2.react.responses("attacked")[0]["count"]), "and never more than the response allows (%d)" % n1)
