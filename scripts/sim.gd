@@ -1322,6 +1322,29 @@ func _dropoff_point(j: Dictionary, u: E.Unit) -> Vector2:
 			if s.pos.distance_to(u.pos) < best.distance_to(u.pos): best = s.pos
 	return best
 
+## Where u stands to work node `n`, their `slot` being their place among those working it: a
+## place of their own round the node (a dropoff gets one by u.id too), so that a crowd at one
+## shoal or tree does not stand on one spot. A shoal lies in the water and is fished from the
+## bank: those places string out along it, side to side, `spread` (rules.json gathering) apart.
+func gather_spot(u: E.Unit, n: E.ResNode, near: float, slot: int) -> Vector2:
+	if D.is_water(n.pos):
+		var t: Vector2 = D.river_info(n.pos)["t"]
+		if t.is_zero_approx(): t = Vector2.RIGHT
+		var k := floorf((slot + 1) / 2.0) * float(RULES["gathering"]["spread"]) # (0, +1, -1, +2, -2 places along the bank)
+		return walk_target(n.pos + t * k * (1.0 if slot % 2 == 0 else -1.0))
+	return walk_target(n.pos + Vector2.from_angle(float(slot) * 2.39996) * near * 0.8) # (the golden angle, as the sleepers round the fire)
+
+## The first place at node `id` that nobody holds (a job says which place it is): a gatherer
+## taking a node nobody works gets place 0, the next one place 1, and so on.
+func _free_slot(id: int) -> int:
+	var used := {}
+	for u in units:
+		if u.dead or int(u.job.get("node_id", -1)) != id: continue
+		used[int(u.job.get("slot", 0))] = true
+	var k := 0
+	while used.has(k): k += 1
+	return k
+
 func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 	var cap := carry_cap(u)
 	if j["phase"] == "deliver" or u.carry_amt >= cap:
@@ -1356,10 +1379,12 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 				weigh.note_refused(u, why)
 				set_job(u, {})
 			return
+		j["slot"] = _free_slot(n.id) # (their place among those working it: where they stand)
 		j["node_id"] = n.id
 		var cl := node_claims()
 		cl[n.id] = int(cl.get(n.id, 0)) + 1 # (the next to look this tick sees it taken)
 		j["weigh_t"] = time + float(weigh.C["recheck"])
+	if not j.has("slot"): j["slot"] = _free_slot(n.id) # (sent to a node, not picked by them)
 	if n.kind == "boulder" and not has_tech("tools"):
 		set_job(u, {})
 		popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools"), Color("#ff9b7a"))
@@ -1374,7 +1399,8 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 			set_job(u, {})
 			popup(u.pos + Vector2(0, -30), tr("Needs Polished Stone Tools") if fd.get("needs", "") == "tools" else tr("The river is frozen"), Color("#ff9b7a"))
 			return
-	if approach(u, n.pos, {"tree": 16.0, "boulder": 16.0, "fish": 34.0}.get(n.kind, 14.0), dt): # (fish: from the bank)
+	var near: float = {"tree": 16.0, "boulder": 16.0, "fish": 34.0}.get(n.kind, 14.0)
+	if approach(u, gather_spot(u, n, near, int(j.get("slot", 0))), 6.0, dt):
 		if n.kind == "deer": # the hunt
 			evo.practice(u, "hunt", 3.0)
 			n.kind = "carcass"
@@ -1389,6 +1415,7 @@ func _do_gather(u: E.Unit, j: Dictionary, dt: float) -> void:
 				n.amount += 5
 		u.act = fd["act"] if not fd.is_empty() else {"tree": "Chopping wood", "carcass": "Butchering game", "boulder": "Quarrying stone"}.get(n.kind, "Picking berries")
 		u.doing = {"tree": "chop", "carcass": "butcher", "boulder": "quarry"}.get(n.kind, "pick")
+		u.face = n.pos # (they work with their eyes on what they are taking)
 		var base: float = fd["rate"] if not fd.is_empty() else {"tree": 1.2, "carcass": 1.4, "boulder": 0.6}.get(n.kind, 1.0)
 		var rate := base * float(soc.work_val("gather").get(j["res"], 1.0)) * skill_mult(u.lv("forage")) * (soc.tool_mult(j["res"]) if soc.on else (1.3 if has_tech("tools") and n.kind != "bush" else 1.0)) * work_mul(u)
 		if evo.has_trad("peaceful_ways"): rate *= 1.2

@@ -81,7 +81,7 @@ Choices put to the chieftain share one format, run by `story.gd` (`dilemma_view(
 ## rules.json
 
 - `survival`: hunger rates, when people eat and how much a meal costs and fills, starving damage, food storage (`store_base`; each building adds its type's `store` in structures.json) and rot.
-- `gathering`: `return_to`, the kinds of node a gatherer goes back to after hauling a load (a half-butchered kill); for any other work they pick afresh.
+- `gathering`: `return_to`, the kinds of node a gatherer goes back to after hauling a load (a half-butchered kill); for any other work they pick afresh. `spread`: how far apart the places of those working one node stand — a crowd at one shoal strings out along the bank it is fished from instead of standing on one stone (`sim.gather_spot()`).
 - `dilemmas`: spacing between the chieftain's dilemmas: after one pauses the game, the next waits `min_gap_hours` game hours in its queue unless it is `urgent` (listed here, or `"urgent": true` on the dilemma); day one is exempt.
 - `strife`: civil strife: a tribe of `min_pop` or more whose mood stays under `mood` for `days` rises (dilemma `strife`).
 - `fuel`: winter fuel: wood the fires burn per head a second (more in the dark); with none left, bonfires give no warmth (`sim.fuel_rate()`, `out_of_fuel()`).

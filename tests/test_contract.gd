@@ -67,7 +67,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors, test_threat_sizing]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors, test_threat_sizing, test_gather_spots]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -5755,3 +5755,48 @@ func test_threat_sizing() -> void:
 	var n2: int = sim2.living().filter(func(u): return u.job.get("type", "") == "attack").size()
 	check(n1 >= 1 and n2 == n1, "a pack that strikes a second person pulls no more hands than the first (%d, then %d)" % [n1, n2])
 	check(n1 <= int(sim2.react.responses("attacked")[0]["count"]), "and never more than the response allows (%d)" % n1)
+
+func test_gather_spots() -> void:
+	print("\n== A crowd at one shoal stands along the bank, not on one spot ==")
+	var sim = _new_sim()
+	for p in sim.predators: p.fled = true
+	var fish = null
+	for n in sim.nodes:
+		if n.kind == "fish": fish = n; break
+	check(fish != null and D.is_water(fish.pos), "a shoal lies in the water")
+	var spread := float(sim.RULES["gathering"]["spread"])
+	var crew: Array = sim.living().filter(func(u): return u.role == "" and u.job.is_empty()).slice(0, 4)
+	# Each one of a crowd has a place of their own, on land, a `spread` apart (the shoal is fished from the bank).
+	var spots: Array = []
+	for i in crew.size(): spots.append(sim.gather_spot(crew[i], fish, 34.0, i))
+	var on_land := true
+	var apart := true
+	for i in spots.size():
+		if D.is_water(spots[i]): on_land = false
+		for j in range(i + 1, spots.size()):
+			if spots[i].distance_to(spots[j]) < spread * 0.9: apart = false
+	check(on_land, "every place at a shoal is on the bank")
+	check(apart, "and no two of them are the same spot")
+	# Sent to the shoal, they take those places instead of standing on one stone.
+	fish.amount = 200.0
+	for u in crew: sim.assign_gather(u, "food", {"node_id": fish.id})
+	for i in 700: sim.tick(0.05) # (35 s: the walk there)
+	var standing: Array = crew.filter(func(u): return u.doing == "pick")
+	check(standing.size() == crew.size(), "the whole crowd is fishing (%d of %d)" % [standing.size(), crew.size()])
+	var still_apart := true
+	var all_on_land := true
+	for i in standing.size():
+		if D.is_water(standing[i].pos): all_on_land = false
+		for j in range(i + 1, standing.size()):
+			if standing[i].pos.distance_to(standing[j].pos) < spread * 0.8: still_apart = false
+	check(all_on_land, "nobody stands in the river")
+	check(still_apart, "and the fishers stand apart (%s)" % str(standing.map(func(u): return u.pos.round())))
+	# The places belong to them alone: each is told which one it is (a game master sends people to a node too).
+	var slots: Array = crew.map(func(u): return int(u.job.get("slot", -1)))
+	check(uniq(slots).size() == slots.size(), "each has a place no one else holds (%s)" % str(slots))
+
+func uniq(a: Array) -> Array:
+	var out: Array = []
+	for x in a:
+		if not out.has(x): out.append(x)
+	return out
