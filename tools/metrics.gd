@@ -211,6 +211,8 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	r["natural"] = {"walk": nat["walk"] / wh, "empty": nat["empty"] / wh, "switches": nat["switches"] / maxf(0.01, nat["work"] / (D.DAY_LEN / 24.0)),
 		"stuck": nat["stuck"] / maxf(0.01, nat["person_days"]), "night_up": nat["night_up"] / maxf(1.0, nat["night"]), "left_kills": float(left)}
 	soc["ledger"] = sim.food_summary()
+	soc["tools"] = {"stock": float(sim.stock.get("tools", 0.0)), "cov": sim.soc.coverage_of("tools") if sim.soc.can_make("tools") else -1.0,
+		"mult": sim.soc.tool_mult("food"), "makers": sim.living().filter(func(u): return u.career == "toolmaker").size()}
 	r["society"] = soc
 	r["min_food_days"] = snappedf(float(r.get("min_food_days", 99.0)), 0.01)
 	r["short_hours"] = snappedf(float(r.get("short_hours", 0.0)), 0.1)
@@ -603,6 +605,16 @@ func _society_report(rows: Array, pols: Array) -> void:
 		for r in rs:
 			mfd += float(r.get("min_food_days", 0.0))
 			sh += float(r.get("short_hours", 0.0))
+		var tl: Array = rs.map(func(r): return r["society"].get("tools", {})).filter(func(x): return not x.is_empty() and float(x["cov"]) >= 0.0)
+		if not tl.is_empty():
+			var cov := 0.0
+			var mult := 0.0
+			var mk := 0.0
+			for x in tl:
+				cov += float(x["cov"])
+				mult += float(x["mult"])
+				mk += float(x["makers"])
+			print("    tools at the end (%d of %d runs with the tech): coverage %.2f, work x%.2f, toolmakers %.1f" % [tl.size(), rs.size(), cov / tl.size(), mult / tl.size(), mk / tl.size()])
 		print("    food in store at its lowest: %.2f days of eating; hours under half a day's food: %.1f a run" % [mfd / rs.size(), sh / rs.size()])
 		print("    c %.2f food a person-day; R %.2f (own food a food hand-day / food eaten a grown-up-day); food share %.0f%%, 1/R %.0f%%" %
 			[c_day, r_meas, 100.0 * float(cols.get("food", 0.0)) / maxf(1.0, jobs_s), 100.0 / maxf(0.01, r_meas)])

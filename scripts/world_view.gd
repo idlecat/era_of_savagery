@@ -983,10 +983,15 @@ func draw_overlay() -> void:
 	first.sort_custom(func(x, y): return x[0] > y[0])
 	for e in first: _draw_unit_name(e[1], e[0] >= NAME_ALWAYS)
 	var abed := {} # hut id -> sleepers inside
+	var busy := {} # hut id -> someone at work inside (a craft, an indoor chore)
 	for u in sim.units:
+		if u.dead: continue
 		if sim.in_hut(u) and u.sleeping: abed[u.bed_id] = abed.get(u.bed_id, 0) + 1
+		elif u.inside >= 0: busy[u.inside] = true
 	for s in sim.structures:
-		if abed.has(s.id) and _in_view(s.pos): _zzz(iso(s.pos) + Vector2(12, -52), s.id)
+		if not _in_view(s.pos): continue
+		if abed.has(s.id): _zzz(iso(s.pos) + Vector2(12, -52), s.id)
+		elif busy.has(s.id): _smoke_wisp(iso(s.pos) + Vector2(-6, -50), s.id)
 	for p in sim.predators:
 		if p.dead or p.fled or not sim.is_visible(p.pos): continue
 		if p.clan != "":
@@ -2551,6 +2556,14 @@ func _zzz(at: Vector2, seed_: int) -> void:
 		var k := fmod(t * 0.45 + i / 3.0 + seed_ * 0.17, 1.0)
 		var q := at + Vector2(sin(t * 1.5 + i + seed_) * 3.0 + k * 8.0, -k * 22.0)
 		_draw_label(q, "z", 12 + int(k * 8), Color(0.88, 0.92, 1.0, 1.0 - k * 0.9), true)
+
+## A thin wisp of smoke from a roof: someone is at work inside (the indoor craft or chore is
+## otherwise invisible: the worker is hidden in the house).
+func _smoke_wisp(at: Vector2, seed_: int) -> void:
+	for i in 4:
+		var k := fmod(t * 0.35 + i / 4.0 + seed_ * 0.13, 1.0)
+		var q := at + Vector2(sin(t * 1.1 + i * 1.7 + seed_) * (2.0 + k * 5.0), -k * 26.0)
+		ci.draw_circle(q, 2.5 + k * 4.5, Color(0.78, 0.76, 0.72, 0.42 * (1.0 - k)))
 
 ## The animation for what a person's hands are doing (u.doing, set by the sim).
 const DOING_ANIM := {"fight": "attack", "ritual": "ritual", "dance": "ritual", "pick": "gather", "craft": "gather", "watch": "gather",
