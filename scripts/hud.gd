@@ -707,10 +707,12 @@ func _process_body(delta: float) -> void:
 	refresh_t -= delta
 	if refresh_t > 0: return
 	refresh_t = 0.25
+	sim.hold_lists() # (the panels read the same once-a-tick lists many times: made once, not per query)
 	_crisis_bar_update()
 	_refresh_top()
 	_refresh_left_content()
 	_refresh_right()
+	sim.release_lists()
 
 func _refresh_top() -> void:
 	var phase := tr("Night") if sim.night_amt > 0.5 and sim.nat.eclipse_t < 0 else (tr("Dusk") if sim.is_day_part("dusk") else tr("Day"))

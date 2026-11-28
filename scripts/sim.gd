@@ -670,6 +670,9 @@ func structs_changed() -> void:
 	_cache_structs_n += 1
 	_cache_built_t = -1.0 # (built_of() looks again, even within the same tick)
 	_cache_warm_t = -2.0 # (and the warmth grid, which is keyed to _cache_built_t)
+## A counter bumped whenever a building is added, removed, finished or lost: the renderer
+## caches what only changes then (a wall's gates, its posts' keys).
+func structures_rev() -> int: return _cache_structs_n
 func our_built() -> Array:
 	if not (_lists_hold() and _cache_ours_key.size() == 4 and _cache_ours_key[0] == _cache_serial and is_same(_cache_ours_key[1], structures) and _cache_ours_key[2] == structures.size() and _cache_ours_key[3] == _cache_structs_n):
 		_cache_ours = []

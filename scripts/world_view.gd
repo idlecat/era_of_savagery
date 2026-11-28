@@ -395,7 +395,8 @@ func _process(delta: float) -> void:
 	# Who moves, and which way they face, before the items are synced: a person's picture
 	# is drawn again when what it shows changes, and that is judged from these.
 	for u in sim.units:
-		var uk := "u%d" % u.id
+		if u.buried: continue # (a grave never moves: no need to track it every frame)
+		var uk := _ukey(u)
 		_track(uk, u.pos)
 		if u.face != null and not moving.get(uk, false): # standing and looking at something (life.gd)
 			var dv: Vector2 = iso(u.face) - iso(u.pos)
@@ -407,7 +408,7 @@ func _process(delta: float) -> void:
 	for p in sim.predators:
 		_track("p%d" % p.id, p.pos)
 		if p.dead or p.fled or p.fleeing or p.kind == "hunter" or p.kind == "trader": continue
-		for u in sim.units:
+		for u in sim.units_near(p.pos, 26.0): # (the grid, not every person per beast)
 			if not u.dead and u.pos.distance_to(p.pos) < 26.0:
 				attacking["p%d" % p.id] = true
 				heading["p%d" % p.id] = (iso(u.pos) - iso(p.pos)).normalized()
@@ -675,6 +676,15 @@ func _water_step(delta: float) -> void:
 	var gm: ShaderMaterial = ground.material
 	gm.set_shader_parameter("sky_col", Vector3(water_sky.r, water_sky.g, water_sky.b))
 	gm.set_shader_parameter("glint_col", Vector3(water_glint.r, water_glint.g, water_glint.b))
+
+## A person's key in the picture tables: made once, not every frame for a town.
+var _ukeys := {}
+func _ukey(u) -> String:
+	var k: String = _ukeys.get(u.id, "")
+	if k == "":
+		k = "u%d" % u.id
+		_ukeys[u.id] = k
+	return k
 
 func _track(key: String, p: Vector2) -> void:
 	var s := iso(p)
@@ -1199,7 +1209,7 @@ func _draw_hearths() -> void:
 	if k < 0.1: return
 	var home := {} # hut id -> someone inside
 	for u in sim.units:
-		if sim.in_hut(u) and u.sleeping: home[u.bed_id] = true
+		if not u.dead and sim.in_hut(u) and u.sleeping: home[u.bed_id] = true
 	for s in sim.structures:
 		if not s.built or not (s.type in ["hut", "large_hut"]) or not _in_view(s.pos) or not sim.is_visible(s.pos): continue
 		if not home.has(s.id) and sim.night_amt > 0.5: continue # (a dark, empty home)
@@ -1529,7 +1539,7 @@ func _draw_water_fx() -> void:
 	# rings round anyone wading (people at a ford, beasts at the water), a wake when they move
 	for u in sim.units:
 		if not u.dead and not sim.in_hut(u) and _in_view(u.pos) and sim.is_visible(u.pos) and D.in_river(u.pos):
-			_wade(u.pos, u.id, moving.get("u%d" % u.id, false))
+			_wade(u.pos, u.id, moving.get(_ukey(u), false))
 	for pr in sim.predators:
 		if not pr.dead and not pr.fled and _in_view(pr.pos) and sim.is_visible(pr.pos) and D.in_river(pr.pos):
 			_wade(pr.pos, pr.id + 7919, moving.get("p%d" % pr.id, false))
@@ -2337,7 +2347,7 @@ func _update_hover() -> void:
 	var sm := get_global_mouse_position()
 	var m := uniso(sm)
 	var bd := 16.0
-	for u in sim.units:
+	for u in sim.units_near(m, 120.0): # (the grid: not every person in a town each time the cursor moves)
 		if u.dead or u.sleeping or sim.in_hut(u) or not sim.is_visible(u.pos) or not _in_view(u.pos): continue
 		var d := _pick_dist(sm, u.pos, 26)
 		if d < bd:
@@ -2856,6 +2866,7 @@ const SAY_ICONS := ["hungry", "cold", "sick", "chat", "friend", "praise", "grief
 ## up close (or for freeform lines from a game master), the words themselves.
 ## Only a few speak in words at once (`words`, SPEECH_CAP); the others show their icon, or
 ## nothing when the line has none. A bubble that would cover another is left out unless `force`.
+var _speech_box: StyleBoxFlat # (reused: a bubble is drawn every frame while it fades)
 func _speech(at: Vector2, u, left: float, words := true, force := false) -> void:
 	if (cam.zoom.x < 1.2 or not words) and u.say_kind in SAY_ICONS:
 		if _bubble_room(Rect2(at.x - 11, at.y - 25, 22, 22), force): _icon_bubble(at, u.say_kind, left)
@@ -2869,12 +2880,13 @@ func _speech(at: Vector2, u, left: float, words := true, force := false) -> void
 	if not _bubble_room(r, force): return
 	var bg := Color(0.98, 0.95, 0.86, 0.92 * a)
 	ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-5, 1), at + Vector2(5, 1), at + Vector2(0, 8)]), bg)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_corner_radius_all(7)
-	sb.border_color = Color(0.3, 0.22, 0.12, 0.5 * a)
-	sb.set_border_width_all(1)
-	ci.draw_style_box(sb, r)
+	if _speech_box == null:
+		_speech_box = StyleBoxFlat.new()
+		_speech_box.set_corner_radius_all(7)
+		_speech_box.set_border_width_all(1)
+	_speech_box.bg_color = bg
+	_speech_box.border_color = Color(0.3, 0.22, 0.12, 0.5 * a)
+	ci.draw_style_box(_speech_box, r)
 	ci.draw_string(font, Vector2(r.position.x + 6, r.position.y + 14), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.22, 0.15, 0.08, a))
 
 ## Like _label_room() for a speech bubble's box.
@@ -3245,6 +3257,7 @@ func hover_info() -> Array:
 	var best = null
 	var bd := 18.0
 	for n in sim.nodes:
+		if absf(n.pos.x - m.x) > 130.0 or absf(n.pos.y - m.y) > 130.0: continue # (a cheap box first: a forest has thousands)
 		if not (sim.is_visible(n.pos) if n.kind == "deer" else sim.is_explored(n.pos)): continue
 		var d := _pick_dist(sm, n.pos, {"tree": 40.0, "boulder": 26.0}.get(n.kind, 12.0)) # (a boulder's rocks stand tall)
 		if d < bd:
@@ -3252,9 +3265,10 @@ func hover_info() -> Array:
 			best = n
 	if best: return _node_info(best)
 	for s in sim.structures:
+		var r: float = sim.struct_r(s)
+		if s.pos.distance_squared_to(m) > (r + 80.0) * (r + 80.0): continue
 		if not sim.is_explored(s.pos): continue
 		var sd: Dictionary = D.STRUCTURES[s.type]
-		var r: float = sim.struct_r(s)
 		var hit: bool = absf(s.pos.distance_to(m) - r) < 14 if sd.get("ring", false) else s.pos.distance_to(m) < r + 10
 		if hit: return _struct_info(s)
 	for lm in sim.landmarks:
@@ -3412,6 +3426,8 @@ const NODE_FULL_EVERY := 6
 var _node_frame := 0
 var _moving_nodes: Array = []
 var _static_n := -1 # the items not looked for between full passes (decor chunks, and nodes): counted when the tidy-up runs
+var _wall_rev := -1 # _cache_structs_n when the walls' gates were last worked out
+var _wall_cache := {} # wall id -> what stays the same between building changes (keys, places, gates)
 
 func _sync_items() -> void:
 	var seen := {}
@@ -3452,26 +3468,56 @@ func _sync_items() -> void:
 	for st in sim.structures:
 		var exp: bool = sim.is_explored(st.pos)
 		if D.STRUCTURES[st.type].get("ring", false):
-			var sdr: Dictionary = D.STRUCTURES[st.type]
-			var r: float = sim.struct_r(st)
-			var cnt := maxi(16, roundi(64.0 * r / float(sdr["r"]))) # (stakes as close as ever)
-			var stone: bool = sdr.get("stakes", "") == "stone"
-			var tower_every: int = int(sdr.get("tower_every", 0))
-			var shown: int = cnt if st.built else int(cnt * st.progress / st.work)
-			# buildings standing on the wall's line make gates in it (no stakes through a hut)
-			var in_way: Array = sim.structures.filter(func(o): return o != st and not D.STRUCTURES[o.type].get("ring", false) \
-				and absf(o.pos.distance_to(st.pos) - r) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
+			var srev: int = sim.structures_rev()
+			if srev != _wall_rev: # (a building was raised or lost: the gates may have moved)
+				_wall_rev = srev
+				_wall_cache.clear()
+			var rec: Dictionary = _wall_cache.get(st.id, {})
+			var fresh: bool = rec.is_empty() or rec["progress"] != st.progress or rec["built"] != st.built or rec["style"] != st.style \
+				or rec["type"] != st.type or rec["size"] != st.size or rec["pos"] != st.pos
+			if fresh:
+				var sdr: Dictionary = D.STRUCTURES[st.type]
+				var r: float = sim.struct_r(st)
+				var cnt := maxi(16, roundi(64.0 * r / float(sdr["r"]))) # (stakes as close as ever)
+				var shown: int = cnt if st.built else int(cnt * st.progress / st.work)
+				# buildings standing on the wall's line make gates in it (no stakes through a hut)
+				var in_way: Array = sim.structures.filter(func(o): return o != st and not D.STRUCTURES[o.type].get("ring", false) \
+					and absf(o.pos.distance_to(st.pos) - r) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
+				var keys: Array = []
+				var pps: Array = []
+				var hidden: Array = []
+				for i in cnt:
+					var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
+					keys.append("s%d_%d" % [st.id, i])
+					pps.append(pp)
+					hidden.append(in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP))
+				rec = {"progress": st.progress, "built": st.built, "style": st.style, "type": st.type, "size": st.size, "pos": st.pos,
+					"keys": keys, "pps": pps, "hidden": hidden,
+					"cnt": cnt, "shown": shown, "stone": sdr.get("stakes", "") == "stone", "tower": int(sdr.get("tower_every", 0))}
+				_wall_cache[st.id] = rec
+			var keys: Array = rec["keys"]
+			var pps: Array = rec["pps"]
+			var hidden: Array = rec["hidden"]
+			var cnt: int = rec["cnt"]
+			var shown: int = rec["shown"]
+			var stone: bool = rec["stone"]
+			var tower_every: int = rec["tower"]
 			for i in cnt:
-				var pp: Vector2 = st.pos + Vector2.from_angle(float(i) / cnt * TAU) * r
-				var key := "s%d_%d" % [st.id, i]
+				var key: String = keys[i]
 				seen[key] = true
 				# a stone block turned along the ring: its tangent's world angle, as one of the baked turns
 				var tang := float(i) / cnt * TAU + PI / 2.0
 				var dir := posmod(roundi(fposmod(-tang, PI) / (PI / ArtBaker.WALL_DIRS)), ArtBaker.WALL_DIRS)
-				var it := _item(key, 5, [pp, i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0, dir], iso(pp), false)
-				it.visible = exp and not in_way.any(func(o): return o.pos.distance_to(pp) < D.STRUCTURES[o.type]["r"] + PALISADE_GAP)
+				var it: Item = items.get(key)
+				if it == null:
+					it = _item(key, 5, [pps[i], i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0, dir], iso(pps[i]), false)
+					_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
+				elif fresh:
+					it.obj = [pps[i], i < shown, st.built, st.style, stone, tower_every > 0 and i % tower_every == 0, dir]
+					_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
+				var vis: bool = exp and not hidden[i]
+				if it.visible != vis: it.visible = vis
 				it.modulate = _pick_glow(st)
-				_touch(it, (2 if i < shown else 0) + (1 if st.built else 0) + st.style * 10)
 		elif st.type == "roadworks": pass # (drawn on the ground: _draw_ground_part)
 		elif st.type != "farm_plot" or (st.built and art != null and art.has("farm_spring")):
 			var key := "s%d" % st.id
@@ -3487,13 +3533,15 @@ func _sync_items() -> void:
 	var judge := _node_frame % 2 == 0 # (a person's picture is judged every other frame: a sprite changes no faster than 11 times a second)
 	_frame_bronze = sim.has_bronze() # (asked for every one of a town's people: once a frame)
 	for u in sim.units:
-		var key := "u%d" % u.id
+		if u.buried: continue # (a grave's stone is drawn with the burial ground, not as a person)
+		var key := _ukey(u)
 		seen[key] = true
 		var sp := iso(u.pos)
-		var it := _item(key, 2, u, sp, false)
 		if not view.has_point(sp):
-			it.stale = true # out of sight: its picture is drawn again when it comes back
+			var off: Item = items.get(key) # (made when it comes into view: a town's offscreen people are many)
+			if off: off.stale = true # out of sight: its picture is drawn again when it comes back
 			continue
+		var it := _item(key, 2, u, sp, false)
 		if not judge: continue # (judged next frame)
 		var sig := _unit_sig(u, key)
 		if sig < 0: # (the clock moves part of the picture: every frame; and what it shows is forgotten)
