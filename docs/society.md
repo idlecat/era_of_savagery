@@ -1169,3 +1169,21 @@ steward game ends at wealth ~2,700, output 7.6 a head a day, standard 0.96. The 
 ask for them yet: which levels of wealth and output make a town or a city is the designer's
 call, with the levels-as-ceilings measure (the calculator's sweep against pacing's long runs).
 
+### 14.17 The cookhouse, pots, potters and weavers (2026-11-27)
+
+- **The cookhouse** (`structures.json cookhouse`, era 2 with pottery; a baked model, a
+  hand-drawn fallback, `ART_VERSION` 28): food's consumption channel (model §4.2). Cooks at it
+  (the `cook` job, indoors) feed `serves` (20) people each, up to `hands` (3) a cookhouse;
+  those fed eat up to a quarter less (`society.json cook.hunger`, `soc.hunger_mult()` in the
+  hunger rule). Cooking is priced by food's value times the share of eating it saves, and the
+  plan raises a cookhouse by the share of the people no cookhouse feeds (`build_price`).
+- **Pots** (`society.json goods.pots`): fired at home from wood once the tribe knows pottery,
+  for everyone (half a pot a head), worn slowly; pots for all halve spoilage
+  (`soc.spoil_mult()`), in place of pottery's flat halving while the model is on.
+- **Careers**: potter (from firing pots), weaver (from sewing cloth), cook (from cooking).
+
+In a 50-day game pots reach full coverage soon after pottery (spoilage ×0.50), and a cookhouse
+stands from ~40 people with 1-2 cooks (hunger ×0.75-0.79). 60 days, 8 seeds: 27-54 people,
+1-7 deaths. Potters' yards and weavers' halls (workshops that make the craft faster) are the
+next of this kind.
+

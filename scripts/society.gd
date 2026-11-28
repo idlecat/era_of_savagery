@@ -108,6 +108,7 @@ static func choice_of(j: Dictionary) -> String:
 		"heal": return "heal"
 		"keep_order": return "order"
 		"train": return "train"
+		"cook": return "cook"
 		"art": return "art"
 		"ritual": return "rites"
 		"build": return "build"
@@ -353,6 +354,9 @@ func weights(site: bool) -> Dictionary:
 		var trainees := float(hands.get("train", 0))
 		var g := float(S["work"]["train"]["gain"])
 		out["train"] = value("safety") * n * M.gain(sc * (1.0 + g * trainees), sc * g, 1.0)
+	# the cookhouse: meals cooked for everyone go further (food's consumption channel)
+	var cd := cook_need_hands()
+	if cd > 0.0: out["cook"] = value("food_now") * n * M.gain(float(hands.get("cook", 0)) / cd, 1.0, cd) * (1.0 - float(S["work"]["cook"]["hunger"]))
 	# health, a service: the sick over the patients a healer tends
 	var sick := 0
 	for u in sim.living():
@@ -390,6 +394,7 @@ func trade_choice(u: E.Unit) -> String:
 	if w.get("build", false): return "build"
 	if w.has("craft"): return str(w["craft"])
 	if w.get("heal", false): return "heal"
+	if w.get("cook", false): return "cook"
 	return ""
 
 ## How productive u is at a choice: their skill on the one curve, and their trade's edge at
@@ -519,6 +524,14 @@ func tool_mult(res: String) -> float:
 		if res in GOODS[g].get("uses", []) and can_make(g): m *= 1.0 + (float(GOODS[g]["max"]) - 1.0) * M.benefit(coverage_of(g))
 	return m
 
+## How fast stored food spoils, by the goods it is kept in (pots): 1 - (1 - spoil) x B(coverage).
+## In place of pottery's flat halving while the society model is on (sim.spoil_rate).
+func spoil_mult() -> float:
+	var m := 1.0
+	for g in GOODS:
+		if GOODS[g].has("spoil") and can_make(g): m *= 1.0 - (1.0 - float(GOODS[g]["spoil"])) * M.benefit(coverage_of(g))
+	return m
+
 ## How hard the cold bites, by the goods worn against it (cloth): 1 - (1 - cold) x B(coverage).
 func cold_mult() -> float:
 	if not on: return 1.0
@@ -558,6 +571,8 @@ func good_weight(good: String, w: Dictionary, hands: Dictionary) -> float:
 	var c := coverage_of(good)
 	var made := float(S["work"]["job_secs"]) / float(gd["work"]) # (a full-time maker's day)
 	var dc := made / good_target(good)
+	if gd.has("spoil"): # (stored food keeps: food's value, the more so with the stores to keep)
+		return value("food_now") * 0.3 * float(sim.living().size()) * (M.benefit(c + dc) - M.benefit(c))
 	if gd.has("cold"): # (worn against the cold: warmth's value, the more so with a winter ahead)
 		var winter_ahead := 1.0 if 3 in horizon() else 0.5
 		return value("warmth") * float(sim.living().size()) * (M.benefit(c + dc) - M.benefit(c)) * winter_ahead
@@ -790,6 +805,66 @@ func mood_term() -> float:
 	var cm: Dictionary = S["comfort"]
 	return float(cm["mood"]) * (standard() - float(cm["ref"])) * 2.0
 
+# ------------------------------------------------------------------ the cookhouse (model §4.2)
+## Hands the cookhouses could take (structures.json cooks.hands each) and the cooks it takes to
+## feed everyone (people over cooks.serves), whichever is less: 0 with no cookhouse.
+func cook_need_hands() -> float:
+	var places := 0.0
+	var serves := 20.0
+	for t in D.STRUCTURES:
+		var ck = D.STRUCTURES[t].get("cooks", null)
+		if ck == null: continue
+		serves = float(ck["serves"])
+		places += float(ck["hands"]) * sim.built_of(t).size()
+	return minf(places, float(sim.living().size()) / maxf(1.0, serves))
+
+## How much the tribe eats, for the cooking (sim.unit_needs): 1 - (1 - hunger) x B(coverage), the
+## cooks against the people they could feed. Once a second (asked for everyone every tick).
+var _cache_hunger := 1.0
+var _cache_hunger_t := -10.0
+func hunger_mult() -> float:
+	if not on: return 1.0
+	if sim.time - _cache_hunger_t < 1.0 and sim.time >= _cache_hunger_t: return _cache_hunger
+	_cache_hunger_t = sim.time
+	var d := cook_need_hands()
+	var cooks := 0.0
+	if d > 0.0:
+		for u in sim.living():
+			if u.job.get("type", "") == "cook": cooks += 1.0
+	_cache_hunger = 1.0 - (1.0 - float(S["work"]["cook"]["hunger"])) * M.benefit(0.0 if d <= 0.0 else clampf(cooks / d, 0.0, 1.0))
+	return _cache_hunger
+
+## Send u to cook at the nearest cookhouse with a free place (indoors, for a stint).
+func assign_cook(u: E.Unit) -> bool:
+	var best = null
+	for t in D.STRUCTURES:
+		var ck = D.STRUCTURES[t].get("cooks", null)
+		if ck == null: continue
+		for s in sim.built_of(t):
+			var at := 0
+			for o in sim.living():
+				if o.job.get("type", "") == "cook" and int(o.job.get("struct_id", -1)) == s.id: at += 1
+			if at >= int(ck["hands"]): continue
+			if best == null or s.pos.distance_to(u.home) < best.pos.distance_to(u.home): best = s
+	if best == null: return false
+	sim.set_job(u, {"type": "cook", "struct_id": best.id, "until": sim.time + float(S["work"]["cook"]["stint"])})
+	return true
+
+func do_cook(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var s = sim.struct_by_id(int(j.get("struct_id", -1)))
+	if s == null or not s.built or sim.time >= float(j.get("until", 0.0)):
+		u.inside = -1
+		sim.set_job(u, {})
+		return
+	if u.inside < 0 and not sim.approach(u, s.pos, 12, dt):
+		u.act = "Walking to work"
+		return
+	u.inside = s.id
+	u.pos = s.pos
+	u.act = str(S["work"]["cook"]["act"])
+	u.doing = "cook"
+	sim.gain_xp(u, "craft", dt * 0.03)
+
 # ------------------------------------------------------------------ the building plan (step 10)
 ## The price of raising what a plan entry builds (improve.gd sorts what it wants by it): the
 ## value of the need the building serves times how short that need is, 1 - B(coverage).
@@ -812,6 +887,12 @@ func build_price(r: Dictionary) -> float:
 		var free = sim.free_field(D.VILLAGE, float(sim.RULES["vice"]["steward"]["area_r"]), [t])
 		return 0.0 if free != null else value("food_now") * (1.0 - M.benefit(clampf(float(sim.stock["food"]) / maxf(1.0, food_demand(sim.hz.season_idx()) * 3.0), 0.0, 1.0)))
 	if t == "council_ring": return value("order") * (1.0 - M.benefit(order_coverage()))
+	if sd.has("cooks"): # (meals go further: food's value times the share of the people no cookhouse feeds yet)
+		var fed := 0.0
+		for tt in D.STRUCTURES:
+			var ck = D.STRUCTURES[tt].get("cooks", null)
+			if ck != null: fed += float(ck["hands"]) * float(ck["serves"]) * sim.built_of(tt).size()
+		return value("food_now") * (1.0 - float(S["work"]["cook"]["hunger"])) * (1.0 - M.benefit(fed / n))
 	if sd.has("ritual_mult") or sd.has("lore"): return value("spirit") * (1.0 - M.benefit(spirit_coverage()))
 	if sd.has("ring") or sd.has("inside_def") or sd.get("lookout", false) or t == "weapon_rack": return value("safety") * (1.0 - M.benefit(safety_coverage()))
 	return float(b["other"])

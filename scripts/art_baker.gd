@@ -11,7 +11,7 @@ extends Node
 
 signal progress(done: int, total: int)
 
-const ART_VERSION := 27
+const ART_VERSION := 28
 const BAKE_SCALE := 2.0
 const PPU := 1.06066 * BAKE_SCALE
 const CACHE_DIR := "user://art_cache_v%d" % ART_VERSION
@@ -555,6 +555,7 @@ func _jobs() -> Array:
 		jobs.append({"key": "weapon_rack" + sfx, "size": 96, "lift": 12.0, "build": _rack.bind(snowy)})
 		jobs.append({"key": "lookout_tower" + sfx, "size": 192, "lift": 34.0, "build": _tower.bind(snowy)})
 		jobs.append({"key": "smokehouse" + sfx, "size": 160, "lift": 10.0, "build": _smokehouse.bind(snowy)})
+		jobs.append({"key": "cookhouse" + sfx, "size": 192, "lift": 12.0, "build": _cookhouse.bind(snowy)})
 		jobs.append({"key": "longhouse" + sfx, "size": 288, "lift": 16.0, "build": _longhall.bind(snowy)})
 		jobs.append({"key": "temple" + sfx, "size": 192, "lift": 22.0, "build": _temple.bind(snowy)})
 		for d in WALL_DIRS: # (a block turned to follow its ring: d * 180/WALL_DIRS degrees)
@@ -1403,6 +1404,32 @@ func _smokehouse(snowy: bool) -> Node3D:
 		var a := i * TAU / 7
 		boulder(root, Vector3(11 + cos(a) * 4.5, 0.8, 9 + sin(a) * 3.5), 1.4, stone, 900 + i)
 	mi(root, cyl(3, 3, 0.4, 10), mat(Color("#2e2620"), "coarse", 0.3), Vector3(11, 0.3, 9))
+	return root
+
+## The cookhouse: a low clay-walled hall under a thatched roof with a smoke hole, its big
+## cooking pot on a hearth of stones by the open door, pots stacked and firewood piled.
+func _cookhouse(snowy: bool) -> Node3D:
+	var root := Node3D.new()
+	var sn := 0.6 if snowy else 0.0
+	var clay := mat(Color("#a8825a"), "coarse", 0.2, Vector3.ONE, 0.5, sn * 0.3)
+	mi(root, lumpy(box(Vector3(30, 10, 20)), 0.25, 61, 0.2), clay, Vector3(0, 5, -2)) # the walls
+	var thatch := mat(Color("#a7703f"), "streak", 0.16, Vector3(1, 5, 1), 0.55, 0.85 if snowy else 0.0)
+	for side in [-1.0, 1.0]: mi(root, box(Vector3(34, 1.6, 13)), thatch, Vector3(0, 13.5, side * 5.0 - 2.0), Vector3(side * 32.0, 0, 0))
+	mi(root, cyl(2.0, 2.4, 2.0, 10), flat(Color("#2a1d12")), Vector3(-6, 17.0, -2)) # the smoke hole
+	mi(root, box(Vector3(8, 7, 0.8)), mat(Color("#2a1a0e"), "fine"), Vector3(4, 3.6, 8.2)) # the open door
+	var stone := mat(Color("#7d776c"), "coarse", 0.25, Vector3.ONE, 0.5, sn)
+	for i in 8:
+		var a := i * TAU / 8
+		boulder(root, Vector3(-8 + cos(a) * 4.2, 0.7, 13 + sin(a) * 3.2), 1.3, stone, 1700 + i)
+	mi(root, cyl(3.0, 3.0, 0.4, 10), mat(Color("#2e2620"), "coarse", 0.3), Vector3(-8, 0.3, 13)) # the embers
+	var pot := mat(Color("#7a4a2c"), "fine", 0.25)
+	mi(root, lumpy(sph(3.2, 12, 8), 0.1, 1710, 0.2), pot, Vector3(-8, 3.6, 13), Vector3.ZERO, Vector3(1.1, 0.85, 1.1)) # the big pot
+	var wood := mat(Color("#6e4b2a"), "streak", 0.2, Vector3(1, 4, 1), 0.5, sn * 0.5)
+	segment(root, Vector3(-12, 0, 13), Vector3(-8, 9, 13), 0.4, wood) # the tripod
+	segment(root, Vector3(-4, 0, 13), Vector3(-8, 9, 13), 0.4, wood)
+	for i in 5: mi(root, cyl(0.8, 0.8, 9, 6), wood, Vector3(13 + (i % 3) * 1.6, 0.9 + int(i / 3) * 1.5, 10), Vector3(0, 0, 90)) # firewood
+	_pot(root, Vector3(10, 0, 14), 0.8)
+	_pot(root, Vector3(13, 0, 15.5), 0.6)
 	return root
 
 ## The Longhouse building (an upgrade of the large hut): the era-3 longhouse home, stretched

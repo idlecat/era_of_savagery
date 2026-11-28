@@ -732,6 +732,7 @@ func _refresh_top() -> void:
 	if sim.stock["goods"] > 0 or not sim.folk.treasures.is_empty(): extra.append("[color=#e6c46a]%s[/color]" % (tr("Goods %d") % sim.stock["goods"]))
 	if sim.knows_find("willow") or sim.knows_find("yarrow"): extra.append("[color=#9ad88a]%s[/color]" % (tr("Herbs %d") % sim.stock["herbs"]))
 	if sim.stock["tools"] > 0 or sim.has_tech("tools"): extra.append("[color=#c8c0b0]%s[/color]" % (tr("Tools %d") % sim.stock["tools"]))
+	if sim.has_tech("pottery"): extra.append("[color=#b88a5a]%s[/color]" % (tr("Pots %d") % sim.stock["pots"]))
 	if sim.has_tech("hide"): extra.append("[color=#c9a27a]%s[/color]" % (tr("Hides %d") % sim.stock["hides"] + "  " + tr("Cloth %d") % sim.stock["cloth"]))
 	if sim.knows_find("copper"): extra.append("[color=#d9965a]%s[/color]" % (tr("Copper %d") % sim.stock["copper"]))
 	if sim.knows_find("tin"): extra.append("[color=#a8b0b8]%s[/color]" % (tr("Tin %d") % sim.stock["tin"]))

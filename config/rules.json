@@ -321,6 +321,11 @@
   "ask_every": 90,
   "list": [
    {
+    "structure": "cookhouse",
+    "when": {"era": 2, "pop": 20, "fewer": {"cookhouse": {"base": 1, "per_pop": 0.02}}},
+    "reason": "meals cooked for everyone go further."
+   },
+   {
     "structure": "smokehouse",
     "when": {
      "season": "Autumn",
@@ -499,7 +504,7 @@
   "_doc": "How the tribe list groups the people at home by what they work at (hud roster, sim.work_group()). A job is matched as type:resource for gathering, then by its type; the first group listing it wins. Jobs in 'set_aside' (a meal, an idle act, warming up, a glance round) and pastimes taken up idly don't count: the work set aside for them does. Anyone left over is in 'idle'.",
   "set_aside": ["life", "meal", "warm", "shelter", "look", "startle"],
   "groups": [
-   {"id": "food", "name": "Food", "color": "#b6e07a", "jobs": ["gather:food", "field", "tend"]},
+   {"id": "food", "name": "Food", "color": "#b6e07a", "jobs": ["gather:food", "field", "tend", "cook"]},
    {"id": "wood", "name": "Wood", "color": "#d9a066", "jobs": ["gather:wood"]},
    {"id": "stone", "name": "Stone", "color": "#b8c0c8", "jobs": ["gather:stone", "gather:copper", "gather:tin"]},
    {"id": "tools", "name": "Tools", "color": "#c8c0b0", "jobs": ["craft"]},

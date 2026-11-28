@@ -50,7 +50,7 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0, "tools": 0.0, "hides": 0.0, "cloth": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0, "tools": 0.0, "hides": 0.0, "cloth": 0.0, "pots": 0.0}
 var known_finds := {} # find id -> day discovered
 var mushroom_loads := 0 # the tribe learns which mushrooms are safe
 var find_t := 0.0
@@ -886,7 +886,7 @@ func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) 
 ## The share of the stores above the first 30 food that spoils a second (pottery, salt, the
 ## season, inventions and buildings lower it).
 func spoil_rate() -> float:
-	return 0.0025 * (0.5 if has_tech("pottery") else 1.0) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
+	return 0.0025 * (soc.spoil_mult() if soc.on else (0.5 if has_tech("pottery") else 1.0)) * (0.5 if knows_find("salt") else 1.0) * hz.spoil_mult() * inv.spoil_mult() * struct_mul("spoil")
 
 ## How much faster a person works at a skill's level (config/society.json work.skill_curve:
 ## one concave curve for every kind of work, docs/society.md §3).
@@ -1182,6 +1182,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			soc.do_keep_order(u, j, dt)
 		"train":
 			soc.do_train(u, j, dt)
+		"cook":
+			soc.do_cook(u, j, dt)
 		"trade_trip":
 			folk.do_trade(u, j, dt)
 		"build":
@@ -2486,7 +2488,7 @@ func unit_idle(u: E.Unit, dt: float) -> void:
 
 func unit_needs(u: E.Unit, dt: float) -> void:
 	var sv: Dictionary = RULES["survival"]
-	var drain: float = float(sv["hunger_rate"]) * (float(sv["gluttonous"]) if u.has_trait("gluttonous") else 1.0) * (float(sv["shared_hearth"]) if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult() * inv.mul("hunger")
+	var drain: float = float(sv["hunger_rate"]) * (float(sv["gluttonous"]) if u.has_trait("gluttonous") else 1.0) * (float(sv["shared_hearth"]) if evo.has_trad("shared_hearth") else 1.0) * hz.hunger_mult() * inv.mul("hunger") * soc.hunger_mult()
 	u.hunger -= drain * dt * (float(sv["child_hunger"]) if u.role == "child" else 1.0) + u.walked * WALK_HUNGER # long walks to work cost food
 	u.walked = 0.0
 	if u.hunger < float(sv["eat_below"]) and stock["food"] >= 1:
@@ -3050,6 +3052,7 @@ func set_to_work(u: E.Unit, choice: String, unbuilt = null, fallback := true) ->
 	if choice == "heal": return soc.assign_heal(u)
 	if choice == "order": return soc.assign_keep_order(u)
 	if choice == "train": return soc.assign_train(u)
+	if choice == "cook": return soc.assign_cook(u)
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 	if field: choice = "field" # (food: a field or dock with a free place before the wild)
@@ -3131,7 +3134,7 @@ func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
 
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
 const JOB_TYPES := ["move", "gather", "bury", "tend", "field", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
-	"life", "meal", "depart", "art", "craft", "heal", "keep_order", "train", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
+	"life", "meal", "depart", "art", "craft", "heal", "keep_order", "train", "cook", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
 
 ## What must always hold in a running game; returns the broken rules ([] when all is well).
 ## Tests call it after ticking; a game master can call it to sanity-check the world.

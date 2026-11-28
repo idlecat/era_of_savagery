@@ -1954,7 +1954,7 @@ func _draw_structure(s) -> void:
 			var rod := iso(s.pos + Vector2(60 if west_dock else -60, -4 if west_dock else 4))
 			ci.draw_line(rod + Vector2(0, -20), rod + Vector2(-4, 6 + sin(t * 2) * 2), Color(1, 1, 1, 0.45), 1)
 			return
-	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse", "longhouse", "temple", "trading_post", "warehouse"]:
+	if s.built and s.type in ["granary", "smelter", "council_ring", "totem_shrine", "grand_altar", "weapon_rack", "aurochs_pen", "lookout_tower", "smokehouse", "cookhouse", "longhouse", "temple", "trading_post", "warehouse"]:
 		if spr_shadow.call(s.type + _snowy(), float(sim.struct_r(s))):
 			if _sprite(s.type + _snowy(), b):
 				if s.decor > 0: _decor(s, b, 18.0)
@@ -1962,6 +1962,7 @@ func _draw_structure(s) -> void:
 					"smelter": _smoke(b - Vector2(-4, 36), s.id)
 					"council_ring": _flame(b - Vector2(0, 2), 4, 11 * (1.0 + 0.15 * sin(t * 10 + s.id)), Color("#f8a531"))
 					"smokehouse": _smoke(iso(s.pos + Vector2(-7, -2)) - Vector2(0, 24), s.id)
+					"cookhouse": _smoke(iso(s.pos + Vector2(-6, -2)) - Vector2(0, 26), s.id)
 			_era_dressing(s, b) # the tribe's growing pride shows at the great places
 			return
 	match s.type:
@@ -2040,6 +2041,12 @@ func _draw_structure(s) -> void:
 				var q := b + Vector2(cos(i * TAU / 6) * 12, sin(i * TAU / 6) * 6)
 				ci.draw_circle(q, 3, Color(0.6, 0.58, 0.52, a))
 			_totem(b, 44, 1.0, a)
+		"cookhouse": # (hand-drawn fallback: a clay hall, a pot on a hearth by the door, smoke)
+			_ell(b + Vector2(4, 2), 26, 10, SHADOW)
+			ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-20, -2), b + Vector2(20, -2), b + Vector2(20, -16), b + Vector2(-20, -16)]), Color(0.66, 0.51, 0.35, a))
+			ci.draw_colored_polygon(PackedVector2Array([b + Vector2(-24, -14), b + Vector2(24, -14), b + Vector2(16, -28), b + Vector2(-16, -28)]), Color(0.65, 0.44, 0.25, a))
+			ci.draw_circle(b + Vector2(-14, 4), 5, Color(0.48, 0.29, 0.17, a))
+			if s.built: _smoke(b - Vector2(4, 30), s.id)
 		"warehouse": # (hand-drawn fallback: a long storehouse on stilts under a pitched roof)
 			_ell(b + Vector2(6, 2), 34, 12, SHADOW)
 			for dx in [-22.0, -8.0, 8.0, 22.0]: ci.draw_line(b + Vector2(dx, 0), b + Vector2(dx, -8), Color(C_WOOD.darkened(0.2), a), 3)
