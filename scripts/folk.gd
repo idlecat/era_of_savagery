@@ -59,7 +59,8 @@ func decor_total() -> int:
 
 func mood_target() -> float:
 	var m: Dictionary = F["mood"]
-	var t: float = float(m["base"]) + minf(float(m["decor_max"]), decor_total() * float(m["decor"])) + minf(float(m["treasure_max"]), treasures.size() * float(m["treasure"])) + sim.inv.mood_bonus()
+	var comfort: float = sim.soc.mood_term() if sim.soc.on else minf(float(m["decor_max"]), decor_total() * float(m["decor"])) # (the society model: the standard of living, comfort among it, in place of the painted homes)
+	var t: float = float(m["base"]) + comfort + minf(float(m["treasure_max"]), treasures.size() * float(m["treasure"])) + sim.inv.mood_bonus()
 	if sim.time < glow_until: t += float(m["glow"])
 	var alive: Array = sim.living()
 	if sim.stock["food"] < alive.size(): t -= float(m["hungry"])

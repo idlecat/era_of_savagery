@@ -27,6 +27,10 @@
   }
  },
 
+ "comfort": {"_doc": "Comfort and the standard of living (model §10, society.gd). Comfort's good is `good` (crafts make it, folk.gd art): each level wants `wants` of it per head in use, used up at `wear` of the want a day; crafts are priced by comfort's value times what a crafter's day adds to that coverage (`per_piece` goods a piece of `art_secs`). The standard is the mean benefit of the needs in `standard` (food today, beds, comfort, spirit, health, order); with the society model on it sways the tribe's mood by `mood` x (standard - `ref`) x 2, in place of the painted homes' term (comfort counted twice otherwise).", "good": "goods",
+  "wants": {"band": 0.3, "camp": 0.6, "village": 1.0, "town": 1.5, "city": 2.0}, "wear": 0.1, "per_piece": 1.0, "art_secs": 18,
+  "standard": ["food", "shelter", "comfort", "spirit", "health", "order"], "mood": 15, "ref": 0.6},
+
  "order": {"_doc": "Order (model §6): a_c coordination per head once a Steward exists; a_d disputes past n0, growing with exponent k; an informal keeper's span shrinks past n1; institutions (the Council, the Code) multiply span by code_mult. In hands at span 1. In the game (society.gd): keepers are the Steward and those at the keep_order job (`act`, by the fire, a `stint` at a time); institutions stand while the tribe has one of `institutions` (story.holds conditions, any); work goes (1 - waste x (1 - B(coverage))) as fast, the waste of disputes nobody settles.", "a_c": 0.01425, "a_d": 0.0185, "n0": 50, "n1": 150, "k": 0.5, "code_mult": 1.4,
   "waste": 0.15, "stint": 40, "act": "Settling disputes", "institutions": [{"built": "council_ring"}, {"tech": "code"}]},
  "health": {"_doc": "Per-head incidence grows with density, density_k on N against n_ref (model §6: density ∝ N^0.3, incidence ∝ density^0.5).", "density_k": 0.15, "n_ref": 20},
@@ -38,7 +42,7 @@
   "rates": {"food": 9, "wood": 15, "stone": 8, "herbs": 5, "copper": 4, "tin": 4, "lore": 6, "tools": 3, "cloth": 2.4},
   "measure_every": 30, "measure_k": 0.3, "rate_floor": 0.25, "job_secs": 60, "band_below": 35, "walk_food": 1.15,
   "stock_needs": {"wood": "warmth", "stone": "shelter", "herbs": "health", "copper": "safety", "tin": "safety", "lore": "knowledge"},
-  "hand_needs": {"art": "comfort", "rites": "spirit", "build": "shelter"},
+  "hand_needs": {"rites": "spirit", "build": "shelter"},
   "food_buffer": 1.2, "reserve_days": 2.0, "avg_secs": 30,
   "secure_from": 1.2, "secure_to": 1.2,
   "by_challenge": {"_doc": "Overrides of these work knobs per challenge level (hz.level: off, normal, harsh), as director.json's levels: e.g. {\"off\": {\"gather\": {\"food\": 0.4}, \"secure_from\": 1.0}}. The designer's knobs between growth and the band's hunger trap, set against make_it_fun.md G1's bands (society.md 14.6, open #12); none set yet."},

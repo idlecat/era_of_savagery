@@ -1099,3 +1099,21 @@ runs are the same as before. Teaching becomes a need to build only if a designer
 spread (a knob: `knowledge.chance`, `every`, `reach`), and then it is a service like healing:
 learners over the pupils a teacher takes.
 
+### 14.12 Step 8, first cut: comfort and the standard of living (2026-11-27)
+
+`config/society.json comfort`: comfort's good is the `goods` crafts make; each level wants
+some in use per head (0.3 a head in a band to 2 in a city) and they are used up (`wear`, a
+tenth of the want a day); crafts are priced by comfort's value times what a crafter's day adds
+to that coverage, instead of by hands. The **standard of living** (`soc.standard()`) is the
+mean benefit of food today, beds, comfort, spirit (the rites), health and order; with the model
+on it sways mood by `comfort.mood` × (standard − `ref`) × 2 in place of the painted homes'
+term, so comfort counts once. Births, departures and wanderers follow mood already, so they
+follow the standard through it, with no rule of their own.
+
+60 days, 8 seeds: 39-61 people, 0-6 deaths. Mood stays at 82-87 on average (80-85 before):
+festivals, treasures and inventions hold it near its top, so the standard barely sways it yet,
+which is for the tuning pass (`comfort.mood`, `ref`, the wants). The 12-day "famine" now reads
+100% for the steward with nobody starved or gone: it is the G1 measure's "a sickness wave while
+the stores are under 15% of the granaries", the granary-relative threshold §14.5 found reads a
+camp with days of food as a close call.
+

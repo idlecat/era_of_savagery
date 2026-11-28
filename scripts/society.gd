@@ -353,7 +353,13 @@ func weights(site: bool) -> Dictionary:
 	if sick > 0:
 		var hd := float(sick) / float(S["work"]["heal"]["patients"])
 		out["heal"] = value("health") * n * M.gain(float(hands.get("heal", 0)) / hd, 1.0, hd)
-	# needs met by hands: crafts (comfort), rites (spirit), building (shelter)
+	# comfort: the daily goods in use against what the level wants (crafts make them)
+	if sim.folk.mood > 0.0:
+		var cw := comfort_want()
+		var cm: Dictionary = S["comfort"]
+		var dcm := float(S["work"]["job_secs"]) / float(cm["art_secs"]) * float(cm["per_piece"]) / maxf(1.0, cw)
+		out["art"] = value("comfort") * n * M.gain(comfort_coverage(), dcm, 1.0)
+	# needs met by hands: rites (spirit), building (shelter)
 	var lv: Dictionary = S["levels"][level()]["hands"]
 	for c in S["work"]["hand_needs"]:
 		if c == "build" and not site: continue
@@ -447,6 +453,10 @@ func round_start(dt: float) -> void:
 	measure(h, dt)
 	var k := clampf(dt / float(S["work"]["avg_secs"]), 0.0, 1.0)
 	for c in S["work"]["hand_needs"]: avg_hands[c] = lerpf(float(avg_hands.get(c, 0.0)), float(h.get(c, 0)), k)
+	# daily goods are used up: wear of what is wanted, a day
+	var g := str(S["comfort"]["good"])
+	if float(sim.stock.get(g, 0.0)) > 0.0:
+		sim.stock[g] = maxf(0.0, float(sim.stock[g]) - comfort_want() * float(S["comfort"]["wear"]) * dt / D.DAY_LEN)
 
 var next_try := {} # person id -> when they next look for work by themselves
 
@@ -681,6 +691,49 @@ func do_keep_order(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.doing = "council"
 	sim.gain_xp(u, "lore", dt * 0.03)
 	sim.evo.practice(u, "lead", dt * 0.2)
+
+# ------------------------------------------------------------------ comfort and the standard (model §10)
+## The daily goods the tribe wants in use now: the level's wants per head.
+func comfort_want() -> float:
+	var cm: Dictionary = S["comfort"]
+	return float(sim.living().size()) * float(cm["wants"].get(level(), cm["wants"]["camp"]))
+
+## Comfort's coverage: the goods in store against what is wanted.
+func comfort_coverage() -> float:
+	var w := comfort_want()
+	return 1.0 if w <= 0.0 else clampf(float(sim.stock.get(str(S["comfort"]["good"]), 0.0)) / w, 0.0, 1.0)
+
+## Spirit's coverage: the hands at the rites (averaged) against the level's hands per head.
+func spirit_coverage() -> float:
+	var d := float(S["levels"][level()]["hands"].get("spirit", 0.0)) * float(sim.living().size())
+	return 1.0 if d <= 0.0 else clampf(float(avg_hands.get("rites", 0.0)) / d, 0.0, 1.0)
+
+## The standard of living, 0..1 (model §10): the mean benefit of the needs society.json
+## comfort.standard names (food today, beds, comfort, spirit, health, order). Once a second.
+var _cache_standard := 1.0
+var _cache_standard_t := -10.0
+func standard() -> float:
+	if sim.time - _cache_standard_t < 1.0 and sim.time >= _cache_standard_t: return _cache_standard
+	_cache_standard_t = sim.time
+	var n: float = maxf(1.0, sim.living().size())
+	var sick := 0.0
+	for u in sim.living():
+		if u.sick > 0.0: sick += 1.0
+	var c := {"food": clampf(float(sim.stock["food"]) / maxf(1.0, food_demand(sim.hz.season_idx())), 0.0, 1.0),
+		"shelter": clampf(float(sim.pop_cap()) / n, 0.0, 1.0), "comfort": comfort_coverage(), "spirit": spirit_coverage(),
+		"health": 1.0 - sick / n, "order": order_coverage()}
+	var t := 0.0
+	var k := 0
+	for need in S["comfort"]["standard"]:
+		t += M.benefit(float(c.get(need, 1.0)))
+		k += 1
+	_cache_standard = t / maxf(1.0, k)
+	return _cache_standard
+
+## The standard's sway on the tribe's mood (folk.mood_target), with the society model on.
+func mood_term() -> float:
+	var cm: Dictionary = S["comfort"]
+	return float(cm["mood"]) * (standard() - float(cm["ref"])) * 2.0
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:
