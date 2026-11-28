@@ -882,7 +882,7 @@ func unit_speed(u: E.Unit) -> float:
 	if u.carry_amt > 0: s *= 0.95 if u.ox else 0.85 # loads slow the walk home
 	return s * roads.speed_at(u.pos) * life.speed_mult(u) * careers.speed_mult(u) # (trails and roads; weariness, hurry; a scout at their trade)
 
-func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u)
+func work_mul(u: E.Unit) -> float: return (0.9 if u.has_trait("lazy") else 1.0) * (0.6 if u.sick > 0 else 1.0) * hz.work_mult() * folk.work_mult() * inv.mul("work") * policy.crew_work(u) * life.work_mult(u) * careers.work_mult(u) * soc.order_mult()
 ## The share of the stores above the first 30 food that spoils a second (pottery, salt, the
 ## season, inventions and buildings lower it).
 func spoil_rate() -> float:
@@ -1178,6 +1178,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			soc.do_craft(u, j, dt)
 		"heal":
 			soc.do_heal(u, j, dt)
+		"keep_order":
+			soc.do_keep_order(u, j, dt)
 		"trade_trip":
 			folk.do_trade(u, j, dt)
 		"build":
@@ -3044,6 +3046,7 @@ func _pick_need(needs: Dictionary, site: bool) -> String:
 func set_to_work(u: E.Unit, choice: String, unbuilt = null, fallback := true) -> bool:
 	if soc.GOODS.has(choice): return soc.assign_craft(u, choice) # (a good made indoors, at home)
 	if choice == "heal": return soc.assign_heal(u)
+	if choice == "order": return soc.assign_keep_order(u)
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 	if field: choice = "field" # (food: a field or dock with a free place before the wild)
@@ -3125,7 +3128,7 @@ func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
 
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
 const JOB_TYPES := ["move", "gather", "bury", "tend", "field", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
-	"life", "meal", "depart", "art", "craft", "heal", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
+	"life", "meal", "depart", "art", "craft", "heal", "keep_order", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
 
 ## What must always hold in a running game; returns the broken rules ([] when all is well).
 ## Tests call it after ticking; a game master can call it to sanity-check the world.

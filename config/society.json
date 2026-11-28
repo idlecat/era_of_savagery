@@ -27,7 +27,8 @@
   }
  },
 
- "order": {"_doc": "Order (model §6): a_c coordination per head once a Steward exists; a_d disputes past n0, growing with exponent k; an informal keeper's span shrinks past n1; institutions (the Council, the Code) multiply span by code_mult. In hands at span 1.", "a_c": 0.01425, "a_d": 0.0185, "n0": 50, "n1": 150, "k": 0.5, "code_mult": 1.4},
+ "order": {"_doc": "Order (model §6): a_c coordination per head once a Steward exists; a_d disputes past n0, growing with exponent k; an informal keeper's span shrinks past n1; institutions (the Council, the Code) multiply span by code_mult. In hands at span 1. In the game (society.gd): keepers are the Steward and those at the keep_order job (`act`, by the fire, a `stint` at a time); institutions stand while the tribe has one of `institutions` (story.holds conditions, any); work goes (1 - waste x (1 - B(coverage))) as fast, the waste of disputes nobody settles.", "a_c": 0.01425, "a_d": 0.0185, "n0": 50, "n1": 150, "k": 0.5, "code_mult": 1.4,
+  "waste": 0.15, "stint": 40, "act": "Settling disputes", "institutions": [{"built": "council_ring"}, {"tech": "code"}]},
  "health": {"_doc": "Per-head incidence grows with density, density_k on N against n_ref (model §6: density ∝ N^0.3, incidence ∝ density^0.5).", "density_k": 0.15, "n_ref": 20},
  "safety": {"_doc": "Safety's demand: max(vigilance per head, threat per head × (N / n_ref)^wealth_k) (model §4.1, §6).", "vigilance": 0.015, "wealth_k": 0.3, "n_ref": 20},
 
@@ -41,7 +42,7 @@
   "food_buffer": 1.2, "reserve_days": 2.0, "avg_secs": 30,
   "secure_from": 1.2, "secure_to": 1.2,
   "by_challenge": {"_doc": "Overrides of these work knobs per challenge level (hz.level: off, normal, harsh), as director.json's levels: e.g. {\"off\": {\"gather\": {\"food\": 0.4}, \"secure_from\": 1.0}}. The designer's knobs between growth and the band's hunger trap, set against make_it_fun.md G1's bands (society.md 14.6, open #12); none set yet."},
-  "skills": {"heal": "lore", "tools": "craft", "cloth": "craft", "food": "forage", "wood": "forage", "stone": "craft", "herbs": "lore", "copper": "craft", "tin": "craft", "lore": "lore", "rites": "lore", "art": "craft", "build": "craft"},
+  "skills": {"order": "lore", "heal": "lore", "tools": "craft", "cloth": "craft", "food": "forage", "wood": "forage", "stone": "craft", "herbs": "lore", "copper": "craft", "tin": "craft", "lore": "lore", "rites": "lore", "art": "craft", "build": "craft"},
   "self_secs": 6,
   "heal": {"_doc": "Healing as a service (model §4: health): one healer tends up to `patients` of the sick within the events.json healer_radius at once, for `stint` seconds at a time; health's demand is the sick over `patients` hands. Only those with the events.json healer_lore may heal.", "patients": 4, "stint": 30, "act": "Tending the sick"},
   "min_weight": 0.01},
@@ -55,7 +56,7 @@
  "jobs": {"_doc": "Which need a job in the game serves (tools/metrics.gd's society report, society_plan.md step 1): keys are a job type, or type:resource for gathering; the columns are the share table's. A job not listed counts as other.",
   "gather:food": "food", "field": "food", "tend": "food",
   "gather:wood": "shelter_warmth", "gather:stone": "shelter_warmth", "build": "shelter_warmth",
-  "gather:herbs": "health", "heal": "health", "craft:tools": "food", "craft:cloth": "shelter_warmth", "aid": "health",
+  "gather:herbs": "health", "heal": "health", "keep_order": "order", "craft:tools": "food", "craft:cloth": "shelter_warmth", "aid": "health",
   "attack": "safety", "firefight": "safety", "cover": "safety",
   "experiment": "knowledge", "explore": "knowledge", "seek": "knowledge",
   "art": "comfort_spirit", "ritual": "comfort_spirit"},

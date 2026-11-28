@@ -1075,3 +1075,15 @@ Measuring it found three traps, each one a self-reinforcing loop, none of cloth'
 60 days, 8 seeds: 39-59 people, 1-9 deaths, none died out. 12 days: hours under half a day's
 food 4/5/23 (steward, hoarder, feaster).
 
+### 14.10 Step 7 begins: order (2026-11-27)
+
+Order as the model has it (§6), in the game (`society.gd`, `config/society.json order`): its
+demand is coordination from the first Steward on plus disputes past the face-to-face limit
+(`society_model.order_demand`, the calculator's own), over a keeper's span (an informal
+keeper's shrinks past 150; an institution, the Council Ring or the Tribal Code, multiplies it
+×1.4). Its keepers are the Steward and those at the new `keep_order` job by the fire; a
+shortfall wastes work (`soc.order_mult()` in `sim.work_mul`: up to `waste` 15% at no
+coverage), and keeping order is priced by the one rule. A camp's Steward covers it; two
+hundred people with one Steward work at ×0.875 until keepers sit by the fire; the Code halves
+what they need past 150. At the 60-day sizes (~50) nothing moves (the same runs, bit for bit).
+

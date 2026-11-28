@@ -98,6 +98,7 @@ static func choice_of(j: Dictionary) -> String:
 		"gather", "field": return job_res(j)
 		"craft": return str(j.get("good", ""))
 		"heal": return "heal"
+		"keep_order": return "order"
 		"art": return "art"
 		"ritual": return "rites"
 		"build": return "build"
@@ -332,6 +333,11 @@ func weights(site: bool) -> Dictionary:
 	for g in GOODS:
 		var gw := good_weight(g, out, hands)
 		if gw > 0.0: out[g] = gw
+	# order: disputes and coordination over the keepers' span (the Steward keeps order too)
+	var od := order_demand_hands()
+	if od > 0.0:
+		var keepers := float(hands.get("order", 0)) + _steward_keeps()
+		out["order"] = value("order") * n * M.gain(keepers / od, 1.0, od)
 	# health, a service: the sick over the patients a healer tends
 	var sick := 0
 	for u in sim.living():
@@ -609,6 +615,64 @@ func do_heal(u: E.Unit, j: Dictionary, dt: float) -> void:
 		o.tended_t = sim.time + 1.0
 		n += 1
 	sim.gain_xp(u, "lore", dt * 0.05)
+
+# ------------------------------------------------------------------ order (model §6)
+## Whether the tribe has an institution of order (the Council Ring, the Tribal Code).
+func has_institutions() -> bool:
+	for c in S["order"]["institutions"]:
+		if sim.story.holds(c): return true
+	return false
+
+## 1 if a Steward stands (they keep order as well as placing hands), else 0.
+func _steward_keeps() -> float:
+	var st = sim.unit_by_id(sim.vice.get("steward", -1))
+	return 1.0 if st != null and not st.dead else 0.0
+
+## Order's demand in keepers' hands now (model §6): coordination from the first Steward on and
+## disputes past the face-to-face limit, over a keeper's span (an informal keeper's shrinks
+## past n1, an institution's doesn't).
+func order_demand_hands() -> float:
+	var o: Dictionary = S["order"]
+	var n: float = sim.living().size()
+	return M.order_demand(n, float(o["a_c"]), float(o["a_d"]), float(o["n0"]), float(o["k"]), _steward_keeps() > 0.0) / M.order_span(n, float(o["n1"]), has_institutions(), float(o["code_mult"]))
+
+## Order's coverage: the keepers (the Steward, those at keep_order) against its demand.
+var _cache_order := 1.0
+var _cache_order_t := -10.0
+func order_coverage() -> float:
+	if sim.time - _cache_order_t < 1.0 and sim.time >= _cache_order_t: return _cache_order
+	_cache_order_t = sim.time
+	var d := order_demand_hands()
+	var k := _steward_keeps()
+	for u in sim.living():
+		if u.job.get("type", "") == "keep_order": k += 1.0
+	_cache_order = 1.0 if d <= 0.0 else clampf(k / d, 0.0, 1.0)
+	return _cache_order
+
+## How fast work goes for order's sake (the labour channel, model §5): disputes nobody settles
+## waste `waste` of the work at worst, 1 - waste x (1 - B(coverage)).
+func order_mult() -> float:
+	if not on: return 1.0
+	return 1.0 - float(S["order"]["waste"]) * (1.0 - M.benefit(order_coverage()))
+
+## Send u to keep the peace by the fire for a stint.
+func assign_keep_order(u: E.Unit) -> bool:
+	var fire = sim.nearest_serving("gather", u.home)
+	var at: Vector2 = fire.pos if fire else u.home
+	sim.set_job(u, {"type": "keep_order", "at": at + Vector2(randf_range(-30, 30), randf_range(20, 40)), "until": sim.time + float(S["order"]["stint"])})
+	return true
+
+func do_keep_order(u: E.Unit, j: Dictionary, dt: float) -> void:
+	if sim.time >= float(j.get("until", 0.0)):
+		sim.set_job(u, {})
+		return
+	if not sim.approach(u, j["at"], 8, dt):
+		u.act = "Walking to work"
+		return
+	u.act = str(S["order"]["act"])
+	u.doing = "council"
+	sim.gain_xp(u, "lore", dt * 0.03)
+	sim.evo.practice(u, "lead", dt * 0.2)
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:
