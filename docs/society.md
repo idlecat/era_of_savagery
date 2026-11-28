@@ -1117,3 +1117,13 @@ which is for the tuning pass (`comfort.mood`, `ref`, the wants). The 12-day "fam
 the stores are under 15% of the granaries", the granary-relative threshold §14.5 found reads a
 camp with days of food as a close call.
 
+### 14.13 G1's food measures in days of eating (2026-11-27)
+
+`make_it_fun.md` G1's near-miss and famine's "sickness in a hungry camp" now count the
+stores under half a day's eating (`tools/metrics.gd SHORT_DAYS`), not 15% of the granaries:
+since the granaries hold a winter, the old threshold read a camp with days of food as a close
+call. 4 seeds × 12 days: near-miss steward 100%, hoarder 25%, feaster 100%; famine 0%, 0%,
+75%; skill sensitivity 1.62 (it read 0.35-0.76 before). Food decisions matter, and the bands
+are now honest tuning targets: the steward lives too near the edge (near-miss above 60-90%),
+the feaster pays too often (famine above 10-25%).
+

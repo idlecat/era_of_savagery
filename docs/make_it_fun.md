@@ -781,10 +781,13 @@ play (that is the measurable form of "decisions matter"):
   - *Skill sensitivity* — the headline: the distributions below must **differ between
     policies**. If hoarders and feasters starve at the same rate, food decisions are
     theater.
-  - Food-floor near-misses (food < 15% of cap): 60–90% of runs at least once, **not**
+  - Food-floor near-misses (the stores under half a day's eating; until 2026-11-27 food < 15%
+    of cap, which read a camp with days of food as a close call once the granaries held a
+    winter, `society.md` §14.5): 60–90% of runs at least once, **not**
     ~100% — a threat in every single run that never kills is a jump-scare without
     teeth, and it means granaries bought nothing.
-  - Real famine consequences (a starvation death, sickness wave, or a family leaving in
+  - Real famine consequences (a starvation death, a sickness wave while the stores are under
+    half a day's eating, or a family leaving in
     `life`'s discontent) in 10–25% of year-1–2 runs: some runs must actually pay, or
     players learn the floor is safe. Starvation deaths *cluster* in badly-played runs,
     ~0 in well-played ones — that spread is the point.

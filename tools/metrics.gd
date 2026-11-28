@@ -33,6 +33,9 @@ const Cultures = preload("res://scripts/cultures.gd")
 
 ## The target bands: [low, high] share of runs (or a value), docs/make_it_fun.md G1.
 const BANDS := {"near_miss": [0.6, 0.9], "famine": [0.1, 0.25]}
+## A close call (near_miss, and famine's sickness in a hungry camp): the stores under this many
+## days of the tribe's eating (society.gd food_demand), whatever the granaries could hold.
+const SHORT_DAYS := 0.5
 ## Share of outposts (settle contracts that ended) interrupted at least once: most should
 ## be quiet enough that an interrupt is news, some must be hit (make_it_fun G1).
 const OUTPOST_BAND := [0.4, 0.7]
@@ -241,16 +244,16 @@ func _sample(sim, r: Dictionary, dead_seen: Dictionary) -> void:
 		for u in sim.units:
 			if u.dead and not u.gone and not dead_seen.has(u.id): r["winter_deaths"] += 1
 	if sim.day() > 1: r["min_food_frac"] = minf(r["min_food_frac"], frac)
-	if frac < 0.15 and sim.day() > 1: r["near_miss"] = true
 	var eat_day: float = sim.soc.food_demand(sim.hz.season_idx()) # (food in days of eating: what "close to starving" means, whatever the granaries hold)
 	var fdays: float = sim.stock["food"] / maxf(1.0, eat_day)
+	if fdays < SHORT_DAYS and sim.day() > 1: r["near_miss"] = true # (G1: a close call is the stores under SHORT_DAYS of eating; it was 15% of the granaries, which since they hold a winter read a camp with days of food as one)
 	if sim.day() > 1:
 		r["min_food_days"] = minf(float(r.get("min_food_days", 99.0)), fdays)
-		if fdays < 0.5: r["short_hours"] = float(r.get("short_hours", 0.0)) + 1.0 / (D.DAY_LEN / 24.0)
+		if fdays < SHORT_DAYS: r["short_hours"] = float(r.get("short_hours", 0.0)) + 1.0 / (D.DAY_LEN / 24.0)
 	if frac < 0.02 and sim.day() > 1: r["hungry_hours"] += 1.0 / (D.DAY_LEN / 24.0) # (game hours with empty stores)
 	if sim.living().filter(func(u): return u.sick > 0).size() >= 3:
 		r["sick_wave"] = true
-		if frac < 0.15: r["hungry_sick"] = true
+		if fdays < SHORT_DAYS: r["hungry_sick"] = true # (a sickness wave in a camp short of food)
 	for u in sim.units:
 		if not u.dead or dead_seen.has(u.id): continue
 		dead_seen[u.id] = true
