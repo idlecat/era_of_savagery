@@ -33,7 +33,11 @@ jobs:
         run: ~/godot/godot --headless --path . --import || true
 
       - name: Unit and smoke tests
-        run: ~/godot/godot --headless --path . --script res://tests/test_contract.gd
+        run: |
+          # (a test script that fails to parse exits 0 with nothing run: require the summary line too)
+          ~/godot/godot --headless --path . --script res://tests/test_contract.gd 2>&1 | tee test-output.txt
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q "^ALL PASSED" test-output.txt
 
       - name: Balance canary (warns, never fails)
         continue-on-error: true
