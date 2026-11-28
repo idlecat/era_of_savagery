@@ -1916,6 +1916,9 @@ func _on_event(id: String, open_now := false) -> void:
 		return
 	trader_wait = {}
 	var d: Dictionary = sim.event_def(id)
+	if d.is_empty(): # (an id nothing knows, e.g. a game master's typo: nothing to ask)
+		if sim.pending_event == id: sim.pending_event = ""
+		return
 	var v := _open_modal("☼ " + d["title"], 820)
 	var txt := _rich(0, true)
 	txt.text = tr("[i]%s[/i]") % d["text"]

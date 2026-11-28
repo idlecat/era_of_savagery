@@ -136,8 +136,9 @@ func _road_cells(r: Dictionary) -> Array:
 	var cells: Array = R.busiest_trails(D.VILLAGE, reach() * 1.5, int(r.get("cells", 40)), lv)
 	if cells.size() < int(r.get("min_cells", 8)): return []
 	var c: Dictionary = R.cost(cells, lv)
+	var reserve := float(C.get("wood_reserve", 10))
 	for k in c:
-		if sim.stock.get(k, 0.0) < float(c[k]) + float(C.get("wood_reserve", 10)): return []
+		if sim.stock.get(k, 0.0) < float(c[k]) + (reserve if k == "wood" else 0.0): return []
 	return cells
 
 ## For an upgrade entry ({"upgrade": from type, "structure": to}): the village's building

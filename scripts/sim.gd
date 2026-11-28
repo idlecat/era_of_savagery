@@ -438,8 +438,7 @@ func make_unit(def: Dictionary, p: Vector2) -> E.Unit:
 	return u
 
 func add_structure(type: String, p: Vector2, built := false, owner := "village", paid := false) -> E.Structure:
-	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
-	structs_changed()
+	structs_changed() # (the buildings change: built_of() and near_warmth() look again)
 	var s := E.Structure.new()
 	s.id = uid(); s.type = type; s.pos = p; s.built = built
 	s.work = D.STRUCTURES[type]["work"]; s.progress = s.work if built else 0.0
@@ -619,8 +618,7 @@ var _cache_built_t := -1.0
 var _cache_serving := {} # role -> our built buildings serving it (serving(), rebuilt with built_of's)
 ## A building was lost or changed outside the usual paths: built_of() looks again.
 func buildings_changed() -> void:
-	_cache_built_t = -1.0
-	structs_changed()
+	structs_changed() # (clears built_of()'s and near_warmth()'s tables at once)
 func built_of(type: String) -> Array:
 	if _cache_built_t != time or not _lists_hold(): # (outside a tick or a hold a building may have been changed by hand: look again)
 		_cache_built_t = time
@@ -641,7 +639,10 @@ var _cache_ours: Array = []
 var _cache_rings: Array = [] # of those, the walls and rings (structures.json "ring")
 var _cache_ours_key: Array = [] # [tick, structures, size, _cache_structs_n] when they were listed
 var _cache_structs_n := 0 # bumped whenever a building is added, removed, rises or falls
-func structs_changed() -> void: _cache_structs_n += 1
+func structs_changed() -> void:
+	_cache_structs_n += 1
+	_cache_built_t = -1.0 # (built_of() looks again, even within the same tick)
+	_cache_warm_t = -2.0 # (and the warmth grid, which is keyed to _cache_built_t)
 func our_built() -> Array:
 	if not (_lists_hold() and _cache_ours_key.size() == 4 and _cache_ours_key[0] == _cache_serial and is_same(_cache_ours_key[1], structures) and _cache_ours_key[2] == structures.size() and _cache_ours_key[3] == _cache_structs_n):
 		_cache_ours = []
@@ -909,14 +910,20 @@ func remember(u: E.Unit, text: String, impact: int) -> void:
 	if u.memory.size() > 10: u.memory.resize(10)
 
 # ------------------------------------------------------------------ movement
-func set_dest(e, target: Vector2) -> void:
+## The point someone actually walks to for a target: clamped to the map, and off deep
+## water to the near shore (a rule may name a place in the river; nobody walks into it).
+func walk_target(target: Vector2) -> Vector2:
 	var t := Vector2(clampf(target.x, 10, D.W - 10), clampf(target.y, 10, D.H - 10))
 	if D.is_water(t): t = D.shore(t, 8.0)
+	return t
+
+func set_dest(e, target: Vector2) -> void:
+	var t := walk_target(target)
 	e.path = D.route(e.pos, t) # over the fords where rivers lie between
 	if e is E.Unit: e.dest = t
 
 func go_to(u: E.Unit, t: Vector2) -> void:
-	if u.dest == null or (u.dest as Vector2).distance_to(t) > 14 or u.path.is_empty():
+	if u.dest == null or u.path.is_empty() or (u.dest as Vector2).distance_to(walk_target(t)) > 14:
 		set_dest(u, t)
 
 ## Moves an entity along its path. Returns true once the path is finished.
@@ -949,9 +956,13 @@ func approach(u: E.Unit, t: Vector2, near: float, dt: float) -> bool:
 	if u.pos.distance_to(t) <= near:
 		u.path.clear()
 		return true
-	go_to(u, t)
+	var goal := walk_target(t) # (a target in the river is reached from its near bank)
+	if u.pos.distance_to(goal) <= near:
+		u.path.clear()
+		return true
+	go_to(u, goal)
 	step_move(u, dt, unit_speed(u))
-	return u.pos.distance_to(t) <= near
+	return u.pos.distance_to(t) <= near or u.pos.distance_to(goal) <= near
 
 # ------------------------------------------------------------------ jobs
 func set_job(u: E.Unit, job: Dictionary, key := "") -> void:
@@ -1422,8 +1433,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
 func complete_structure(s: E.Structure, u: E.Unit) -> void:
-	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
-	structs_changed()
+	structs_changed() # (the buildings change: built_of() and near_warmth() look again)
 	if s.type == "roadworks": # a finished road is part of the ground, not a building
 		s.progress = s.work
 		roads.progress(s)
@@ -2048,6 +2058,21 @@ func grave_slot(bg: E.Structure, i: int) -> Vector2:
 	# rows run along the screen's horizontal (world (1,-1)), new rows step towards the viewer
 	return bg.pos + Vector2(1, -1) * ((col - 2) * 14.0 + (row % 2) * 5.0) + Vector2(1, 1) * (row * 13.0 - 2.0)
 
+## The next free place in the burial ground: the first slot round the fire that neither a
+## grave nor another carrier holds (an interrupted carrier may leave a gap, so the count
+## of graves alone does not say which slot is next).
+func _bury_slot(bg: E.Structure, u: E.Unit) -> Vector2:
+	var used := {} # the places already spoken for
+	for g in bg.graves:
+		if g.has("pos"): used[g["pos"]] = true
+	for o in units:
+		if o == u or o.dead: continue
+		var oj: Dictionary = o.job
+		if oj.get("type", "") == "bury" and oj.has("slot"): used[oj["slot"]] = true
+	var i: int = bg.graves.size()
+	while used.has(grave_slot(bg, i)): i += 1
+	return grave_slot(bg, i)
+
 ## Every second: see that each body is fetched, carried home and buried.
 func _burials(dt: float) -> void:
 	bury_t -= dt
@@ -2086,7 +2111,7 @@ func _do_bury(u: E.Unit, j: Dictionary, dt: float) -> void:
 			u.act = "Fetching the body of " + b.name
 			if approach(u, b.pos, 10, dt):
 				j["phase"] = "carry"
-				j["slot"] = grave_slot(bg, bg.graves.size() + units.filter(func(o): return o != u and o.job.get("type", "") == "bury" and o.job.has("slot")).size())
+				j["slot"] = _bury_slot(bg, u)
 				u.path.clear()
 				u.dest = null
 		"carry":
@@ -2238,6 +2263,7 @@ func _night_rest(u: E.Unit, dt: float) -> bool:
 		if u.sleeping or u.bed_pos != null: wake(u)
 		return false
 	if u.bed_pos == null: pick_bed(u)
+	u.inside = -1 # (out of the workshop: a craft or indoor chore set aside for the night is not being worked)
 	var outdoors: bool = u.bed_id < 0
 	if outdoors and D.river_dist(u.bed_pos) < wet_reach() - 10.0: # the water is rising: move the bed out
 		u.sleeping = false
@@ -2514,7 +2540,7 @@ func update_predator(p: E.Predator, dt: float) -> void:
 	if p.kind == "wolf":
 		p.raid_t -= dt
 		if p.raid_t <= 0: p.fleeing = true
-	if p.raid:
+	elif p.raid:
 		p.raid_t -= dt
 		if p.raid_t <= 0 and p.clan != "":
 			p.fleeing = true # the war band gives up and goes home
@@ -3236,8 +3262,7 @@ func demolish_block(s: E.Structure) -> String:
 
 ## Pull a building down (a building site is cancelled): part of its wood and stone back.
 func demolish(id: int) -> String:
-	_cache_built_t = -1.0 # (the buildings change: built_of() looks again)
-	structs_changed()
+	structs_changed() # (the buildings change: built_of() and near_warmth() look again)
 	var s := struct_by_id(id)
 	var why := demolish_block(s)
 	if why != "": return why

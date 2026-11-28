@@ -4908,6 +4908,19 @@ func test_tools_indoors() -> void:
 	var was = mender.inside
 	while mender.inside >= 0 and mender.job.get("type", "") == "life": sim.update_unit(mender, 0.1) # (the chore runs its time out)
 	check(was >= 0 and mender.inside < 0 and not sim.in_hut(mender), "and comes out when it is done")
+	# A crafter sent from the bench to bed is no longer "inside" the hut on the way (or asleep by a fire)
+	var maker = sim.living().filter(func(x): return x.role == "")[0]
+	sim.stock["stone"] = 10.0
+	sim.stock["wood"] = 10.0
+	check(sim.soc.assign_craft(maker, "tools"), "a crafter is set to work again")
+	maker.job["shift_end"] = sim.time + 1000.0 # (still at the bench when night comes)
+	var mhut = sim.struct_by_id(maker.job["struct_id"])
+	maker.pos = mhut.pos
+	for i in 5: sim.update_unit(maker, 0.1)
+	check(maker.inside == mhut.id, "the crafter works indoors")
+	sim.time = D.DAY_LEN * 0.75
+	for i in 30: sim.update_unit(maker, 0.1)
+	check(maker.inside < 0, "when night takes them from the bench, they are no longer counted as inside (%d)" % maker.inside)
 
 func test_society_model() -> void:
 	print("\n== The society model's formulas (docs/society.md, scripts/society_model.gd) ==")
@@ -5485,6 +5498,18 @@ func test_tick_caches() -> void:
 	check(sim.pop_cap() == sim.our_built().map(func(o): return int(D.STRUCTURES[o.type].get("cap", 0))).reduce(func(a, b): return a + b, 0), "the beds count what stands")
 	sim.demolish(st.id)
 	check(not st in sim.our_built(), "and one pulled down is gone at once")
+	# the warmth grid is keyed to the building index: a fire raised later in the same tick warms at once
+	var by_fire = sim.living()[0]
+	by_fire.pos = sim.dry_spot(D.VILLAGE + Vector2(600, 600))
+	by_fire.inside = -1
+	by_fire.sleeping = false
+	by_fire.bed_id = -1
+	sim.hold_lists()
+	sim.near_warmth(by_fire) # (fills the grid for this held tick, as a rule early in the tick would)
+	var late_fire = sim.add_structure("bonfire", by_fire.pos)
+	sim.complete_structure(late_fire, null)
+	check(sim.near_warmth(by_fire), "a fire raised later in the same tick warms at once")
+	sim.release_lists()
 	# a settlement stands the moment its contract is done
 	var c := E.Contract.new()
 	c.id = sim.uid()

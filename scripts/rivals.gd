@@ -518,6 +518,7 @@ func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
 	var hostility := _hostility(c)
 	var stage_add: int = int(feud_stage().get("size_add", 0)) if feud_id() == c["id"] else 0
+	if int(c["warriors"]) < 1: return # (no warriors left to march: the nemesis's stage bonus does not conjure a band)
 	var size := mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add \
 		+ int(float(cr["size"].get("per_our_pop", 0.0)) * sim.living().size())) # (a bigger tribe draws bigger war bands, if the clan has the warriors)
 	if size < 1: return
@@ -1052,6 +1053,7 @@ func war_spoils(id: String, objective: String, contract) -> String:
 			var huts: Array = sim.structures.filter(func(st): return st.owner == "rival:" + id and st.type in ["hut", "large_hut"])
 			var n := mini(int(sp["burn_huts"]), huts.size())
 			for i in n: sim.structures.erase(huts[i])
+			if n > 0: sim.buildings_changed()
 			c["pop"] = maxi(2, c["pop"] - int(sp["burn_pop"]))
 			_deed(id, "burned")
 			sim.popup(c["pos"] + Vector2(0, -60), tr("%d huts burned!") % n, Color("#ff9b5a"), true)

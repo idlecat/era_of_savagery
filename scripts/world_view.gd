@@ -3162,7 +3162,7 @@ func _box_select(r: Rect2, add: bool) -> void:
 	selected_struct = -1
 	if not add: selected = []
 	for u in sim.units:
-		if not u.dead and r.has_point(iso(u.pos) - Vector2(0, 15)) and u.id not in selected: selected.append(u.id)
+		if not u.dead and not sim.in_hut(u) and r.has_point(iso(u.pos) - Vector2(0, 15)) and u.id not in selected: selected.append(u.id)
 	selection_changed.emit()
 
 ## Send the selected (non-contract) people to auto-explore.
