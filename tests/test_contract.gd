@@ -4877,6 +4877,7 @@ func test_tools_indoors() -> void:
 	sim.stock["stone"] = 10.0
 	sim.stock["wood"] = 10.0
 	var u = sim.living().filter(func(x): return x.role == "")[0]
+	sim.evo.learn(u, "tools")
 	check(sim.soc.assign_craft(u, "tools") and u.job["type"] == "craft", "someone is sent to make tools")
 	var hut = sim.struct_by_id(u.job["struct_id"])
 	for i in 400:
@@ -4956,6 +4957,10 @@ func test_cloth() -> void:
 	check(sim.soc.cold_mult() == 1.0 and not sim.soc.can_make("cloth"), "without hide tailoring, no cloth")
 	sim.techs["hide"] = true
 	sim.stock["hides"] = 5.0
+	var other = sim.living().filter(func(x): return x.role == "")[1]
+	check(sim.soc.known_mult(other, "cloth") == float(sim.soc.S["work"]["known"]), "someone who doesn't know hide tailoring sews at half pace, while they learn")
+	sim.evo.learn(u, "hide")
+	check(sim.soc.known_mult(u, "cloth") == 1.0, "someone who knows it, at full")
 	check(sim.soc.assign_craft(u, "cloth"), "someone is sent to sew clothes")
 	for i in 400:
 		sim.update_unit(u, 0.1)

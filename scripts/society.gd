@@ -43,6 +43,14 @@ func work_val(key: String):
 	var by: Dictionary = S["work"].get("by_challenge", {}).get(sim.hz.level, {})
 	return by[key] if by.has(key) else S["work"][key]
 
+## How well u knows the method a kind of work needs (model §3: `known`): 1 if they know it
+## (evo.knows), else work.known while they learn; 1 for work with no method listed.
+func known_mult(u: E.Unit, work: String) -> float:
+	if not on: return 1.0
+	var m: Dictionary = S["work"]["methods"]
+	if not m.has(work) or work == "_doc" or not sim.has_tech(str(m[work])): return 1.0
+	return 1.0 if sim.evo.knows(u, str(m[work])) else float(S["work"]["known"])
+
 ## A need's value per person: its channels' values times its impact on them (model §8).
 func value(need: String) -> float:
 	var v := 0.0
@@ -570,7 +578,7 @@ func do_craft(u: E.Unit, j: Dictionary, dt: float) -> void:
 	u.pos = hut.pos
 	u.act = str(gd["act"])
 	u.doing = str(gd["doing"])
-	j["t"] = float(j.get("t", 0.0)) + dt * sim.work_mul(u) * sim.skill_mult(u.lv(str(gd["skill"])))
+	j["t"] = float(j.get("t", 0.0)) + dt * sim.work_mul(u) * sim.skill_mult(u.lv(str(gd["skill"]))) * known_mult(u, str(j.get("good", "")))
 	if float(j["t"]) < float(gd["work"]): return
 	j["t"] = 0.0
 	if not sim.spend(gd["cost"]):

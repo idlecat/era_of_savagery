@@ -44,6 +44,8 @@
   "by_challenge": {"_doc": "Overrides of these work knobs per challenge level (hz.level: off, normal, harsh), as director.json's levels: e.g. {\"off\": {\"gather\": {\"food\": 0.4}, \"secure_from\": 1.0}}. The designer's knobs between growth and the band's hunger trap, set against make_it_fun.md G1's bands (society.md 14.6, open #12); none set yet."},
   "skills": {"order": "lore", "heal": "lore", "tools": "craft", "cloth": "craft", "food": "forage", "wood": "forage", "stone": "craft", "herbs": "lore", "copper": "craft", "tin": "craft", "lore": "lore", "rites": "lore", "art": "craft", "build": "craft"},
   "self_secs": 6,
+  "known": 0.5,
+  "methods": {"_doc": "The method each kind of work needs known (evo.knows): those who don't know it work at `known` while they learn (model §3). field: the fields, tools and cloth: the goods.", "field": "farming", "tools": "tools", "cloth": "hide"},
   "heal": {"_doc": "Healing as a service (model §4: health): one healer tends up to `patients` of the sick within the events.json healer_radius at once, for `stint` seconds at a time; health's demand is the sick over `patients` hands. Only those with the events.json healer_lore may heal.", "patients": 4, "stint": 30, "act": "Tending the sick"},
   "min_weight": 0.01},
 

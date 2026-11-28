@@ -22,6 +22,12 @@
   "store_base": 80,
   "rot": 0.03
  },
+ "knowledge": {
+  "_doc": "Knowledge spreads between people who spend time together (evo.update): every `every` seconds, someone who doesn't know a method the tribe has learns it from each knower within `reach` with `chance`. Fast enough that a camp learns a new method within moments at the fire: the society model's teaching (docs/society.md §14.11) is worth building only if this is slowed.",
+  "every": 2.0,
+  "reach": 150,
+  "chance": 0.2
+ },
  "gathering": {
   "_doc": "After hauling a load home, a gatherer goes back to the node they were working only if it is of a kind in `return_to` (a kill half butchered is not left to the crows); any other work is picked afresh from where they are, so the camp's gatherers spread over what is near home. A carcass keeps carcass_fresh seconds (a day), then rots at carcass_rot meat a second (times carcass_winter in the cold) and is gone when nothing is left. `hides_per_meat`: hides a butchered kill gives with each meat brought home (sewn into cloth, config/society.json goods). `spread`: how far apart the places of those working one node stand (a shoal is fished from the bank, and they string out along it).",
   "spread": 24,

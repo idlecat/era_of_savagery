@@ -2097,7 +2097,7 @@ func _do_field(u: E.Unit, j: Dictionary, dt: float) -> void:
 		return
 	u.act = str(w["act"])
 	u.doing = str(w["doing"])
-	var rate := float(w["food"]) * skill_mult(u.lv("forage")) * (soc.tool_mult("food") if soc.on else 1.0) * work_mul(u)
+	var rate := float(w["food"]) * skill_mult(u.lv("forage")) * (soc.tool_mult("food") if soc.on else 1.0) * soc.known_mult(u, "field") * work_mul(u)
 	var got: float = rate * dt * (1.3 if evo.has_trad("harvest_festival") else 1.0) * hz.food_mult(s.type) * nat.food_mult(s) * inv.mul("yield", s.type)
 	stock["food"] += got
 	note_food("in", "field:" + s.type, got)

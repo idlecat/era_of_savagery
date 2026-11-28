@@ -1087,3 +1087,15 @@ coverage), and keeping order is priced by the one rule. A camp's Steward covers 
 hundred people with one Steward work at ×0.875 until keepers sit by the fire; the Code halves
 what they need past 150. At the 60-day sizes (~50) nothing moves (the same runs, bit for bit).
 
+### 14.11 Knowledge: known methods; teaching already happens at the fire (2026-11-27)
+
+The `known` factor (model §3) is in: the fields need farming known, tools and cloth their
+methods (`society.json work.methods`); those who don't know one work at `work.known` (0.5)
+while they learn (`soc.known_mult`). Teaching, the knowledge need, is not built as a job, and
+by measurement need not be yet: knowledge already spreads between people who spend time
+together (`evo.update`, now config: `rules.json knowledge`), every 2 s at a 1-in-5 chance per
+knower within 150 paces, so a camp learns a new method within moments at a meal. The 60-day
+runs are the same as before. Teaching becomes a need to build only if a designer slows that
+spread (a knob: `knowledge.chance`, `every`, `reach`), and then it is a service like healing:
+learners over the pupils a teacher takes.
+

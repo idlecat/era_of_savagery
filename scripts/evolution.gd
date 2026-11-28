@@ -183,12 +183,13 @@ func _lose(id: String, u: E.Unit) -> void:
 func update(dt: float) -> void:
 	spread_t -= dt
 	if spread_t > 0: return
-	spread_t = 2.0
+	var ks_cfg: Dictionary = sim.RULES["knowledge"]
+	spread_t = float(ks_cfg["every"])
 	# Knowledge spreads between people who spend time together. A grid of the living (at the
 	# positions they have now) keeps it from being everyone against everyone: each learner
 	# only tries the knowers within reach, in the same order the old full scan would have.
 	var alive: Array = sim.living()
-	var cell := 150.0
+	var cell := float(ks_cfg["reach"])
 	var grid := {} # cell -> the indexes in alive there
 	for i in alive.size():
 		var c := Vector2i(floori(alive[i].pos.x / cell), floori(alive[i].pos.y / cell))
@@ -211,13 +212,13 @@ func update(dt: float) -> void:
 			for dx in [-1, 0, 1]:
 				for dy in [-1, 0, 1]:
 					for ki in grid.get(c + Vector2i(dx, dy), []):
-						if known.has(ki) and alive[ki].pos.distance_to(o.pos) < 150: near.append(ki)
+						if known.has(ki) and alive[ki].pos.distance_to(o.pos) < cell: near.append(ki)
 			near.sort()
 			for ki in near:
-				if randf() < 0.2:
+				if randf() < float(ks_cfg["chance"]):
 					knowers[id][o.id] = true
 					break
-	drift("martial", -0.004 * 2.0) # quiet days soften the tribe
+	drift("martial", -0.004 * float(ks_cfg["every"])) # quiet days soften the tribe
 	_check_traditions()
 
 # ------------------------------------------------------------ culture
