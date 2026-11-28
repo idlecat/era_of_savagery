@@ -27,6 +27,7 @@ var traditions := {} # id -> day adopted
 var era := 1
 var pending_era := 0 # era whose dilemma event is waiting to fire
 var spread_t := 0.0
+var _cache_by_activity := {} # activity -> the techs that its work advances (in D.TECHS order)
 
 func _init(s) -> void:
 	sim = s
@@ -34,6 +35,9 @@ func _init(s) -> void:
 		insight[t["id"]] = 0.0
 		contrib[t["id"]] = {}
 		knowers[t["id"]] = {}
+		for a in t.get("practice", {}):
+			if not _cache_by_activity.has(a): _cache_by_activity[a] = []
+			_cache_by_activity[a].append(t)
 
 # ------------------------------------------------------------ queries
 static func tech_def(id: String) -> Dictionary:
@@ -41,10 +45,11 @@ static func tech_def(id: String) -> Dictionary:
 		if t["id"] == id: return t
 	return {}
 
-func prereqs_met(id: String) -> bool:
-	for r in tech_def(id).get("req", []):
+func prereqs_met(id) -> bool:
+	var t: Dictionary = id if id is Dictionary else tech_def(str(id))
+	for r in t.get("req", []):
 		if not sim.has_tech(r): return false
-	for f in tech_def(id).get("finds", []): # e.g. bronze needs copper and tin found
+	for f in t.get("finds", []): # e.g. bronze needs copper and tin found
 		if not sim.knows_find(f): return false
 	return true
 
@@ -82,10 +87,10 @@ func era_now() -> int:
 ## amount ~ seconds of work.
 func practice(u: E.Unit, activity: String, amount: float) -> void:
 	sim.inv.practice(u, activity, amount) # everyday inventions grow from the same work
-	for t in D.TECHS:
+	for t in _cache_by_activity.get(activity, []): # (only the techs this work advances)
 		var id: String = t["id"]
 		var w: float = t["practice"].get(activity, 0.0)
-		if w <= 0.0 or sim.has_tech(id) or not prereqs_met(id): continue
+		if w <= 0.0 or sim.has_tech(id) or not prereqs_met(t): continue
 		var pts: float = amount * w * D.INSIGHT_RATE * sim.inv.mul("insight", id)
 		insight[id] += pts
 		contrib[id][u.id] = contrib[id].get(u.id, 0.0) + pts
@@ -179,17 +184,37 @@ func update(dt: float) -> void:
 	spread_t -= dt
 	if spread_t > 0: return
 	spread_t = 2.0
-	# Knowledge spreads between people who spend time together.
+	# Knowledge spreads between people who spend time together. A grid of the living (at the
+	# positions they have now) keeps it from being everyone against everyone: each learner
+	# only tries the knowers within reach, in the same order the old full scan would have.
 	var alive: Array = sim.living()
+	var cell := 150.0
+	var grid := {} # cell -> the indexes in alive there
+	for i in alive.size():
+		var c := Vector2i(floori(alive[i].pos.x / cell), floori(alive[i].pos.y / cell))
+		if grid.has(c): grid[c].append(i)
+		else: grid[c] = [i]
 	for t in D.TECHS:
 		var id: String = t["id"]
 		if not sim.has_tech(id): continue
-		var ks: Array = alive.filter(func(o): return knowers[id].has(o.id))
+		var ks: Array = [] # the knowers now, in alive order (the old scan's snapshot)
+		for i in alive.size():
+			if knowers[id].has(alive[i].id): ks.append(i)
 		if ks.size() == alive.size(): continue
-		for o in alive:
-			if knowers[id].has(o.id): continue
-			for k in ks:
-				if k.pos.distance_to(o.pos) < 150 and randf() < 0.2:
+		var known := {}
+		for i in ks: known[i] = true
+		for oi in alive.size():
+			var o: E.Unit = alive[oi]
+			if known.has(oi): continue
+			var near: Array = [] # the knowers within reach, in alive order
+			var c := Vector2i(floori(o.pos.x / cell), floori(o.pos.y / cell))
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					for ki in grid.get(c + Vector2i(dx, dy), []):
+						if known.has(ki) and alive[ki].pos.distance_to(o.pos) < 150: near.append(ki)
+			near.sort()
+			for ki in near:
+				if randf() < 0.2:
 					knowers[id][o.id] = true
 					break
 	drift("martial", -0.004 * 2.0) # quiet days soften the tribe

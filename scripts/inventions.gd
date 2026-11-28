@@ -17,9 +17,23 @@ var progress := {} # invention id -> {activity: points}
 var contrib := {}  # invention id -> {unit id: points}
 var feats: Array = [] # [{"day", "kind", "text", "who"}], oldest first (texts already translated)
 var _t := 0.0
+var _cache_by_activity := {} # activity -> the inventions its work advances (in D.INVENTIONS order)
+var _cache_activity_sig: Array = [] # the D.INVENTIONS array the index was made from
 
 func _init(s) -> void:
 	sim = s
+
+## The inventions each activity advances, by activity and in D.INVENTIONS order. D.INVENTIONS
+## is the culture's (Cultures.apply() replaces it), so the index is made again when it changes.
+func _activity_index() -> Dictionary:
+	if is_same(_cache_activity_sig, D.INVENTIONS): return _cache_by_activity
+	_cache_activity_sig = D.INVENTIONS
+	_cache_by_activity = {}
+	for d in D.INVENTIONS:
+		for a in d.get("practice", {}):
+			if not _cache_by_activity.has(a): _cache_by_activity[a] = []
+			_cache_by_activity[a].append(d)
+	return _cache_by_activity
 
 static func def(id: String) -> Dictionary:
 	for d in D.INVENTIONS:
@@ -52,9 +66,9 @@ func frac(id: String) -> float:
 
 func practice(u: E.Unit, activity: String, amount: float) -> void:
 	if u.role == "child": return # children play at the work; ideas come to grown hands
-	for d in D.INVENTIONS:
+	for d in _activity_index().get(activity, []): # (only the inventions this work advances)
 		var id: String = d["id"]
-		if has(id) or not d["practice"].has(activity) or not needs_met(d): continue
+		if has(id) or not needs_met(d): continue
 		var p: Dictionary = progress.get(id, {})
 		p[activity] = p.get(activity, 0.0) + amount
 		progress[id] = p
@@ -116,8 +130,8 @@ func feat(kind: String, text: String, who: E.Unit = null, info := {}) -> void:
 ## Effects are data ({"stat", "mul"|"add", "of"}, see D.EFFECT_STATS) on inventions, on
 ## culture finds (while known) and on the culture's event/tale boons (sim.cult.boons).
 ## mul() multiplies them up and add() sums them; both cache until something is learned.
-## The folds made so far (stat|of -> {mul, add}), emptied when the sources change: a memo that
-## rebuilds itself, so a _cache (not saved: the first question after loading makes it again).
+## The folds made so far (stat -> of -> {mul, add}), emptied when the sources change: a memo
+## that rebuilds itself, so a _cache (not saved: the first question after loading makes it again).
 var _cache_fx := {}
 var _cache_fx_sig := -1
 
@@ -136,8 +150,9 @@ func _fold(stat: String, of: String) -> Dictionary:
 	if sig != _cache_fx_sig:
 		_cache_fx = {}
 		_cache_fx_sig = sig
-	var key := stat + "|" + of
-	if not _cache_fx.has(key):
+	var by_of: Dictionary = _cache_fx.get(stat, {})
+	if not _cache_fx.has(stat): _cache_fx[stat] = by_of
+	if not by_of.has(of):
 		var m := 1.0
 		var a := 0.0
 		for e in _sources():
@@ -146,8 +161,8 @@ func _fold(stat: String, of: String) -> Dictionary:
 			if o != "" and o != of and not (of.contains("/") and o in of.split("/")) and not (o.contains("|") and of in o.split("|")): continue
 			if e.has("mul"): m *= float(e["mul"])
 			if e.has("add"): a += float(e["add"])
-		_cache_fx[key] = {"mul": m, "add": a}
-	return _cache_fx[key]
+		by_of[of] = {"mul": m, "add": a}
+	return by_of[of]
 
 ## Product of every known "mul" effect on `stat` (narrowed by `of`, "a/b" matches either;
 ## an effect's own `of` may list several: "a|b").

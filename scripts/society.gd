@@ -59,12 +59,20 @@ func note_yield(res: String, amt: float) -> void:
 	if amt > 0.0: _yield[res] = float(_yield.get(res, 0.0)) + amt
 
 ## The model's level for the tribe now (society.json levels): the band below band_below people,
-## else the village's tier.
+## else the village's tier. The Steward's round asks for it for every hand placed, so it is
+## kept for the tick (a town's tier_of() walks the village's buildings).
+var _cache_level := ""
+var _cache_level_t := -1.0
 func level() -> String:
+	if sim.in_tick() and _cache_level_t == sim.time: return _cache_level
 	var n: int = sim.living().size()
-	if n < int(S["work"]["band_below"]): return "band"
-	var t: String = sim.tier_of(D.VILLAGE)
-	return t if S["levels"].has(t) else "camp"
+	var lv := "band"
+	if n >= int(S["work"]["band_below"]):
+		var t: String = sim.tier_of(D.VILLAGE)
+		lv = t if S["levels"].has(t) else "camp"
+	_cache_level = lv
+	_cache_level_t = sim.time if sim.in_tick() else -1.0
+	return lv
 
 ## The resource a job brings in ("" for none): gathering its res, a field food.
 static func job_res(j: Dictionary) -> String:
@@ -147,13 +155,14 @@ func horizon() -> Array:
 ## a field's or dock's `yields`, the bushes' `berries`; a find yields in winter only if it
 ## says so; half the herds leave for the winter). Field/dock: the structure type; gather: the
 ## node kind.
-var _cache_factor := {} # kind|season -> the season's factor (the game's own tables: fixed while it runs)
+var _cache_factor := {} # kind -> [the season's factor] (the game's own tables: fixed while it runs)
 func food_factor(kind: String, si: int) -> float:
-	var key := kind + "|" + str(si)
-	if _cache_factor.has(key): return _cache_factor[key]
-	var f := _food_factor(kind, si)
-	_cache_factor[key] = f
-	return f
+	var arr: Array = _cache_factor.get(kind, [])
+	if arr.is_empty():
+		arr = [null, null, null, null]
+		_cache_factor[kind] = arr
+	if arr[si] == null: arr[si] = _food_factor(kind, si)
+	return float(arr[si])
 func _food_factor(kind: String, si: int) -> float:
 	var sz: Dictionary = sim.hz.C["seasons"]
 	if sz["yields"].has(kind): return float(sz["yields"][kind][si])
@@ -433,12 +442,20 @@ func self_work(u: E.Unit) -> bool:
 func can_make(good: String) -> bool:
 	return GOODS.has(good) and sim.story.holds(GOODS[good].get("when", {}))
 
-## How many of `good` the tribe wants: per_worker for each grown-up.
-func good_target(good: String) -> float:
+## How many of `good` the tribe wants: per_worker for each grown-up. The count is kept for
+## the tick: the Steward's round asks for it for every good and every hand placed.
+var _cache_grown := 0
+var _cache_grown_t := -1.0
+func _grown_ups() -> int:
+	if sim.in_tick() and _cache_grown_t == sim.time: return _cache_grown
 	var n := 0
 	for u in sim.living():
 		if u.role != "child": n += 1
-	return maxf(1.0, n * float(GOODS[good]["per_worker"]))
+	_cache_grown = n
+	_cache_grown_t = sim.time if sim.in_tick() else -1.0
+	return n
+func good_target(good: String) -> float:
+	return maxf(1.0, _grown_ups() * float(GOODS[good]["per_worker"]))
 
 ## A good's coverage: what is in store against what the tribe wants.
 func coverage_of(good: String) -> float:

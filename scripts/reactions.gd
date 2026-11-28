@@ -111,9 +111,9 @@ func _pick(r: Dictionary, ctx: Dictionary) -> Array:
 		"victim": # (within "reach" of the danger, if both are given)
 			var v = ctx.get("victim")
 			if v != null and not v.dead and (not ctx.has("danger") or v.pos.distance_to(ctx["danger"]) < reach): out = [v]
-		"near": out = sim.living().filter(func(u): return u.pos.distance_to(at) < reach)
+		"near": out = sim.living().filter(func(u): return reach > 0.0 and u.pos.distance_squared_to(at) < reach * reach)
 		"river": out = sim.living().filter(func(u): return D.river_dist(u.pos) < reach)
-		"able": out = sim.living().filter(func(u): return able(u) and u.pos.distance_to(at) < reach)
+		"able": out = sim.living().filter(func(u): return able(u) and reach > 0.0 and u.pos.distance_squared_to(at) < reach * reach)
 		"helpers": out = _helpers(r, ctx)
 		_: out = sim.living()
 	return out.filter(func(u): return _fits(r, u))
@@ -136,8 +136,9 @@ func _helpers(r: Dictionary, ctx: Dictionary) -> Array:
 			if o.has_trait(t): reach = float(r["reach_by_trait"][t])
 		var close: bool = sim.life.on and (sim.life.kin(o, v) or sim.life.bond(o, v) >= float(sim.life.C["bonds"]["friend_at"]))
 		if close: reach += float(r.get("bond_reach", 0)) # friends and kin come from further, and first
+		if reach <= 0.0 or o.pos.distance_squared_to(v.pos) >= reach * reach or not D.same_side(o.pos, v.pos): continue
 		var d: float = o.pos.distance_to(v.pos)
-		if d < reach and D.same_side(o.pos, v.pos): near.append([d - (float(r.get("bond_reach", 0)) if close else 0.0), o])
+		near.append([d - (float(r.get("bond_reach", 0)) if close else 0.0), o])
 	near.sort_custom(func(a, b): return a[0] < b[0])
 	return near.map(func(e): return e[1])
 

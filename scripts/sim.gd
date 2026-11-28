@@ -532,6 +532,7 @@ func _grid() -> Dictionary:
 func units_near(p: Vector2, r: float) -> Array:
 	var g := _grid()
 	var out: Array = []
+	var r2 := r * r
 	var x0 := floori((p.x - r) / GRID)
 	var x1 := floori((p.x + r) / GRID)
 	var y0 := floori((p.y - r) / GRID)
@@ -539,7 +540,26 @@ func units_near(p: Vector2, r: float) -> Array:
 	for x in range(x0, x1 + 1):
 		for y in range(y0, y1 + 1):
 			for u in g.get(Vector2i(x, y), []):
-				if not u.dead and u.pos.distance_to(p) <= r: out.append(u)
+				if not u.dead and u.pos.distance_squared_to(p) <= r2: out.append(u)
+	return out
+
+## The first `limit` living within `r` of `p` for whom `ok` is true, scanned in the grid's
+## order (a rule that only needs a few neighbours can stop early instead of listing them all).
+func units_near_where(p: Vector2, r: float, ok: Callable, limit: int) -> Array:
+	var g := _grid()
+	var out: Array = []
+	if limit <= 0: return out
+	var r2 := r * r
+	var x0 := floori((p.x - r) / GRID)
+	var x1 := floori((p.x + r) / GRID)
+	var y0 := floori((p.y - r) / GRID)
+	var y1 := floori((p.y + r) / GRID)
+	for x in range(x0, x1 + 1):
+		for y in range(y0, y1 + 1):
+			for u in g.get(Vector2i(x, y), []):
+				if u.dead or u.pos.distance_squared_to(p) > r2 or not ok.call(u): continue
+				out.append(u)
+				if out.size() >= limit: return out
 	return out
 
 ## A person by id, through a lookup table (people are only ever added: the dead stay in `units`).
@@ -556,10 +576,17 @@ func unit_by_name(n: String) -> E.Unit:
 	for u in units:
 		if u.name == n: return u
 	return null
+## A building by id, through a lookup table (fields, huts and fires are looked up by the id a
+## job holds, and a town has hundreds of them). Rebuilt whenever the buildings change.
+var _cache_structs := {}
+var _cache_structs_key: Array = [] # [the structures array, its size, _cache_structs_n] when the table was made
 func struct_by_id(id: int) -> E.Structure:
-	for s in structures:
-		if s.id == id: return s
-	return null
+	if id < 0: return null
+	if _cache_structs_key.size() != 3 or not is_same(_cache_structs_key[0], structures) or _cache_structs_key[1] != structures.size() or _cache_structs_key[2] != _cache_structs_n:
+		_cache_structs.clear()
+		for s in structures: _cache_structs[s.id] = s
+		_cache_structs_key = [structures, structures.size(), _cache_structs_n]
+	return _cache_structs.get(id)
 ## Resource nodes by id and by resource: lookup tables rebuilt whenever the list of nodes
 ## changes (a node added or removed, or a loaded game's list). With thousands of trees in a
 ## deep forest, scanning them all for every gatherer was slow. A node's `res` never changes.
@@ -724,10 +751,11 @@ func nearest_serving(role: String, p: Vector2) -> E.Structure:
 ## How near a fire someone must be to be warm by it.
 func warm_reach() -> float: return 110.0 * (2.0 if has_tech("fire") else 1.0)
 
-## What warms, by grid cell as wide as the farthest-reaching warmth: rebuilt with the
-## building index (asked for every person every tick; a town of a thousand has ~40 fires). A _cache.
+## What warms, by grid cell: each fire is listed in every cell its warmth reaches, so a person
+## asks only their own cell (built with the building index; asked for every person every tick;
+## a town of a thousand has ~40 fires). A _cache.
 var _cache_warm := {}
-var _cache_warm_reach := {} # building id -> how far its warmth reaches (made with _cache_warm)
+var _cache_warm_reach := {} # building id -> how far its warmth reaches (already times warm_reach())
 var _cache_warm_t := -2.0
 var _cache_warm_cell := 1.0
 
@@ -741,20 +769,26 @@ func near_warmth(u: E.Unit) -> bool:
 		_cache_warm = {}
 		_cache_warm_reach = {}
 		_cache_warm_cell = r
-		var reach := {} # building id -> its type's warmth (the per-person loop reads this, not the tables)
+		var reach := {} # building id -> how far it warms (the per-person loop reads this, not the tables)
 		for s in warm:
-			reach[s.id] = serves(s, "warmth")
-			_cache_warm_cell = maxf(_cache_warm_cell, r * reach[s.id])
-		for s in warm:
-			var k := Vector2i(floori(s.pos.x / _cache_warm_cell), floori(s.pos.y / _cache_warm_cell))
-			if _cache_warm.has(k): _cache_warm[k].append(s)
-			else: _cache_warm[k] = [s]
+			reach[s.id] = r * serves(s, "warmth")
+			_cache_warm_cell = maxf(_cache_warm_cell, reach[s.id])
+		for s in warm: # every cell its warmth can reach (so a person asks only their own cell)
+			var th: float = reach[s.id]
+			var x0 := floori((s.pos.x - th) / _cache_warm_cell)
+			var x1 := floori((s.pos.x + th) / _cache_warm_cell)
+			var y0 := floori((s.pos.y - th) / _cache_warm_cell)
+			var y1 := floori((s.pos.y + th) / _cache_warm_cell)
+			for x in range(x0, x1 + 1):
+				for y in range(y0, y1 + 1):
+					var k := Vector2i(x, y)
+					if _cache_warm.has(k): _cache_warm[k].append(s)
+					else: _cache_warm[k] = [s]
 		_cache_warm_reach = reach
 	var c := Vector2i(floori(u.pos.x / _cache_warm_cell), floori(u.pos.y / _cache_warm_cell))
-	for dx in [-1, 0, 1]:
-		for dy in [-1, 0, 1]:
-			for s in _cache_warm.get(c + Vector2i(dx, dy), []):
-				if s.pos.distance_to(u.pos) < r * float(_cache_warm_reach.get(s.id, serves(s, "warmth"))): return true # (the reach now: it doubles with fire)
+	for s in _cache_warm.get(c, []):
+		var th: float = float(_cache_warm_reach.get(s.id, 0.0))
+		if th > 0.0 and s.pos.distance_squared_to(u.pos) < th * th: return true # (the reach now: it doubles with fire)
 	return false
 
 ## A building's radius: a wall's chosen one, else its type's.
@@ -1023,8 +1057,9 @@ func find_node(res: String, from: Vector2, bank: int, max_dist: float, kinds: Ar
 	var prefer := {} # kind -> the ways' preference (looked up once per kind)
 	for n in nodes_of(res):
 		if n.amount < 1 or (not kinds.is_empty() and not n.kind in kinds): continue
-		var d: float = n.pos.distance_to(from) # (cheap checks first: thousands of trees in a forest)
-		if d > max_dist: continue
+		var d2: float = n.pos.distance_squared_to(from) # (cheap checks first: thousands of trees in a forest)
+		if d2 > max_dist * max_dist: continue
+		var d := sqrt(d2)
 		if n.kind == "boulder" and not has_tech("tools"): continue
 		if D.FINDS.has(n.kind) and not _can_gather_find(n): continue
 		if bank >= 0 and D.region_at(n.pos) != bank: continue
@@ -1390,6 +1425,15 @@ func _deplete(n: E.ResNode) -> void:
 ## and a deer taken brings the herds back in time (no new herds arrive in winter).
 func _node_gone(n: E.ResNode) -> void:
 	nodes.erase(n)
+	# keep the id/resource tables exact without re-scanning every node: a big hunt rots many
+	# carcasses, and a full _index_nodes() per one was O(nodes) each time
+	if _cache_nodes_key.size() == 3 and is_same(_cache_nodes_key[0], nodes) and _cache_nodes_key[1] == nodes.size() + 1 \
+			and _cache_nodes_key[2] == next_id and _cache_nodes.get(n.id) == n:
+		_cache_nodes.erase(n.id)
+		var same: Array = _cache_by_res.get(n.res, [])
+		same.erase(n)
+		_cache_nodes_key[1] = nodes.size()
+		_cache_live_t = 0.0 # (the live list drops it next update, as a full reindex did)
 	if n.from_deer and not hz.winter(): # how many come depends on the hunt
 		var hm := inv.mul("herd")
 		for i in floori(hm) + (1 if randf() < hm - floorf(hm) else 0): spawn_deer(n.bank, true)
@@ -1550,7 +1594,8 @@ func _finds_tick(dt: float) -> void:
 		for u in units: # (noticed by chance: skill, temperament and what they are doing count)
 			if u.dead or u.sleeping or u.role == "child": continue
 			var seeking: bool = u.job.get("seek", "") != ""
-			if u.pos.distance_to(n.pos) > (seek_rng if seeking else rng_) or not can_recognise(u, n.kind): continue
+			var lim := seek_rng if seeking else rng_
+			if u.pos.distance_squared_to(n.pos) > lim * lim or not can_recognise(u, n.kind): continue
 			if randf() < 1.0 - exp(-find_chance(u, n.kind) * 0.5):
 				discover_find(n.kind, u, n.pos)
 				break
@@ -2613,8 +2658,8 @@ func _wolf_target(u: E.Unit) -> bool:
 	if in_hut(u): return false
 	if near_warmth(u): return false
 	var near := 0
-	for o in units:
-		if not o.dead and o != u and o.pos.distance_to(u.pos) < 90: near += 1
+	for o in units_near(u.pos, 120.0): # (the grid with a step's margin, then the live distance: not everyone per wolf)
+		if o != u and o.pos.distance_squared_to(u.pos) < 8100.0: near += 1
 	return near < 2
 
 func active_predators_near(center: Vector2, r: float) -> Array:
@@ -2918,7 +2963,12 @@ func steward_needs() -> Dictionary:
 ## The Steward's target for each resource the tribe can gather now (rules.json vice.steward
 ## needs: a count, or food's share of what the stores hold); only what can be gathered near
 ## home counts. Read by steward_needs() and the society model's allocation (society.gd).
+## Once a tick inside the tick: a town's placements asked for it for every idle hand, and
+## each ask walked the nodes for every resource (find_node).
+var _cache_targets := {}
+var _cache_targets_t := -1.0
 func steward_needs_targets() -> Dictionary:
+	if _cache_targets_t == time and _cache_in_tick: return _cache_targets
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var out := {}
 	for res in sw["needs"]:
@@ -2927,6 +2977,8 @@ func steward_needs_targets() -> Dictionary:
 		var t := food_cap() * float(nd["of_store"]) if nd.has("of_store") else float(story.count(nd["target"])) # (food: the granaries full)
 		if res != "lore" and res != "food" and find_node(res, D.VILLAGE, D.region_at(D.VILLAGE), float(sw["area_r"])) == null: continue # (nothing of it to gather near home)
 		out[res] = t
+	_cache_targets = out
+	_cache_targets_t = time
 	return out
 
 ## How much the tribe needs `res` now (steward_needs(), 0 if not at all): a trade is worked

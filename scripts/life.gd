@@ -130,19 +130,30 @@ func _friend_count(u: E.Unit) -> int:
 
 func friends_of(u: E.Unit) -> Array: return _people(u, func(v, _o): return v >= float(C["bonds"]["friend_at"]))
 func rivals_of(u: E.Unit) -> Array: return _people(u, func(v, _o): return v <= float(C["bonds"]["rival_at"]))
-## u's living kin: the line it came from and the lines that came from it.
-func kin_of(u: E.Unit) -> Array:
-	if _cache_kids_t != sim.time: # (who came from whom, indexed once a tick, not everyone per person)
+## Who came from whom, indexed once a tick (not everyone per person).
+func _kids_index() -> Dictionary:
+	if _cache_kids_t != sim.time:
 		_cache_kids_t = sim.time
 		_cache_kids = {}
 		for o in sim.units:
 			if not o.dead and o.parent_id >= 0:
 				if _cache_kids.has(o.parent_id): _cache_kids[o.parent_id].append(o)
 				else: _cache_kids[o.parent_id] = [o]
-	var out: Array = _cache_kids.get(u.id, []).duplicate()
+	return _cache_kids
+
+## u's living kin: the line it came from and the lines that came from it.
+func kin_of(u: E.Unit) -> Array:
+	var out: Array = _kids_index().get(u.id, []).duplicate()
 	var p: E.Unit = sim.unit_by_id(u.parent_id) if u.parent_id >= 0 else null
 	if p and not p.dead: out.append(p)
 	return out
+
+## How many living kin u has (kin_of(u).size(), without building the list).
+func _kin_count(u: E.Unit) -> int:
+	var n: int = _kids_index().get(u.id, []).size()
+	var p: E.Unit = sim.unit_by_id(u.parent_id) if u.parent_id >= 0 else null
+	if p and not p.dead: n += 1
+	return n
 
 # ------------------------------------------------------------ the tick
 func update(dt: float) -> void:
@@ -202,7 +213,7 @@ func morale_target(u: E.Unit) -> float:
 	if u.sick > 0: t += float(m["sick"])
 	if u.hp < u.max_hp * float(m["hurt_below"]): t += float(m["hurt"])
 	if u.fatigue >= float(C["fatigue"]["tired_at"]): t += float(m["tired"])
-	var nf := _friend_count(u) + kin_of(u).size()
+	var nf := _friend_count(u) + _kin_count(u)
 	t += minf(float(m["friend_max"]), nf * float(m["friend"])) if nf > 0 else float(m["lonely"])
 	if u.company < 0: t += float(m["rival_near"])
 	t += u.cheer - u.grief
@@ -266,11 +277,8 @@ func _bond_tick(alive: Array, step: float) -> void:
 	for u in alive: u.company = 0
 	for a in workers: # (pairs near each other, from the sim's grid: never everyone against everyone)
 		var ja: Dictionary = a.job
-		var seen := 0
-		for o in sim.units_near(a.pos, near):
-			if o.id <= a.id or not working.has(o.id): continue
-			seen += 1
-			if seen > max_near: break # (in a crowd one works beside a few, not all of them)
+		var partners: Array = sim.units_near_where(a.pos, near, func(o): return o.id > a.id and working.has(o.id), max_near)
+		for o in partners:
 			var jo: Dictionary = o.job
 			var v := bond(a, o)
 			if v >= float(b["friend_at"]) or kin(a, o):
@@ -523,8 +531,8 @@ func start(u: E.Unit, a: Dictionary) -> bool:
 				job["to"] = _home_spot(u)
 			if a.has("near"): # (at one of our buildings of that type, the nearest)
 				var best = null
-				for st in sim.structures:
-					if st.built and sim.ours(st) and st.type == str(a["near"]) and D.same_side(st.pos, u.pos) \
+				for st in sim.our_built(): # (the standing buildings, not the rival villages')
+					if st.type == str(a["near"]) and D.same_side(st.pos, u.pos) \
 							and (best == null or st.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = st
 				if best == null: return false
 				job["to"] = best.pos + Vector2.from_angle(randf() * TAU) * randf_range(22.0, 40.0)
@@ -592,8 +600,8 @@ func _spot(u: E.Unit, at: String) -> Variant:
 			return sim.dry_spot(fire.pos + Vector2(cos(a), sin(a) * 0.8) * randf_range(40, 80))
 		"shelter":
 			var best = null
-			for s in sim.structures:
-				if s.built and sim.ours(s) and D.STRUCTURES[s.type].get("cap", 0) > 0 and D.same_side(s.pos, u.pos) and (best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = s
+			for s in sim.our_built():
+				if D.STRUCTURES[s.type].get("cap", 0) > 0 and D.same_side(s.pos, u.pos) and (best == null or s.pos.distance_to(u.pos) < best.pos.distance_to(u.pos)): best = s
 			if best == null: return null
 			return best.pos + Vector2(randf_range(-18, 18), sim.struct_r(best) + 6)
 		"grave":

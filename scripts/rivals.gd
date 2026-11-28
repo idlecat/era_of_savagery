@@ -435,8 +435,11 @@ func _treaties(c: Dictionary) -> void:
 ## Gathering on their hunting grounds or building near them angers them.
 func _trespass(c: Dictionary, dt: float) -> void:
 	var n := 0
-	for u in sim.living(): # (live positions: people move through the tick, and the grid is the tick's start)
-		if u.pos.distance_to(c["pos"]) < D.RIVAL_TERRITORY and u.job.get("type", "") in ["gather", "explore"]: n += 1
+	var reach2: float = D.RIVAL_TERRITORY * D.RIVAL_TERRITORY
+	# the grid, with a step's margin, then the exact live distance (people move through the tick):
+	# a whole-tribe scan per clan per tick was most of the rivals' cost
+	for u in sim.units_near(c["pos"], D.RIVAL_TERRITORY + 30.0):
+		if u.pos.distance_squared_to(c["pos"]) < reach2 and u.job.get("type", "") in ["gather", "explore"]: n += 1
 	if n == 0 or has_treaty(c["id"], "hunting_rights"): return
 	if has_treaty(c["id"], "alliance") or c["vassal"] > 0: return
 	var tp: Dictionary = C["trespass"]
