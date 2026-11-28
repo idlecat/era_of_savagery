@@ -1143,3 +1143,16 @@ sparring all day (12-19% of the hands, growth down to 24-46 at day 60). Counting
 tribe's standing strength, training takes 1-2% of the hands and only when a clan grows
 stronger than the tribe as it is; the 12-day numbers are the same as §14.13's.
 
+### 14.15 Step 10, first cut: the plan builds for the need least covered (2026-11-27)
+
+What to build is now priced like work (`society.gd build_price`, `config/society.json build`):
+of what the improvement list wants (its `when` conditions still say when a building is wanted
+at all), the planner raises first the building whose need is least covered, the need's value
+times 1 - B(coverage): homes by beds against the people, stores by what they hold against
+two and a half days of winter eating, fires by the people they warm, fields and docks by food's
+price while no field place is free, shrines and temples by spirit, walls, racks and towers by
+safety, the Council Ring by order, roads by the walk. The list's order no longer decides.
+Where a building goes (zones, lots, `improve.spot()`) is untouched. 60 days, 8 seeds: 31-62
+people (21-57 before), 1-4 deaths; beds stay 3-8 ahead of the people. The list's conditions
+themselves (simplify.md §2's targets per role) are the next cut.
+

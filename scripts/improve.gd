@@ -49,6 +49,8 @@ func update(dt: float) -> void:
 	if open_sites() >= maxi(1, sim.story.count(C.get("max_sites", 1))): return # (a number, or {base, per_pop}: a bigger tribe raises more at once)
 	var opts := wanted()
 	if opts.is_empty(): return
+	if sim.soc.on: # (the society model: of what is wanted, the building whose need is least covered first; the list's order no longer decides)
+		opts.sort_custom(func(a, b): return sim.soc.build_price(a) > sim.soc.build_price(b))
 	if opts.size() == 1 or not bool(C.get("ask", true)) or sim.time < quiet_until or sim.advice_wanted.get_connections().is_empty():
 		_build(opts[0], "", "")
 		return

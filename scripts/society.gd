@@ -790,6 +790,32 @@ func mood_term() -> float:
 	var cm: Dictionary = S["comfort"]
 	return float(cm["mood"]) * (standard() - float(cm["ref"])) * 2.0
 
+# ------------------------------------------------------------------ the building plan (step 10)
+## The price of raising what a plan entry builds (improve.gd sorts what it wants by it): the
+## value of the need the building serves times how short that need is, 1 - B(coverage).
+func build_price(r: Dictionary) -> float:
+	var b: Dictionary = S["build"]
+	if r.has("road"): return float(S["values"]["labour"]) * float(S["levels"][level()].get("walk", 0.3)) # (the walk: labour's value times the share of the work spent walking)
+	var t: String = str(r.get("structure", r.get("upgrade", "")))
+	var sd: Dictionary = D.STRUCTURES.get(t, {})
+	var n: float = maxf(1.0, sim.living().size())
+	if int(sd.get("cap", 0)) > 0 and int(sd.get("store", 0)) == 0:
+		return value("shelter") * (1.0 - M.benefit(float(sim.pop_cap()) / (n * float(b["shelter_margin"]))))
+	if int(sd.get("store", 0)) > 0:
+		var want := food_demand(3) * float(b["winter_days"])
+		return (value("food_now") * 0.5) * (1.0 - M.benefit(float(sim.food_cap()) / maxf(1.0, want)))
+	if sd.has("serves") and sd["serves"].has("warmth") and t != "council_ring":
+		var fires := 0.0
+		for st in sim.serving("warmth"): fires += 1.0
+		return value("warmth") * (1.0 - M.benefit(fires * float(b["per_fire"]) / n))
+	if sd.has("worked"):
+		var free = sim.free_field(D.VILLAGE, float(sim.RULES["vice"]["steward"]["area_r"]), [t])
+		return 0.0 if free != null else value("food_now") * (1.0 - M.benefit(clampf(float(sim.stock["food"]) / maxf(1.0, food_demand(sim.hz.season_idx()) * 3.0), 0.0, 1.0)))
+	if t == "council_ring": return value("order") * (1.0 - M.benefit(order_coverage()))
+	if sd.has("ritual_mult") or sd.has("lore"): return value("spirit") * (1.0 - M.benefit(spirit_coverage()))
+	if sd.has("ring") or sd.has("inside_def") or sd.get("lookout", false) or t == "weapon_rack": return value("safety") * (1.0 - M.benefit(safety_coverage()))
+	return float(b["other"])
+
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:
 	return {"on": on, "level": level(), "weights": last.duplicate(), "rates": rate.duplicate(), "income": income.duplicate(), "horizon_days": horizon().size()}

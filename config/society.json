@@ -60,6 +60,8 @@
   "cloth": {"cost": {"hides": 1}, "work": 25, "skill": "craft", "doing": "sew", "act": "Sewing clothes at home", "when": {"tech": "hide"},
    "per_worker": 1.0, "for": "all", "cold": 0.7, "wear": 0.1}},
 
+ "build": {"_doc": "What the planner raises first (improve.gd, society.gd build_price): of the buildings its list wants (their `when`), the one whose need is least covered, priced by the need's value times (1 - B(coverage)): homes by beds against the people (shelter's margin), stores by what they hold against `winter_days` of eating (food's horizon), fires by the people they warm against `per_fire` a fire (warmth), fields and docks by food's price while no field place is free, shrines and temples by spirit, walls, racks and towers by safety, the Council Ring by order, roads by the walk (labour). Any other: `other`.", "shelter_margin": 1.1, "winter_days": 2.5, "per_fire": 25, "other": 0.5},
+
  "jobs": {"_doc": "Which need a job in the game serves (tools/metrics.gd's society report, society_plan.md step 1): keys are a job type, or type:resource for gathering; the columns are the share table's. A job not listed counts as other.",
   "gather:food": "food", "field": "food", "tend": "food",
   "gather:wood": "shelter_warmth", "gather:stone": "shelter_warmth", "build": "shelter_warmth",
