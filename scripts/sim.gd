@@ -50,7 +50,7 @@ var next_id := 1
 var time := 0.0
 var paused := false
 var speed := 1.0
-var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0, "tools": 0.0}
+var stock := {"food": 45.0, "wood": 35.0, "lore": 0.0, "stone": 0.0, "herbs": 0.0, "copper": 0.0, "tin": 0.0, "goods": 0.0, "tools": 0.0, "hides": 0.0, "cloth": 0.0}
 var known_finds := {} # find id -> day discovered
 var mushroom_loads := 0 # the tribe learns which mushrooms are safe
 var find_t := 0.0
@@ -1505,6 +1505,7 @@ func deposit(u: E.Unit, j: Dictionary, amt: int) -> void:
 			return
 	stock[j["res"]] += amt
 	if j["res"] == "food": note_food("in", "gather:" + (kind if kind != "" else "?"), amt)
+	if kind == "carcass": give({"hides": amt * float(RULES["gathering"].get("hides_per_meat", 0.0))}) # (a butchered kill gives its hide)
 	soc.note_yield(j["res"], amt)
 	popup(u.pos + Vector2(0, -12), tr("+%d %s") % [amt, tr(j["res"])], {"wood": Color("#d8b483"), "stone": Color("#c8c8d0")}.get(j["res"], Color("#f0a07a")))
 
@@ -3177,7 +3178,6 @@ func _update_vice(dt: float) -> void:
 		var starving: bool = float(needs.get("food", 0.0)) >= float(sw["starving"]) # (rest cures no hunger)
 		var idle := living().filter(func(u): return is_idle(u) and u.role == "" and u.id != steward.id and u.pos.distance_to(u.home) < float(vc["steward_reach"]) \
 			and u.sick <= 0.0 and (u.hp >= u.max_hp * rest_below or starving)) # (the sick and the badly hurt are left to rest, unless the tribe is starving)
-		if soc.on: soc.round_start(float(vc["every"]))
 		for u in idle:
 			var unbuilt = site_for(u)
 			var choice := ""

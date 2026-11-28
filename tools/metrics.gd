@@ -536,7 +536,7 @@ func _society(sim, soc: Dictionary) -> void:
 		elif moved > 3.0: st = "walk"
 		soc["state"][st] = float(soc["state"].get(st, 0.0)) + 1.0
 		if st != "walk" and st != "work": continue
-		var key := jt + (":" + str(u.job.get("res", "")) if jt == "gather" else "")
+		var key := jt + (":" + str(u.job.get("res", "")) if jt == "gather" else (":" + str(u.job.get("good", "")) if jt == "craft" else ""))
 		var col: String = JOBS.get(key, JOBS.get(jt, "other"))
 		soc["cols"][col] = float(soc["cols"].get(col, 0.0)) + 1.0
 		if col == "food":

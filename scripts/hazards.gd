@@ -121,7 +121,7 @@ func cold_rate_as(u: E.Unit, night: bool, w: String) -> float:
 	if winter():
 		r += float(cc["winter_hide"] if hide else cc["winter"]) * (1.0 if night else float(cc["winter_day"]))
 	r += float(WEATHER.get(w, {}).get("cold_hide" if hide else "cold", 0.0))
-	return r * (mult() if on() else 1.0) * sim.inv.cold_mult() * winter_mod("cold")
+	return r * (mult() if on() else 1.0) * sim.inv.cold_mult() * winter_mod("cold") * sim.soc.cold_mult()
 
 ## Outside winter and blizzards the cold only weakens (never below 35% HP).
 func cold_can_kill() -> bool:

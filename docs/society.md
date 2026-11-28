@@ -1051,3 +1051,27 @@ the hands in a band, the model's share. 12 days: famine 33-67% (band 10-25%), th
 hours under half a day's food ~50: for the tuning pass (the famine count includes sickness in
 a hungry camp, and the reserve and the food-security gate are knobs, §14.6).
 
+### 14.9 Cloth against the cold; three traps in the measuring (2026-11-27)
+
+**Cloth** (`config/society.json goods.cloth`): a butchered kill gives hides with its meat
+(`rules.json gathering.hides_per_meat`), sewn indoors into cloth once the tribe knows hide
+tailoring; worn by everyone, children too (`for: all`), 0.1 a day each; clothes for all make the
+cold bite 0.7 as hard (`soc.cold_mult()`, on top of hide tailoring). Its price: warmth's value
+times the rise in benefit a sewer's day gives, halved with no winter in the horizon.
+
+Measuring it found three traps, each one a self-reinforcing loop, none of cloth's making:
+
+1. **Placements piled up without a Steward.** The round's count of hands placed (counted
+   before the next) was cleared only by the Steward's round; with no Steward the idle who
+   placed themselves added to it for good, the forecast swelled, food looked covered, and
+   the tribe starved beside its fields. Three of eight 60-day seeds died out this way (all had
+   lost their Steward). The round now runs on the society model's own clock (`soc.tick`).
+2. **A rate nobody measures stayed at nothing.** Over a winter with the herds gone the food
+   rate fell toward 0; with food worth nothing nobody worked it, and nothing was measured to
+   lift it. Now a rate drifts back toward its guess while unmeasured, and never falls below
+   `work.rate_floor` (a quarter) of it.
+3. (from §14.8) the rate is a hand's day at a season's yield of 1.
+
+60 days, 8 seeds: 39-59 people, 1-9 deaths, none died out. 12 days: hours under half a day's
+food 4/5/23 (steward, hoarder, feaster).
+

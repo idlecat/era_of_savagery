@@ -120,11 +120,15 @@ func measure(hands: Dictionary, dt: float) -> void:
 		var got := float(_yield.get(res, 0.0)) / _measure_t * D.DAY_LEN
 		income[res] = lerpf(float(income.get(res, got)), got, k)
 	_measure_t = 0.0
-	for res in _hand_s:
-		var hs: float = _hand_s[res]
-		if hs < 30.0: continue # (too few hand-seconds to say)
+	var prior: Dictionary = S["work"]["rates"]
+	for res in prior:
+		var hs := float(_hand_s.get(res, 0.0))
+		var guess := float(prior[res])
+		if hs < 30.0: # (too few hand-seconds to say: drift back toward the guess, so a rate nobody measures can't stay at nothing)
+			if rate.has(res): rate[res] = lerpf(float(rate[res]), guess, k * 0.5)
+			continue
 		var per_day: float = float(_yield.get(res, 0.0)) / hs * float(S["work"]["job_secs"])
-		rate[res] = lerpf(rate_of(res), per_day, k)
+		rate[res] = maxf(guess * float(S["work"]["rate_floor"]), lerpf(rate_of(res), per_day, k)) # (and never below a share of it: a bad season can't shut a kind of work for good)
 	_hand_s.clear()
 	_yield.clear()
 
@@ -469,7 +473,8 @@ func _grown_ups() -> int:
 	_cache_grown_t = sim.time if sim.in_tick() else -1.0
 	return n
 func good_target(good: String) -> float:
-	return maxf(1.0, _grown_ups() * float(GOODS[good]["per_worker"]))
+	var n: float = float(sim.living().size()) if GOODS[good].get("for", "") == "all" else float(_grown_ups()) # (a good for all is wanted by children too)
+	return maxf(1.0, n * float(GOODS[good]["per_worker"]))
 
 ## A good's coverage: what is in store against what the tribe wants.
 func coverage_of(good: String) -> float:
@@ -480,13 +485,26 @@ func coverage_of(good: String) -> float:
 func tool_mult(res: String) -> float:
 	var m := 1.0
 	for g in GOODS:
-		if res in GOODS[g]["uses"] and can_make(g): m *= 1.0 + (float(GOODS[g]["max"]) - 1.0) * M.benefit(coverage_of(g))
+		if res in GOODS[g].get("uses", []) and can_make(g): m *= 1.0 + (float(GOODS[g]["max"]) - 1.0) * M.benefit(coverage_of(g))
+	return m
+
+## How hard the cold bites, by the goods worn against it (cloth): 1 - (1 - cold) x B(coverage).
+func cold_mult() -> float:
+	if not on: return 1.0
+	var m := 1.0
+	for g in GOODS:
+		if GOODS[g].has("cold") and can_make(g): m *= 1.0 - (1.0 - float(GOODS[g]["cold"])) * M.benefit(coverage_of(g))
 	return m
 
 ## Goods wear with use: each hand at the work a good serves wears `wear` of it a day.
 var _wear_t := 0.0
+var _round_t := 0.0
 func tick(dt: float) -> void:
 	if not on: return
+	_round_t += dt # (the round of placements, with or without a Steward: what was placed is in the jobs now, and the rates are measured)
+	if _round_t >= float(sim.RULES["vice"]["every"]):
+		round_start(_round_t)
+		_round_t = 0.0
 	_wear_t += dt
 	if _wear_t < 1.0: return
 	var step := _wear_t
@@ -495,7 +513,8 @@ func tick(dt: float) -> void:
 	for g in GOODS:
 		if float(sim.stock.get(g, 0.0)) <= 0.0: continue
 		var users := 0
-		for res in GOODS[g]["uses"]: users += int(h.get(res, 0))
+		if GOODS[g].get("for", "") == "all": users = sim.living().size() # (worn by everyone)
+		for res in GOODS[g].get("uses", []): users += int(h.get(res, 0))
 		sim.stock[g] = maxf(0.0, float(sim.stock[g]) - users * float(GOODS[g]["wear"]) * step / D.DAY_LEN)
 
 ## The price of making `good` (the one rule): what one more maker's day saves, the rise in the
@@ -508,11 +527,14 @@ func good_weight(good: String, w: Dictionary, hands: Dictionary) -> float:
 	var c := coverage_of(good)
 	var made := float(S["work"]["job_secs"]) / float(gd["work"]) # (a full-time maker's day)
 	var dc := made / good_target(good)
+	if gd.has("cold"): # (worn against the cold: warmth's value, the more so with a winter ahead)
+		var winter_ahead := 1.0 if 3 in horizon() else 0.5
+		return value("warmth") * float(sim.living().size()) * (M.benefit(c + dc) - M.benefit(c)) * winter_ahead
 	var dm := (float(gd["max"]) - 1.0) * (M.benefit(c + dc) - M.benefit(c))
 	var best := 0.0
 	for k in w: best = maxf(best, float(w[k]))
 	var users := 0.0
-	for res in gd["uses"]: users += float(hands.get(res, 0))
+	for res in gd.get("uses", []): users += float(hands.get(res, 0))
 	var life := 1.0 / maxf(0.01, float(gd["wear"])) # (a good saves time every day it lasts: its worth is the stream, days of use until worn out)
 	return dm * users * best * life
 

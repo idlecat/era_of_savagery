@@ -478,7 +478,7 @@ static var STRUCTURES: Dictionary = Config.load_cfg("structures")["types"]
 static var STYLED: Array = STRUCTURES.keys().filter(func(k): return STRUCTURES[k].get("styled", false))
 ## Everything the tribe keeps in its stores (sim.stock): the only resource ids input from
 ## outside (scenarios, configs, culture packs, a game master) may name.
-const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods", "tools"]
+const RESOURCES := ["food", "wood", "lore", "stone", "herbs", "copper", "tin", "goods", "tools", "hides", "cloth"]
 ## What a Task Contract may build, and what the village build menu offers (in order).
 static var CONTRACT_STRUCTURES: Array = Config.load_cfg("structures")["contract_builds"]
 static var VILLAGE_BUILDS: Array = Config.load_cfg("structures")["build_menu"]
