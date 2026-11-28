@@ -107,6 +107,7 @@ static func choice_of(j: Dictionary) -> String:
 		"craft": return str(j.get("good", ""))
 		"heal": return "heal"
 		"keep_order": return "order"
+		"train": return "train"
 		"art": return "art"
 		"ritual": return "rites"
 		"build": return "build"
@@ -346,6 +347,12 @@ func weights(site: bool) -> Dictionary:
 	if od > 0.0:
 		var keepers := float(hands.get("order", 0)) + _steward_keeps()
 		out["order"] = value("order") * n * M.gain(keepers / od, 1.0, od)
+	# safety: the hands to be ready for the band a clan could send (the trained stand by)
+	var sc := safety_coverage()
+	if sc < 1.0: # (training raises the tribe's standing strength: worth it only while it falls short of the band to be ready for)
+		var trainees := float(hands.get("train", 0))
+		var g := float(S["work"]["train"]["gain"])
+		out["train"] = value("safety") * n * M.gain(sc * (1.0 + g * trainees), sc * g, 1.0)
 	# health, a service: the sick over the patients a healer tends
 	var sick := 0
 	for u in sim.living():
@@ -633,6 +640,54 @@ func do_heal(u: E.Unit, j: Dictionary, dt: float) -> void:
 		o.tended_t = sim.time + 1.0
 		n += 1
 	sim.gain_xp(u, "lore", dt * 0.05)
+
+# ------------------------------------------------------------------ safety (model §4.1)
+## Safety's coverage, a stock against a pressure: the standing strength of everyone able to
+## fight (threat.gd's force: their health and blows, weapons and mastery folded in) against
+## the force wanted for the biggest band a clan that may raid us could send now
+## (rivals.expected_band, threat.need). 1 with no such clan. Once a second.
+var _cache_safety := 1.0
+var _cache_safety_t := -10.0
+func safety_coverage() -> float:
+	if sim.time - _cache_safety_t < 1.0 and sim.time >= _cache_safety_t: return _cache_safety
+	_cache_safety_t = sim.time
+	var band: Array = sim.rivals.expected_band()
+	if band.is_empty():
+		_cache_safety = 1.0
+		return 1.0
+	var able: Array = sim.living().filter(func(u): return sim.threat.able(u) or u.job.get("type", "") == "train")
+	var want: float = sim.threat.need(band)
+	_cache_safety = 1.0 if want <= 0.0 else clampf(sim.threat.force(able, band) / want, 0.0, 1.0)
+	return _cache_safety
+
+## Safety's demand in hands, for a game master: the squad threat.gd would send against that band.
+func safety_need_hands() -> float:
+	var band: Array = sim.rivals.expected_band()
+	return 0.0 if band.is_empty() else float(sim.threat.squad(band, sim.living().filter(func(u): return sim.threat.able(u))).size())
+
+## Send u to train for war: sparring at the weapon rack (else by the fire) for a stint.
+func assign_train(u: E.Unit) -> bool:
+	var rack = null
+	for s in sim.built_of("weapon_rack"):
+		if rack == null or s.pos.distance_to(u.home) < rack.pos.distance_to(u.home): rack = s
+	var at: Vector2 = rack.pos if rack else u.home
+	if rack == null:
+		var fire = sim.nearest_serving("gather", u.home)
+		if fire: at = fire.pos
+	sim.set_job(u, {"type": "train", "at": at + Vector2(randf_range(-30, 30), randf_range(20, 40)), "until": sim.time + float(S["work"]["train"]["stint"])})
+	return true
+
+func do_train(u: E.Unit, j: Dictionary, dt: float) -> void:
+	if sim.time >= float(j.get("until", 0.0)):
+		sim.set_job(u, {})
+		return
+	if not sim.approach(u, j["at"], 8, dt):
+		u.act = "Walking to work"
+		return
+	u.act = str(S["work"]["train"]["act"])
+	u.doing = "spar"
+	sim.arms.practice(u, str(sim.arms.wielded(u).get("id", "")), float(S["work"]["train"]["arms_xp"]) * dt)
+	sim.gain_xp(u, "combat", dt * 0.05)
 
 # ------------------------------------------------------------------ order (model §6)
 ## Whether the tribe has an institution of order (the Council Ring, the Tribal Code).

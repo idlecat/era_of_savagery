@@ -1180,6 +1180,8 @@ func update_unit(u: E.Unit, dt: float) -> void:
 			soc.do_heal(u, j, dt)
 		"keep_order":
 			soc.do_keep_order(u, j, dt)
+		"train":
+			soc.do_train(u, j, dt)
 		"trade_trip":
 			folk.do_trade(u, j, dt)
 		"build":
@@ -3047,6 +3049,7 @@ func set_to_work(u: E.Unit, choice: String, unbuilt = null, fallback := true) ->
 	if soc.GOODS.has(choice): return soc.assign_craft(u, choice) # (a good made indoors, at home)
 	if choice == "heal": return soc.assign_heal(u)
 	if choice == "order": return soc.assign_keep_order(u)
+	if choice == "train": return soc.assign_train(u)
 	var sw: Dictionary = RULES["vice"]["steward"]
 	var field := free_field(u.home, float(sw["area_r"])) if choice == "food" else null
 	if field: choice = "field" # (food: a field or dock with a free place before the wild)
@@ -3128,7 +3131,7 @@ func _nearest_spare(at: Vector2, reach: float) -> E.Unit:
 
 ## Every job type update_unit() runs (a job of any other type would silently do nothing).
 const JOB_TYPES := ["move", "gather", "bury", "tend", "field", "cover", "aid", "warm", "shelter", "firefight", "look", "startle",
-	"life", "meal", "depart", "art", "craft", "heal", "keep_order", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
+	"life", "meal", "depart", "art", "craft", "heal", "keep_order", "train", "trade_trip", "build", "seek", "attack", "envoy", "experiment", "explore", "ritual"]
 
 ## What must always hold in a running game; returns the broken rules ([] when all is well).
 ## Tests call it after ticking; a game master can call it to sanity-check the world.

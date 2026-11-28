@@ -1127,3 +1127,19 @@ call. 4 seeds × 12 days: near-miss steward 100%, hoarder 25%, feaster 100%; fam
 are now honest tuning targets: the steward lives too near the edge (near-miss above 60-90%),
 the feaster pays too often (famine above 10-25%).
 
+### 14.14 Step 9, first cut: safety as standing strength (2026-11-27)
+
+Safety as the model has it (§4.1: a stock against a pressure). The pressure is the biggest
+band a clan that may raid us could send now (`rivals.expected_band()`, sized by the raid's own
+`band_size()`, which `launch_raid` now uses too; none in the peaceful setting). The stock is
+the standing strength of everyone able to fight, by `threat.gd`'s own reckoning (`force`,
+weapons and mastery folded in), against the force wanted for that band (`threat.need`).
+Training, the new `train` job (sparring at the weapon rack, else by the fire; arms mastery and
+combat xp), raises it, and is priced by the one rule only while the tribe falls short.
+`threat.gd` still meets a threat that comes (who is sent, how many).
+
+The first try counted only those at the train job as the defence: it kept a whole squad
+sparring all day (12-19% of the hands, growth down to 24-46 at day 60). Counting the whole
+tribe's standing strength, training takes 1-2% of the hands and only when a clan grows
+stronger than the tribe as it is; the 12-day numbers are the same as §14.13's.
+

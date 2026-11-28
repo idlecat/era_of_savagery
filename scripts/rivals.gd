@@ -517,13 +517,46 @@ func _coalition(c: Dictionary, target: Vector2, aim) -> void:
 		sim.alert(_txt(co["alert"], o, {"with": tr(c["name"]), "n": n}), o["pos"], "danger")
 		return # (one clan joins: a coalition, not the whole world at once)
 
+## How many warriors a raid by clan c would send now: raids.size (base, its hostility, winter,
+## our size), the feud's stage, at most the warriors it has. launch_raid's, and the society
+## model's safety need (expected_band).
+func band_size(c: Dictionary) -> int:
+	var cr: Dictionary = C["raids"]
+	var stage_add: int = int(feud_stage().get("size_add", 0)) if feud_id() == c["id"] else 0
+	if int(c["warriors"]) < 1: return 0 # (no warriors left to march: the nemesis's stage bonus does not conjure a band)
+	return mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(_hostility(c) * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add \
+		+ int(float(cr["size"].get("per_our_pop", 0.0)) * sim.living().size())) # (a bigger tribe draws bigger war bands, if the clan has the warriors)
+
+## The war band the tribe should be ready for (the society model's safety need): the biggest a
+## clan that may raid us could send now (not gone, not at peace, its relation at its raiding
+## point), as raiders that are not in the world, for threat.gd's reckoning. [] when none may.
+func expected_band() -> Array:
+	var best: Array = []
+	if sim.hz.level == "off": return best # (the peaceful setting: neighbours never raid, _raids)
+	var N: Dictionary = C["nemesis"]
+	for id in clans:
+		var c: Dictionary = clans[id]
+		if gone(id) or at_peace(id): continue
+		if c["relation"] > (float(N["hostile_at"]) if feud_id() == id else float(C["raids"]["hostile_at"])): continue
+		var n := band_size(c)
+		if n <= best.size(): continue
+		var cp: Dictionary = C["people"]
+		best = []
+		for i in n:
+			var p := E.Predator.new()
+			p.kind = "warrior"
+			p.clan = id
+			p.hp = float(cp["warrior"]["hp"]) * c["strength"]
+			p.max_hp = p.hp
+			p.atk = float(cp["warrior"]["atk"]) * c["strength"]
+			p.def = float(cp["def"])
+			p.spd = float(cp["spd"])
+			best.append(p)
+	return best
+
 func launch_raid(c: Dictionary) -> void:
 	var cr: Dictionary = C["raids"]
-	var hostility := _hostility(c)
-	var stage_add: int = int(feud_stage().get("size_add", 0)) if feud_id() == c["id"] else 0
-	if int(c["warriors"]) < 1: return # (no warriors left to march: the nemesis's stage bonus does not conjure a band)
-	var size := mini(c["warriors"] + stage_add, int(cr["size"]["base"]) + int(hostility * float(cr["size"]["hostility"])) + (int(cr["size"]["winter"]) if sim.hz.winter() else 0) + stage_add \
-		+ int(float(cr["size"].get("per_our_pop", 0.0)) * sim.living().size())) # (a bigger tribe draws bigger war bands, if the clan has the warriors)
+	var size := band_size(c)
 	if size < 1: return
 	if feud_id() == c["id"]: c["raid_live"] = true
 	var target: Vector2 = D.VILLAGE

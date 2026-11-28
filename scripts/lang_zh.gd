@@ -821,6 +821,7 @@ const STRINGS := {
 	"Tools %d": "工具 %d",
 	"Tending the sick": "照料病人",
 	"Settling disputes": "调解纷争",
+	"Training for war": "操练备战",
 	"Sewing clothes at home": "在家里缝衣服",
 	"Cloth %d": "衣物 %d",
 	"Hides %d": "兽皮 %d",

@@ -505,7 +505,7 @@
    {"id": "tools", "name": "Tools", "color": "#c8c0b0", "jobs": ["craft"]},
    {"id": "build", "name": "Building", "color": "#e8c07a", "jobs": ["build"]},
    {"id": "health", "name": "Healing", "color": "#8fe0b0", "jobs": ["gather:herbs", "heal", "aid", "bury"]},
-   {"id": "safety", "name": "Defence", "color": "#ff9a8a", "jobs": ["attack", "firefight", "cover"]},
+   {"id": "safety", "name": "Defence", "color": "#ff9a8a", "jobs": ["attack", "firefight", "cover", "train"]},
    {"id": "lore", "name": "Lore", "color": "#a8b8ff", "jobs": ["experiment", "seek", "keep_order"]},
    {"id": "spirit", "name": "Crafts & rites", "color": "#e0a8f0", "jobs": ["art", "ritual"]},
    {"id": "trade", "name": "Trade", "color": "#ffd36b", "jobs": ["trade_trip", "envoy"]},
