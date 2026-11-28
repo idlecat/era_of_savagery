@@ -866,6 +866,20 @@ func do_cook(u: E.Unit, j: Dictionary, dt: float) -> void:
 	sim.gain_xp(u, "craft", dt * 0.03)
 
 # ------------------------------------------------------------------ the building plan (step 10)
+## Whether a plan entry's conditions hold, the society model's way: those that say how many to
+## raise (build.price_replaces) are left to the price; those that say it is possible still hold.
+func plan_holds(r: Dictionary) -> bool:
+	var w: Dictionary = r.get("when", {})
+	var kept := {}
+	for k in w:
+		if not k in S["build"]["price_replaces"]: kept[k] = w[k]
+	return sim.story.holds(kept)
+
+## Whether the plan wants what entry r raises: its possibility conditions hold and its price is
+## above build.min_price (improve.wanted, with the model on).
+func plan_wants(r: Dictionary) -> bool:
+	return plan_holds(r) and build_price(r) > float(S["build"]["min_price"])
+
 ## The price of raising what a plan entry builds (improve.gd sorts what it wants by it): the
 ## value of the need the building serves times how short that need is, 1 - B(coverage).
 func build_price(r: Dictionary) -> float:
@@ -874,8 +888,11 @@ func build_price(r: Dictionary) -> float:
 	var t: String = str(r.get("structure", r.get("upgrade", "")))
 	var sd: Dictionary = D.STRUCTURES.get(t, {})
 	var n: float = maxf(1.0, sim.living().size())
-	if int(sd.get("cap", 0)) > 0 and int(sd.get("store", 0)) == 0:
-		return value("shelter") * (1.0 - M.benefit(float(sim.pop_cap()) / (n * float(b["shelter_margin"]))))
+	if t in b["one_counts"] and sim.structures.any(func(s): return s.type == t and sim.ours(s)): return 0.0 # (helps once: a second adds nothing)
+	if sd.has("effects") and sd["effects"].any(func(e): return e.get("stat", "") == "spoil"): # (the stores keep: food's value, the more so with a winter ahead)
+		return value("food_now") * 0.3 * (1.0 if 3 in horizon() else 0.5)
+	if int(sd.get("cap", 0)) > 0 and int(sd.get("store", 0)) == 0: # (beds for the people, and the room births need: a free bed each)
+		return value("shelter") * (1.0 - M.benefit(float(sim.pop_cap()) / (n * float(b["shelter_margin"]) + float(b["spare_beds"]))))
 	if int(sd.get("store", 0)) > 0:
 		var want := food_demand(3) * float(b["winter_days"])
 		return (value("food_now") * 0.5) * (1.0 - M.benefit(float(sim.food_cap()) / maxf(1.0, want)))
@@ -883,9 +900,14 @@ func build_price(r: Dictionary) -> float:
 		var fires := 0.0
 		for st in sim.serving("warmth"): fires += 1.0
 		return value("warmth") * (1.0 - M.benefit(fires * float(b["per_fire"]) / n))
-	if sd.has("worked"):
-		var free = sim.free_field(D.VILLAGE, float(sim.RULES["vice"]["steward"]["area_r"]), [t])
-		return 0.0 if free != null else value("food_now") * (1.0 - M.benefit(clampf(float(sim.stock["food"]) / maxf(1.0, food_demand(sim.hz.season_idx()) * 3.0), 0.0, 1.0)))
+	if sd.has("worked"): # (fields: only while every place at the fields there are is taken, whatever the season)
+		var places := 0
+		var taken := 0
+		for f in sim.built_of(t):
+			places += int(sd["worked"]["hands"])
+			taken += sim.field_hands(f)
+		if sim.structures.any(func(s): return s.type == t and not s.built and sim.ours(s)): return 0.0
+		return 0.0 if taken < places else value("food_now") * (1.0 - M.benefit(clampf(float(sim.stock["food"]) / maxf(1.0, food_demand(sim.hz.season_idx()) * 3.0), 0.0, 1.0)))
 	if t == "council_ring": return value("order") * (1.0 - M.benefit(order_coverage()))
 	if sd.has("cooks"): # (meals go further: food's value times the share of the people no cookhouse feeds yet)
 		var fed := 0.0

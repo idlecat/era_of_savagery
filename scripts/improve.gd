@@ -114,7 +114,7 @@ func wanted() -> Array:
 			if not _road_cells(r).is_empty() and sim.story.holds(r.get("when", {})): out.append(r)
 			continue
 		if r.has("upgrade"):
-			if _upgrade_target(r) != null and sim.story.holds(r.get("when", {})): out.append(r)
+			if _upgrade_target(r) != null and (sim.soc.plan_wants(r) if sim.soc.on else sim.story.holds(r.get("when", {}))): out.append(r)
 			continue
 		var st: String = r.get("structure", "")
 		if not D.STRUCTURES.has(st) or not st in D.VILLAGE_BUILDS: continue
@@ -123,7 +123,8 @@ func wanted() -> Array:
 		if str(r.get("at", "village")) == "village" and sim.obsolete(st): continue # (outdated: outposts still get theirs)
 		if sim.stock["wood"] < sd["wood"] + reserve or sim.stock["stone"] < sd.get("stone", 0): continue
 		if sim.structures.any(func(s): return not s.built and s.type == st and sim.ours(s)): continue # one at a time
-		if not sim.story.holds(r.get("when", {})): continue
+		var at_village := str(r.get("at", "village")) == "village"
+		if not (sim.soc.plan_wants(r) if sim.soc.on and at_village else sim.story.holds(r.get("when", {}))): continue # (the society model: how many is the price's to say)
 		if site_for(r) == Vector2.INF: continue
 		out.append(r)
 	return out

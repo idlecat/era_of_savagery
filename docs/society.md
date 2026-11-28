@@ -1187,3 +1187,22 @@ stands from ~40 people with 1-2 cooks (hunger ×0.75-0.79). 60 days, 8 seeds: 27
 1-7 deaths. Potters' yards and weavers' halls (workshops that make the craft faster) are the
 next of this kind.
 
+### 14.18 Step 10, second cut: how many to build is the price's to say (2026-11-28)
+
+With the model on, the improvement list's conditions that say *how many* to raise
+(`society.json build.price_replaces`: fewer, beds_free_below, store_below, food_frac,
+village_full, homeless, season) are left out; a building is wanted while its price is above
+`build.min_price`; the conditions that say it is *possible* (an era, a tech, a least size) still
+hold (`soc.plan_wants`, used by `improve.wanted`). Buildings that help once (`build.one_counts`:
+a shrine, the smokehouse, a pen, a rack, the temple...) are worth nothing once one stands or is
+laid out; the smokehouse is priced by food's value, more with a winter ahead. Outposts' entries
+and roads keep their own rules.
+
+The first try stalled every seed at 11-17 people with no new homes and 14-22 fields: a bed's
+price fell under the threshold before the beds ran out (the benefit is flat near full), and the
+fields read "no free place" in winter, when no field yields. Fixed by the model's own terms:
+shelter's demand includes the room births need (`spare_beds`: 3 beds besides a tenth a head),
+and a field is wanted only while every place at the fields is taken, whatever the season.
+60 days, 8 seeds: 34-51 people, beds 2-6 ahead, 7-8 fields, 1-5 deaths. 12 days: the steward
+is now in G1's bands (near-miss 75%, famine 25%); skill sensitivity 1.65.
+

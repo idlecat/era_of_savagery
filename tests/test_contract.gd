@@ -5056,6 +5056,13 @@ func test_build_price() -> void:
 	var opts: Array = [{"structure": "totem_shrine"}, hut]
 	opts.sort_custom(func(x, y): return sim.soc.build_price(x) > sim.soc.build_price(y))
 	check(opts[0] == hut, "with the people outgrowing the beds, a home before a shrine")
+	# the second cut: how many is the price's to say, possibility still gates
+	check(sim.soc.plan_wants({"structure": "hut", "when": {"fewer": {"hut": 0}}}), "a home is wanted while the beds fall short, whatever the list's count says")
+	check(not sim.soc.plan_wants({"structure": "hut", "when": {"pop": 9999}}), "but a condition that says it is possible still holds")
+	var shrine := {"structure": "totem_shrine", "when": {"pop": 1}}
+	var sh = sim.place_structure("totem_shrine", D.VILLAGE + Vector2(-160, -90))
+	if sh != null:
+		check(not sim.soc.plan_wants(shrine), "a shrine helps once: with one laid out, no second is wanted")
 
 func test_wealth() -> void:
 	print("\n== Wealth, output per head, the standard as conditions (society.gd, model §10) ==")
