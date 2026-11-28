@@ -1028,3 +1028,26 @@ toolmakers by day 30. 12 days (the tech comes on day ~12): hours short 4/11/21, 
 60 days: 44-52 people, 0-9 deaths. The tools free food hands, but those go idle rather than
 into growth while food security holds births back (open #12, a designer's knob).
 
+### 14.8 Step 6 begins: healing is a healer's work (2026-11-27)
+
+Health as a service (model §4): with the society model on, the sick get well faster only
+while a healer tends them (`events.json` recover `healer`), not because someone learned stands
+near: the new `heal` job (`society.gd assign_heal/do_heal`) takes a healer to the sick, who
+tends up to `work.heal.patients` (4) within the healer's radius for a stint. Health's demand
+is the sick over the patients a healer tends; its price follows the one rule, and only those
+with the healer's lore are offered it. A **healer** career grows from it. (The old rule, any
+learned person near, stays while the model is off, for the older tests; it also walked every
+living person for each sick one every tick.)
+
+Found on the way, and fixed by the principle: **the measured food rate learned from winter
+that food work is worthless.** A hand's day was measured as it came: nothing in winter, so by
+spring the rate was ~0, food weighed nothing, and one seed's 27 people starved beside five
+working fields (it died out on day 51). The rate is now a hand's day at a season's yield of 1
+(the hand-seconds are weighed by what each hand's work yields now), and the forecast
+multiplies it back by each day's yield.
+
+60 days, 6 seeds: 52-62 people, 2-5 deaths, none died out (44-57 before). Health takes ~1% of
+the hands in a band, the model's share. 12 days: famine 33-67% (band 10-25%), the feaster's
+hours under half a day's food ~50: for the tuning pass (the famine count includes sickness in
+a hungry camp, and the reserve and the food-security gate are knobs, §14.6).
+

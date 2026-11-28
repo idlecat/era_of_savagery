@@ -97,6 +97,7 @@ static func choice_of(j: Dictionary) -> String:
 	match j.get("type", ""):
 		"gather", "field": return job_res(j)
 		"craft": return str(j.get("good", ""))
+		"heal": return "heal"
 		"art": return "art"
 		"ritual": return "rites"
 		"build": return "build"
@@ -105,8 +106,13 @@ static func choice_of(j: Dictionary) -> String:
 ## Measure the rates: what came in against the hand-seconds spent, folded into a running mean.
 func measure(hands: Dictionary, dt: float) -> void:
 	for c in hands:
-		if c in ["art", "rites", "build"]: continue
+		if c in ["art", "rites", "build", "food"]: continue
 		_hand_s[c] = float(_hand_s.get(c, 0.0)) + float(hands[c]) * dt
+	# food's hand-seconds weighed by what each hand's work yields now (a field in winter: 0), so the
+	# rate is a hand's day at a season's yield of 1: winter can't teach that food work is worthless
+	for u in sim.living():
+		if u.role == "child" or u.job.get("leisure", false) or job_res(u.job) != "food": continue
+		_hand_s["food"] = float(_hand_s.get("food", 0.0)) + food_factor_now(food_kind(u.job)) * dt
 	_measure_t += dt
 	if _measure_t < float(S["work"]["measure_every"]): return
 	var k := float(S["work"]["measure_k"])
@@ -264,14 +270,13 @@ func c_horizon(stores: float, sup: Array, add: Array, seasons: Array) -> float:
 func food_forecast(seasons: Array) -> Array:
 	var sup: Array = []
 	for j in seasons.size(): sup.append(0.0)
-	var r := rate_of("food")
+	var r := rate_of("food") # (a hand's day at a season's yield of 1)
 	for u in sim.living():
 		if u.role == "child" or u.job.get("leisure", false) or job_res(u.job) != "food": continue
 		var k := food_kind(u.job)
 		var f0 := food_factor_now(k)
 		if f0 <= 0.05: continue
-		var fs := food_factor(k, seasons[0])
-		for j in seasons.size(): sup[j] += r * (1.0 if j == 0 else food_factor(k, seasons[j]) / maxf(0.05, fs)) # (today at today's yield, weather and all; later days by their season)
+		for j in seasons.size(): sup[j] += r * (f0 if j == 0 else food_factor(k, seasons[j])) # (today at today's yield, weather and all; later days by their season)
 	return sup
 
 # ------------------------------------------------------------------ the weights
@@ -289,13 +294,13 @@ func weights(site: bool) -> Dictionary:
 	var sup := food_forecast(seasons) # (the hands on food now, held where they are: the persistence forecast)
 	var placed_f := float(placed.get("food", 0))
 	var day_eat := food_demand(seasons[0])
-	var f_rate := rate_of("food") # (measured this season)
+	var f_rate := rate_of("food") # (a hand's day at a season's yield of 1, measured)
 	var new_kind := best_food_kind(seasons[0]) # (where a new food hand would go: the best food work to be had today)
 	var f0 := food_factor_now(new_kind) if new_kind != "" else 0.0
-	var s_now := f_rate if f0 > 0.05 else 0.0 # (no delayed payoff: food work that yields nothing today gains nothing)
+	var s_now := f_rate * f0 if f0 > 0.05 else 0.0 # (no delayed payoff: food work that yields nothing today gains nothing)
 	var add: Array = []
 	for j in seasons.size():
-		var fj := 1.0 if j == 0 else food_factor(new_kind, seasons[j]) / maxf(0.05, food_factor(new_kind, seasons[0]))
+		var fj := f0 if j == 0 else (food_factor(new_kind, seasons[j]) if new_kind != "" else 0.0)
 		add.append(f_rate * fj)
 		sup[j] += placed_f * f_rate * fj # (the hands placed this round)
 	var flow: float = sup[0]
@@ -323,6 +328,13 @@ func weights(site: bool) -> Dictionary:
 	for g in GOODS:
 		var gw := good_weight(g, out, hands)
 		if gw > 0.0: out[g] = gw
+	# health, a service: the sick over the patients a healer tends
+	var sick := 0
+	for u in sim.living():
+		if u.sick > 0.0: sick += 1
+	if sick > 0:
+		var hd := float(sick) / float(S["work"]["heal"]["patients"])
+		out["heal"] = value("health") * n * M.gain(float(hands.get("heal", 0)) / hd, 1.0, hd)
 	# needs met by hands: crafts (comfort), rites (spirit), building (shelter)
 	var lv: Dictionary = S["levels"][level()]["hands"]
 	for c in S["work"]["hand_needs"]:
@@ -346,6 +358,7 @@ func trade_choice(u: E.Unit) -> String:
 	if w.get("art", false): return "art"
 	if w.get("build", false): return "build"
 	if w.has("craft"): return str(w["craft"])
+	if w.get("heal", false): return "heal"
 	return ""
 
 ## How productive u is at a choice: their skill on the one curve, and their trade's edge at
@@ -366,6 +379,7 @@ func best_for(u: E.Unit, w: Dictionary) -> Array:
 	var bw := float(S["work"]["min_weight"])
 	for c in w:
 		if c == "art" and not sim.folk.can_art(u): continue
+		if c == "heal" and u.lv("lore") < int(sim.hz.C["sickness"]["recover"]["healer_lore"]): continue # (only those who know the healing)
 		var v := float(w[c]) * productivity(u, c)
 		if v > bw:
 			bw = v
@@ -542,6 +556,37 @@ func do_craft(u: E.Unit, j: Dictionary, dt: float) -> void:
 	if float(j.get("shift_end", INF)) <= sim.time:
 		u.inside = -1
 		sim.set_job(u, {}) # (the stint is over: a new look at what is needed)
+
+# ------------------------------------------------------------------ health, a service (model §4)
+## Send u to tend the sick: to the sick person nearest home that no healer tends yet. False
+## when nobody is sick.
+func assign_heal(u: E.Unit) -> bool:
+	var best = null
+	for o in sim.living():
+		if o.sick > 0.0 and o != u and sim.time >= o.tended_t and (best == null or o.pos.distance_to(u.home) < best.pos.distance_to(u.home)): best = o
+	if best == null: return false
+	sim.set_job(u, {"type": "heal", "patient_id": best.id, "until": sim.time + float(S["work"]["heal"]["stint"])})
+	return true
+
+## The heal job: go to the patient, and tend them and the sick round them (up to `patients`,
+## within the healer's radius) until the stint ends or nobody near is sick.
+func do_heal(u: E.Unit, j: Dictionary, dt: float) -> void:
+	var p = sim.unit_by_id(int(j.get("patient_id", -1)))
+	if p == null or p.dead or p.sick <= 0.0 or sim.time >= float(j.get("until", 0.0)):
+		sim.set_job(u, {}) # (well again, gone, or the stint is over: a new look at what is needed)
+		return
+	var rr := float(sim.hz.C["sickness"]["recover"]["healer_radius"])
+	if not sim.approach(u, p.pos, rr * 0.4, dt):
+		u.act = "Walking to work"
+		return
+	u.act = str(S["work"]["heal"]["act"])
+	u.doing = "heal"
+	var n := 0
+	for o in sim.units_near(u.pos, rr):
+		if o.dead or o.sick <= 0.0 or n >= int(S["work"]["heal"]["patients"]): continue
+		o.tended_t = sim.time + 1.0
+		n += 1
+	sim.gain_xp(u, "lore", dt * 0.05)
 
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:

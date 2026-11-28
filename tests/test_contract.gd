@@ -67,7 +67,7 @@ func test_lead_from_outpost() -> void:
 func _initialize() -> void:
 	# Each test starts from its own fixed seed, so adding or changing one test never shifts
 	# the random draws (and the outcome) of the tests after it.
-	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors, test_threat_sizing, test_gather_spots]
+	var all: Array = [test_personas, test_sanitize, test_full_contract, test_events, test_exploration, test_evolution, test_research_contract, test_translations, test_vice_slots, test_hardships, test_rivals, test_witness_memory, test_work_groups, test_diplomacy, test_war_and_trade, test_endgames, test_night_rest, test_burials, test_night_contracts, test_herd, test_finds, test_nature, test_settling, test_folk, test_mapgen, test_water, test_inventions, test_cultures, test_flood_deer, test_dry_beds, test_feat_details, test_help_and_carry, test_reactions, test_config, test_gm_operations, test_dilemma_config, test_improvements, test_layout, test_campfire_retires, test_audio, test_save_load, test_renovate_settlements, test_building_panel, test_wall_radius, test_structures_config, test_ranks, test_seal, test_forecast, test_field_log, test_outpost_interrupts, test_autumn_decision, test_chief_ledger, test_nemesis, test_opening, test_contract_events, test_lookout_and_smokehouse, test_temple_and_longhouse, test_challenges, test_careers, test_last_stand_and_heritage, test_era3_buildings, test_hungry_sickness, test_policies, test_leaders_and_the_ways, test_crisis, test_director, test_names, test_lands, test_roads, test_discovery_odds, test_routine_matters, test_life, test_spend, test_indexes, test_set_aside, test_dispose, test_boundaries, test_day_parts, test_source_rules, test_night_renovation, test_teardown, test_regrowth, test_find_data, test_spare_hands, test_rest_at_nearest_fire, test_weigh, test_weigh_dangers, test_band_hunt, test_back_to_the_kill, test_carcass_rots, test_worked_fields, test_need_rule, test_shifts, test_growth, test_tiers, test_freezing, test_city_path, test_outside_first, test_house_fire, test_depart_needs_who, test_strife, test_dilemma_spacing, test_director_bored, test_flood_homes, test_perf, test_weapons, test_lead_from_outpost, test_rival_growth, test_absorb_clan, test_society_model, test_food_ledger, test_society_alloc, test_tick_caches, test_determinism, test_smoke, test_tools_indoors, test_threat_sizing, test_gather_spots, test_healing_service]
 	# --only=test_life,test_smoke (or a part of a name: --only=life) runs just those tests
 	var only: Array = []
 	for a in OS.get_cmdline_user_args():
@@ -4921,6 +4921,28 @@ func test_tools_indoors() -> void:
 	sim.time = D.DAY_LEN * 0.75
 	for i in 30: sim.update_unit(maker, 0.1)
 	check(maker.inside < 0, "when night takes them from the bench, they are no longer counted as inside (%d)" % maker.inside)
+
+func test_healing_service() -> void:
+	print("\n== Healing is a healer's work (society.gd heal) ==")
+	var sim = _new_sim()
+	sim.soc.on = true
+	sim.time = D.DAY_LEN * 0.3
+	var folk: Array = sim.living().filter(func(x): return x.role == "")
+	var sick = folk[0]
+	var healer = folk[1]
+	healer.skills["lore"]["lv"] = 4
+	folk[2].skills["lore"]["lv"] = 0
+	check(not sim.soc.weights(false).has("heal"), "nobody sick: no healing to do")
+	sick.sick = 50.0
+	var r0: float = sim.hz.heal_rate(sick, false)
+	healer.pos = sick.pos + Vector2(10, 0)
+	check(is_equal_approx(sim.hz.heal_rate(sick, false), r0), "a learned person merely standing near doesn't heal")
+	var w: Dictionary = sim.soc.weights(false)
+	check(float(w.get("heal", 0.0)) > 0.0, "someone sick: healing has a price (%.2f)" % float(w.get("heal", 0.0)))
+	check(sim.soc.best_for(folk[2], {"heal": 99.0})[0] == "", "only those who know the healing are offered it")
+	check(sim.soc.assign_heal(healer) and healer.job["type"] == "heal", "a healer is sent to the sick")
+	for i in 10: sim.update_unit(healer, 0.1)
+	check(sim.time < sick.tended_t and sim.hz.heal_rate(sick, false) > r0 * 1.4, "and while tended the sick get well faster (%.4f against %.4f)" % [sim.hz.heal_rate(sick, false), r0])
 
 func test_society_model() -> void:
 	print("\n== The society model's formulas (docs/society.md, scripts/society_model.gd) ==")

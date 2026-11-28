@@ -53,6 +53,7 @@ class Unit:
 	var carrier_id: int = -1 # who is carrying the body to the burial ground
 	var carry_kind: String = "" # node kind of the load being carried (mushroom, honey...)
 	var herb_t: float = -1.0 # willow-bark tea working until
+	var tended_t: float = -1.0 # a healer at the heal job tends them until (society.gd)
 	var salve_t: float = -1.0 # yarrow poultice working until
 	var walked: float = 0.0 # distance walked since the last meal tick (walking makes people hungry)
 	var born_t: float = -9999.0 # (children)

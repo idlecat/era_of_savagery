@@ -223,6 +223,7 @@ func go_work(u: E.Unit, priced := false) -> bool:
 		sim.folk.start_art(u)
 		return true
 	if w.has("craft") and (priced or not sim.soc.on): return sim.soc.assign_craft(u, str(w["craft"])) # (a good, made indoors at home)
+	if w.get("heal", false) and (priced or not sim.soc.on): return sim.soc.assign_heal(u) # (the sick, tended)
 	return false
 
 ## The career whose holders go first for `duty` (config "preferred"), or "".

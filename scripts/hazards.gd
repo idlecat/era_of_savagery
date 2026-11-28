@@ -419,10 +419,13 @@ func heal_rate(u: E.Unit, warm: bool) -> float:
 		if sim.struct_near(st, u.pos, float(cr["shrine_radius"])):
 			r *= float(cr["shrine"])
 			break
-	for o in sim.living():
-		if o != u and o.lv("lore") >= int(cr["healer_lore"]) and o.pos.distance_to(u.pos) < float(cr["healer_radius"]):
-			r *= float(cr["healer"])
-			break
+	if sim.soc.on: # (the society model: healing is a healer's work, the heal job; society.gd do_heal)
+		if sim.time < u.tended_t: r *= float(cr["healer"])
+	else:
+		for o in sim.living():
+			if o != u and o.lv("lore") >= int(cr["healer_lore"]) and o.pos.distance_to(u.pos) < float(cr["healer_radius"]):
+				r *= float(cr["healer"])
+				break
 	for lm in sim.landmarks:
 		if lm["kind"] == "spring" and lm["found"]: r *= float(cr["spring"])
 	if sim.time < u.herb_t: r *= float(cr["herbs"]) # willow-bark tea
