@@ -98,6 +98,9 @@ func holds(w: Dictionary) -> bool:
 	if w.has("built") and not sim.structures.any(func(st): return st.built and sim.ours(st) and st.type == w["built"]): return false
 	if w.has("devotion") and sim.devotion < float(w["devotion"]): return false
 	if w.has("mood") and sim.folk.mood < float(w["mood"]): return false
+	if w.has("standard") and sim.soc.standard() < float(w["standard"]): return false # (the society model: the standard of living 0..1, society.gd)
+	if w.has("wealth") and sim.soc.wealth() < float(w["wealth"]): return false
+	if w.has("output") and sim.soc.output_per_head() < float(w["output"]): return false
 	if w.has("food_frac") and sim.stock["food"] < sim.food_cap() * float(w["food_frac"]): return false
 	if w.has("homeless") and sim.living().size() - sim.pop_cap() < int(w["homeless"]): return false
 	if w.has("store_below") and sim.food_cap() >= count(w["store_below"]): return false # (the stores hold less than this: a winter's need, say)
@@ -155,7 +158,8 @@ const ACTION_TYPES := {"event": "str", "log": "text", "arg": "str", "kind": "str
 const COND_TYPES := {"contract": "any", "time": "num", "day": "num", "pop": "num", "flag": "str", "found": "str", "met_any": "bool",
 	"met": "str", "tech": "str", "invention": "str", "find": "str", "era": "num", "season": "str", "built": "str", "devotion": "num",
 	"mood": "num", "food_frac": "num", "homeless": "num", "village_full": "num", "beds_free_below": "any", "wood": "num", "fewer": "counts", "deaths": "num", "culture": "nums",
-	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "pop_below": "num", "career": "str", "can_settle": "bool", "store_below": "any"}
+	"after": "str", "told": "str", "joined": "str", "happened": "str", "oxen": "num", "friend_any": "bool", "outposts": "num", "pop_below": "num", "career": "str", "can_settle": "bool", "store_below": "any",
+	"standard": "num", "wealth": "num", "output": "num"}
 
 static func _num_ok(v) -> bool:
 	return (v is int or v is float) and not is_nan(float(v)) and absf(float(v)) <= 1e6

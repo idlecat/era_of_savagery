@@ -816,6 +816,38 @@ func build_price(r: Dictionary) -> float:
 	if sd.has("ring") or sd.has("inside_def") or sd.get("lookout", false) or t == "weapon_rack": return value("safety") * (1.0 - M.benefit(safety_coverage()))
 	return float(b["other"])
 
+# ------------------------------------------------------------------ wealth (model §10)
+## The price of one unit of res: the trade's (rules.json folk.trade.value), else wealth.prices.
+func price_of(res: String) -> float:
+	var tv: Dictionary = sim.RULES["folk"]["trade"]["value"]
+	if tv.has(res): return float(tv[res])
+	return float(S["wealth"]["prices"].get(res, 1.0))
+
+## What the tribe has: stores and goods at their prices, buildings at their cost, treasures, and
+## knowledge (each known tech's cost times the share who know it).
+func wealth() -> float:
+	var W: Dictionary = S["wealth"]
+	var v := 0.0
+	for r in sim.stock: v += float(sim.stock[r]) * price_of(r)
+	for s in sim.structures:
+		if s.built and sim.ours(s):
+			var sd: Dictionary = D.STRUCTURES.get(s.type, {})
+			v += float(sd.get("wood", 0)) * float(W["building"]["wood"]) + float(sd.get("stone", 0)) * float(W["building"]["stone"])
+	v += sim.folk.treasures.size() * float(W["treasure"])
+	var n: float = maxf(1.0, sim.living().size())
+	for t in D.TECHS:
+		if sim.has_tech(t["id"]): v += float(t["cost"]) * float(W["knowledge"]) * minf(1.0, sim.evo.keepers(t["id"]).size() / n)
+	return v
+
+## What comes in a day per head, at the same prices (the measured income).
+func output_per_head() -> float:
+	var v := 0.0
+	for r in income: v += float(income[r]) * price_of(r)
+	return v / maxf(1.0, sim.living().size())
+
 ## For a game master: the last round's weights, the measured rates, the level.
 func summary() -> Dictionary:
-	return {"on": on, "level": level(), "weights": last.duplicate(), "rates": rate.duplicate(), "income": income.duplicate(), "horizon_days": horizon().size()}
+	return {"on": on, "level": level(), "weights": last.duplicate(), "rates": rate.duplicate(), "income": income.duplicate(), "horizon_days": horizon().size(),
+		"standard": standard(), "wealth": wealth(), "output_per_head": output_per_head(),
+		"coverage": {"comfort": comfort_coverage(), "spirit": spirit_coverage(), "order": order_coverage(), "safety": safety_coverage(), "tools": coverage_of("tools"), "cloth": coverage_of("cloth")},
+		"food_security": food_security()}

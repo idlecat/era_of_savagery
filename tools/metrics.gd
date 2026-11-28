@@ -214,6 +214,7 @@ func _play(pol: Dictionary, sd: int) -> Dictionary:
 	r["natural"] = {"walk": nat["walk"] / wh, "empty": nat["empty"] / wh, "switches": nat["switches"] / maxf(0.01, nat["work"] / (D.DAY_LEN / 24.0)),
 		"stuck": nat["stuck"] / maxf(0.01, nat["person_days"]), "night_up": nat["night_up"] / maxf(1.0, nat["night"]), "left_kills": float(left)}
 	soc["ledger"] = sim.food_summary()
+	soc["wealth"] = {"wealth": sim.soc.wealth(), "output": sim.soc.output_per_head(), "standard": sim.soc.standard()}
 	soc["tools"] = {"stock": float(sim.stock.get("tools", 0.0)), "cov": sim.soc.coverage_of("tools") if sim.soc.can_make("tools") else -1.0,
 		"mult": sim.soc.tool_mult("food"), "makers": sim.living().filter(func(u): return u.career == "toolmaker").size()}
 	r["society"] = soc
@@ -608,6 +609,16 @@ func _society_report(rows: Array, pols: Array) -> void:
 		for r in rs:
 			mfd += float(r.get("min_food_days", 0.0))
 			sh += float(r.get("short_hours", 0.0))
+		var wl: Array = rs.map(func(r): return r["society"].get("wealth", {})).filter(func(x): return not x.is_empty())
+		if not wl.is_empty():
+			var wv := 0.0
+			var ov := 0.0
+			var sv := 0.0
+			for x in wl:
+				wv += float(x["wealth"])
+				ov += float(x["output"])
+				sv += float(x["standard"])
+			print("    at the end: wealth %.0f, output %.1f a head a day, standard %.2f" % [wv / wl.size(), ov / wl.size(), sv / wl.size()])
 		var tl: Array = rs.map(func(r): return r["society"].get("tools", {})).filter(func(x): return not x.is_empty() and float(x["cov"]) >= 0.0)
 		if not tl.is_empty():
 			var cov := 0.0

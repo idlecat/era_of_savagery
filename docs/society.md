@@ -1156,3 +1156,16 @@ Where a building goes (zones, lots, `improve.spot()`) is untouched. 60 days, 8 s
 people (21-57 before), 1-4 deaths; beds stay 3-8 ahead of the people. The list's conditions
 themselves (simplify.md §2's targets per role) are the next cut.
 
+### 14.16 Step 11, first cut: wealth and output as readings and conditions (2026-11-27)
+
+`soc.wealth()`: what the tribe has, its stores and goods at the trade prices (`rules.json
+folk.trade.value`, `society.json wealth.prices` for the rest), its buildings at cost, its
+treasures, and its knowledge (each known tech's cost times the share who know it).
+`soc.output_per_head()`: what comes in a day (the measured income) at the same prices, per
+head. With `soc.standard()` they are in `soc.summary()` for a game master and the LLM, in the
+metrics' society report, and are `story.holds()` conditions (`standard`, `wealth`, `output`,
+typed at the boundary), so a tier, a challenge or a culture pack can ask for them. A 20-day
+steward game ends at wealth ~2,700, output 7.6 a head a day, standard 0.96. The tiers do not
+ask for them yet: which levels of wealth and output make a town or a city is the designer's
+call, with the levels-as-ceilings measure (the calculator's sweep against pacing's long runs).
+
