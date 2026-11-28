@@ -1106,7 +1106,7 @@ some in use per head (0.3 a head in a band to 2 in a city) and they are used up 
 tenth of the want a day); crafts are priced by comfort's value times what a crafter's day adds
 to that coverage, instead of by hands. The **standard of living** (`soc.standard()`) is the
 mean benefit of food today, beds, comfort, spirit (the rites), health and order; with the model
-on it sways mood by `comfort.mood` × (standard − `ref`) × 2 in place of the painted homes'
+on it sways mood by `comfort.mood` × (standard − `ref` 0.8: neutral where most needs are met) × 2 in place of the painted homes'
 term, so comfort counts once. Births, departures and wanderers follow mood already, so they
 follow the standard through it, with no rule of their own.
 
